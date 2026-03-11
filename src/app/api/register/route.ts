@@ -27,9 +27,10 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ id: user.id, email: user.email });
-  } catch {
+  } catch (error) {
+    console.error("Register error:", error);
     return NextResponse.json(
-      { error: "Erreur lors de l'inscription" },
+      { error: "Erreur lors de l'inscription", details: String(error) },
       { status: 500 }
     );
   }
