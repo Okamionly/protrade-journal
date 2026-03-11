@@ -1,5 +1,29 @@
-export { auth as middleware } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export function middleware(request: NextRequest) {
+  const token =
+    request.cookies.get("authjs.session-token") ||
+    request.cookies.get("__Secure-authjs.session-token");
+
+  if (!token) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("callbackUrl", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/journal/:path*", "/analytics/:path*", "/screenshots/:path*", "/calendar/:path*", "/api/trades/:path*", "/api/upload/:path*", "/api/user/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/journal/:path*",
+    "/analytics/:path*",
+    "/screenshots/:path*",
+    "/calendar/:path*",
+    "/api/trades/:path*",
+    "/api/upload/:path*",
+    "/api/user/:path*",
+  ],
 };
