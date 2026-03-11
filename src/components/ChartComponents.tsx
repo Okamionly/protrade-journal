@@ -1,0 +1,174 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { Chart, registerables } from "chart.js";
+import { Trade } from "@/hooks/useTrades";
+import { useTheme } from "next-themes";
+
+Chart.register(...registerables);
+
+interface EquityChartProps {
+  trades: Trade[];
+  startingBalance: number;
+}
+
+export function EquityChart({ trades, startingBalance }: EquityChartProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    if (chartRef.current) chartRef.current.destroy();
+
+    const isDark = theme === "dark";
+    const textColor = isDark ? "#94a3b8" : "#64748b";
+    const gridColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+
+    const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const equityData = sorted.reduce<number[]>((acc, trade, i) => {
+      const prev = i > 0 ? acc[i - 1] : startingBalance;
+      acc.push(prev + trade.result);
+      return acc;
+    }, []);
+
+    chartRef.current = new Chart(canvasRef.current, {
+      type: "line",
+      data: {
+        labels: sorted.map((t) => new Date(t.date).toLocaleDateString("fr-FR")),
+        datasets: [
+          {
+            label: "Equity",
+            data: equityData,
+            borderColor: "#0ea5e9",
+            backgroundColor: "rgba(14, 165, 233, 0.1)",
+            fill: true,
+            tension: 0.4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { grid: { color: gridColor }, ticks: { color: textColor } },
+          x: { grid: { display: false }, ticks: { color: textColor } },
+        },
+      },
+    });
+
+    return () => {
+      chartRef.current?.destroy();
+    };
+  }, [trades, startingBalance, theme]);
+
+  return (
+    <div className="chart-container">
+      <canvas ref={canvasRef} />
+    </div>
+  );
+}
+
+export function StrategyChart({ trades }: { trades: Trade[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    if (chartRef.current) chartRef.current.destroy();
+
+    const isDark = theme === "dark";
+    const textColor = isDark ? "#94a3b8" : "#64748b";
+
+    const strategies: Record<string, number> = {};
+    trades.forEach((t) => {
+      strategies[t.strategy] = (strategies[t.strategy] || 0) + 1;
+    });
+
+    chartRef.current = new Chart(canvasRef.current, {
+      type: "doughnut",
+      data: {
+        labels: Object.keys(strategies),
+        datasets: [
+          {
+            data: Object.values(strategies),
+            backgroundColor: ["#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: "right", labels: { color: textColor } } },
+      },
+    });
+
+    return () => {
+      chartRef.current?.destroy();
+    };
+  }, [trades, theme]);
+
+  return (
+    <div className="chart-container">
+      <canvas ref={canvasRef} />
+    </div>
+  );
+}
+
+export function WeekdayChart({ trades }: { trades: Trade[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    if (chartRef.current) chartRef.current.destroy();
+
+    const isDark = theme === "dark";
+    const textColor = isDark ? "#94a3b8" : "#64748b";
+    const gridColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+
+    const weekdays = ["Lun", "Mar", "Mer", "Jeu", "Ven"];
+    const weekdayData = [0, 0, 0, 0, 0];
+    trades.forEach((t) => {
+      const day = new Date(t.date).getDay();
+      if (day >= 1 && day <= 5) weekdayData[day - 1] += t.result;
+    });
+
+    chartRef.current = new Chart(canvasRef.current, {
+      type: "bar",
+      data: {
+        labels: weekdays,
+        datasets: [
+          {
+            label: "P&L (€)",
+            data: weekdayData,
+            backgroundColor: weekdayData.map((v) => (v >= 0 ? "#10b981" : "#ef4444")),
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { grid: { color: gridColor }, ticks: { color: textColor } },
+          x: { grid: { display: false }, ticks: { color: textColor } },
+        },
+      },
+    });
+
+    return () => {
+      chartRef.current?.destroy();
+    };
+  }, [trades, theme]);
+
+  return (
+    <div className="chart-container">
+      <canvas ref={canvasRef} />
+    </div>
+  );
+}
