@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { signOut } from "next-auth/react";
-import { Sun, Moon, Download, LogOut, BarChart3 } from "lucide-react";
+import { Sun, Moon, Download, LogOut, BarChart3, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,6 +12,7 @@ const tabs = [
   { href: "/analytics", label: "Analytiques" },
   { href: "/screenshots", label: "Screenshots" },
   { href: "/calendar", label: "Calendrier" },
+  { href: "/chat", label: "Communauté", icon: "chat" },
 ];
 
 export function Header() {
@@ -82,12 +83,15 @@ export function Header() {
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
                   pathname === tab.href
                     ? "tab-active"
                     : "text-gray-400 hover:text-current"
                 }`}
               >
+                {"icon" in tab && tab.icon === "chat" && (
+                  <MessageCircle className="w-4 h-4" />
+                )}
                 {tab.label}
               </Link>
             ))}

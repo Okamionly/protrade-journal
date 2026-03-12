@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  balance   Float    @default(25000)
-  trades    Trade[]
-  createdAt DateTime @default(now())
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String
+  name         String?
+  balance      Float         @default(25000)
+  trades       Trade[]
+  chatMessages ChatMessage[]
+  createdAt    DateTime      @default(now())
 }
 
 model Trade {
@@ -34,9 +35,10 @@ model Trade {
   tags        String?
   userId      String
   user        User         @relation(fields: [userId], references: [id])
-  screenshots Screenshot[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  screenshots  Screenshot[]
+  chatMessages ChatMessage[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
 model Screenshot {
@@ -44,4 +46,27 @@ model Screenshot {
   url     String
   tradeId String
   trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+}
+
+model ChatRoom {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String?
+  icon        String?
+  order       Int           @default(0)
+  messages    ChatMessage[]
+  createdAt   DateTime      @default(now())
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  roomId    String
+  room      ChatRoom @relation(fields: [roomId], references: [id])
+  tradeId   String?
+  trade     Trade?   @relation(fields: [tradeId], references: [id])
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

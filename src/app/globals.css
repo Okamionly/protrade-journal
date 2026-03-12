@@ -191,3 +191,39 @@ html:not(.dark) .modal-input {
   justify-content: center;
   padding: 2rem;
 }
+
+/* Chat styles */
+.chat-message {
+  transition: background-color 0.15s ease;
+}
+.chat-message:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+.dark .chat-message:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+.light .chat-message:hover {
+  background-color: rgba(14, 165, 233, 0.03);
+}
+.chat-message.pinned {
+  border-left: 3px solid #0ea5e9;
+  background-color: rgba(14, 165, 233, 0.05);
+}
+
+.chat-sidebar-item.active {
+  background: rgba(14, 165, 233, 0.15);
+  color: #0ea5e9;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+.chat-input {
+  font-family: 'Inter', sans-serif;
+}
+.light .chat-input {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+.light .chat-input::placeholder {
+  color: #94a3b8;
+}

@@ -117,7 +117,7 @@ export default function AdminPage() {
               <Lock className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-amber-400">Admin Panel</h1>
-            <p className="text-gray-400 mt-1">ProTrade Journal</p>
+            <p className="text-gray-400 mt-1">MarketPhase</p>
           </div>
 
           {error && (
@@ -172,7 +172,7 @@ export default function AdminPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-amber-400">Admin Panel</h1>
-            <p className="text-gray-400 text-sm">ProTrade Journal</p>
+            <p className="text-gray-400 text-sm">MarketPhase</p>
           </div>
         </div>
         <div className="flex gap-3">

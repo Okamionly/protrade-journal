@@ -25,5 +25,7 @@ export const config = {
     "/api/trades/:path*",
     "/api/upload/:path*",
     "/api/user/:path*",
+    "/chat/:path*",
+    "/api/chat/:path*",
   ],
 };
