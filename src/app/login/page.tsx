@@ -41,7 +41,7 @@ export default function LoginPage() {
             <BarChart3 className="text-white w-8 h-8" />
           </div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
-            ProTrade Journal
+            MarketPhase
           </h1>
           <p className="text-gray-400 text-sm mt-2">Connectez-vous à votre compte</p>
         </div>

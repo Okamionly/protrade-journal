@@ -13,6 +13,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: "Le mot de passe doit contenir au moins 6 caractères" },
+        { status: 400 }
+      );
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json(
@@ -30,7 +37,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Register error:", error);
     return NextResponse.json(
-      { error: "Erreur lors de l'inscription", details: String(error) },
+      { error: "Erreur lors de l'inscription" },
       { status: 500 }
     );
   }

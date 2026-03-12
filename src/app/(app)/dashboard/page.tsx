@@ -98,7 +98,7 @@ export default function DashboardPage() {
                         {isWin ? "+" : ""}{trade.result}€
                       </td>
                       <td className="py-4">
-                        <button onClick={() => deleteTrade(trade.id)} className="text-rose-400 hover:text-rose-300">
+                        <button onClick={() => { if (confirm("Supprimer ce trade ?")) deleteTrade(trade.id); }} className="text-rose-400 hover:text-rose-300">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>

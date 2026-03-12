@@ -25,7 +25,7 @@ export function Header() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "protrade-export.csv";
+      a.download = "marketphase-export.csv";
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -41,7 +41,7 @@ export function Header() {
                 <BarChart3 className="text-white w-5 h-5" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
-                ProTrade Journal
+                MarketPhase
               </span>
             </div>
             <div className="flex items-center space-x-4">

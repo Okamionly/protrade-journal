@@ -4,8 +4,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { SessionProvider } from "@/components/SessionProvider";
 
 export const metadata: Metadata = {
-  title: "ProTrade Journal - Journal de Trading Professionnel",
-  description: "Suivez vos trades, analysez vos performances et améliorez votre trading.",
+  title: "MarketPhase - Journal de Trading Professionnel",
+  description: "Suivez vos trades, analysez vos performances et améliorez votre trading avec MarketPhase.",
 };
 
 export default function RootLayout({
