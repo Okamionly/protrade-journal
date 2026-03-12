@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SessionProvider } from "@/components/SessionProvider";
@@ -16,13 +17,14 @@ export default function RootLayout({
   return (
     <html lang="fr" className="dark" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `
+        <Script id="theme-init" strategy="beforeInteractive">{`
           (function() {
-            var theme = localStorage.getItem('theme') || 'dark';
-            document.documentElement.classList.toggle('dark', theme === 'dark');
-            document.documentElement.classList.toggle('light', theme === 'light');
+            try {
+              var theme = localStorage.getItem('theme') || 'dark';
+              document.documentElement.className = theme;
+            } catch(e) {}
           })();
-        `}} />
+        `}</Script>
       </head>
       <body className="antialiased min-h-screen overflow-x-hidden">
         <SessionProvider>
