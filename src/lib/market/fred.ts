@@ -1,4 +1,4 @@
-import { FRED_SERIES, FRED_API_BASE } from "./constants";
+import { FRED_SERIES } from "./constants";
 
 export interface FredObservation {
   date: string;
@@ -17,26 +17,22 @@ export interface FredSeriesData {
   changePercent: number;
 }
 
-function getFredApiKey(): string {
-  return process.env.NEXT_PUBLIC_FRED_API_KEY || "";
-}
-
 export async function fetchFredSeries(seriesKey: string, years = 5): Promise<FredSeriesData> {
   const series = FRED_SERIES[seriesKey];
   if (!series) throw new Error(`Unknown series: ${seriesKey}`);
-
-  const apiKey = getFredApiKey();
-  if (!apiKey) throw new Error("FRED API key not configured");
 
   const startDate = new Date();
   startDate.setFullYear(startDate.getFullYear() - years);
   const start = startDate.toISOString().slice(0, 10);
 
-  const url = `${FRED_API_BASE}?series_id=${series.id}&api_key=${apiKey}&file_type=json&observation_start=${start}`;
+  // Use our API proxy to avoid CORS issues
+  const url = `/api/fred?series_id=${series.id}&observation_start=${start}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`FRED API error: ${res.status}`);
 
   const json = await res.json();
+  if (json.error) throw new Error(json.error);
+
   const observations: FredObservation[] = (json.observations || [])
     .filter((o: { value: string }) => o.value !== ".")
     .map((o: { date: string; value: string }) => ({

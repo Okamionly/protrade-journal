@@ -9,24 +9,14 @@ export interface EconomicEvent {
   prev: string;
 }
 
-const FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY || "";
-
 export async function fetchEconomicCalendar(): Promise<EconomicEvent[]> {
-  if (!FINNHUB_API_KEY) return getMockCalendar();
-
-  const from = new Date();
-  const to = new Date();
-  to.setDate(to.getDate() + 7);
-
-  const fromStr = from.toISOString().slice(0, 10);
-  const toStr = to.toISOString().slice(0, 10);
-
   try {
-    const url = `https://finnhub.io/api/v1/calendar/economic?from=${fromStr}&to=${toStr}&token=${FINNHUB_API_KEY}`;
-    const res = await fetch(url);
+    // Use our API proxy to avoid CORS issues and hide the API key
+    const res = await fetch("/api/calendar");
     if (!res.ok) return getMockCalendar();
 
     const json = await res.json();
+    if (json.error) return getMockCalendar();
     const events = json.economicCalendar || [];
 
     return events.map((e: Record<string, string | number>) => ({
