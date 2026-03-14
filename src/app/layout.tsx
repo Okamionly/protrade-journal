@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SessionProvider } from "@/components/SessionProvider";
+import { ToastProvider } from "@/components/Toast";
 
 export const metadata: Metadata = {
   title: "MarketPhase - Journal de Trading Professionnel",
@@ -28,7 +29,9 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen overflow-x-hidden">
         <SessionProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </ThemeProvider>
         </SessionProvider>
       </body>
     </html>

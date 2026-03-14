@@ -227,3 +227,19 @@ html:not(.dark) .modal-input {
 .light .chat-input::placeholder {
   color: #94a3b8;
 }
+
+/* Toast animations */
+@keyframes slideOut {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+
+/* Skeleton pulse */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.animate-pulse > div {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}

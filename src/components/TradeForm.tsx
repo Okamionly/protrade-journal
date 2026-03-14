@@ -1,21 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, ArrowUp, ArrowDown, Upload } from "lucide-react";
+import { Trade } from "@/hooks/useTrades";
 
 interface TradeFormProps {
   onSubmit: (trade: Record<string, unknown>) => Promise<boolean>;
   onClose: () => void;
+  editTrade?: Trade | null;
 }
 
 const ASSETS = ["EUR/USD", "GBP/USD", "USD/JPY", "XAU/USD", "BTC/USD"];
 const STRATEGIES = ["Breakout", "Retracement", "Support/Resistance", "Trend Following", "Scalping"];
 const EMOTIONS = ["Confiant", "Peur", "Gourmand", "Impatient", "Neutre"];
 
-export function TradeForm({ onSubmit, onClose }: TradeFormProps) {
-  const [direction, setDirection] = useState("LONG");
+export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
+  const [direction, setDirection] = useState(editTrade?.direction || "LONG");
   const [loading, setLoading] = useState(false);
   const [screenshots, setScreenshots] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (editTrade?.screenshots?.length) {
+      setScreenshots(editTrade.screenshots.map((s) => s.url));
+    }
+  }, [editTrade]);
 
   const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -58,11 +66,15 @@ export function TradeForm({ onSubmit, onClose }: TradeFormProps) {
     if (ok) onClose();
   };
 
+  const formatDateTimeLocal = (date: string) => {
+    return new Date(date).toISOString().slice(0, 16);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="glass rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-700 flex justify-between items-center">
-          <h3 className="text-xl font-bold">Nouveau Trade</h3>
+          <h3 className="text-xl font-bold">{editTrade ? "Modifier le Trade" : "Nouveau Trade"}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-current">
             <X className="w-6 h-6" />
           </button>
@@ -74,14 +86,14 @@ export function TradeForm({ onSubmit, onClose }: TradeFormProps) {
               <input
                 type="datetime-local"
                 name="date"
-                defaultValue={new Date().toISOString().slice(0, 16)}
+                defaultValue={editTrade ? formatDateTimeLocal(editTrade.date) : new Date().toISOString().slice(0, 16)}
                 className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
                 required
               />
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Actif</label>
-              <select name="asset" className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2">
+              <select name="asset" defaultValue={editTrade?.asset || ASSETS[0]} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2">
                 {ASSETS.map((a) => (
                   <option key={a}>{a}</option>
                 ))}
@@ -121,7 +133,7 @@ export function TradeForm({ onSubmit, onClose }: TradeFormProps) {
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Stratégie</label>
-              <select name="strategy" className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2">
+              <select name="strategy" defaultValue={editTrade?.strategy || STRATEGIES[0]} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2">
                 {STRATEGIES.map((s) => (
                   <option key={s}>{s}</option>
                 ))}
@@ -132,30 +144,30 @@ export function TradeForm({ onSubmit, onClose }: TradeFormProps) {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Prix d&apos;entrée</label>
-              <input type="number" step="0.00001" name="entry" className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" required />
+              <input type="number" step="0.00001" name="entry" defaultValue={editTrade?.entry} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" required />
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Stop Loss</label>
-              <input type="number" step="0.00001" name="sl" className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" required />
+              <input type="number" step="0.00001" name="sl" defaultValue={editTrade?.sl} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" required />
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Take Profit</label>
-              <input type="number" step="0.00001" name="tp" className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" required />
+              <input type="number" step="0.00001" name="tp" defaultValue={editTrade?.tp} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" required />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Taille (Lots)</label>
-              <input type="number" step="0.01" name="lots" className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" required />
+              <input type="number" step="0.01" name="lots" defaultValue={editTrade?.lots} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" required />
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Prix de sortie</label>
-              <input type="number" step="0.00001" name="exit" className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" />
+              <input type="number" step="0.00001" name="exit" defaultValue={editTrade?.exit ?? undefined} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" />
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Résultat (€)</label>
-              <input type="number" step="0.01" name="result" className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" required />
+              <input type="number" step="0.01" name="result" defaultValue={editTrade?.result} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 mono" required />
             </div>
           </div>
 
@@ -196,13 +208,13 @@ export function TradeForm({ onSubmit, onClose }: TradeFormProps) {
 
           <div>
             <label className="block text-sm text-gray-400 mb-1">Setup / Description</label>
-            <textarea name="setup" rows={3} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2" placeholder="Décrivez votre analyse..." />
+            <textarea name="setup" rows={3} defaultValue={editTrade?.setup || ""} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2" placeholder="Décrivez votre analyse..." />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Émotion / Psychologie</label>
-              <select name="emotion" className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2">
+              <select name="emotion" defaultValue={editTrade?.emotion || EMOTIONS[0]} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2">
                 {EMOTIONS.map((e) => (
                   <option key={e}>{e}</option>
                 ))}
@@ -210,7 +222,7 @@ export function TradeForm({ onSubmit, onClose }: TradeFormProps) {
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Tags</label>
-              <input type="text" name="tags" className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2" placeholder="scalp, tendance, news..." />
+              <input type="text" name="tags" defaultValue={editTrade?.tags || ""} className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2" placeholder="scalp, tendance, news..." />
             </div>
           </div>
 
@@ -219,7 +231,7 @@ export function TradeForm({ onSubmit, onClose }: TradeFormProps) {
               Annuler
             </button>
             <button type="submit" disabled={loading} className="flex-1 py-3 rounded-lg btn-primary text-white font-medium disabled:opacity-50">
-              {loading ? "Enregistrement..." : "Enregistrer le Trade"}
+              {loading ? "Enregistrement..." : editTrade ? "Sauvegarder les modifications" : "Enregistrer le Trade"}
             </button>
           </div>
         </form>

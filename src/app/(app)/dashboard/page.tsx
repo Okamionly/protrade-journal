@@ -1,31 +1,114 @@
 "use client";
 
-import { useTrades, useUser } from "@/hooks/useTrades";
+import { useTrades, useUser, Trade } from "@/hooks/useTrades";
 import { DashboardCards } from "@/components/DashboardCards";
 import { EquityChart, StrategyChart } from "@/components/ChartComponents";
 import { TradeForm } from "@/components/TradeForm";
+import { DashboardSkeleton } from "@/components/Skeleton";
+import { useToast } from "@/components/Toast";
 import { calculateRR, formatDate } from "@/lib/utils";
-import { useState } from "react";
-import { Plus, Eye, Trash2, Camera } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Trash2, Pencil, Camera, Target } from "lucide-react";
 
 export default function DashboardPage() {
-  const { trades, loading, addTrade, deleteTrade } = useTrades();
+  const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
   const { user } = useUser();
+  const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
+  const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
+  const [monthlyGoal, setMonthlyGoal] = useState<number>(0);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [goalInput, setGoalInput] = useState("");
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400">Chargement...</div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const saved = localStorage.getItem("monthlyGoal");
+    if (saved) setMonthlyGoal(parseFloat(saved));
+  }, []);
+
+  const handleAddTrade = async (trade: Record<string, unknown>) => {
+    const ok = await addTrade(trade);
+    if (ok) toast("Trade créé avec succès", "success");
+    else toast("Erreur lors de la création", "error");
+    return ok;
+  };
+
+  const handleUpdateTrade = async (trade: Record<string, unknown>) => {
+    if (!editingTrade) return false;
+    const ok = await updateTrade(editingTrade.id, trade);
+    if (ok) toast("Trade modifié avec succès", "success");
+    else toast("Erreur lors de la modification", "error");
+    return ok;
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Supprimer ce trade ?")) {
+      const ok = await deleteTrade(id);
+      if (ok) toast("Trade supprimé", "success");
+      else toast("Erreur lors de la suppression", "error");
+    }
+  };
+
+  const saveGoal = () => {
+    const value = parseFloat(goalInput);
+    if (!isNaN(value) && value > 0) {
+      setMonthlyGoal(value);
+      localStorage.setItem("monthlyGoal", String(value));
+      setShowGoalModal(false);
+      toast("Objectif mensuel mis à jour", "success");
+    }
+  };
+
+  // Monthly P&L
+  const now = new Date();
+  const monthlyTrades = trades.filter((t) => {
+    const d = new Date(t.date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthlyPnL = monthlyTrades.reduce((s, t) => s + t.result, 0);
+  const goalProgress = monthlyGoal > 0 ? Math.min((monthlyPnL / monthlyGoal) * 100, 100) : 0;
+
+  if (loading) return <DashboardSkeleton />;
 
   const recentTrades = trades.slice(0, 5);
 
   return (
     <>
       <DashboardCards trades={trades} balance={user?.balance ?? 25000} />
+
+      {/* Objectif mensuel */}
+      <div className="glass rounded-2xl p-6 mb-6">
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-blue-400" />
+            <h3 className="text-lg font-semibold">Objectif Mensuel</h3>
+          </div>
+          <button
+            onClick={() => { setGoalInput(String(monthlyGoal || "")); setShowGoalModal(true); }}
+            className="text-sm text-blue-400 hover:text-blue-300 transition"
+          >
+            {monthlyGoal > 0 ? "Modifier" : "Définir un objectif"}
+          </button>
+        </div>
+        {monthlyGoal > 0 ? (
+          <>
+            <div className="flex justify-between text-sm mb-2">
+              <span className={monthlyPnL >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                {monthlyPnL >= 0 ? "+" : ""}€{monthlyPnL.toFixed(2)}
+              </span>
+              <span className="text-gray-400">Objectif : €{monthlyGoal.toFixed(2)}</span>
+            </div>
+            <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${monthlyPnL >= monthlyGoal ? "bg-emerald-500" : monthlyPnL >= 0 ? "bg-blue-500" : "bg-rose-500"}`}
+                style={{ width: `${Math.max(goalProgress, 0)}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">{goalProgress.toFixed(1)}% atteint — {monthlyTrades.length} trades ce mois</p>
+          </>
+        ) : (
+          <p className="text-gray-500 text-sm">Aucun objectif défini. Cliquez pour en définir un.</p>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass rounded-2xl p-6">
@@ -97,8 +180,11 @@ export default function DashboardPage() {
                       <td className={`py-4 mono font-bold ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
                         {isWin ? "+" : ""}{trade.result}€
                       </td>
-                      <td className="py-4">
-                        <button onClick={() => { if (confirm("Supprimer ce trade ?")) deleteTrade(trade.id); }} className="text-rose-400 hover:text-rose-300">
+                      <td className="py-4 flex gap-2">
+                        <button onClick={() => { setEditingTrade(trade); }} className="text-blue-400 hover:text-blue-300">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDelete(trade.id)} className="text-rose-400 hover:text-rose-300">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
@@ -111,7 +197,36 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {showForm && <TradeForm onSubmit={addTrade} onClose={() => setShowForm(false)} />}
+      {showForm && <TradeForm onSubmit={handleAddTrade} onClose={() => setShowForm(false)} />}
+      {editingTrade && <TradeForm onSubmit={handleUpdateTrade} onClose={() => setEditingTrade(null)} editTrade={editingTrade} />}
+
+      {/* Goal Modal */}
+      {showGoalModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="text-lg font-bold mb-4">Objectif Mensuel</h3>
+            <p className="text-sm text-gray-400 mb-4">Définissez votre objectif de profit mensuel en euros.</p>
+            <input
+              type="number"
+              step="0.01"
+              value={goalInput}
+              onChange={(e) => setGoalInput(e.target.value)}
+              placeholder="Ex: 500"
+              className="modal-input mb-4"
+              autoFocus
+              onKeyDown={(e) => e.key === "Enter" && saveGoal()}
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setShowGoalModal(false)} className="flex-1 py-2 rounded-lg border border-gray-600 hover:bg-gray-800 transition">
+                Annuler
+              </button>
+              <button onClick={saveGoal} className="flex-1 py-2 rounded-lg btn-primary text-white font-medium">
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

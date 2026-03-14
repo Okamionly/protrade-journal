@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Chart, registerables } from "chart.js";
 import { Trade } from "@/hooks/useTrades";
 import { useTheme } from "next-themes";
+import { MonthlyData, EmotionPerformance } from "@/lib/utils";
 
 Chart.register(...registerables);
 
@@ -165,6 +166,104 @@ export function WeekdayChart({ trades }: { trades: Trade[] }) {
       chartRef.current?.destroy();
     };
   }, [trades, theme]);
+
+  return (
+    <div className="chart-container">
+      <canvas ref={canvasRef} />
+    </div>
+  );
+}
+
+export function MonthlyComparisonChart({ data }: { data: MonthlyData[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    if (!canvasRef.current || data.length === 0) return;
+    if (chartRef.current) chartRef.current.destroy();
+
+    const isDark = theme === "dark";
+    const textColor = isDark ? "#94a3b8" : "#64748b";
+    const gridColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+
+    chartRef.current = new Chart(canvasRef.current, {
+      type: "bar",
+      data: {
+        labels: data.map((d) => d.label),
+        datasets: [
+          {
+            label: "P&L (€)",
+            data: data.map((d) => d.pnl),
+            backgroundColor: data.map((d) => (d.pnl >= 0 ? "#10b981" : "#ef4444")),
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { grid: { color: gridColor }, ticks: { color: textColor, callback: (v) => `€${v}` } },
+          x: { grid: { display: false }, ticks: { color: textColor } },
+        },
+      },
+    });
+
+    return () => {
+      chartRef.current?.destroy();
+    };
+  }, [data, theme]);
+
+  return (
+    <div className="chart-container">
+      <canvas ref={canvasRef} />
+    </div>
+  );
+}
+
+export function EmotionChart({ data }: { data: EmotionPerformance[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    if (!canvasRef.current || data.length === 0) return;
+    if (chartRef.current) chartRef.current.destroy();
+
+    const isDark = theme === "dark";
+    const textColor = isDark ? "#94a3b8" : "#64748b";
+    const gridColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+
+    chartRef.current = new Chart(canvasRef.current, {
+      type: "bar",
+      data: {
+        labels: data.map((d) => d.emotion),
+        datasets: [
+          {
+            label: "P&L Moyen (€)",
+            data: data.map((d) => d.avgPnL),
+            backgroundColor: data.map((d) => (d.avgPnL >= 0 ? "rgba(16, 185, 129, 0.7)" : "rgba(239, 68, 68, 0.7)")),
+            borderRadius: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { grid: { color: gridColor }, ticks: { color: textColor, callback: (v) => `€${v}` } },
+          x: { grid: { display: false }, ticks: { color: textColor } },
+        },
+      },
+    });
+
+    return () => {
+      chartRef.current?.destroy();
+    };
+  }, [data, theme]);
 
   return (
     <div className="chart-container">

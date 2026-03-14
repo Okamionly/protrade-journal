@@ -86,3 +86,123 @@ export function computeStats(
     sharpeRatio: parseFloat(sharpe.toFixed(2)),
   };
 }
+
+export interface StreakData {
+  bestWinStreak: number;
+  worstLossStreak: number;
+  currentStreak: number;
+  currentStreakType: "win" | "loss" | "none";
+}
+
+export function computeStreaks(trades: { result: number; date: string }[]): StreakData {
+  const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  let bestWin = 0;
+  let worstLoss = 0;
+  let currentWin = 0;
+  let currentLoss = 0;
+
+  sorted.forEach((t) => {
+    if (t.result > 0) {
+      currentWin++;
+      currentLoss = 0;
+      if (currentWin > bestWin) bestWin = currentWin;
+    } else if (t.result < 0) {
+      currentLoss++;
+      currentWin = 0;
+      if (currentLoss > worstLoss) worstLoss = currentLoss;
+    } else {
+      currentWin = 0;
+      currentLoss = 0;
+    }
+  });
+
+  return {
+    bestWinStreak: bestWin,
+    worstLossStreak: worstLoss,
+    currentStreak: currentWin > 0 ? currentWin : currentLoss,
+    currentStreakType: currentWin > 0 ? "win" : currentLoss > 0 ? "loss" : "none",
+  };
+}
+
+export interface AssetPerformance {
+  asset: string;
+  trades: number;
+  wins: number;
+  winRate: number;
+  totalPnL: number;
+  avgPnL: number;
+}
+
+export function computeAssetPerformance(trades: { asset: string; result: number }[]): AssetPerformance[] {
+  const map: Record<string, { count: number; wins: number; total: number }> = {};
+  trades.forEach((t) => {
+    if (!map[t.asset]) map[t.asset] = { count: 0, wins: 0, total: 0 };
+    map[t.asset].count++;
+    map[t.asset].total += t.result;
+    if (t.result > 0) map[t.asset].wins++;
+  });
+  return Object.entries(map)
+    .map(([asset, s]) => ({
+      asset,
+      trades: s.count,
+      wins: s.wins,
+      winRate: (s.wins / s.count) * 100,
+      totalPnL: s.total,
+      avgPnL: s.total / s.count,
+    }))
+    .sort((a, b) => b.totalPnL - a.totalPnL);
+}
+
+export interface EmotionPerformance {
+  emotion: string;
+  trades: number;
+  wins: number;
+  winRate: number;
+  totalPnL: number;
+  avgPnL: number;
+}
+
+export function computeEmotionPerformance(trades: { emotion: string | null; result: number }[]): EmotionPerformance[] {
+  const map: Record<string, { count: number; wins: number; total: number }> = {};
+  trades.forEach((t) => {
+    const emotion = t.emotion || "Non défini";
+    if (!map[emotion]) map[emotion] = { count: 0, wins: 0, total: 0 };
+    map[emotion].count++;
+    map[emotion].total += t.result;
+    if (t.result > 0) map[emotion].wins++;
+  });
+  return Object.entries(map)
+    .map(([emotion, s]) => ({
+      emotion,
+      trades: s.count,
+      wins: s.wins,
+      winRate: (s.wins / s.count) * 100,
+      totalPnL: s.total,
+      avgPnL: s.total / s.count,
+    }))
+    .sort((a, b) => b.totalPnL - a.totalPnL);
+}
+
+export interface MonthlyData {
+  label: string;
+  pnl: number;
+}
+
+export function computeMonthlyComparison(trades: { date: string; result: number }[]): MonthlyData[] {
+  const months: Record<string, number> = {};
+  trades.forEach((t) => {
+    const d = new Date(t.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    months[key] = (months[key] || 0) + t.result;
+  });
+
+  return Object.entries(months)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-6)
+    .map(([key, pnl]) => {
+      const [year, month] = key.split("-");
+      const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+      return { label: `${monthNames[parseInt(month) - 1]} ${year}`, pnl };
+    });
+}

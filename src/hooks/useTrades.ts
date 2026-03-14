@@ -62,18 +62,25 @@ export function useTrades() {
       body: JSON.stringify(trade),
     });
     if (res.ok) {
-      await fetchTrades();
+      const newTrade = await res.json();
+      // Optimistic: add to local state immediately
+      setTrades((prev) => [newTrade, ...prev]);
       return true;
     }
     return false;
   };
 
   const deleteTrade = async (id: string) => {
+    // Optimistic: remove from local state immediately
+    const previous = trades;
+    setTrades((prev) => prev.filter((t) => t.id !== id));
+
     const res = await fetch(`/api/trades/${id}`, { method: "DELETE" });
     if (res.ok) {
-      await fetchTrades();
       return true;
     }
+    // Rollback on failure
+    setTrades(previous);
     return false;
   };
 
@@ -84,7 +91,9 @@ export function useTrades() {
       body: JSON.stringify(data),
     });
     if (res.ok) {
-      await fetchTrades();
+      const updated = await res.json();
+      // Optimistic: update in local state
+      setTrades((prev) => prev.map((t) => (t.id === id ? updated : t)));
       return true;
     }
     return false;
