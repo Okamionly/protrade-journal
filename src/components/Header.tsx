@@ -2,17 +2,20 @@
 
 import { useTheme } from "next-themes";
 import { signOut } from "next-auth/react";
-import { Sun, Moon, Download, LogOut, BarChart3, MessageCircle } from "lucide-react";
+import { Sun, Moon, Download, LogOut, BarChart3, MessageCircle, TrendingUp, Globe, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const tabs = [
-  { href: "/dashboard", label: "Tableau de Bord" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/journal", label: "Journal" },
-  { href: "/analytics", label: "Analytiques" },
+  { href: "/analytics", label: "Analytics" },
+  { href: "/cot", label: "COT", icon: "trending" },
+  { href: "/macro", label: "Macro", icon: "globe" },
+  { href: "/calendar-eco", label: "Éco", icon: "calendarDays" },
   { href: "/screenshots", label: "Screenshots" },
-  { href: "/calendar", label: "Calendrier" },
-  { href: "/chat", label: "Communauté", icon: "chat" },
+  { href: "/calendar", label: "Planning" },
+  { href: "/chat", label: "Chat", icon: "chat" },
 ];
 
 export function Header() {
@@ -89,9 +92,10 @@ export function Header() {
                     : "text-gray-400 hover:text-current"
                 }`}
               >
-                {"icon" in tab && tab.icon === "chat" && (
-                  <MessageCircle className="w-4 h-4" />
-                )}
+                {"icon" in tab && tab.icon === "chat" && <MessageCircle className="w-4 h-4" />}
+                {"icon" in tab && tab.icon === "trending" && <TrendingUp className="w-4 h-4" />}
+                {"icon" in tab && tab.icon === "globe" && <Globe className="w-4 h-4" />}
+                {"icon" in tab && tab.icon === "calendarDays" && <CalendarDays className="w-4 h-4" />}
                 {tab.label}
               </Link>
             ))}
