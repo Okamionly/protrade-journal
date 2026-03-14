@@ -12,13 +12,15 @@ import { Plus, Trash2, Pencil, Camera, Target } from "lucide-react";
 
 export default function DashboardPage() {
   const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
-  const { user } = useUser();
+  const { user, updateBalance } = useUser();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [monthlyGoal, setMonthlyGoal] = useState<number>(0);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [goalInput, setGoalInput] = useState("");
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [balanceInput, setBalanceInput] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem("monthlyGoal");
@@ -48,6 +50,19 @@ export default function DashboardPage() {
     }
   };
 
+  const saveBalance = async () => {
+    const value = parseFloat(balanceInput);
+    if (!isNaN(value) && value >= 0) {
+      const ok = await updateBalance(value);
+      if (ok) {
+        toast("Balance mise à jour", "success");
+        setShowBalanceModal(false);
+      } else {
+        toast("Erreur lors de la mise à jour", "error");
+      }
+    }
+  };
+
   const saveGoal = () => {
     const value = parseFloat(goalInput);
     if (!isNaN(value) && value > 0) {
@@ -73,7 +88,14 @@ export default function DashboardPage() {
 
   return (
     <>
-      <DashboardCards trades={trades} balance={user?.balance ?? 25000} />
+      <DashboardCards
+        trades={trades}
+        balance={user?.balance ?? 25000}
+        onEditBalance={() => {
+          setBalanceInput(String(user?.balance ?? 25000));
+          setShowBalanceModal(true);
+        }}
+      />
 
       {/* Objectif mensuel */}
       <div className="glass rounded-2xl p-6 mb-6">
@@ -199,6 +221,34 @@ export default function DashboardPage() {
 
       {showForm && <TradeForm onSubmit={handleAddTrade} onClose={() => setShowForm(false)} />}
       {editingTrade && <TradeForm onSubmit={handleUpdateTrade} onClose={() => setEditingTrade(null)} editTrade={editingTrade} />}
+
+      {/* Balance Modal */}
+      {showBalanceModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="text-lg font-bold mb-4">Modifier la Balance</h3>
+            <p className="text-sm text-gray-400 mb-4">Entrez votre capital initial en euros.</p>
+            <input
+              type="number"
+              step="0.01"
+              value={balanceInput}
+              onChange={(e) => setBalanceInput(e.target.value)}
+              placeholder="Ex: 25000"
+              className="modal-input mb-4"
+              autoFocus
+              onKeyDown={(e) => e.key === "Enter" && saveBalance()}
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setShowBalanceModal(false)} className="flex-1 py-2 rounded-lg border border-gray-600 hover:bg-gray-800 transition">
+                Annuler
+              </button>
+              <button onClick={saveBalance} className="flex-1 py-2 rounded-lg btn-primary text-white font-medium">
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Goal Modal */}
       {showGoalModal && (

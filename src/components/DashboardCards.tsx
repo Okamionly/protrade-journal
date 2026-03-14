@@ -1,23 +1,24 @@
 "use client";
 
 import { Trade } from "@/hooks/useTrades";
-import { computeStats, calculateRR } from "@/lib/utils";
-import { Wallet, TrendingUp, Scale, ArrowLeftRight } from "lucide-react";
+import { computeStats } from "@/lib/utils";
+import { Wallet, TrendingUp, Scale, ArrowLeftRight, Pencil } from "lucide-react";
 import Link from "next/link";
 
 interface Props {
   trades: Trade[];
   balance: number;
+  onEditBalance?: () => void;
 }
 
-export function DashboardCards({ trades, balance }: Props) {
+export function DashboardCards({ trades, balance, onEditBalance }: Props) {
   const stats = computeStats(trades);
   const totalBalance = balance + stats.netProfit;
   const profitPercent = balance > 0 ? ((stats.netProfit / balance) * 100).toFixed(1) : "0";
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div className="metric-card clickable rounded-2xl p-6 relative overflow-hidden">
+      <div className="metric-card clickable rounded-2xl p-6 relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 opacity-10 rounded-full -mr-16 -mt-16" />
         <div className="flex justify-between items-start mb-4">
           <div>
@@ -26,8 +27,19 @@ export function DashboardCards({ trades, balance }: Props) {
               €{totalBalance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-            <Wallet className="text-blue-400 w-5 h-5" />
+          <div className="flex items-center gap-2">
+            {onEditBalance && (
+              <button
+                onClick={onEditBalance}
+                className="w-8 h-8 rounded-lg bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                title="Modifier la balance"
+              >
+                <Pencil className="text-gray-400 w-3.5 h-3.5" />
+              </button>
+            )}
+            <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+              <Wallet className="text-blue-400 w-5 h-5" />
+            </div>
           </div>
         </div>
         <div className="flex items-center text-sm">
@@ -35,6 +47,9 @@ export function DashboardCards({ trades, balance }: Props) {
             {stats.netProfit >= 0 ? "+" : ""}{profitPercent}%
           </span>
           <span className="text-gray-500 ml-2">ce mois</span>
+        </div>
+        <div className="mt-1 text-xs text-gray-500">
+          Capital initial: €{balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
         </div>
       </div>
 

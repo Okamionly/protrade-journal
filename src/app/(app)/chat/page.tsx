@@ -338,7 +338,23 @@ export default function ChatPage() {
             <div className="flex flex-col items-center justify-center h-full text-gray-500">
               <MessageCircle className="w-12 h-12 mb-3 opacity-30" />
               <p>Aucun message dans ce salon.</p>
-              <p className="text-sm">Soyez le premier à écrire !</p>
+              <p className="text-sm mb-4">Soyez le premier à écrire !</p>
+              <div className="flex flex-wrap gap-2 justify-center max-w-md">
+                {[
+                  "Quel est votre setup du jour ?",
+                  "Je suis bullish sur EUR/USD",
+                  "Le NFP arrive cette semaine !",
+                  "Quelqu'un trade le gold ?",
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => setInput(suggestion)}
+                    className="px-3 py-1.5 rounded-full text-xs border border-gray-700 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/50 transition"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             messages.map((msg) => (

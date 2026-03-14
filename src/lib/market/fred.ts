@@ -17,17 +17,22 @@ export interface FredSeriesData {
   changePercent: number;
 }
 
-const FRED_API_KEY = process.env.NEXT_PUBLIC_FRED_API_KEY || "";
+function getFredApiKey(): string {
+  return process.env.NEXT_PUBLIC_FRED_API_KEY || "";
+}
 
 export async function fetchFredSeries(seriesKey: string, years = 5): Promise<FredSeriesData> {
   const series = FRED_SERIES[seriesKey];
   if (!series) throw new Error(`Unknown series: ${seriesKey}`);
 
+  const apiKey = getFredApiKey();
+  if (!apiKey) throw new Error("FRED API key not configured");
+
   const startDate = new Date();
   startDate.setFullYear(startDate.getFullYear() - years);
   const start = startDate.toISOString().slice(0, 10);
 
-  const url = `${FRED_API_BASE}?series_id=${series.id}&api_key=${FRED_API_KEY}&file_type=json&observation_start=${start}`;
+  const url = `${FRED_API_BASE}?series_id=${series.id}&api_key=${apiKey}&file_type=json&observation_start=${start}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`FRED API error: ${res.status}`);
 

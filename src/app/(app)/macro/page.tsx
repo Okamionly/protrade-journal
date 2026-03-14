@@ -10,17 +10,22 @@ Chart.register(...registerables);
 export default function MacroPage() {
   const [series, setSeries] = useState<FredSeriesData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [selected, setSelected] = useState<FredSeriesData | null>(null);
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart | null>(null);
 
   const load = async () => {
     setLoading(true);
+    setError("");
     try {
       const data = await fetchMultipleFredSeries();
+      if (data.length === 0) {
+        setError("Aucune donnée récupérée. Vérifiez la clé API FRED.");
+      }
       setSeries(data);
-    } catch {
-      // silently fail — cards will be empty
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur de chargement des données FRED");
     } finally {
       setLoading(false);
     }
@@ -69,6 +74,12 @@ export default function MacroPage() {
           <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
+
+      {error && (
+        <div className="glass rounded-xl p-4 text-rose-400 text-sm border border-rose-500/30">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
