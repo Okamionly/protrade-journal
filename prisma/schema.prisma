@@ -61,6 +61,7 @@ model ChatRoom {
 model ChatMessage {
   id        String   @id @default(cuid())
   content   String
+  imageUrl  String?
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   roomId    String

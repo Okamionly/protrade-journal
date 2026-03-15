@@ -7,18 +7,13 @@ export async function GET() {
     return NextResponse.json({ error: "Finnhub API key not configured" }, { status: 500 });
   }
 
-  const from = new Date();
-  const to = new Date();
-  to.setDate(to.getDate() + 7);
-
-  const fromStr = from.toISOString().slice(0, 10);
-  const toStr = to.toISOString().slice(0, 10);
-
   try {
-    const url = `https://finnhub.io/api/v1/calendar/economic?from=${fromStr}&to=${toStr}&token=${FINNHUB_API_KEY}`;
-    const res = await fetch(url);
+    const res = await fetch(
+      `https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_API_KEY}`,
+      { next: { revalidate: 300 } }
+    );
     if (!res.ok) {
-      return NextResponse.json({ error: `Finnhub API error: ${res.status}` }, { status: res.status });
+      return NextResponse.json({ error: `Finnhub news error: ${res.status}` }, { status: res.status });
     }
     const data = await res.json();
     return NextResponse.json(data);

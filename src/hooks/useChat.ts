@@ -27,6 +27,7 @@ export interface SharedTrade {
 export interface ChatMessage {
   id: string;
   content: string;
+  imageUrl: string | null;
   userId: string;
   user: { id: string; name: string | null; email: string };
   roomId: string;
@@ -128,13 +129,13 @@ export function useChat(roomId: string) {
     return () => clearInterval(interval);
   }, [fetchMessages]);
 
-  const sendMessage = useCallback(async (content: string, tradeId?: string) => {
+  const sendMessage = useCallback(async (content: string, tradeId?: string, imageUrl?: string) => {
     setSending(true);
     try {
       const res = await fetch("/api/chat/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId, content, tradeId }),
+        body: JSON.stringify({ roomId, content, tradeId, imageUrl }),
       });
 
       if (res.ok) {

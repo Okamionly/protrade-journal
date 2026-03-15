@@ -125,6 +125,7 @@ export async function POST(req: Request) {
     const message = await prisma.chatMessage.create({
       data: {
         content: body.content.trim(),
+        imageUrl: body.imageUrl || null,
         userId: session.user.id,
         roomId: body.roomId,
         tradeId: body.tradeId || null,
