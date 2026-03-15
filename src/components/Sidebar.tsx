@@ -16,6 +16,11 @@ import {
   ChevronRight,
   Newspaper,
   Gauge,
+  Trophy,
+  Grid3x3,
+  Target,
+  Zap,
+  Clock,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -23,11 +28,16 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { divider: true, label: "PERFORMANCE" },
+  { href: "/performance", label: "Score", icon: Trophy },
+  { href: "/heatmap", label: "Heatmap", icon: Grid3x3 },
+  { href: "/daily-bias", label: "Daily Bias", icon: Target },
   { divider: true, label: "MARCHÉ" },
   { href: "/cot", label: "Rapport COT", icon: TrendingUp },
   { href: "/macro", label: "Macro", icon: Globe },
   { href: "/calendar-eco", label: "Calendrier Éco", icon: CalendarDays },
   { href: "/sentiment", label: "Sentiment", icon: Gauge },
+  { href: "/currency-strength", label: "Force Devises", icon: Zap },
   { href: "/news", label: "News", icon: Newspaper },
   { divider: true, label: "OUTILS" },
   { href: "/screenshots", label: "Screenshots", icon: Camera },

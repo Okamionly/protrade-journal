@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ToastProvider } from "@/components/Toast";
+import { CommandPalette } from "@/components/CommandPalette";
+import { LiveTicker } from "@/components/LiveTicker";
 
 export const metadata: Metadata = {
   title: "MarketPhase - Journal de Trading Professionnel",
@@ -30,7 +32,11 @@ export default function RootLayout({
       <body className="antialiased min-h-screen overflow-x-hidden">
         <SessionProvider>
           <ThemeProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <ToastProvider>
+              <LiveTicker />
+              {children}
+              <CommandPalette />
+            </ToastProvider>
           </ThemeProvider>
         </SessionProvider>
       </body>

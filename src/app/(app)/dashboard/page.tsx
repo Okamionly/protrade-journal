@@ -6,9 +6,10 @@ import { EquityChart, StrategyChart } from "@/components/ChartComponents";
 import { TradeForm } from "@/components/TradeForm";
 import { DashboardSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
+import { ForexSessions } from "@/components/ForexSessions";
 import { calculateRR, formatDate } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Pencil, Camera, Target } from "lucide-react";
+import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown } from "lucide-react";
 
 export default function DashboardPage() {
   const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
@@ -130,6 +131,82 @@ export default function DashboardPage() {
         ) : (
           <p className="text-gray-500 text-sm">Aucun objectif défini. Cliquez pour en définir un.</p>
         )}
+      </div>
+
+      {/* Streak + Forex Sessions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        {/* Win/Loss Streak */}
+        {(() => {
+          let currentStreak = 0;
+          let streakType: "win" | "loss" | "none" = "none";
+          const sorted = [...trades].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          for (const t of sorted) {
+            if (currentStreak === 0) {
+              streakType = t.result > 0 ? "win" : t.result < 0 ? "loss" : "none";
+              currentStreak = 1;
+            } else if ((streakType === "win" && t.result > 0) || (streakType === "loss" && t.result < 0)) {
+              currentStreak++;
+            } else {
+              break;
+            }
+          }
+          let bestWin = 0, bestLoss = 0, tempWin = 0, tempLoss = 0;
+          for (const t of sorted.reverse()) {
+            if (t.result > 0) { tempWin++; tempLoss = 0; bestWin = Math.max(bestWin, tempWin); }
+            else if (t.result < 0) { tempLoss++; tempWin = 0; bestLoss = Math.max(bestLoss, tempLoss); }
+            else { tempWin = 0; tempLoss = 0; }
+          }
+          return (
+            <div className="glass rounded-2xl p-4">
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Série en cours</h4>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${streakType === "win" ? "bg-emerald-500/20" : streakType === "loss" ? "bg-rose-500/20" : "bg-gray-500/20"}`}>
+                  <Flame className={`w-6 h-6 ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-gray-400"}`} />
+                </div>
+                <div>
+                  <div className={`text-2xl font-bold mono ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-gray-400"}`}>
+                    {currentStreak}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {streakType === "win" ? "victoires" : streakType === "loss" ? "défaites" : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between"><span className="text-gray-500">Meilleure série W</span><span className="text-emerald-400 font-bold">{bestWin}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Pire série L</span><span className="text-rose-400 font-bold">{bestLoss}</span></div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Quick Stats */}
+        <div className="glass rounded-2xl p-4">
+          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Aujourd&apos;hui</h4>
+          {(() => {
+            const today = new Date().toISOString().slice(0, 10);
+            const todayTrades = trades.filter(t => new Date(t.date).toISOString().slice(0, 10) === today);
+            const todayPnL = todayTrades.reduce((s, t) => s + t.result, 0);
+            const todayWins = todayTrades.filter(t => t.result > 0).length;
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  {todayPnL >= 0 ? <TrendingUp className="w-5 h-5 text-emerald-400" /> : <TrendingDown className="w-5 h-5 text-rose-400" />}
+                  <span className={`text-xl font-bold mono ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                    {todayPnL >= 0 ? "+" : ""}€{todayPnL.toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500">{todayTrades.length} trades — {todayWins} gagnants</div>
+                <div className="text-xs text-gray-500">
+                  WR: {todayTrades.length > 0 ? ((todayWins / todayTrades.length) * 100).toFixed(0) : 0}%
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Forex Sessions */}
+        <ForexSessions />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

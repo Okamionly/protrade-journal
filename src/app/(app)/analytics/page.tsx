@@ -123,6 +123,158 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* R-Multiple Distribution */}
+      <div className="glass rounded-2xl p-6">
+        <h3 className="text-lg font-semibold mb-4">Distribution R-Multiple</h3>
+        {(() => {
+          const rMultiples = trades
+            .filter(t => t.sl && t.entry !== t.sl)
+            .map(t => {
+              const risk = Math.abs(t.entry - t.sl);
+              return risk > 0 ? t.result / risk : 0;
+            })
+            .filter(r => Math.abs(r) < 50);
+
+          if (rMultiples.length === 0) {
+            return <p className="text-gray-500 text-sm text-center py-12">Pas assez de données</p>;
+          }
+
+          const buckets: Record<string, number> = {};
+          for (let i = -5; i <= 5; i += 0.5) {
+            buckets[i.toFixed(1)] = 0;
+          }
+          rMultiples.forEach(r => {
+            const clamped = Math.max(-5, Math.min(5, r));
+            const bucket = (Math.round(clamped * 2) / 2).toFixed(1);
+            if (buckets[bucket] !== undefined) buckets[bucket]++;
+          });
+
+          const maxCount = Math.max(...Object.values(buckets), 1);
+
+          return (
+            <div className="space-y-3">
+              <div className="flex items-end gap-[2px] h-40">
+                {Object.entries(buckets).map(([key, count]) => {
+                  const r = parseFloat(key);
+                  const h = count > 0 ? Math.max((count / maxCount) * 100, 4) : 0;
+                  return (
+                    <div key={key} className="flex-1 flex flex-col items-center justify-end group relative">
+                      {count > 0 && (
+                        <div className="absolute -top-6 text-[9px] text-gray-500 opacity-0 group-hover:opacity-100 transition">{count}</div>
+                      )}
+                      <div
+                        className={`w-full rounded-t transition-all ${r >= 0 ? "bg-emerald-500" : "bg-rose-500"} hover:opacity-80`}
+                        style={{ height: `${h}%` }}
+                        title={`${key}R: ${count} trades`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-between text-[10px] text-gray-500">
+                <span>-5R</span>
+                <span>0R</span>
+                <span>+5R</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4 mt-4 text-center">
+                <div>
+                  <p className="text-xs text-gray-500">R moyen</p>
+                  <p className={`text-lg font-bold mono ${(rMultiples.reduce((a, b) => a + b, 0) / rMultiples.length) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                    {(rMultiples.reduce((a, b) => a + b, 0) / rMultiples.length).toFixed(2)}R
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Meilleur</p>
+                  <p className="text-lg font-bold mono text-emerald-400">+{Math.max(...rMultiples).toFixed(2)}R</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Pire</p>
+                  <p className="text-lg font-bold mono text-rose-400">{Math.min(...rMultiples).toFixed(2)}R</p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Equity by Strategy - Horizontal Bars */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="glass rounded-2xl p-6">
+          <h3 className="text-lg font-semibold mb-4">Equity par Stratégie</h3>
+          {(() => {
+            const strategies = [...new Set(trades.map(t => t.strategy))];
+            if (strategies.length === 0) return <p className="text-gray-500 text-sm text-center py-12">Pas assez de données</p>;
+
+            const bgColors = ["bg-cyan-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-purple-500"];
+            const strategyEquity: Record<string, number> = {};
+            strategies.forEach(s => { strategyEquity[s] = 0; });
+            trades.forEach(t => { strategyEquity[t.strategy] += t.result; });
+            const sorted = Object.entries(strategyEquity).sort((a, b) => b[1] - a[1]);
+            const maxVal = Math.max(...sorted.map(([, v]) => Math.abs(v)), 1);
+
+            return (
+              <div className="space-y-3">
+                {sorted.map(([name, pnl], i) => {
+                  const width = (Math.abs(pnl) / maxVal) * 100;
+                  const count = trades.filter(t => t.strategy === name).length;
+                  const wins = trades.filter(t => t.strategy === name && t.result > 0).length;
+                  return (
+                    <div key={name} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">{name} <span className="text-gray-500 text-xs">({count}t, {count > 0 ? ((wins / count) * 100).toFixed(0) : 0}%)</span></span>
+                        <span className={`mono font-bold ${pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {pnl >= 0 ? "+" : ""}€{pnl.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="h-3 bg-gray-700/50 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${pnl >= 0 ? bgColors[i % bgColors.length] : "bg-rose-500"}`} style={{ width: `${width}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+
+        <div className="glass rounded-2xl p-6">
+          <h3 className="text-lg font-semibold mb-4">Equity par Asset</h3>
+          {(() => {
+            const assets = [...new Set(trades.map(t => t.asset))];
+            if (assets.length === 0) return <p className="text-gray-500 text-sm text-center py-12">Pas assez de données</p>;
+
+            const bgColors = ["bg-blue-500", "bg-cyan-500", "bg-purple-500", "bg-amber-500", "bg-emerald-500"];
+            const assetEquity: Record<string, number> = {};
+            assets.forEach(a => { assetEquity[a] = 0; });
+            trades.forEach(t => { assetEquity[t.asset] += t.result; });
+            const sorted = Object.entries(assetEquity).sort((a, b) => b[1] - a[1]);
+            const maxVal = Math.max(...sorted.map(([, v]) => Math.abs(v)), 1);
+
+            return (
+              <div className="space-y-3">
+                {sorted.map(([name, pnl], i) => {
+                  const width = (Math.abs(pnl) / maxVal) * 100;
+                  const count = trades.filter(t => t.asset === name).length;
+                  return (
+                    <div key={name} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">{name} <span className="text-gray-500 text-xs">({count}t)</span></span>
+                        <span className={`mono font-bold ${pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {pnl >= 0 ? "+" : ""}€{pnl.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="h-3 bg-gray-700/50 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${pnl >= 0 ? bgColors[i % bgColors.length] : "bg-rose-500"}`} style={{ width: `${width}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
       {/* Performance par Asset */}
       <div className="glass rounded-2xl p-6">
         <h3 className="text-lg font-semibold mb-4">Performance par Asset</h3>
