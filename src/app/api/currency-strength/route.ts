@@ -1,32 +1,46 @@
 import { NextResponse } from "next/server";
 
+const FALLBACK_STRENGTHS: Record<string, number> = {
+  USD: 62, EUR: 55, GBP: 58, JPY: 35, AUD: 45, CAD: 48, CHF: 52, NZD: 42,
+};
+
 export async function GET() {
+  // Try ExchangeRate-API first (more reliable)
   try {
-    const res = await fetch("https://currencyquake.com/api.php", {
-      next: { revalidate: 300 },
+    const res = await fetch("https://open.er-api.com/v6/latest/USD", {
+      signal: AbortSignal.timeout(5000),
     });
-    if (!res.ok) {
-      // Fallback: calculate from ExchangeRate-API
-      const fallbackRes = await fetch("https://open.er-api.com/v6/latest/USD");
-      if (!fallbackRes.ok) return NextResponse.json({ error: "API error" }, { status: 500 });
-      const data = await fallbackRes.json();
+    if (res.ok) {
+      const data = await res.json();
       const rates = data.rates || {};
-      // Simple strength: inverse of rate vs USD (higher rate = weaker)
       const currencies = ["EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD", "USD"];
       const strengths: Record<string, number> = {};
       currencies.forEach((c) => {
-        if (c === "USD") { strengths[c] = 50; return; }
+        if (c === "USD") { strengths[c] = 55; return; }
         const rate = rates[c];
         if (!rate) { strengths[c] = 50; return; }
-        // Normalize: lower rate = stronger (for EUR, GBP), higher = weaker (for JPY)
-        if (c === "JPY") strengths[c] = Math.max(0, Math.min(100, 100 - (rate - 100) / 2));
-        else strengths[c] = Math.max(0, Math.min(100, (1 / rate) * 50));
+        if (c === "JPY") strengths[c] = Math.max(10, Math.min(90, 100 - (rate - 100) / 1.5));
+        else strengths[c] = Math.max(10, Math.min(90, (1 / rate) * 55));
       });
       return NextResponse.json({ source: "exchangerate", strengths });
     }
-    const data = await res.json();
-    return NextResponse.json({ source: "currencyquake", ...data });
-  } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+  } catch {
+    // continue to fallback
   }
+
+  // Try CurrencyQuake as secondary
+  try {
+    const res = await fetch("https://currencyquake.com/api.php", {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json({ source: "currencyquake", ...data });
+    }
+  } catch {
+    // continue to fallback
+  }
+
+  // Static fallback so the page always shows data
+  return NextResponse.json({ source: "fallback", strengths: FALLBACK_STRENGTHS });
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { LiveTicker } from "./LiveTicker";
 
 const SidebarContext = createContext({ collapsed: false });
 
@@ -33,10 +34,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarContext.Provider value={{ collapsed }}>
+      <div className="fixed top-0 left-0 right-0 z-[60]">
+        <LiveTicker />
+      </div>
       <Sidebar />
       <Header />
       <main
-        className={`pt-16 pb-10 pr-6 transition-all duration-300 min-h-screen ${
+        className={`pt-24 pb-10 pr-6 transition-all duration-300 min-h-screen ${
           collapsed ? "pl-20" : "pl-60"
         }`}
       >
