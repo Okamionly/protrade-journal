@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY || "";
+const FINNHUB_API_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY || process.env.FINNHUB_API_KEY || "d6qucn9r01qgdhqcfkrgd6qucn9r01qgdhqcfks0";
 
 export async function GET() {
   if (!FINNHUB_API_KEY) {

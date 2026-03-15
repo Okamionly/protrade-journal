@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const FRED_API_KEY = process.env.NEXT_PUBLIC_FRED_API_KEY || "";
+const FRED_API_KEY = process.env.NEXT_PUBLIC_FRED_API_KEY || process.env.FRED_API_KEY || "fbc067585f9c2ab426adc843d3b5a30b";
 const FRED_API_BASE = "https://api.stlouisfed.org/fred/series/observations";
 
 export async function GET(req: NextRequest) {
