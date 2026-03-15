@@ -15,6 +15,7 @@ model User {
   balance      Float         @default(25000)
   trades       Trade[]
   chatMessages ChatMessage[]
+  dailyPlans   DailyPlan[]
   createdAt    DateTime      @default(now())
 }
 
@@ -33,6 +34,9 @@ model Trade {
   emotion     String?
   setup       String?
   tags        String?
+  rating      Int?
+  notes       String?
+  duration    Int?
   userId      String
   user        User         @relation(fields: [userId], references: [id])
   screenshots  Screenshot[]
@@ -46,6 +50,23 @@ model Screenshot {
   url     String
   tradeId String
   trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+}
+
+model DailyPlan {
+  id        String   @id @default(cuid())
+  date      DateTime
+  bias      String?
+  notes     String?
+  pairs     String?
+  keyLevels String?
+  review    String?
+  grade     String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
 }
 
 model ChatRoom {
