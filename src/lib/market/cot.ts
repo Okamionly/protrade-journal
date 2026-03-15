@@ -26,8 +26,8 @@ export async function fetchCotData(assetKey: string, weeks = 52): Promise<CotPar
 
   return raw
     .map((r: Record<string, string>) => {
-      const ncLong = parseInt(r.ncomm_positions_long_all || "0");
-      const ncShort = parseInt(r.ncomm_positions_short_all || "0");
+      const ncLong = parseInt(r.noncomm_positions_long_all || "0");
+      const ncShort = parseInt(r.noncomm_positions_short_all || "0");
       const cLong = parseInt(r.comm_positions_long_all || "0");
       const cShort = parseInt(r.comm_positions_short_all || "0");
       const oi = parseInt(r.open_interest_all || "0");

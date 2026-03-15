@@ -65,15 +65,15 @@ export function LiveTicker() {
   const doubled = [...tickers, ...tickers];
 
   return (
-    <div className="w-full h-8 bg-gray-950/80 border-b border-gray-800 overflow-hidden relative">
+    <div className="w-full h-8 bg-gray-100/90 dark:bg-gray-950/80 border-b border-gray-200 dark:border-gray-800 overflow-hidden relative">
       <div
         className="flex items-center h-full gap-8 whitespace-nowrap absolute"
         style={{ transform: `translateX(-${offset % (tickers.length * 160)}px)` }}
       >
         {doubled.map((t, i) => (
           <div key={`${t.symbol}-${i}`} className="flex items-center gap-2 px-2">
-            <span className="text-[11px] font-medium text-gray-400">{t.symbol}</span>
-            <span className="text-[11px] font-bold mono text-white">{t.price}</span>
+            <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{t.symbol}</span>
+            <span className="text-[11px] font-bold mono text-gray-800 dark:text-white">{t.price}</span>
             <span className={`text-[10px] font-bold mono ${t.change >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
               {t.change >= 0 ? "+" : ""}{t.change}%
             </span>

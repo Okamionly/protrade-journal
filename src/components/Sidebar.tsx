@@ -65,10 +65,10 @@ export function Sidebar() {
     <aside
       className={`fixed left-0 top-8 h-[calc(100%-2rem)] z-50 flex flex-col transition-all duration-300 ${
         collapsed ? "w-16" : "w-56"
-      } bg-gray-950/95 dark:bg-gray-950/95 backdrop-blur-xl border-r border-gray-800 dark:border-gray-800`}
+      } bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800`}
     >
       {/* Logo area */}
-      <div className="flex items-center h-14 px-3 border-b border-gray-800 dark:border-gray-800">
+      <div className="flex items-center h-14 px-3 border-b border-gray-200 dark:border-gray-800">
         <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/20">
           <BarChart3 className="text-white w-5 h-5" />
         </div>
@@ -86,9 +86,9 @@ export function Sidebar() {
             return (
               <div key={`div-${i}`} className="pt-3 pb-1">
                 {!collapsed && "label" in item && item.label && (
-                  <span className="px-3 text-[10px] font-bold tracking-widest text-gray-600 uppercase">{item.label}</span>
+                  <span className="px-3 text-[10px] font-bold tracking-widest text-gray-400 dark:text-gray-600 uppercase">{item.label}</span>
                 )}
-                {collapsed && <div className="border-t border-gray-800 mx-2" />}
+                {collapsed && <div className="border-t border-gray-200 dark:border-gray-800 mx-2" />}
               </div>
             );
           }
@@ -104,14 +104,14 @@ export function Sidebar() {
               className={`flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all group relative ${
                 isActive
                   ? "bg-cyan-500/15 text-cyan-400"
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
               }`}
               title={collapsed ? item.label : undefined}
             >
               {isActive && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-cyan-400 rounded-r-full" />
               )}
-              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? "text-cyan-400" : "text-gray-500 group-hover:text-gray-300"}`} />
+              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? "text-cyan-400" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300"}`} />
               {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           );
@@ -119,10 +119,10 @@ export function Sidebar() {
       </nav>
 
       {/* Collapse button */}
-      <div className="p-2 border-t border-gray-800">
+      <div className="p-2 border-t border-gray-200 dark:border-gray-800">
         <button
           onClick={toggleCollapsed}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-gray-500 hover:text-gray-300 hover:bg-white/5 transition text-xs"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition text-xs"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /><span>Réduire</span></>}
         </button>
