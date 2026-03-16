@@ -2,7 +2,7 @@
 
 import { useTrades } from "@/hooks/useTrades";
 import { computeStats, computeStreaks, computeAssetPerformance, computeEmotionPerformance, computeMonthlyComparison } from "@/lib/utils";
-import { WeekdayChart, EquityChart, MonthlyComparisonChart, EmotionChart } from "@/components/ChartComponents";
+import { WeekdayChart, EquityChart, MonthlyComparisonChart, EmotionChart, AdvancedEquityChart } from "@/components/ChartComponents";
 import { AnalyticsSkeleton } from "@/components/Skeleton";
 import { useUser } from "@/hooks/useTrades";
 import { TrendingUp, TrendingDown, Zap, Flame } from "lucide-react";
@@ -100,6 +100,14 @@ export default function AnalyticsPage() {
         <div className="glass rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4">Courbe d&apos;Équité</h3>
           <EquityChart trades={trades} startingBalance={user?.balance ?? 25000} />
+        </div>
+      </div>
+
+      {/* Advanced Equity Curve with Drawdown */}
+      <div className="glass rounded-2xl p-6 mb-6">
+        <h3 className="text-lg font-semibold mb-4">Equity Avancée + Drawdown</h3>
+        <div className="h-80">
+          <AdvancedEquityChart trades={trades} />
         </div>
       </div>
 

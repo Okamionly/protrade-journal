@@ -9,7 +9,7 @@ import { useToast } from "@/components/Toast";
 import { ForexSessions } from "@/components/ForexSessions";
 import { calculateRR, formatDate } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 export default function DashboardPage() {
   const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
@@ -208,6 +208,65 @@ export default function DashboardPage() {
         {/* Forex Sessions */}
         <ForexSessions />
       </div>
+
+      {/* Weekly Comparison */}
+      {(() => {
+        const today = new Date();
+        const dayOfWeek = today.getDay() || 7;
+        const thisWeekStart = new Date(today);
+        thisWeekStart.setDate(today.getDate() - dayOfWeek + 1);
+        thisWeekStart.setHours(0, 0, 0, 0);
+        const lastWeekStart = new Date(thisWeekStart);
+        lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+        const lastWeekEnd = new Date(thisWeekStart);
+        lastWeekEnd.setMilliseconds(-1);
+
+        const thisWeekTrades = trades.filter(t => new Date(t.date) >= thisWeekStart);
+        const lastWeekTrades = trades.filter(t => { const d = new Date(t.date); return d >= lastWeekStart && d <= lastWeekEnd; });
+
+        const twPnL = thisWeekTrades.reduce((s, t) => s + t.result, 0);
+        const lwPnL = lastWeekTrades.reduce((s, t) => s + t.result, 0);
+        const twWins = thisWeekTrades.filter(t => t.result > 0).length;
+        const lwWins = lastWeekTrades.filter(t => t.result > 0).length;
+        const twWR = thisWeekTrades.length > 0 ? (twWins / thisWeekTrades.length) * 100 : 0;
+        const lwWR = lastWeekTrades.length > 0 ? (lwWins / lastWeekTrades.length) * 100 : 0;
+
+        const metrics = [
+          { label: "P&L", current: twPnL, previous: lwPnL, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}€` },
+          { label: "Trades", current: thisWeekTrades.length, previous: lastWeekTrades.length, format: (v: number) => String(v) },
+          { label: "Win Rate", current: twWR, previous: lwWR, format: (v: number) => `${v.toFixed(0)}%` },
+          { label: "Avg P&L", current: thisWeekTrades.length ? twPnL / thisWeekTrades.length : 0, previous: lastWeekTrades.length ? lwPnL / lastWeekTrades.length : 0, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}€` },
+        ];
+
+        return (
+          <div className="glass rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Calendar className="w-5 h-5 text-cyan-400" />
+              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Comparaison Hebdomadaire</h3>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {metrics.map(({ label, current, previous, format }) => {
+                const delta = previous !== 0 ? ((current - previous) / Math.abs(previous)) * 100 : current > 0 ? 100 : 0;
+                const improved = current >= previous;
+                return (
+                  <div key={label} className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
+                    <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{label}</div>
+                    <div className="text-xl font-bold mono" style={{ color: current >= 0 || label === "Trades" || label === "Win Rate" ? "var(--text-primary)" : "#ef4444" }}>
+                      {format(current)}
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      {improved ? <ArrowUpRight className="w-3 h-3 text-emerald-400" /> : <ArrowDownRight className="w-3 h-3 text-rose-400" />}
+                      <span className={`text-xs font-medium ${improved ? "text-emerald-400" : "text-rose-400"}`}>
+                        {Math.abs(delta).toFixed(0)}% vs sem. préc.
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass rounded-2xl p-6">

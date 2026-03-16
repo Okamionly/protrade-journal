@@ -6,7 +6,7 @@ import { JournalSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { calculateRR, formatDate } from "@/lib/utils";
 import { useState } from "react";
-import { Plus, Search, Camera, Trash2, Pencil, FilterX } from "lucide-react";
+import { Plus, Search, Camera, Trash2, Pencil, FilterX, ArrowUpDown } from "lucide-react";
 
 export default function JournalPage() {
   const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
@@ -19,14 +19,18 @@ export default function JournalPage() {
   const [resultFilter, setResultFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [emotionFilter, setEmotionFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"date" | "result" | "rr">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const hasFilters = search || assetFilter !== "all" || directionFilter !== "all" || resultFilter !== "all" || dateFrom || dateTo;
+  const hasFilters = search || assetFilter !== "all" || directionFilter !== "all" || resultFilter !== "all" || dateFrom || dateTo || emotionFilter !== "all";
 
   const resetFilters = () => {
     setSearch("");
     setAssetFilter("all");
     setDirectionFilter("all");
     setResultFilter("all");
+    setEmotionFilter("all");
     setDateFrom("");
     setDateTo("");
   };
@@ -36,10 +40,20 @@ export default function JournalPage() {
     const matchAsset = assetFilter === "all" || t.asset === assetFilter;
     const matchDirection = directionFilter === "all" || t.direction === directionFilter;
     const matchResult = resultFilter === "all" || (resultFilter === "win" && t.result > 0) || (resultFilter === "loss" && t.result < 0) || (resultFilter === "be" && t.result === 0);
+    const matchEmotion = emotionFilter === "all" || t.emotion === emotionFilter;
     const tradeDate = new Date(t.date);
     const matchDateFrom = !dateFrom || tradeDate >= new Date(dateFrom);
     const matchDateTo = !dateTo || tradeDate <= new Date(dateTo + "T23:59:59");
-    return matchSearch && matchAsset && matchDirection && matchResult && matchDateFrom && matchDateTo;
+    return matchSearch && matchAsset && matchDirection && matchResult && matchEmotion && matchDateFrom && matchDateTo;
+  });
+
+  // Sort
+  const sorted = [...filtered].sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === "date") cmp = new Date(a.date).getTime() - new Date(b.date).getTime();
+    else if (sortBy === "result") cmp = a.result - b.result;
+    else if (sortBy === "rr") cmp = (Number(calculateRR(a.entry, a.sl, a.tp)) || 0) - (Number(calculateRR(b.entry, b.sl, b.tp)) || 0);
+    return sortDir === "desc" ? -cmp : cmp;
   });
 
   const assets = [...new Set(trades.map((t) => t.asset))];
@@ -107,19 +121,32 @@ export default function JournalPage() {
             <option value="loss">Perdants</option>
             <option value="be">Break-even</option>
           </select>
-          <div className="flex gap-2">
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="flex-1 bg-gray-800/50 border border-gray-700 rounded-lg px-2 py-2 text-sm" placeholder="Du" />
-          </div>
+          <select value={emotionFilter} onChange={(e) => setEmotionFilter(e.target.value)} className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+            <option value="all">Toutes émotions</option>
+            {[...new Set(trades.map(t => t.emotion).filter((e): e is string => !!e))].map(e => <option key={e} value={e}>{e}</option>)}
+          </select>
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-gray-800/50 border border-gray-700 rounded-lg px-2 py-2 text-sm" />
         </div>
         <div className="flex items-center gap-3 mb-4">
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm" placeholder="Au" />
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
           {hasFilters && (
             <button onClick={resetFilters} className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition">
               <FilterX className="w-4 h-4" />
               Réinitialiser
             </button>
           )}
-          <span className="text-sm text-gray-500 ml-auto">{filtered.length} trade{filtered.length !== 1 ? "s" : ""}</span>
+          <div className="flex items-center gap-2 ml-auto">
+            <ArrowUpDown className="w-3.5 h-3.5 text-gray-500" />
+            <select value={`${sortBy}-${sortDir}`} onChange={(e) => { const [s, d] = e.target.value.split("-"); setSortBy(s as "date" | "result" | "rr"); setSortDir(d as "asc" | "desc"); }} className="bg-gray-800/50 border border-gray-700 rounded-lg px-2 py-1 text-xs">
+              <option value="date-desc">Date (récent)</option>
+              <option value="date-asc">Date (ancien)</option>
+              <option value="result-desc">P&L (meilleur)</option>
+              <option value="result-asc">P&L (pire)</option>
+              <option value="rr-desc">R:R (meilleur)</option>
+              <option value="rr-asc">R:R (pire)</option>
+            </select>
+          </div>
+          <span className="text-sm text-gray-500">{filtered.length} trade{filtered.length !== 1 ? "s" : ""}</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -141,12 +168,12 @@ export default function JournalPage() {
               </tr>
             </thead>
             <tbody className="text-sm">
-              {filtered.length === 0 ? (
+              {sorted.length === 0 ? (
                 <tr>
                   <td colSpan={12} className="py-8 text-center text-gray-500">Aucun trade trouvé</td>
                 </tr>
               ) : (
-                filtered.map((trade) => {
+                sorted.map((trade) => {
                   const isWin = trade.result > 0;
                   const rr = calculateRR(trade.entry, trade.sl, trade.tp);
                   return (

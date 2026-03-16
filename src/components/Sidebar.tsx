@@ -26,6 +26,8 @@ import {
   Shield,
   AlertOctagon,
   Clock,
+  BookMarked,
+  Award,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -37,9 +39,11 @@ const navItems = [
   { href: "/risk", label: "Risk Manager", icon: Shield },
   { href: "/mistakes", label: "Erreurs", icon: AlertOctagon },
   { href: "/strategies", label: "Stratégies", icon: Crosshair },
+  { href: "/playbook", label: "Playbook", icon: BookMarked },
   { href: "/import", label: "Import CSV", icon: Upload },
   { divider: true, label: "PERFORMANCE" },
   { href: "/performance", label: "Score", icon: Trophy },
+  { href: "/performance/grading", label: "Notation", icon: Award },
   { href: "/heatmap", label: "Heatmap", icon: Grid3x3 },
   { href: "/daily-bias", label: "Daily Bias", icon: Target },
   { divider: true, label: "MARCHÉ" },

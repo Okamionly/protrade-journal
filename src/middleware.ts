@@ -32,6 +32,7 @@ export const config = {
     "/currency-strength/:path*",
     "/news/:path*",
     "/strategies/:path*",
+    "/playbook/:path*",
     "/import/:path*",
     "/recaps/:path*",
     "/risk/:path*",

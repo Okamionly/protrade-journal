@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Chart, registerables } from "chart.js";
+import { Chart, registerables, Filler } from "chart.js";
 import { Trade } from "@/hooks/useTrades";
 import { useTheme } from "next-themes";
 import { MonthlyData, EmotionPerformance } from "@/lib/utils";
 
-Chart.register(...registerables);
+Chart.register(...registerables, Filler);
 
 interface EquityChartProps {
   trades: Trade[];
@@ -264,6 +264,160 @@ export function EmotionChart({ data }: { data: EmotionPerformance[] }) {
       chartRef.current?.destroy();
     };
   }, [data, theme]);
+
+  return (
+    <div className="chart-container">
+      <canvas ref={canvasRef} />
+    </div>
+  );
+}
+
+export function AdvancedEquityChart({ trades }: { trades: any[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || trades.length === 0) return;
+    if (chartRef.current) chartRef.current.destroy();
+
+    const gridColor = "rgba(255,255,255,0.1)";
+    const textColor = "rgba(255,255,255,0.6)";
+
+    const sorted = [...trades].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // Compute cumulative equity brute (raw P&L)
+    const equityBrute: number[] = [];
+    // Compute cumulative equity nette (P&L minus commissions and swaps)
+    const equityNette: number[] = [];
+
+    sorted.forEach((trade, i) => {
+      const prevBrute = i > 0 ? equityBrute[i - 1] : 0;
+      const prevNette = i > 0 ? equityNette[i - 1] : 0;
+      equityBrute.push(prevBrute + (trade.result ?? 0));
+      const commission = trade.commission ?? 0;
+      const swap = trade.swap ?? 0;
+      equityNette.push(prevNette + (trade.result ?? 0) - Math.abs(commission) - Math.abs(swap));
+    });
+
+    // Compute drawdown % based on equity brute
+    const drawdownPct: number[] = [];
+    let peak = 0;
+    equityBrute.forEach((eq) => {
+      if (eq > peak) peak = eq;
+      const dd = peak > 0 ? ((eq - peak) / peak) * 100 : 0;
+      drawdownPct.push(dd);
+    });
+
+    // High watermark value (peak equity)
+    const highWatermark = Math.max(...equityBrute, 0);
+
+    const labels = sorted.map((t) =>
+      new Date(t.date).toLocaleDateString("fr-FR")
+    );
+
+    chartRef.current = new Chart(canvasRef.current, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Equity Brute",
+            data: equityBrute,
+            borderColor: "#10b981",
+            backgroundColor: "transparent",
+            borderWidth: 2,
+            tension: 0.3,
+            pointRadius: 0,
+            yAxisID: "y",
+          },
+          {
+            label: "Equity Nette",
+            data: equityNette,
+            borderColor: "#06b6d4",
+            backgroundColor: "transparent",
+            borderWidth: 2,
+            tension: 0.3,
+            pointRadius: 0,
+            yAxisID: "y",
+          },
+          {
+            label: "Drawdown %",
+            data: drawdownPct,
+            borderColor: "#ef4444",
+            backgroundColor: "rgba(239, 68, 68, 0.2)",
+            borderWidth: 1,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            yAxisID: "y1",
+          },
+          {
+            label: "High Watermark",
+            data: Array(labels.length).fill(highWatermark),
+            borderColor: "rgba(255, 255, 255, 0.4)",
+            borderDash: [6, 4],
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: false,
+            yAxisID: "y",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: "index",
+          intersect: false,
+        },
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              color: textColor,
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: gridColor },
+            ticks: { color: textColor },
+          },
+          y: {
+            type: "linear",
+            position: "left",
+            title: {
+              display: true,
+              text: "Equity (\u20ac)",
+              color: textColor,
+            },
+            grid: { color: gridColor },
+            ticks: { color: textColor },
+          },
+          y1: {
+            type: "linear",
+            position: "right",
+            title: {
+              display: true,
+              text: "Drawdown (%)",
+              color: textColor,
+            },
+            grid: { drawOnChartArea: false },
+            ticks: {
+              color: textColor,
+              callback: (v: string | number) => `${v}%`,
+            },
+          },
+        },
+      },
+    });
+
+    return () => {
+      chartRef.current?.destroy();
+    };
+  }, [trades]);
 
   return (
     <div className="chart-container">
