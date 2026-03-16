@@ -41,6 +41,9 @@ export async function GET(req: Request) {
               date: true,
             },
           },
+          reactions: {
+            include: { user: { select: { id: true, name: true } } },
+          },
         },
         orderBy: { createdAt: "asc" },
         take: limit,

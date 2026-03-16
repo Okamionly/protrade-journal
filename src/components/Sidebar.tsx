@@ -20,7 +20,9 @@ import {
   Grid3x3,
   Target,
   Zap,
-  Clock,
+  Upload,
+  Crosshair,
+  FileBarChart,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -28,6 +30,8 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/strategies", label: "Stratégies", icon: Crosshair },
+  { href: "/import", label: "Import CSV", icon: Upload },
   { divider: true, label: "PERFORMANCE" },
   { href: "/performance", label: "Score", icon: Trophy },
   { href: "/heatmap", label: "Heatmap", icon: Grid3x3 },
@@ -40,6 +44,7 @@ const navItems = [
   { href: "/currency-strength", label: "Force Devises", icon: Zap },
   { href: "/news", label: "News", icon: Newspaper },
   { divider: true, label: "OUTILS" },
+  { href: "/recaps", label: "Recaps", icon: FileBarChart },
   { href: "/screenshots", label: "Screenshots", icon: Camera },
   { href: "/calendar", label: "Planning", icon: CalendarRange },
   { href: "/chat", label: "Chat", icon: MessageCircle },

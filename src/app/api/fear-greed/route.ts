@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const res = await fetch("https://api.alternative.me/fng/?limit=30&format=json", {
+    const { searchParams } = new URL(req.url);
+    const days = Math.min(parseInt(searchParams.get("days") || "30"), 365);
+    const res = await fetch(`https://api.alternative.me/fng/?limit=${days}&format=json`, {
       next: { revalidate: 300 }, // Cache 5 min
     });
     if (!res.ok) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { RefreshCw, TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
 
 interface FearGreedEntry {
@@ -25,8 +25,10 @@ const CLASSIFICATION_FR: Record<string, string> = {
   "Extreme Greed": "Avidité Extrême",
 };
 
+type RangeOption = 30 | 90 | 365;
+
 function GaugeChart({ value }: { value: number }) {
-  const angle = (value / 100) * 180 - 90; // -90 to 90 degrees
+  const angle = (value / 100) * 180 - 90;
   const getColor = (v: number) => {
     if (v <= 25) return "#ef4444";
     if (v <= 45) return "#f97316";
@@ -38,9 +40,7 @@ function GaugeChart({ value }: { value: number }) {
   return (
     <div className="relative w-64 h-36 mx-auto">
       <svg viewBox="0 0 200 110" className="w-full h-full">
-        {/* Background arc */}
         <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="16" strokeLinecap="round" />
-        {/* Value arc */}
         <path
           d="M 10 100 A 90 90 0 0 1 190 100"
           fill="none"
@@ -50,7 +50,6 @@ function GaugeChart({ value }: { value: number }) {
           strokeDasharray={`${(value / 100) * 283} 283`}
           className="transition-all duration-1000"
         />
-        {/* Needle */}
         <line
           x1="100" y1="100"
           x2={100 + 70 * Math.cos((angle * Math.PI) / 180)}
@@ -59,7 +58,6 @@ function GaugeChart({ value }: { value: number }) {
           className="transition-all duration-1000"
         />
         <circle cx="100" cy="100" r="4" fill="white" />
-        {/* Labels */}
         <text x="15" y="108" fill="#ef4444" fontSize="8" fontWeight="bold">0</text>
         <text x="93" y="15" fill="#6b7280" fontSize="8" fontWeight="bold">50</text>
         <text x="178" y="108" fill="#34d399" fontSize="8" fontWeight="bold">100</text>
@@ -74,11 +72,12 @@ function GaugeChart({ value }: { value: number }) {
 export default function SentimentPage() {
   const [data, setData] = useState<FearGreedEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<RangeOption>(30);
 
-  const load = async () => {
+  const load = async (days: number) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/fear-greed");
+      const res = await fetch(`/api/fear-greed?days=${days}`);
       if (res.ok) {
         const json = await res.json();
         setData(json.data || []);
@@ -88,7 +87,7 @@ export default function SentimentPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(range); }, [range]);
 
   const current = data[0];
   const yesterday = data[1];
@@ -110,26 +109,67 @@ export default function SentimentPage() {
     return <Minus className="w-3.5 h-3.5 text-gray-500" />;
   };
 
+  // Compute stats for historical data
+  const histStats = useMemo(() => {
+    if (data.length === 0) return null;
+    const vals = data.map((d) => parseInt(d.value));
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    return { avg: avg.toFixed(0), min, max };
+  }, [data]);
+
+  const getBarColor = (v: number) => {
+    if (v <= 25) return "#ef4444";
+    if (v <= 45) return "#f97316";
+    if (v <= 55) return "#6b7280";
+    if (v <= 75) return "#10b981";
+    return "#34d399";
+  };
+
+  // For the line chart, sample data if too many points
+  const chartData = useMemo(() => {
+    const reversed = [...data].reverse();
+    if (reversed.length <= 90) return reversed;
+    // Sample every Nth point
+    const step = Math.ceil(reversed.length / 90);
+    return reversed.filter((_, i) => i % step === 0 || i === reversed.length - 1);
+  }, [data]);
+
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Sentiment du Marché</h1>
-          <p className="text-sm text-gray-400 mt-1">Fear & Greed Index — Crypto Market</p>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Sentiment du Marché</h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>Fear & Greed Index — Crypto Market</p>
         </div>
-        <button onClick={load} className="p-2 rounded-lg hover:bg-white/5 transition" title="Rafraichir">
-          <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            {([30, 90, 365] as RangeOption[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`px-3 py-1.5 text-sm font-medium transition ${range === r ? "bg-cyan-500/20 text-cyan-400" : ""}`}
+                style={range !== r ? { color: "var(--text-secondary)" } : {}}
+              >
+                {r}j
+              </button>
+            ))}
+          </div>
+          <button onClick={() => load(range)} className="p-2 rounded-lg transition" style={{ color: "var(--text-muted)" }} title="Rafraichir">
+            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       {loading ? (
-        <div className="glass rounded-2xl p-8 animate-pulse">
-          <div className="h-48 bg-gray-700/30 rounded-xl" />
+        <div className="metric-card rounded-2xl p-8 animate-pulse">
+          <div className="h-48 rounded-xl" style={{ background: "var(--bg-secondary)" }} />
         </div>
       ) : (
         <>
           {/* Main gauge */}
-          <div className="glass rounded-2xl p-8">
+          <div className="metric-card rounded-2xl p-8">
             <GaugeChart value={currentVal} />
             <div className="text-center mt-4">
               <span className={`px-4 py-2 rounded-full text-sm font-bold ${config.bg} ${config.color} border ${config.border}`}>
@@ -149,8 +189,8 @@ export default function SentimentPage() {
               const val = entry ? parseInt(entry.value) : null;
               const cls = entry ? CLASSIFICATION_CONFIG[entry.value_classification] || CLASSIFICATION_CONFIG["Neutral"] : CLASSIFICATION_CONFIG["Neutral"];
               return (
-                <div key={label} className="glass rounded-2xl p-5">
-                  <p className="text-xs text-gray-500 mb-2">{label}</p>
+                <div key={label} className="metric-card rounded-2xl p-5">
+                  <p className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>{label}</p>
                   <div className="flex items-center justify-between">
                     <div>
                       <span className={`text-2xl font-bold mono ${cls.color}`}>{val ?? "—"}</span>
@@ -174,35 +214,46 @@ export default function SentimentPage() {
             })}
           </div>
 
-          {/* 30-day history bar chart */}
-          <div className="glass rounded-2xl p-6">
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
+          {/* Stats summary */}
+          {histStats && (
+            <div className="grid grid-cols-3 gap-4">
+              <div className="metric-card rounded-2xl p-4 text-center">
+                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Moyenne {range}j</div>
+                <div className="text-xl font-bold mono" style={{ color: "var(--text-primary)" }}>{histStats.avg}</div>
+              </div>
+              <div className="metric-card rounded-2xl p-4 text-center">
+                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Min {range}j</div>
+                <div className="text-xl font-bold mono text-rose-400">{histStats.min}</div>
+              </div>
+              <div className="metric-card rounded-2xl p-4 text-center">
+                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Max {range}j</div>
+                <div className="text-xl font-bold mono text-emerald-400">{histStats.max}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Historical bar chart */}
+          <div className="metric-card rounded-2xl p-6">
+            <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
               <Activity className="w-4 h-4 text-cyan-400" />
-              Historique 30 jours
+              Historique {range} jours
             </h3>
-            <div className="flex items-end gap-1 h-32">
-              {[...data].reverse().map((entry, i) => {
+            <div className="flex items-end gap-[1px] h-40">
+              {chartData.map((entry, i) => {
                 const val = parseInt(entry.value);
-                const getBarColor = (v: number) => {
-                  if (v <= 25) return "bg-rose-500";
-                  if (v <= 45) return "bg-orange-500";
-                  if (v <= 55) return "bg-gray-500";
-                  if (v <= 75) return "bg-emerald-500";
-                  return "bg-emerald-400";
-                };
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center group relative">
                     <div
-                      className={`w-full rounded-t ${getBarColor(val)} transition-all hover:opacity-80`}
-                      style={{ height: `${val}%` }}
+                      className="w-full rounded-t transition-all hover:opacity-80 cursor-default"
+                      style={{ height: `${val}%`, background: getBarColor(val) }}
                       title={`${val} - ${CLASSIFICATION_FR[entry.value_classification] || entry.value_classification}`}
                     />
                   </div>
                 );
               })}
             </div>
-            <div className="flex justify-between text-[10px] text-gray-500 mt-1">
-              <span>30j</span>
+            <div className="flex justify-between text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
+              <span>{range}j</span>
               <span>Aujourd&apos;hui</span>
             </div>
           </div>

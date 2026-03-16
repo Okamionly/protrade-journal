@@ -16,30 +16,42 @@ model User {
   trades       Trade[]
   chatMessages ChatMessage[]
   dailyPlans   DailyPlan[]
+  strategies   Strategy[]
+  tags         Tag[]
+  monthlyGoals MonthlyGoal[]
+  tradingRules TradingRule[]
+  reactions    Reaction[]
   createdAt    DateTime      @default(now())
 }
 
 model Trade {
-  id          String       @id @default(cuid())
-  date        DateTime
-  asset       String
-  direction   String
-  strategy    String
-  entry       Float
-  exit        Float?
-  sl          Float
-  tp          Float
-  lots        Float
-  result      Float
-  emotion     String?
-  setup       String?
-  tags        String?
-  rating      Int?
-  notes       String?
-  duration    Int?
-  userId      String
-  user        User         @relation(fields: [userId], references: [id])
+  id           String       @id @default(cuid())
+  date         DateTime
+  asset        String
+  direction    String
+  strategy     String
+  entry        Float
+  exit         Float?
+  sl           Float
+  tp           Float
+  lots         Float
+  result       Float
+  emotion      String?
+  setup        String?
+  tags         String?
+  rating       Int?
+  notes        String?
+  duration     Int?
+  commission   Float?       @default(0)
+  swap         Float?       @default(0)
+  maePrice     Float?
+  mfePrice     Float?
+  strategyId   String?
+  strategyRel  Strategy?    @relation(fields: [strategyId], references: [id])
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
   screenshots  Screenshot[]
+  tradeTags    TradeTag[]
   chatMessages ChatMessage[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -52,19 +64,75 @@ model Screenshot {
   trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
 }
 
+model Strategy {
+  id          String   @id @default(cuid())
+  name        String
+  color       String   @default("#0ea5e9")
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  trades      Trade[]
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, name])
+}
+
+model Tag {
+  id     String     @id @default(cuid())
+  name   String
+  color  String     @default("#6b7280")
+  userId String
+  user   User       @relation(fields: [userId], references: [id])
+  trades TradeTag[]
+
+  @@unique([userId, name])
+}
+
+model TradeTag {
+  tradeId String
+  trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tagId   String
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([tradeId, tagId])
+}
+
+model MonthlyGoal {
+  id            String @id @default(cuid())
+  month         Int
+  year          Int
+  targetPnl     Float?
+  targetTrades  Int?
+  targetWinRate Float?
+  userId        String
+  user          User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId, month, year])
+}
+
+model TradingRule {
+  id     String @id @default(cuid())
+  text   String
+  order  Int    @default(0)
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}
+
 model DailyPlan {
-  id        String   @id @default(cuid())
-  date      DateTime
-  bias      String?
-  notes     String?
-  pairs     String?
-  keyLevels String?
-  review    String?
-  grade     String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  date        DateTime
+  bias        String?
+  notes       String?
+  pairs       String?
+  keyLevels   String?
+  review      String?
+  grade       String?
+  screenshots String[] @default([])
+  shared      Boolean  @default(false)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([userId, date])
 }
@@ -80,15 +148,28 @@ model ChatRoom {
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   content   String
   imageUrl  String?
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
   roomId    String
-  room      ChatRoom @relation(fields: [roomId], references: [id])
+  room      ChatRoom   @relation(fields: [roomId], references: [id])
   tradeId   String?
-  trade     Trade?   @relation(fields: [tradeId], references: [id])
-  isPinned  Boolean  @default(false)
-  createdAt DateTime @default(now())
+  trade     Trade?     @relation(fields: [tradeId], references: [id])
+  isPinned  Boolean    @default(false)
+  reactions Reaction[]
+  createdAt DateTime   @default(now())
+}
+
+model Reaction {
+  id        String      @id @default(cuid())
+  emoji     String
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  messageId String
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([userId, messageId, emoji])
 }
