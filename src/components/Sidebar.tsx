@@ -28,6 +28,7 @@ import {
   Clock,
   BookMarked,
   Award,
+  Activity,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -53,6 +54,7 @@ const navItems = [
   { href: "/sentiment", label: "Sentiment", icon: Gauge },
   { href: "/currency-strength", label: "Force Devises", icon: Zap },
   { href: "/news", label: "News", icon: Newspaper },
+  { href: "/market", label: "Market Data", icon: Activity },
   { divider: true, label: "OUTILS" },
   { href: "/recaps", label: "Recaps", icon: FileBarChart },
   { href: "/screenshots", label: "Screenshots", icon: Camera },

@@ -38,6 +38,7 @@ export const config = {
     "/risk/:path*",
     "/mistakes/:path*",
     "/chat/:path*",
+    "/market/:path*",
     "/api/trades/:path*",
     "/api/upload/:path*",
     "/api/user/:path*",
