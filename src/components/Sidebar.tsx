@@ -23,6 +23,9 @@ import {
   Upload,
   Crosshair,
   FileBarChart,
+  Shield,
+  AlertOctagon,
+  Clock,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -30,6 +33,9 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/journal", label: "Journal", icon: BookOpen },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/analytics/distribution", label: "Distribution", icon: Clock },
+  { href: "/risk", label: "Risk Manager", icon: Shield },
+  { href: "/mistakes", label: "Erreurs", icon: AlertOctagon },
   { href: "/strategies", label: "Stratégies", icon: Crosshair },
   { href: "/import", label: "Import CSV", icon: Upload },
   { divider: true, label: "PERFORMANCE" },

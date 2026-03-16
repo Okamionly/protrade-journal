@@ -34,6 +34,8 @@ export const config = {
     "/strategies/:path*",
     "/import/:path*",
     "/recaps/:path*",
+    "/risk/:path*",
+    "/mistakes/:path*",
     "/chat/:path*",
     "/api/trades/:path*",
     "/api/upload/:path*",
