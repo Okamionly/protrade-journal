@@ -65,8 +65,7 @@ export const metadata: Metadata = {
     canonical: "https://protrade-journal.vercel.app",
   },
   verification: {
-    // Add your Google Search Console verification code here
-    // google: "YOUR_VERIFICATION_CODE",
+    google: "1ovgGf31NCAaEWZgILyqtlaCksw5vElLLrU6-p66jS0",
   },
 };
 
