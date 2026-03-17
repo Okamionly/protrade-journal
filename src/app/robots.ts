@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/api/", "/dashboard/", "/journal/", "/analytics/", "/calendar/", "/chat/", "/market/", "/screenshots/", "/import/", "/admin/"],
       },
     ],
-    sitemap: "https://protrade-journal.vercel.app/sitemap.xml",
+    sitemap: "https://marketphase.vercel.app/sitemap.xml",
   };
 }

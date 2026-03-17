@@ -7,7 +7,7 @@ import { ToastProvider } from "@/components/Toast";
 import { CommandPalette } from "@/components/CommandPalette";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://protrade-journal.vercel.app"),
+  metadataBase: new URL("https://marketphase.vercel.app"),
   title: {
     default: "MarketPhase - Journal de Trading Gratuit avec IA | 35+ Outils",
     template: "%s | MarketPhase - Journal de Trading",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     title: "MarketPhase - Journal de Trading Gratuit avec IA",
     description:
       "35+ outils de trading professionnels : analytics, AI Coach, market data live, options flow. 100% gratuit, pour toujours.",
-    url: "https://protrade-journal.vercel.app",
+    url: "https://marketphase.vercel.app",
     siteName: "MarketPhase",
     locale: "fr_FR",
     type: "website",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://protrade-journal.vercel.app",
+    canonical: "https://marketphase.vercel.app",
   },
   verification: {
     google: "1ovgGf31NCAaEWZgILyqtlaCksw5vElLLrU6-p66jS0",
@@ -78,7 +78,7 @@ const jsonLd = {
     "Journal de trading professionnel gratuit avec intelligence artificielle. 35+ outils : analytics avancés, AI Coach, market data live, options flow, gestion du risque.",
   applicationCategory: "FinanceApplication",
   operatingSystem: "Web",
-  url: "https://protrade-journal.vercel.app",
+  url: "https://marketphase.vercel.app",
   offers: {
     "@type": "Offer",
     price: "0",

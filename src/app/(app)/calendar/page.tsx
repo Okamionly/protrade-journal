@@ -1,19 +1,18 @@
 "use client";
 
 import { useTrades } from "@/hooks/useTrades";
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useState, useMemo } from "react";
+import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock } from "lucide-react";
 
 const MONTH_NAMES = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const DAY_FULL = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
-export default function CalendarPage() {
+export default function PnLCalendarPage() {
   const { trades, loading } = useTrades();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<{ day: number; trades: typeof trades } | null>(null);
-
-  if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">Chargement...</div></div>;
-  }
+  const [view, setView] = useState<"month" | "year">("month");
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -21,93 +20,364 @@ export default function CalendarPage() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startOffset = firstDay === 0 ? 6 : firstDay - 1;
 
-  // Group trades by day
+  // Group trades by day for current month
   const tradesByDay: Record<number, typeof trades> = {};
-  trades.forEach((t) => {
+  const monthTrades = trades.filter((t) => {
     const d = new Date(t.date);
-    if (d.getFullYear() === year && d.getMonth() === month) {
-      const day = d.getDate();
-      if (!tradesByDay[day]) tradesByDay[day] = [];
-      tradesByDay[day].push(t);
-    }
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+  monthTrades.forEach((t) => {
+    const day = new Date(t.date).getDate();
+    if (!tradesByDay[day]) tradesByDay[day] = [];
+    tradesByDay[day].push(t);
   });
 
-  const changeMonth = (delta: number) => {
-    setCurrentDate(new Date(year, month + delta, 1));
+  // Monthly stats
+  const stats = useMemo(() => {
+    const totalPnl = monthTrades.reduce((s, t) => s + t.result, 0);
+    const dayPnls: Record<number, number> = {};
+    monthTrades.forEach((t) => {
+      const day = new Date(t.date).getDate();
+      dayPnls[day] = (dayPnls[day] || 0) + t.result;
+    });
+    const dayEntries = Object.entries(dayPnls);
+    const winDays = dayEntries.filter(([, v]) => v > 0).length;
+    const lossDays = dayEntries.filter(([, v]) => v < 0).length;
+    const bestDay = dayEntries.length > 0 ? dayEntries.reduce((a, b) => (+a[1] > +b[1] ? a : b)) : null;
+    const worstDay = dayEntries.length > 0 ? dayEntries.reduce((a, b) => (+a[1] < +b[1] ? a : b)) : null;
+    const maxAbs = dayEntries.length > 0 ? Math.max(...dayEntries.map(([, v]) => Math.abs(+v)), 1) : 1;
+
+    // Streak calculation
+    let currentStreak = 0;
+    let maxStreak = 0;
+    const sortedDays = dayEntries.sort((a, b) => +a[0] - +b[0]);
+    for (const [, pnl] of sortedDays) {
+      if (+pnl > 0) { currentStreak++; maxStreak = Math.max(maxStreak, currentStreak); }
+      else currentStreak = 0;
+    }
+
+    // Day of week breakdown
+    const dowPnl: number[] = [0, 0, 0, 0, 0, 0, 0];
+    const dowCount: number[] = [0, 0, 0, 0, 0, 0, 0];
+    monthTrades.forEach((t) => {
+      const d = new Date(t.date);
+      const dow = d.getDay() === 0 ? 6 : d.getDay() - 1; // Mon=0 .. Sun=6
+      dowPnl[dow] += t.result;
+      dowCount[dow]++;
+    });
+
+    // Hour breakdown
+    const hourPnl: Record<number, number> = {};
+    const hourCount: Record<number, number> = {};
+    monthTrades.forEach((t) => {
+      const h = new Date(t.date).getHours();
+      hourPnl[h] = (hourPnl[h] || 0) + t.result;
+      hourCount[h] = (hourCount[h] || 0) + 1;
+    });
+
+    return { totalPnl, winDays, lossDays, bestDay, worstDay, maxAbs, maxStreak, dowPnl, dowCount, hourPnl, hourCount, tradingDays: dayEntries.length };
+  }, [monthTrades]);
+
+  // Year view data
+  const yearData = useMemo(() => {
+    if (view !== "year") return [];
+    return Array.from({ length: 12 }, (_, m) => {
+      const mt = trades.filter((t) => {
+        const d = new Date(t.date);
+        return d.getFullYear() === year && d.getMonth() === m;
+      });
+      const pnl = mt.reduce((s, t) => s + t.result, 0);
+      return { month: m, pnl, count: mt.length };
+    });
+  }, [trades, year, view]);
+
+  const changeMonth = (delta: number) => setCurrentDate(new Date(year, month + delta, 1));
+  const changeYear = (delta: number) => setCurrentDate(new Date(year + delta, month, 1));
+
+  const getPnlIntensity = (pnl: number) => {
+    const ratio = Math.min(Math.abs(pnl) / stats.maxAbs, 1);
+    const opacity = 0.1 + ratio * 0.5;
+    return pnl >= 0
+      ? `rgba(16, 185, 129, ${opacity})`
+      : `rgba(239, 68, 68, ${opacity})`;
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">Chargement...</div></div>;
+  }
 
   return (
     <div className="space-y-6">
-      <div className="glass rounded-2xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold">Calendrier des Trades</h3>
-          <div className="flex items-center space-x-2">
-            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg">
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <span className="px-4 py-2 font-medium">{MONTH_NAMES[month]} {year}</span>
-            <button onClick={() => changeMonth(1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg">
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[--text-primary]">P&L Calendar</h1>
+          <p className="text-sm text-[--text-secondary]">Visualisez votre performance jour par jour</p>
         </div>
-
-        <div className="grid grid-cols-7 gap-2 text-center mb-2 text-[--text-secondary] text-sm">
-          <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
-        </div>
-
-        <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: startOffset }).map((_, i) => (
-            <div key={`empty-${i}`} />
-          ))}
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const day = i + 1;
-            const dayTrades = tradesByDay[day] || [];
-            const hasTrade = dayTrades.length > 0;
-            const dayProfit = dayTrades.reduce((sum, t) => sum + t.result, 0);
-            const isWin = dayProfit >= 0;
-
-            return (
-              <div
-                key={day}
-                className={`calendar-day aspect-square rounded-lg border p-2 relative ${
-                  hasTrade
-                    ? isWin
-                      ? "bg-emerald-500/10 border-emerald-500/30"
-                      : "bg-rose-500/10 border-rose-500/30"
-                    : "bg-[--bg-secondary]/30 border-[--border]"
-                }`}
-                onClick={() => setSelectedDay({ day, trades: dayTrades })}
-              >
-                <span className={`text-sm ${hasTrade ? "font-bold" : "text-[--text-secondary]"} ${hasTrade ? (isWin ? "text-emerald-400" : "text-rose-400") : ""}`}>
-                  {day}
-                </span>
-                {hasTrade && (
-                  <div className={`text-xs mt-1 truncate ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
-                    {isWin ? "+" : ""}{dayProfit}€
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setView("month")}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "month" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary] hover:text-[--text-primary]"}`}
+          >
+            Mois
+          </button>
+          <button
+            onClick={() => setView("year")}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "year" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary] hover:text-[--text-primary]"}`}
+          >
+            Année
+          </button>
         </div>
       </div>
 
-      {/* Day Trades Modal */}
+      {/* Monthly Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="metric-card rounded-xl p-4 text-center">
+          <p className="text-xs text-[--text-muted] mb-1">P&L Mois</p>
+          <p className={`text-xl font-bold mono ${stats.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+            {stats.totalPnl >= 0 ? "+" : ""}{stats.totalPnl.toFixed(2)}€
+          </p>
+        </div>
+        <div className="metric-card rounded-xl p-4 text-center">
+          <p className="text-xs text-[--text-muted] mb-1">Jours Gagnants</p>
+          <p className="text-xl font-bold text-emerald-400">{stats.winDays}</p>
+        </div>
+        <div className="metric-card rounded-xl p-4 text-center">
+          <p className="text-xs text-[--text-muted] mb-1">Jours Perdants</p>
+          <p className="text-xl font-bold text-rose-400">{stats.lossDays}</p>
+        </div>
+        <div className="metric-card rounded-xl p-4 text-center">
+          <p className="text-xs text-[--text-muted] mb-1">Meilleur Jour</p>
+          <p className="text-xl font-bold text-emerald-400 mono">
+            {stats.bestDay ? `+${(+stats.bestDay[1]).toFixed(0)}€` : "—"}
+          </p>
+        </div>
+        <div className="metric-card rounded-xl p-4 text-center">
+          <p className="text-xs text-[--text-muted] mb-1">Pire Jour</p>
+          <p className="text-xl font-bold text-rose-400 mono">
+            {stats.worstDay ? `${(+stats.worstDay[1]).toFixed(0)}€` : "—"}
+          </p>
+        </div>
+        <div className="metric-card rounded-xl p-4 text-center">
+          <p className="text-xs text-[--text-muted] mb-1">Série Wins</p>
+          <p className="text-xl font-bold text-amber-400 flex items-center justify-center gap-1">
+            <Flame className="w-5 h-5" /> {stats.maxStreak}
+          </p>
+        </div>
+      </div>
+
+      {view === "month" ? (
+        <>
+          {/* Calendar Grid */}
+          <div className="glass rounded-2xl p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-lg font-semibold text-[--text-primary]">
+                  {MONTH_NAMES[month]} {year}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setCurrentDate(new Date())} className="text-xs px-3 py-1.5 rounded-lg glass text-[--text-secondary] hover:text-[--text-primary]">Aujourd&apos;hui</button>
+                <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronLeft className="w-5 h-5 text-[--text-secondary]" /></button>
+                <button onClick={() => changeMonth(1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronRight className="w-5 h-5 text-[--text-secondary]" /></button>
+              </div>
+            </div>
+
+            {/* Day headers */}
+            <div className="grid grid-cols-7 gap-2 text-center mb-3">
+              {DAY_NAMES.map((d) => (
+                <div key={d} className="text-xs font-semibold text-[--text-muted] py-2">{d}</div>
+              ))}
+            </div>
+
+            {/* Calendar days */}
+            <div className="grid grid-cols-7 gap-2">
+              {Array.from({ length: startOffset }).map((_, i) => (
+                <div key={`empty-${i}`} className="aspect-square" />
+              ))}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const dayTrades = tradesByDay[day] || [];
+                const hasTrade = dayTrades.length > 0;
+                const dayPnl = dayTrades.reduce((s, t) => s + t.result, 0);
+                const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
+
+                return (
+                  <div
+                    key={day}
+                    onClick={() => setSelectedDay({ day, trades: dayTrades })}
+                    className={`calendar-day aspect-square rounded-xl border p-2 flex flex-col justify-between cursor-pointer transition-all hover:scale-105 ${
+                      isToday ? "ring-2 ring-cyan-400/50" : ""
+                    } ${hasTrade ? "border-transparent" : "border-[--border-subtle] bg-[--bg-secondary]/20"}`}
+                    style={hasTrade ? { background: getPnlIntensity(dayPnl), borderColor: dayPnl >= 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)" } : undefined}
+                  >
+                    <span className={`text-sm font-medium ${isToday ? "text-cyan-400" : hasTrade ? (dayPnl >= 0 ? "text-emerald-300" : "text-rose-300") : "text-[--text-muted]"}`}>
+                      {day}
+                    </span>
+                    {hasTrade && (
+                      <div className="text-right">
+                        <p className={`text-xs font-bold mono ${dayPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {dayPnl >= 0 ? "+" : ""}{dayPnl.toFixed(0)}€
+                        </p>
+                        <p className="text-[10px] text-[--text-muted]">{dayTrades.length} trade{dayTrades.length > 1 ? "s" : ""}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[--border-subtle]">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-emerald-500/30 border border-emerald-500/40" />
+                <span className="text-xs text-[--text-muted]">Jour gagnant</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-rose-500/30 border border-rose-500/40" />
+                <span className="text-xs text-[--text-muted]">Jour perdant</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded ring-2 ring-cyan-400/50 bg-[--bg-secondary]/20" />
+                <span className="text-xs text-[--text-muted]">Aujourd&apos;hui</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Day of Week Performance */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="glass rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-lg font-semibold text-[--text-primary]">Performance par Jour</h3>
+              </div>
+              <div className="space-y-3">
+                {DAY_FULL.map((dayName, idx) => {
+                  const pnl = stats.dowPnl[idx];
+                  const count = stats.dowCount[idx];
+                  const maxDow = Math.max(...stats.dowPnl.map(Math.abs), 1);
+                  const width = Math.abs(pnl) / maxDow * 100;
+                  return (
+                    <div key={dayName} className="flex items-center gap-3">
+                      <span className="text-sm text-[--text-secondary] w-20 shrink-0">{dayName}</span>
+                      <div className="flex-1 h-7 bg-[--bg-secondary]/50 rounded-lg overflow-hidden relative">
+                        {count > 0 && (
+                          <div
+                            className={`h-full rounded-lg ${pnl >= 0 ? "bg-emerald-500/40" : "bg-rose-500/40"}`}
+                            style={{ width: `${Math.max(width, 5)}%` }}
+                          />
+                        )}
+                        <span className={`absolute inset-0 flex items-center px-3 text-xs font-medium mono ${pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {count > 0 ? `${pnl >= 0 ? "+" : ""}${pnl.toFixed(0)}€ (${count} trades)` : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Hour Performance */}
+            <div className="glass rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-lg font-semibold text-[--text-primary]">Performance par Heure</h3>
+              </div>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {Object.entries(stats.hourPnl)
+                  .sort(([a], [b]) => +a - +b)
+                  .map(([hour, pnl]) => {
+                    const count = stats.hourCount[+hour] || 0;
+                    const maxH = Math.max(...Object.values(stats.hourPnl).map(Math.abs), 1);
+                    const width = Math.abs(pnl) / maxH * 100;
+                    return (
+                      <div key={hour} className="flex items-center gap-3">
+                        <span className="text-sm text-[--text-secondary] w-12 shrink-0">{hour}:00</span>
+                        <div className="flex-1 h-6 bg-[--bg-secondary]/50 rounded-lg overflow-hidden relative">
+                          <div
+                            className={`h-full rounded-lg ${pnl >= 0 ? "bg-emerald-500/40" : "bg-rose-500/40"}`}
+                            style={{ width: `${Math.max(width, 5)}%` }}
+                          />
+                          <span className={`absolute inset-0 flex items-center px-3 text-[11px] font-medium mono ${pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                            {pnl >= 0 ? "+" : ""}{pnl.toFixed(0)}€ ({count})
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                {Object.keys(stats.hourPnl).length === 0 && (
+                  <p className="text-sm text-[--text-muted] text-center py-4">Aucune donnée horaire</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* Year View */
+        <div className="glass rounded-2xl p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-semibold text-[--text-primary]">Vue Annuelle {year}</h3>
+            <div className="flex items-center gap-2">
+              <button onClick={() => changeYear(-1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronLeft className="w-5 h-5 text-[--text-secondary]" /></button>
+              <button onClick={() => changeYear(1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronRight className="w-5 h-5 text-[--text-secondary]" /></button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {yearData.map(({ month: m, pnl, count }) => {
+              const maxYearPnl = Math.max(...yearData.map((d) => Math.abs(d.pnl)), 1);
+              const intensity = count > 0 ? 0.1 + (Math.abs(pnl) / maxYearPnl) * 0.5 : 0;
+              return (
+                <div
+                  key={m}
+                  onClick={() => { setCurrentDate(new Date(year, m, 1)); setView("month"); }}
+                  className="rounded-xl border p-4 cursor-pointer transition-all hover:scale-105"
+                  style={{
+                    background: count > 0 ? (pnl >= 0 ? `rgba(16,185,129,${intensity})` : `rgba(239,68,68,${intensity})`) : "var(--bg-secondary)",
+                    borderColor: count > 0 ? (pnl >= 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)") : "var(--border-subtle)",
+                  }}
+                >
+                  <p className="text-sm font-medium text-[--text-primary]">{MONTH_NAMES[m]}</p>
+                  <p className={`text-lg font-bold mono mt-1 ${count > 0 ? (pnl >= 0 ? "text-emerald-400" : "text-rose-400") : "text-[--text-muted]"}`}>
+                    {count > 0 ? `${pnl >= 0 ? "+" : ""}${pnl.toFixed(0)}€` : "—"}
+                  </p>
+                  <p className="text-xs text-[--text-muted] mt-1">{count} trade{count !== 1 ? "s" : ""}</p>
+                </div>
+              );
+            })}
+          </div>
+          {/* Year Total */}
+          <div className="mt-6 pt-4 border-t border-[--border-subtle] flex justify-between items-center">
+            <span className="text-sm text-[--text-secondary]">Total {year}</span>
+            <span className={`text-xl font-bold mono ${yearData.reduce((s, d) => s + d.pnl, 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+              {yearData.reduce((s, d) => s + d.pnl, 0) >= 0 ? "+" : ""}{yearData.reduce((s, d) => s + d.pnl, 0).toFixed(2)}€
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Day Detail Modal */}
       {selectedDay && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedDay(null)}>
           <div className="glass rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold">
-                Trades du {selectedDay.day} {MONTH_NAMES[month]} {year}
-              </h3>
-              <button onClick={() => setSelectedDay(null)} className="text-[--text-secondary] hover:text-current">
+              <div>
+                <h3 className="text-xl font-bold text-[--text-primary]">
+                  {selectedDay.day} {MONTH_NAMES[month]} {year}
+                </h3>
+                {selectedDay.trades.length > 0 && (
+                  <p className={`text-sm font-medium mt-1 ${selectedDay.trades.reduce((s, t) => s + t.result, 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                    Total : {selectedDay.trades.reduce((s, t) => s + t.result, 0) >= 0 ? "+" : ""}{selectedDay.trades.reduce((s, t) => s + t.result, 0).toFixed(2)}€
+                  </p>
+                )}
+              </div>
+              <button onClick={() => setSelectedDay(null)} className="text-[--text-secondary] hover:text-[--text-primary]">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="space-y-3">
               {selectedDay.trades.length === 0 ? (
-                <p className="text-[--text-muted] text-center py-4">Aucun trade ce jour</p>
+                <p className="text-[--text-muted] text-center py-8">Aucun trade ce jour</p>
               ) : (
                 selectedDay.trades.map((trade) => {
                   const isWin = trade.result > 0;
@@ -115,22 +385,18 @@ export default function CalendarPage() {
                     <div key={trade.id} className={`p-4 rounded-xl border ${isWin ? "border-emerald-500/30 bg-emerald-500/10" : "border-rose-500/30 bg-rose-500/10"}`}>
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-bold">
+                          <p className="font-bold text-[--text-primary]">
                             {trade.asset}{" "}
                             <span className={`text-xs px-2 py-1 rounded ${trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
                               {trade.direction}
                             </span>
                           </p>
-                          <p className="text-sm text-[--text-secondary] mt-1">
-                            {trade.strategy} | {trade.setup?.substring(0, 50) || "Pas de description"}
-                          </p>
-                          <p className="text-xs text-[--text-muted] mt-1">
-                            {new Date(trade.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                          </p>
+                          <p className="text-sm text-[--text-secondary] mt-1">{trade.strategy}</p>
+                          {trade.emotion && <p className="text-xs text-[--text-muted] mt-1">{trade.emotion}</p>}
                         </div>
                         <div className="text-right">
                           <p className={`text-xl font-bold mono ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
-                            {isWin ? "+" : ""}{trade.result}€
+                            {isWin ? "+" : ""}{trade.result.toFixed(2)}€
                           </p>
                           <p className="text-xs text-[--text-muted]">{trade.lots} lots</p>
                         </div>

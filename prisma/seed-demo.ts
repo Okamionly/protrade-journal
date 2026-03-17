@@ -164,8 +164,10 @@ async function main() {
     { month: now.getMonth() - 1 < 0 ? 11 : now.getMonth() - 1, year: now.getMonth() - 1 < 0 ? now.getFullYear() - 1 : now.getFullYear() },
   ];
   for (const { month, year } of months) {
-    await prisma.monthlyGoal.create({
-      data: {
+    await prisma.monthlyGoal.upsert({
+      where: { userId_month_year: { userId: user.id, month, year } },
+      update: {},
+      create: {
         userId: user.id,
         month,
         year,
@@ -185,6 +187,8 @@ async function main() {
     "Toujours attendre la confirmation",
     "Pas de trading le vendredi après-midi",
   ];
+  // Delete existing rules for demo user and recreate
+  await prisma.tradingRule.deleteMany({ where: { userId: user.id } });
   for (let i = 0; i < rules.length; i++) {
     await prisma.tradingRule.create({
       data: { userId: user.id, text: rules[i], order: i },
