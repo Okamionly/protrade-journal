@@ -34,6 +34,8 @@ import {
   Play,
   GitCompare,
   Layers,
+  Eye,
+  CheckSquare,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -46,6 +48,7 @@ const navItems = [
   { href: "/mistakes", label: "Erreurs", icon: AlertOctagon },
   { href: "/strategies", label: "Stratégies", icon: Crosshair },
   { href: "/playbook", label: "Playbook", icon: BookMarked },
+  { href: "/checklist", label: "Checklist", icon: CheckSquare },
   { href: "/import", label: "Import CSV", icon: Upload },
   { divider: true, label: "PERFORMANCE" },
   { href: "/performance", label: "Score", icon: Trophy },
@@ -60,6 +63,12 @@ const navItems = [
   { href: "/currency-strength", label: "Force Devises", icon: Zap },
   { href: "/news", label: "News", icon: Newspaper },
   { href: "/market", label: "Market Data", icon: Activity },
+  { href: "/scanner", label: "Scanner", icon: Crosshair },
+  { href: "/watchlist", label: "Watchlist", icon: Eye },
+  { href: "/sector-heatmap", label: "Heatmap Secteurs", icon: Grid3x3 },
+  { href: "/volatility", label: "Volatilité", icon: Gauge },
+  { href: "/earnings", label: "Earnings", icon: CalendarDays },
+  { href: "/flow", label: "Options Flow", icon: Zap },
   { divider: true, label: "AVANCÉ" },
   { href: "/ai-coach", label: "AI Coach", icon: Brain },
   { href: "/calculator", label: "Calculateur", icon: Calculator },
