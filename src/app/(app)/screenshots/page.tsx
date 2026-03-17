@@ -10,7 +10,7 @@ export default function ScreenshotsPage() {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Chargement...</div></div>;
+    return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">Chargement...</div></div>;
   }
 
   const allScreenshots: { src: string; trade: typeof trades[0] }[] = [];
@@ -45,7 +45,7 @@ export default function ScreenshotsPage() {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 text-sm"
+            className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-4 py-2 text-sm"
           >
             <option value="all">Tous les trades</option>
             <option value="win">Trades gagnants</option>
@@ -54,7 +54,7 @@ export default function ScreenshotsPage() {
         </div>
 
         {allScreenshots.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-[--text-muted]">
             <Camera className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>Aucun screenshot enregistré</p>
           </div>
@@ -82,27 +82,27 @@ export default function ScreenshotsPage() {
       <div className="glass rounded-2xl p-6">
         <h3 className="text-lg font-semibold mb-4">Analyse Visuelle</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-gray-800/50 rounded-xl p-4">
-            <h4 className="text-sm font-medium text-gray-400 mb-2">Setups les plus profitables</h4>
+          <div className="bg-[--bg-secondary]/50 rounded-xl p-4">
+            <h4 className="text-sm font-medium text-[--text-secondary] mb-2">Setups les plus profitables</h4>
             <div className="space-y-2">
               {sortedStrats.length > 0 ? sortedStrats.map(([name, stats]) => (
-                <div key={name} className="flex justify-between items-center p-2 bg-gray-800/50 rounded-lg">
+                <div key={name} className="flex justify-between items-center p-2 bg-[--bg-secondary]/50 rounded-lg">
                   <span className="text-sm">{name}</span>
                   <span className={`text-sm font-bold ${stats.profit > 0 ? "text-emerald-400" : "text-rose-400"}`}>
                     {stats.profit > 0 ? "+" : ""}{stats.profit}€
                   </span>
                 </div>
-              )) : <p className="text-gray-600 text-sm">Pas assez de données</p>}
+              )) : <p className="text-[--text-muted] text-sm">Pas assez de données</p>}
             </div>
           </div>
-          <div className="bg-gray-800/50 rounded-xl p-4">
-            <h4 className="text-sm font-medium text-gray-400 mb-2">Erreurs visuelles fréquentes</h4>
+          <div className="bg-[--bg-secondary]/50 rounded-xl p-4">
+            <h4 className="text-sm font-medium text-[--text-secondary] mb-2">Erreurs visuelles fréquentes</h4>
             <div className="space-y-2">
-              <div className="flex items-center space-x-2 p-2 bg-gray-800/50 rounded-lg">
+              <div className="flex items-center space-x-2 p-2 bg-[--bg-secondary]/50 rounded-lg">
                 <span className="text-yellow-500">⚠</span>
                 <span className="text-sm">Entrées anticipées sur breakout</span>
               </div>
-              <div className="flex items-center space-x-2 p-2 bg-gray-800/50 rounded-lg">
+              <div className="flex items-center space-x-2 p-2 bg-[--bg-secondary]/50 rounded-lg">
                 <span className="text-yellow-500">⚠</span>
                 <span className="text-sm">SL trop serré en volatilité</span>
               </div>

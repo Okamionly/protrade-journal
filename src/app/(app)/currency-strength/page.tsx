@@ -25,7 +25,7 @@ function getStrengthColor(value: number): string {
 function getStrengthLabel(value: number): { text: string; color: string } {
   if (value >= 70) return { text: "Fort", color: "text-emerald-400" };
   if (value >= 55) return { text: "Haussier", color: "text-emerald-400/70" };
-  if (value >= 45) return { text: "Neutre", color: "text-gray-400" };
+  if (value >= 45) return { text: "Neutre", color: "text-[--text-secondary]" };
   if (value >= 30) return { text: "Baissier", color: "text-rose-400/70" };
   return { text: "Faible", color: "text-rose-400" };
 }
@@ -70,17 +70,17 @@ export default function CurrencyStrengthPage() {
             <Activity className="w-6 h-6 text-cyan-400" />
             Currency Strength
           </h1>
-          <p className="text-sm text-gray-400 mt-1">Force relative des devises majeures</p>
+          <p className="text-sm text-[--text-secondary] mt-1">Force relative des devises majeures</p>
         </div>
         <button onClick={load} className="p-2 rounded-lg hover:bg-white/5 transition">
-          <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
 
       {loading ? (
         <div className="glass rounded-2xl p-6 animate-pulse">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-12 bg-gray-700/30 rounded mb-2" />
+            <div key={i} className="h-12 bg-[--bg-secondary]/30 rounded mb-2" />
           ))}
         </div>
       ) : (
@@ -96,7 +96,7 @@ export default function CurrencyStrengthPage() {
                   <span className="font-bold text-sm">{currency}</span>
                 </div>
                 <div className="flex-1">
-                  <div className="h-8 bg-gray-800/50 rounded-lg overflow-hidden relative">
+                  <div className="h-8 bg-[--bg-secondary]/50 rounded-lg overflow-hidden relative">
                     <div className={`h-full rounded-lg ${getStrengthColor(value)} transition-all duration-500`}
                       style={{ width: `${value}%` }} />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold mono">{value.toFixed(1)}</span>
@@ -130,7 +130,7 @@ export default function CurrencyStrengthPage() {
               </span>
             )}
           </div>
-          <p className="text-[10px] text-gray-500 mt-2">Basé sur la différence de force entre devises</p>
+          <p className="text-[10px] text-[--text-muted] mt-2">Basé sur la différence de force entre devises</p>
         </div>
       )}
     </div>

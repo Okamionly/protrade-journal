@@ -23,27 +23,27 @@ export default function AnalyticsPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="glass rounded-2xl p-6">
-          <h4 className="text-gray-400 text-sm mb-2">Profit Factor</h4>
+          <h4 className="text-[--text-secondary] text-sm mb-2">Profit Factor</h4>
           <p className="text-3xl font-bold text-emerald-400 mono">
             {stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)}
           </p>
-          <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className="mt-2 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
             <div className="h-full bg-emerald-500" style={{ width: `${Math.min(stats.profitFactor * 25, 100)}%` }} />
           </div>
         </div>
         <div className="glass rounded-2xl p-6">
-          <h4 className="text-gray-400 text-sm mb-2">Drawdown Max</h4>
+          <h4 className="text-[--text-secondary] text-sm mb-2">Drawdown Max</h4>
           <p className="text-3xl font-bold text-rose-400 mono">
             -€{stats.maxDrawdown.toFixed(2)}
           </p>
-          <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className="mt-2 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
             <div className="h-full bg-rose-500" style={{ width: `${Math.min((stats.maxDrawdown / (user?.balance ?? 25000)) * 100, 100)}%` }} />
           </div>
         </div>
         <div className="glass rounded-2xl p-6">
-          <h4 className="text-gray-400 text-sm mb-2">Sharpe Ratio</h4>
+          <h4 className="text-[--text-secondary] text-sm mb-2">Sharpe Ratio</h4>
           <p className="text-3xl font-bold text-blue-400 mono">{stats.sharpeRatio.toFixed(2)}</p>
-          <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className="mt-2 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
             <div className="h-full bg-blue-500" style={{ width: `${Math.min(Math.abs(stats.sharpeRatio) * 30, 100)}%` }} />
           </div>
         </div>
@@ -56,7 +56,7 @@ export default function AnalyticsPage() {
             <TrendingUp className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <p className="text-xs text-gray-400">Meilleure série</p>
+            <p className="text-xs text-[--text-secondary]">Meilleure série</p>
             <p className="text-xl font-bold text-emerald-400 mono">{streaks.bestWinStreak} wins</p>
           </div>
         </div>
@@ -65,7 +65,7 @@ export default function AnalyticsPage() {
             <TrendingDown className="w-5 h-5 text-rose-400" />
           </div>
           <div>
-            <p className="text-xs text-gray-400">Pire série</p>
+            <p className="text-xs text-[--text-secondary]">Pire série</p>
             <p className="text-xl font-bold text-rose-400 mono">{streaks.worstLossStreak} losses</p>
           </div>
         </div>
@@ -74,8 +74,8 @@ export default function AnalyticsPage() {
             {streaks.currentStreakType === "win" ? <Flame className="w-5 h-5 text-emerald-400" /> : <Zap className="w-5 h-5 text-rose-400" />}
           </div>
           <div>
-            <p className="text-xs text-gray-400">Série en cours</p>
-            <p className={`text-xl font-bold mono ${streaks.currentStreakType === "win" ? "text-emerald-400" : streaks.currentStreakType === "loss" ? "text-rose-400" : "text-gray-400"}`}>
+            <p className="text-xs text-[--text-secondary]">Série en cours</p>
+            <p className={`text-xl font-bold mono ${streaks.currentStreakType === "win" ? "text-emerald-400" : streaks.currentStreakType === "loss" ? "text-rose-400" : "text-[--text-secondary]"}`}>
               {streaks.currentStreak > 0 ? `${streaks.currentStreak} ${streaks.currentStreakType === "win" ? "wins" : "losses"}` : "-"}
             </p>
           </div>
@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
             <span className="text-lg">📊</span>
           </div>
           <div>
-            <p className="text-xs text-gray-400">R:R Moyen</p>
+            <p className="text-xs text-[--text-secondary]">R:R Moyen</p>
             <p className="text-xl font-bold text-amber-400 mono">1:{stats.avgRR}</p>
           </div>
         </div>
@@ -118,7 +118,7 @@ export default function AnalyticsPage() {
           {monthlyData.length > 0 ? (
             <MonthlyComparisonChart data={monthlyData} />
           ) : (
-            <p className="text-gray-500 text-sm text-center py-12">Pas assez de données</p>
+            <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de données</p>
           )}
         </div>
         <div className="glass rounded-2xl p-6">
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
           {emotionPerf.length > 0 ? (
             <EmotionChart data={emotionPerf} />
           ) : (
-            <p className="text-gray-500 text-sm text-center py-12">Pas assez de données</p>
+            <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de données</p>
           )}
         </div>
       </div>
@@ -144,7 +144,7 @@ export default function AnalyticsPage() {
             .filter(r => Math.abs(r) < 50);
 
           if (rMultiples.length === 0) {
-            return <p className="text-gray-500 text-sm text-center py-12">Pas assez de données</p>;
+            return <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de données</p>;
           }
 
           const buckets: Record<string, number> = {};
@@ -168,7 +168,7 @@ export default function AnalyticsPage() {
                   return (
                     <div key={key} className="flex-1 flex flex-col items-center justify-end group relative">
                       {count > 0 && (
-                        <div className="absolute -top-6 text-[9px] text-gray-500 opacity-0 group-hover:opacity-100 transition">{count}</div>
+                        <div className="absolute -top-6 text-[9px] text-[--text-muted] opacity-0 group-hover:opacity-100 transition">{count}</div>
                       )}
                       <div
                         className={`w-full rounded-t transition-all ${r >= 0 ? "bg-emerald-500" : "bg-rose-500"} hover:opacity-80`}
@@ -179,24 +179,24 @@ export default function AnalyticsPage() {
                   );
                 })}
               </div>
-              <div className="flex justify-between text-[10px] text-gray-500">
+              <div className="flex justify-between text-[10px] text-[--text-muted]">
                 <span>-5R</span>
                 <span>0R</span>
                 <span>+5R</span>
               </div>
               <div className="grid grid-cols-3 gap-4 mt-4 text-center">
                 <div>
-                  <p className="text-xs text-gray-500">R moyen</p>
+                  <p className="text-xs text-[--text-muted]">R moyen</p>
                   <p className={`text-lg font-bold mono ${(rMultiples.reduce((a, b) => a + b, 0) / rMultiples.length) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                     {(rMultiples.reduce((a, b) => a + b, 0) / rMultiples.length).toFixed(2)}R
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Meilleur</p>
+                  <p className="text-xs text-[--text-muted]">Meilleur</p>
                   <p className="text-lg font-bold mono text-emerald-400">+{Math.max(...rMultiples).toFixed(2)}R</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Pire</p>
+                  <p className="text-xs text-[--text-muted]">Pire</p>
                   <p className="text-lg font-bold mono text-rose-400">{Math.min(...rMultiples).toFixed(2)}R</p>
                 </div>
               </div>
@@ -211,7 +211,7 @@ export default function AnalyticsPage() {
           <h3 className="text-lg font-semibold mb-4">Equity par Stratégie</h3>
           {(() => {
             const strategies = [...new Set(trades.map(t => t.strategy))];
-            if (strategies.length === 0) return <p className="text-gray-500 text-sm text-center py-12">Pas assez de données</p>;
+            if (strategies.length === 0) return <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de données</p>;
 
             const bgColors = ["bg-cyan-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-purple-500"];
             const strategyEquity: Record<string, number> = {};
@@ -229,12 +229,12 @@ export default function AnalyticsPage() {
                   return (
                     <div key={name} className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="font-medium">{name} <span className="text-gray-500 text-xs">({count}t, {count > 0 ? ((wins / count) * 100).toFixed(0) : 0}%)</span></span>
+                        <span className="font-medium">{name} <span className="text-[--text-muted] text-xs">({count}t, {count > 0 ? ((wins / count) * 100).toFixed(0) : 0}%)</span></span>
                         <span className={`mono font-bold ${pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                           {pnl >= 0 ? "+" : ""}€{pnl.toFixed(2)}
                         </span>
                       </div>
-                      <div className="h-3 bg-gray-700/50 rounded-full overflow-hidden">
+                      <div className="h-3 bg-[--bg-secondary]/50 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${pnl >= 0 ? bgColors[i % bgColors.length] : "bg-rose-500"}`} style={{ width: `${width}%` }} />
                       </div>
                     </div>
@@ -249,7 +249,7 @@ export default function AnalyticsPage() {
           <h3 className="text-lg font-semibold mb-4">Equity par Asset</h3>
           {(() => {
             const assets = [...new Set(trades.map(t => t.asset))];
-            if (assets.length === 0) return <p className="text-gray-500 text-sm text-center py-12">Pas assez de données</p>;
+            if (assets.length === 0) return <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de données</p>;
 
             const bgColors = ["bg-blue-500", "bg-cyan-500", "bg-purple-500", "bg-amber-500", "bg-emerald-500"];
             const assetEquity: Record<string, number> = {};
@@ -266,12 +266,12 @@ export default function AnalyticsPage() {
                   return (
                     <div key={name} className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="font-medium">{name} <span className="text-gray-500 text-xs">({count}t)</span></span>
+                        <span className="font-medium">{name} <span className="text-[--text-muted] text-xs">({count}t)</span></span>
                         <span className={`mono font-bold ${pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                           {pnl >= 0 ? "+" : ""}€{pnl.toFixed(2)}
                         </span>
                       </div>
-                      <div className="h-3 bg-gray-700/50 rounded-full overflow-hidden">
+                      <div className="h-3 bg-[--bg-secondary]/50 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${pnl >= 0 ? bgColors[i % bgColors.length] : "bg-rose-500"}`} style={{ width: `${width}%` }} />
                       </div>
                     </div>
@@ -289,7 +289,7 @@ export default function AnalyticsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-400 border-b border-gray-700">
+              <tr className="text-left text-[--text-secondary] border-b border-[--border]">
                 <th className="pb-3 font-medium">Asset</th>
                 <th className="pb-3 font-medium">Trades</th>
                 <th className="pb-3 font-medium">Win Rate</th>
@@ -299,12 +299,12 @@ export default function AnalyticsPage() {
             </thead>
             <tbody>
               {assetPerf.map((a) => (
-                <tr key={a.asset} className="border-b border-gray-800">
+                <tr key={a.asset} className="border-b border-[--border-subtle]">
                   <td className="py-3 font-medium">{a.asset}</td>
                   <td className="py-3 mono">{a.trades}</td>
                   <td className="py-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-16 h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div className="w-16 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
                         <div className="h-full bg-emerald-500" style={{ width: `${a.winRate}%` }} />
                       </div>
                       <span className="mono text-emerald-400 text-xs">{a.winRate.toFixed(1)}%</span>
@@ -319,7 +319,7 @@ export default function AnalyticsPage() {
                 </tr>
               ))}
               {assetPerf.length === 0 && (
-                <tr><td colSpan={5} className="py-6 text-center text-gray-500">Aucun trade</td></tr>
+                <tr><td colSpan={5} className="py-6 text-center text-[--text-muted]">Aucun trade</td></tr>
               )}
             </tbody>
           </table>
@@ -332,7 +332,7 @@ export default function AnalyticsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-400 border-b border-gray-700">
+              <tr className="text-left text-[--text-secondary] border-b border-[--border]">
                 <th className="pb-3 font-medium">Émotion</th>
                 <th className="pb-3 font-medium">Trades</th>
                 <th className="pb-3 font-medium">Win Rate</th>
@@ -342,12 +342,12 @@ export default function AnalyticsPage() {
             </thead>
             <tbody>
               {emotionPerf.map((e) => (
-                <tr key={e.emotion} className="border-b border-gray-800">
+                <tr key={e.emotion} className="border-b border-[--border-subtle]">
                   <td className="py-3 font-medium">{e.emotion}</td>
                   <td className="py-3 mono">{e.trades}</td>
                   <td className="py-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-16 h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div className="w-16 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
                         <div className="h-full bg-emerald-500" style={{ width: `${e.winRate}%` }} />
                       </div>
                       <span className="mono text-emerald-400 text-xs">{e.winRate.toFixed(1)}%</span>
@@ -362,7 +362,7 @@ export default function AnalyticsPage() {
                 </tr>
               ))}
               {emotionPerf.length === 0 && (
-                <tr><td colSpan={5} className="py-6 text-center text-gray-500">Aucun trade</td></tr>
+                <tr><td colSpan={5} className="py-6 text-center text-[--text-muted]">Aucun trade</td></tr>
               )}
             </tbody>
           </table>
@@ -375,7 +375,7 @@ export default function AnalyticsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-400 border-b border-gray-700">
+              <tr className="text-left text-[--text-secondary] border-b border-[--border]">
                 <th className="pb-3 font-medium">Stratégie</th>
                 <th className="pb-3 font-medium">Trades</th>
                 <th className="pb-3 font-medium">Win Rate</th>
@@ -393,12 +393,12 @@ export default function AnalyticsPage() {
                   if (t.result > 0) strategyMap[t.strategy].wins++;
                 });
                 return Object.entries(strategyMap).map(([name, s]) => (
-                  <tr key={name} className="border-b border-gray-800">
+                  <tr key={name} className="border-b border-[--border-subtle]">
                     <td className="py-3 font-medium">{name}</td>
                     <td className="py-3 mono">{s.count}</td>
                     <td className="py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-16 h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div className="w-16 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
                           <div className="h-full bg-emerald-500" style={{ width: `${(s.wins / s.count) * 100}%` }} />
                         </div>
                         <span className="mono text-emerald-400 text-xs">{((s.wins / s.count) * 100).toFixed(1)}%</span>

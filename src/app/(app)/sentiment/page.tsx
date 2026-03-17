@@ -12,7 +12,7 @@ interface FearGreedEntry {
 const CLASSIFICATION_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
   "Extreme Fear": { color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30" },
   "Fear": { color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30" },
-  "Neutral": { color: "text-gray-400", bg: "bg-gray-500/10", border: "border-gray-500/30" },
+  "Neutral": { color: "text-[--text-secondary]", bg: "bg-gray-500/10", border: "border-gray-500/30" },
   "Greed": { color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" },
   "Extreme Greed": { color: "text-emerald-300", bg: "bg-emerald-500/15", border: "border-emerald-400/30" },
 };
@@ -103,10 +103,10 @@ export default function SentimentPage() {
   };
 
   const DeltaIcon = ({ delta }: { delta: number | null }) => {
-    if (delta === null) return <Minus className="w-3.5 h-3.5 text-gray-500" />;
+    if (delta === null) return <Minus className="w-3.5 h-3.5 text-[--text-muted]" />;
     if (delta > 0) return <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />;
     if (delta < 0) return <TrendingDown className="w-3.5 h-3.5 text-rose-400" />;
-    return <Minus className="w-3.5 h-3.5 text-gray-500" />;
+    return <Minus className="w-3.5 h-3.5 text-[--text-muted]" />;
   };
 
   // Compute stats for historical data
@@ -203,7 +203,7 @@ export default function SentimentPage() {
                     <div className="flex items-center gap-1">
                       <DeltaIcon delta={delta} />
                       {delta !== null && (
-                        <span className={`text-sm font-bold mono ${delta > 0 ? "text-emerald-400" : delta < 0 ? "text-rose-400" : "text-gray-500"}`}>
+                        <span className={`text-sm font-bold mono ${delta > 0 ? "text-emerald-400" : delta < 0 ? "text-rose-400" : "text-[--text-muted]"}`}>
                           {delta > 0 ? "+" : ""}{delta}
                         </span>
                       )}

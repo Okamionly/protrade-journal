@@ -16,7 +16,7 @@ const COUNTRY_FLAGS: Record<string, string> = {
 const IMPACT_CONFIG = {
   high: { label: "Élevé", dot: "bg-rose-500", text: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30" },
   medium: { label: "Moyen", dot: "bg-amber-500", text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30" },
-  low: { label: "Faible", dot: "bg-gray-500", text: "text-gray-400", bg: "bg-gray-500/10", border: "border-gray-500/30" },
+  low: { label: "Faible", dot: "bg-gray-500", text: "text-[--text-secondary]", bg: "bg-gray-500/10", border: "border-gray-500/30" },
 };
 
 function formatDayHeader(dateStr: string): string {
@@ -72,10 +72,10 @@ export default function CalendarEcoPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Calendrier Économique</h1>
-          <p className="text-sm text-gray-400 mt-1">Événements macro et publications à venir</p>
+          <p className="text-sm text-[--text-secondary] mt-1">Événements macro et publications à venir</p>
         </div>
         <button onClick={load} className="p-2 rounded-lg hover:bg-white/5 transition" title="Rafraichir">
-          <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
 
@@ -92,7 +92,7 @@ export default function CalendarEcoPage() {
                     ? imp === "all"
                       ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
                       : `${config!.bg} ${config!.text} border ${config!.border}`
-                    : "text-gray-400 hover:text-white border border-gray-700 hover:border-gray-600"
+                    : "text-[--text-secondary] hover:text-white border border-[--border] hover:border-gray-600"
                 }`}>
                 {config && <span className={`w-2 h-2 rounded-full ${config.dot}`} />}
                 {imp === "all" ? "Tous" : config!.label}
@@ -102,38 +102,38 @@ export default function CalendarEcoPage() {
         </div>
 
         <select value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)}
-          className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-cyan-500/50 focus:outline-none transition">
+          className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm focus:border-cyan-500/50 focus:outline-none transition">
           <option value="all">Tous pays</option>
           {countries.map((c) => (
             <option key={c} value={c}>{COUNTRY_FLAGS[c] || ""} {c}</option>
           ))}
         </select>
 
-        <span className="text-xs text-gray-500 ml-auto">{filtered.length} événements</span>
+        <span className="text-xs text-[--text-muted] ml-auto">{filtered.length} événements</span>
       </div>
 
       {loading ? (
         <div className="glass rounded-2xl p-6 animate-pulse">
           <div className="space-y-3">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-10 bg-gray-700/30 rounded" />
+              <div key={i} className="h-10 bg-[--bg-secondary]/30 rounded" />
             ))}
           </div>
         </div>
       ) : sortedDates.length === 0 ? (
-        <div className="glass rounded-2xl p-8 text-center text-gray-500">Aucun événement avec ces filtres</div>
+        <div className="glass rounded-2xl p-8 text-center text-[--text-muted]">Aucun événement avec ces filtres</div>
       ) : (
         <div className="space-y-4">
           {sortedDates.map((date) => (
             <div key={date} className="glass rounded-2xl overflow-hidden">
               {/* Day header */}
-              <div className={`px-4 py-3 border-b border-gray-700/50 ${isToday(date) ? "bg-cyan-500/5" : ""}`}>
+              <div className={`px-4 py-3 border-b border-[--border]/50 ${isToday(date) ? "bg-cyan-500/5" : ""}`}>
                 <h3 className="font-semibold text-sm flex items-center gap-2">
                   {isToday(date) && <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />}
                   <span className={isToday(date) ? "text-cyan-400" : "text-gray-300"}>
                     {formatDayHeader(date)}
                   </span>
-                  <span className="text-xs text-gray-500 font-normal ml-auto">{grouped[date].length} événements</span>
+                  <span className="text-xs text-[--text-muted] font-normal ml-auto">{grouped[date].length} événements</span>
                 </h3>
               </div>
 
@@ -141,7 +141,7 @@ export default function CalendarEcoPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-gray-500 text-xs uppercase tracking-wider border-b border-gray-800/50">
+                    <tr className="text-left text-[--text-muted] text-xs uppercase tracking-wider border-b border-[--border-subtle]/50">
                       <th className="px-4 py-2 w-16">Heure</th>
                       <th className="px-4 py-2 w-16">Impact</th>
                       <th className="px-4 py-2 w-16">Pays</th>
@@ -162,14 +162,14 @@ export default function CalendarEcoPage() {
                         : null;
 
                       return (
-                        <tr key={i} className={`border-b border-gray-800/30 transition hover:bg-white/5 ${e.impact === "high" ? "bg-rose-500/[0.03]" : ""}`}>
-                          <td className="px-4 py-2.5 mono text-xs text-gray-400">{e.time || "—"}</td>
+                        <tr key={i} className={`border-b border-[--border-subtle]/30 transition hover:bg-white/5 ${e.impact === "high" ? "bg-rose-500/[0.03]" : ""}`}>
+                          <td className="px-4 py-2.5 mono text-xs text-[--text-secondary]">{e.time || "—"}</td>
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-1">
                               {[1, 2, 3].map((dot) => (
                                 <span key={dot} className={`w-2 h-2 rounded-full ${
                                   (e.impact === "high" && dot <= 3) || (e.impact === "medium" && dot <= 2) || (e.impact === "low" && dot <= 1)
-                                    ? config.dot : "bg-gray-700"
+                                    ? config.dot : "bg-[--bg-secondary]"
                                 }`} />
                               ))}
                             </div>
@@ -177,22 +177,22 @@ export default function CalendarEcoPage() {
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-1.5">
                               <span className="text-sm">{COUNTRY_FLAGS[e.country] || ""}</span>
-                              <span className="text-xs font-medium text-gray-300 bg-gray-800 px-1.5 py-0.5 rounded">{e.country}</span>
+                              <span className="text-xs font-medium text-gray-300 bg-[--bg-secondary] px-1.5 py-0.5 rounded">{e.country}</span>
                             </div>
                           </td>
                           <td className="px-4 py-2.5 font-medium text-gray-200 flex items-center gap-1.5">
                             {e.event}
-                            <Info className="w-3.5 h-3.5 text-gray-600 hover:text-gray-400 cursor-help flex-shrink-0" />
+                            <Info className="w-3.5 h-3.5 text-[--text-muted] hover:text-[--text-secondary] cursor-help flex-shrink-0" />
                           </td>
                           <td className={`px-4 py-2.5 text-right mono text-xs font-bold ${
                             actualVsForecast === "better" ? "text-emerald-400"
                               : actualVsForecast === "worse" ? "text-rose-400"
-                              : hasActual ? "text-white" : "text-gray-600"
+                              : hasActual ? "text-white" : "text-[--text-muted]"
                           }`}>
                             {e.actual}
                           </td>
-                          <td className="px-4 py-2.5 text-right mono text-xs text-gray-400">{e.estimate}</td>
-                          <td className="px-4 py-2.5 text-right mono text-xs text-gray-500">{e.prev}</td>
+                          <td className="px-4 py-2.5 text-right mono text-xs text-[--text-secondary]">{e.estimate}</td>
+                          <td className="px-4 py-2.5 text-right mono text-xs text-[--text-muted]">{e.prev}</td>
                         </tr>
                       );
                     })}

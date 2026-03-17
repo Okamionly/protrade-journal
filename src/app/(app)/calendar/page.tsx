@@ -12,7 +12,7 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState<{ day: number; trades: typeof trades } | null>(null);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Chargement...</div></div>;
+    return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">Chargement...</div></div>;
   }
 
   const year = currentDate.getFullYear();
@@ -42,17 +42,17 @@ export default function CalendarPage() {
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-semibold">Calendrier des Trades</h3>
           <div className="flex items-center space-x-2">
-            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-gray-700 rounded-lg">
+            <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg">
               <ChevronLeft className="w-5 h-5" />
             </button>
             <span className="px-4 py-2 font-medium">{MONTH_NAMES[month]} {year}</span>
-            <button onClick={() => changeMonth(1)} className="p-2 hover:bg-gray-700 rounded-lg">
+            <button onClick={() => changeMonth(1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg">
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-2 text-center mb-2 text-gray-400 text-sm">
+        <div className="grid grid-cols-7 gap-2 text-center mb-2 text-[--text-secondary] text-sm">
           <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
         </div>
 
@@ -75,11 +75,11 @@ export default function CalendarPage() {
                     ? isWin
                       ? "bg-emerald-500/10 border-emerald-500/30"
                       : "bg-rose-500/10 border-rose-500/30"
-                    : "bg-gray-800/30 border-gray-700"
+                    : "bg-[--bg-secondary]/30 border-[--border]"
                 }`}
                 onClick={() => setSelectedDay({ day, trades: dayTrades })}
               >
-                <span className={`text-sm ${hasTrade ? "font-bold" : "text-gray-400"} ${hasTrade ? (isWin ? "text-emerald-400" : "text-rose-400") : ""}`}>
+                <span className={`text-sm ${hasTrade ? "font-bold" : "text-[--text-secondary]"} ${hasTrade ? (isWin ? "text-emerald-400" : "text-rose-400") : ""}`}>
                   {day}
                 </span>
                 {hasTrade && (
@@ -101,13 +101,13 @@ export default function CalendarPage() {
               <h3 className="text-xl font-bold">
                 Trades du {selectedDay.day} {MONTH_NAMES[month]} {year}
               </h3>
-              <button onClick={() => setSelectedDay(null)} className="text-gray-400 hover:text-current">
+              <button onClick={() => setSelectedDay(null)} className="text-[--text-secondary] hover:text-current">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="space-y-3">
               {selectedDay.trades.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Aucun trade ce jour</p>
+                <p className="text-[--text-muted] text-center py-4">Aucun trade ce jour</p>
               ) : (
                 selectedDay.trades.map((trade) => {
                   const isWin = trade.result > 0;
@@ -121,10 +121,10 @@ export default function CalendarPage() {
                               {trade.direction}
                             </span>
                           </p>
-                          <p className="text-sm text-gray-400 mt-1">
+                          <p className="text-sm text-[--text-secondary] mt-1">
                             {trade.strategy} | {trade.setup?.substring(0, 50) || "Pas de description"}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-[--text-muted] mt-1">
                             {new Date(trade.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                           </p>
                         </div>
@@ -132,7 +132,7 @@ export default function CalendarPage() {
                           <p className={`text-xl font-bold mono ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
                             {isWin ? "+" : ""}{trade.result}€
                           </p>
-                          <p className="text-xs text-gray-500">{trade.lots} lots</p>
+                          <p className="text-xs text-[--text-muted]">{trade.lots} lots</p>
                         </div>
                       </div>
                     </div>

@@ -51,10 +51,10 @@ export default function NewsPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">News Feed</h1>
-          <p className="text-sm text-gray-400 dark:text-gray-400 mt-1">Actualités financières en temps réel</p>
+          <p className="text-sm text-[--text-secondary] dark:text-[--text-secondary] mt-1">Actualités financières en temps réel</p>
         </div>
         <button onClick={load} className="p-2 rounded-lg hover:bg-white/5 transition" title="Rafraichir">
-          <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
 
@@ -65,7 +65,7 @@ export default function NewsPage() {
           className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition ${
             filter === "all"
               ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
-              : "text-gray-400 hover:text-white border border-gray-700 hover:border-gray-600"
+              : "text-[--text-secondary] hover:text-white border border-[--border] hover:border-gray-600"
           }`}
         >
           Tous ({news.length})
@@ -77,7 +77,7 @@ export default function NewsPage() {
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition ${
               filter === cat
                 ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
-                : "text-gray-400 hover:text-white border border-gray-700 hover:border-gray-600"
+                : "text-[--text-secondary] hover:text-white border border-[--border] hover:border-gray-600"
             }`}
           >
             {cat}
@@ -89,14 +89,14 @@ export default function NewsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="glass rounded-2xl p-4 animate-pulse">
-              <div className="h-40 bg-gray-700/30 rounded-xl mb-3" />
-              <div className="h-4 bg-gray-700/30 rounded w-3/4 mb-2" />
-              <div className="h-3 bg-gray-700/30 rounded w-full" />
+              <div className="h-40 bg-[--bg-secondary]/30 rounded-xl mb-3" />
+              <div className="h-4 bg-[--bg-secondary]/30 rounded w-3/4 mb-2" />
+              <div className="h-3 bg-[--bg-secondary]/30 rounded w-full" />
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="glass rounded-2xl p-8 text-center text-gray-500">Aucune actualité disponible</div>
+        <div className="glass rounded-2xl p-8 text-center text-[--text-muted]">Aucune actualité disponible</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((item) => (
@@ -123,9 +123,9 @@ export default function NewsPage() {
                     {item.source}
                   </span>
                   {item.category && (
-                    <span className="text-[10px] text-gray-500 uppercase">{item.category}</span>
+                    <span className="text-[10px] text-[--text-muted] uppercase">{item.category}</span>
                   )}
-                  <span className="text-[10px] text-gray-500 ml-auto flex items-center gap-1">
+                  <span className="text-[10px] text-[--text-muted] ml-auto flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {timeAgo(item.datetime)}
                   </span>
@@ -133,7 +133,7 @@ export default function NewsPage() {
                 <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-cyan-400 transition">
                   {item.headline}
                 </h3>
-                <p className="text-xs text-gray-400 line-clamp-2">{item.summary}</p>
+                <p className="text-xs text-[--text-secondary] line-clamp-2">{item.summary}</p>
                 <div className="mt-3 flex items-center gap-1 text-xs text-cyan-400 opacity-0 group-hover:opacity-100 transition">
                   <ExternalLink className="w-3 h-3" />
                   Lire l&apos;article

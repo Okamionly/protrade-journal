@@ -97,47 +97,47 @@ export default function JournalPage() {
         {/* Filtres avancés */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           <div className="relative lg:col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--text-muted]" />
             <input
               type="text"
               placeholder="Rechercher..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm"
+              className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg pl-10 pr-4 py-2 text-sm"
             />
           </div>
-          <select value={assetFilter} onChange={(e) => setAssetFilter(e.target.value)} className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+          <select value={assetFilter} onChange={(e) => setAssetFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm">
             <option value="all">Tous les actifs</option>
             {assets.map((a) => (<option key={a} value={a}>{a}</option>))}
           </select>
-          <select value={directionFilter} onChange={(e) => setDirectionFilter(e.target.value)} className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+          <select value={directionFilter} onChange={(e) => setDirectionFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm">
             <option value="all">Toutes directions</option>
             <option value="LONG">LONG</option>
             <option value="SHORT">SHORT</option>
           </select>
-          <select value={resultFilter} onChange={(e) => setResultFilter(e.target.value)} className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+          <select value={resultFilter} onChange={(e) => setResultFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm">
             <option value="all">Tous résultats</option>
             <option value="win">Gagnants</option>
             <option value="loss">Perdants</option>
             <option value="be">Break-even</option>
           </select>
-          <select value={emotionFilter} onChange={(e) => setEmotionFilter(e.target.value)} className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm">
+          <select value={emotionFilter} onChange={(e) => setEmotionFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm">
             <option value="all">Toutes émotions</option>
             {[...new Set(trades.map(t => t.emotion).filter((e): e is string => !!e))].map(e => <option key={e} value={e}>{e}</option>)}
           </select>
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-gray-800/50 border border-gray-700 rounded-lg px-2 py-2 text-sm" />
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-2 py-2 text-sm" />
         </div>
         <div className="flex items-center gap-3 mb-4">
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm" />
           {hasFilters && (
-            <button onClick={resetFilters} className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition">
+            <button onClick={resetFilters} className="flex items-center gap-1 text-sm text-[--text-secondary] hover:text-white transition">
               <FilterX className="w-4 h-4" />
               Réinitialiser
             </button>
           )}
           <div className="flex items-center gap-2 ml-auto">
-            <ArrowUpDown className="w-3.5 h-3.5 text-gray-500" />
-            <select value={`${sortBy}-${sortDir}`} onChange={(e) => { const [s, d] = e.target.value.split("-"); setSortBy(s as "date" | "result" | "rr"); setSortDir(d as "asc" | "desc"); }} className="bg-gray-800/50 border border-gray-700 rounded-lg px-2 py-1 text-xs">
+            <ArrowUpDown className="w-3.5 h-3.5 text-[--text-muted]" />
+            <select value={`${sortBy}-${sortDir}`} onChange={(e) => { const [s, d] = e.target.value.split("-"); setSortBy(s as "date" | "result" | "rr"); setSortDir(d as "asc" | "desc"); }} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-2 py-1 text-xs">
               <option value="date-desc">Date (récent)</option>
               <option value="date-asc">Date (ancien)</option>
               <option value="result-desc">P&L (meilleur)</option>
@@ -146,13 +146,13 @@ export default function JournalPage() {
               <option value="rr-asc">R:R (pire)</option>
             </select>
           </div>
-          <span className="text-sm text-gray-500">{filtered.length} trade{filtered.length !== 1 ? "s" : ""}</span>
+          <span className="text-sm text-[--text-muted]">{filtered.length} trade{filtered.length !== 1 ? "s" : ""}</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-gray-400 text-sm border-b border-gray-700">
+              <tr className="text-left text-[--text-secondary] text-sm border-b border-[--border]">
                 <th className="pb-3 font-medium">Date</th>
                 <th className="pb-3 font-medium">Actif</th>
                 <th className="pb-3 font-medium">Direction</th>
@@ -170,15 +170,15 @@ export default function JournalPage() {
             <tbody className="text-sm">
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="py-8 text-center text-gray-500">Aucun trade trouvé</td>
+                  <td colSpan={12} className="py-8 text-center text-[--text-muted]">Aucun trade trouvé</td>
                 </tr>
               ) : (
                 sorted.map((trade) => {
                   const isWin = trade.result > 0;
                   const rr = calculateRR(trade.entry, trade.sl, trade.tp);
                   return (
-                    <tr key={trade.id} className="trade-row border-b border-gray-800">
-                      <td className="py-4 mono text-gray-400">{formatDate(trade.date)}</td>
+                    <tr key={trade.id} className="trade-row border-b border-[--border-subtle]">
+                      <td className="py-4 mono text-[--text-secondary]">{formatDate(trade.date)}</td>
                       <td className="py-4 font-medium">{trade.asset}</td>
                       <td className="py-4">
                         <span className={`px-2 py-1 rounded text-xs font-bold ${trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
@@ -188,7 +188,7 @@ export default function JournalPage() {
                       <td className="py-4">
                         <span className="px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-xs">{trade.strategy}</span>
                       </td>
-                      <td className="py-4 text-gray-400 max-w-xs truncate">{trade.setup || "-"}</td>
+                      <td className="py-4 text-[--text-secondary] max-w-xs truncate">{trade.setup || "-"}</td>
                       <td className="py-4">
                         {trade.screenshots.length > 0 ? (
                           <span className="inline-flex items-center px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-xs">
@@ -198,11 +198,11 @@ export default function JournalPage() {
                       </td>
                       <td className="py-4 mono">{trade.entry} → {trade.exit || "Open"}</td>
                       <td className="py-4 mono">{trade.lots}</td>
-                      <td className="py-4 mono text-gray-400">1:{rr}</td>
+                      <td className="py-4 mono text-[--text-secondary]">1:{rr}</td>
                       <td className={`py-4 mono font-bold ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
                         {isWin ? "+" : ""}{trade.result}€
                       </td>
-                      <td className="py-4 text-xs text-gray-400">{trade.emotion || "-"}</td>
+                      <td className="py-4 text-xs text-[--text-secondary]">{trade.emotion || "-"}</td>
                       <td className="py-4">
                         <div className="flex gap-2">
                           <button onClick={() => setEditingTrade(trade)} className="text-blue-400 hover:text-blue-300">

@@ -71,7 +71,7 @@ export default function MacroPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Indicateurs Macro — FRED</h1>
         <button onClick={load} className="p-2 rounded-lg hover:bg-white/5 transition" title="Rafraichir">
-          <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
 
@@ -85,8 +85,8 @@ export default function MacroPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className="glass rounded-2xl p-5 animate-pulse">
-              <div className="h-4 bg-gray-700/50 rounded w-1/2 mb-3" />
-              <div className="h-8 bg-gray-700/50 rounded w-2/3" />
+              <div className="h-4 bg-[--bg-secondary]/50 rounded w-1/2 mb-3" />
+              <div className="h-8 bg-[--bg-secondary]/50 rounded w-2/3" />
             </div>
           ))}
         </div>
@@ -96,12 +96,12 @@ export default function MacroPage() {
             <button key={s.key} onClick={() => setSelected(s)}
               className={`glass rounded-2xl p-5 text-left transition hover:border-cyan-500/30 hover:ring-1 hover:ring-cyan-500/20 ${selected?.key === s.key ? "border-cyan-500/50 ring-1 ring-cyan-500/30" : ""}`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-400">{s.label}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">{s.frequency}</span>
+                <span className="text-xs text-[--text-secondary]">{s.label}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[--bg-secondary] text-[--text-secondary]">{s.frequency}</span>
               </div>
               <div className="flex items-end gap-2">
                 <span className="text-2xl font-bold mono">{s.latest.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                <span className="text-xs text-gray-500">{s.unit}</span>
+                <span className="text-xs text-[--text-muted]">{s.unit}</span>
               </div>
               <div className={`flex items-center gap-1 mt-1 text-xs ${s.change >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                 {s.change > 0 ? <TrendingUp className="w-3 h-3" /> : s.change < 0 ? <TrendingDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
@@ -118,9 +118,9 @@ export default function MacroPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold">{selected.label}</h3>
-              <p className="text-xs text-gray-400">{selected.frequency} — {selected.unit} — {selected.observations.length} points</p>
+              <p className="text-xs text-[--text-secondary]">{selected.frequency} — {selected.unit} — {selected.observations.length} points</p>
             </div>
-            <button onClick={() => setSelected(null)} className="p-1 text-gray-400 hover:text-white">
+            <button onClick={() => setSelected(null)} className="p-1 text-[--text-secondary] hover:text-white">
               <X className="w-5 h-5" />
             </button>
           </div>

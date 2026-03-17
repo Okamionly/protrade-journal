@@ -67,6 +67,31 @@
   --glass-border: rgba(255, 255, 255, 0.06);
 }
 
+/* ========== LIGHT MODE CONTRAST FIXES ========== */
+/* Fix gray text that's invisible on white backgrounds */
+html:not(.dark):not(.oled) .metric-card,
+html:not(.dark):not(.oled) .glass {
+  color: var(--text-primary);
+}
+
+html:not(.dark):not(.oled) .metric-card h3,
+html:not(.dark):not(.oled) .glass h3,
+html:not(.dark):not(.oled) .glass h2 {
+  color: var(--text-primary);
+}
+
+html:not(.dark):not(.oled) .mono {
+  color: var(--text-primary);
+}
+
+html:not(.dark):not(.oled) table th {
+  color: var(--text-secondary);
+}
+
+html:not(.dark):not(.oled) table td {
+  color: var(--text-primary);
+}
+
 /* ========== BODY ========== */
 body {
   font-family: 'Inter', sans-serif;

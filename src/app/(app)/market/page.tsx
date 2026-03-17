@@ -285,7 +285,7 @@ export default function MarketPage() {
                   ${formatPrice(q.last)}
                 </div>
                 <div className="flex items-center gap-1 mt-1">
-                  {q.changepct > 0 ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400" /> : q.changepct < 0 ? <TrendingDown className="w-3.5 h-3.5 text-rose-400" /> : <Minus className="w-3.5 h-3.5 text-gray-500" />}
+                  {q.changepct > 0 ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400" /> : q.changepct < 0 ? <TrendingDown className="w-3.5 h-3.5 text-rose-400" /> : <Minus className="w-3.5 h-3.5 text-[--text-muted]" />}
                   <span className={`text-sm font-bold mono ${q.changepct >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                     {(q.changepct * 100).toFixed(2)}%
                   </span>

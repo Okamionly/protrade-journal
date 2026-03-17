@@ -27,7 +27,7 @@ function ScoreGauge({ score, label }: { score: number; label: string }) {
           <span className="text-2xl font-bold mono" style={{ color }}>{score}</span>
         </div>
       </div>
-      <span className="text-xs text-gray-400 mt-2">{label}</span>
+      <span className="text-xs text-[--text-secondary] mt-2">{label}</span>
     </div>
   );
 }
@@ -37,13 +37,13 @@ function getBadge(score: number): { label: string; color: string; bg: string } {
   if (score >= 75) return { label: "Gold", color: "text-yellow-400", bg: "bg-yellow-500/15 border-yellow-500/30" };
   if (score >= 60) return { label: "Silver", color: "text-gray-300", bg: "bg-gray-500/15 border-gray-400/30" };
   if (score >= 40) return { label: "Bronze", color: "text-orange-400", bg: "bg-orange-500/15 border-orange-500/30" };
-  return { label: "Débutant", color: "text-gray-500", bg: "bg-gray-600/15 border-gray-600/30" };
+  return { label: "Débutant", color: "text-[--text-muted]", bg: "bg-gray-600/15 border-gray-600/30" };
 }
 
 export default function PerformancePage() {
   const { trades, loading } = useTrades();
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Chargement...</div>;
+  if (loading) return <div className="flex items-center justify-center h-64 text-[--text-secondary]">Chargement...</div>;
 
   const wins = trades.filter((t) => t.result > 0);
   const losses = trades.filter((t) => t.result < 0);
@@ -122,7 +122,7 @@ export default function PerformancePage() {
           <Trophy className="w-6 h-6 text-amber-400" />
           Score de Performance
         </h1>
-        <p className="text-sm text-gray-400 mt-1">Analyse complète de ta performance de trading</p>
+        <p className="text-sm text-[--text-secondary] mt-1">Analyse complète de ta performance de trading</p>
       </div>
 
       {/* Main score */}
@@ -136,13 +136,13 @@ export default function PerformancePage() {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-5xl font-bold mono">{overallScore}</span>
-            <span className="text-xs text-gray-400">/ 100</span>
+            <span className="text-xs text-[--text-secondary]">/ 100</span>
           </div>
         </div>
         <span className={`px-4 py-2 rounded-full text-sm font-bold border ${badge.bg} ${badge.color}`}>
           {badge.label}
         </span>
-        {trades.length < 5 && <p className="text-xs text-gray-500 mt-3">Minimum 5 trades requis pour le score</p>}
+        {trades.length < 5 && <p className="text-xs text-[--text-muted] mt-3">Minimum 5 trades requis pour le score</p>}
       </div>
 
       {/* Sub-scores */}
@@ -166,8 +166,8 @@ export default function PerformancePage() {
         {stats.map((s) => (
           <div key={s.label} className="glass rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
-              <s.icon className="w-4 h-4 text-gray-500" />
-              <span className="text-xs text-gray-400">{s.label}</span>
+              <s.icon className="w-4 h-4 text-[--text-muted]" />
+              <span className="text-xs text-[--text-secondary]">{s.label}</span>
             </div>
             <span className={`text-xl font-bold mono ${s.color}`}>{s.value}</span>
           </div>
@@ -178,10 +178,10 @@ export default function PerformancePage() {
       <div className="glass rounded-2xl p-6">
         <h3 className="font-semibold mb-3">Série actuelle</h3>
         <div className="flex items-center gap-3">
-          <span className={`text-3xl font-bold mono ${currentStreak > 0 ? "text-emerald-400" : currentStreak < 0 ? "text-rose-400" : "text-gray-400"}`}>
+          <span className={`text-3xl font-bold mono ${currentStreak > 0 ? "text-emerald-400" : currentStreak < 0 ? "text-rose-400" : "text-[--text-secondary]"}`}>
             {Math.abs(currentStreak)}
           </span>
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-[--text-secondary]">
             {currentStreak > 0 ? "trades gagnants d'affilée" : currentStreak < 0 ? "trades perdants d'affilée" : "—"}
           </span>
         </div>

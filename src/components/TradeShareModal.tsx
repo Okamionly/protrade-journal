@@ -27,13 +27,13 @@ export function TradeShareModal({ onSelect, onClose }: TradeShareModalProps) {
             <Share2 className="w-5 h-5 text-cyan-400" />
             Partager un trade
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
+          <button onClick={onClose} className="text-[--text-secondary] hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="relative mb-4">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[--text-secondary]" />
           <input
             type="text"
             placeholder="Rechercher par actif ou stratégie..."
@@ -45,9 +45,9 @@ export function TradeShareModal({ onSelect, onClose }: TradeShareModalProps) {
 
         <div className="overflow-y-auto flex-1 space-y-2">
           {loading ? (
-            <p className="text-gray-400 text-center py-8">Chargement...</p>
+            <p className="text-[--text-secondary] text-center py-8">Chargement...</p>
           ) : filtered.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Aucun trade trouvé.</p>
+            <p className="text-[--text-muted] text-center py-8">Aucun trade trouvé.</p>
           ) : (
             filtered.slice(0, 20).map((trade) => {
               const isWin = trade.result > 0;
@@ -58,7 +58,7 @@ export function TradeShareModal({ onSelect, onClose }: TradeShareModalProps) {
                     const content = `📊 Trade partagé : ${trade.asset} ${trade.direction} — ${isWin ? "+" : ""}${trade.result}€`;
                     onSelect(trade.id, content);
                   }}
-                  className="w-full text-left p-3 rounded-xl border border-gray-700 hover:bg-white/5 transition flex items-center justify-between"
+                  className="w-full text-left p-3 rounded-xl border border-[--border] hover:bg-white/5 transition flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <span
@@ -72,7 +72,7 @@ export function TradeShareModal({ onSelect, onClose }: TradeShareModalProps) {
                     </span>
                     <div>
                       <p className="font-medium text-sm">{trade.asset}</p>
-                      <p className="text-xs text-gray-400">{trade.strategy}</p>
+                      <p className="text-xs text-[--text-secondary]">{trade.strategy}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -84,7 +84,7 @@ export function TradeShareModal({ onSelect, onClose }: TradeShareModalProps) {
                       {isWin ? "+" : ""}
                       {trade.result}€
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-[--text-secondary]">
                       {new Date(trade.date).toLocaleDateString("fr-FR")}
                     </p>
                   </div>

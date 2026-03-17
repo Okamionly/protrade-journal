@@ -7,7 +7,7 @@ import { useTradingRules } from "@/hooks/useTradingRules";
 const BIAS_OPTIONS = [
   { value: "bullish", label: "Haussier", icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-500/15 border-emerald-500/30" },
   { value: "bearish", label: "Baissier", icon: TrendingDown, color: "text-rose-400", bg: "bg-rose-500/15 border-rose-500/30" },
-  { value: "neutral", label: "Neutre", icon: Minus, color: "text-gray-400", bg: "bg-gray-500/15 border-gray-500/30" },
+  { value: "neutral", label: "Neutre", icon: Minus, color: "text-[--text-secondary]", bg: "bg-gray-500/15 border-gray-500/30" },
 ];
 
 const GRADE_OPTIONS = ["A+", "A", "B", "C", "D", "F"];

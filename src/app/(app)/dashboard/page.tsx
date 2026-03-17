@@ -118,18 +118,18 @@ export default function DashboardPage() {
               <span className={monthlyPnL >= 0 ? "text-emerald-400" : "text-rose-400"}>
                 {monthlyPnL >= 0 ? "+" : ""}€{monthlyPnL.toFixed(2)}
               </span>
-              <span className="text-gray-400">Objectif : €{monthlyGoal.toFixed(2)}</span>
+              <span className="text-[--text-muted]">Objectif : €{monthlyGoal.toFixed(2)}</span>
             </div>
-            <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
               <div
                 className={`h-full rounded-full transition-all duration-500 ${monthlyPnL >= monthlyGoal ? "bg-emerald-500" : monthlyPnL >= 0 ? "bg-blue-500" : "bg-rose-500"}`}
                 style={{ width: `${Math.max(goalProgress, 0)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400 mt-1">{goalProgress.toFixed(1)}% atteint — {monthlyTrades.length} trades ce mois</p>
+            <p className="text-xs text-[--text-muted] mt-1">{goalProgress.toFixed(1)}% atteint — {monthlyTrades.length} trades ce mois</p>
           </>
         ) : (
-          <p className="text-gray-500 text-sm">Aucun objectif défini. Cliquez pour en définir un.</p>
+          <p className="text-[--text-muted] text-sm">Aucun objectif défini. Cliquez pour en définir un.</p>
         )}
       </div>
 
@@ -158,23 +158,23 @@ export default function DashboardPage() {
           }
           return (
             <div className="glass rounded-2xl p-4">
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Série en cours</h4>
+              <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider mb-3">Série en cours</h4>
               <div className="flex items-center gap-3 mb-3">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${streakType === "win" ? "bg-emerald-500/20" : streakType === "loss" ? "bg-rose-500/20" : "bg-gray-500/20"}`}>
-                  <Flame className={`w-6 h-6 ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-gray-400"}`} />
+                  <Flame className={`w-6 h-6 ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-[--text-muted]"}`} />
                 </div>
                 <div>
-                  <div className={`text-2xl font-bold mono ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-gray-400"}`}>
+                  <div className={`text-2xl font-bold mono ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-[--text-muted]"}`}>
                     {currentStreak}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-[--text-muted]">
                     {streakType === "win" ? "victoires" : streakType === "loss" ? "défaites" : "—"}
                   </div>
                 </div>
               </div>
               <div className="space-y-1 text-xs">
-                <div className="flex justify-between"><span className="text-gray-500">Meilleure série W</span><span className="text-emerald-400 font-bold">{bestWin}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Pire série L</span><span className="text-rose-400 font-bold">{bestLoss}</span></div>
+                <div className="flex justify-between"><span className="text-[--text-muted]">Meilleure série W</span><span className="text-emerald-400 font-bold">{bestWin}</span></div>
+                <div className="flex justify-between"><span className="text-[--text-muted]">Pire série L</span><span className="text-rose-400 font-bold">{bestLoss}</span></div>
               </div>
             </div>
           );
@@ -182,7 +182,7 @@ export default function DashboardPage() {
 
         {/* Quick Stats */}
         <div className="glass rounded-2xl p-4">
-          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Aujourd&apos;hui</h4>
+          <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider mb-3">Aujourd&apos;hui</h4>
           {(() => {
             const today = new Date().toISOString().slice(0, 10);
             const todayTrades = trades.filter(t => new Date(t.date).toISOString().slice(0, 10) === today);
@@ -196,8 +196,8 @@ export default function DashboardPage() {
                     {todayPnL >= 0 ? "+" : ""}€{todayPnL.toFixed(2)}
                   </span>
                 </div>
-                <div className="text-xs text-gray-500">{todayTrades.length} trades — {todayWins} gagnants</div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-[--text-muted]">{todayTrades.length} trades — {todayWins} gagnants</div>
+                <div className="text-xs text-[--text-muted]">
                   WR: {todayTrades.length > 0 ? ((todayWins / todayTrades.length) * 100).toFixed(0) : 0}%
                 </div>
               </div>
@@ -290,7 +290,7 @@ export default function DashboardPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-gray-400 text-sm border-b border-gray-700">
+              <tr className="text-left text-[--text-muted] text-sm border-b border-[--border]">
                 <th className="pb-3 font-medium">Date</th>
                 <th className="pb-3 font-medium">Actif</th>
                 <th className="pb-3 font-medium">Type</th>
@@ -305,7 +305,7 @@ export default function DashboardPage() {
             <tbody className="text-sm">
               {recentTrades.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-gray-500">
+                  <td colSpan={9} className="py-8 text-center text-[--text-muted]">
                     Aucun trade enregistré. Cliquez sur &quot;Nouveau Trade&quot; pour commencer.
                   </td>
                 </tr>
@@ -314,8 +314,8 @@ export default function DashboardPage() {
                   const isWin = trade.result > 0;
                   const rr = calculateRR(trade.entry, trade.sl, trade.tp);
                   return (
-                    <tr key={trade.id} className="trade-row border-b border-gray-800">
-                      <td className="py-4 mono text-gray-400">{formatDate(trade.date)}</td>
+                    <tr key={trade.id} className="trade-row border-b border-[--border]">
+                      <td className="py-4 mono text-[--text-muted]">{formatDate(trade.date)}</td>
                       <td className="py-4 font-medium">{trade.asset}</td>
                       <td className="py-4">
                         <span className={`px-2 py-1 rounded text-xs font-bold ${trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
@@ -334,7 +334,7 @@ export default function DashboardPage() {
                           <span className="text-gray-600">-</span>
                         )}
                       </td>
-                      <td className="py-4 mono text-gray-400">1:{rr}</td>
+                      <td className="py-4 mono text-[--text-muted]">1:{rr}</td>
                       <td className={`py-4 mono font-bold ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
                         {isWin ? "+" : ""}{trade.result}€
                       </td>
@@ -363,7 +363,7 @@ export default function DashboardPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass rounded-2xl p-6 w-full max-w-sm">
             <h3 className="text-lg font-bold mb-4">Modifier la Balance</h3>
-            <p className="text-sm text-gray-400 mb-4">Entrez votre capital initial en euros.</p>
+            <p className="text-sm text-[--text-muted] mb-4">Entrez votre capital initial en euros.</p>
             <input
               type="number"
               step="0.01"
@@ -375,7 +375,7 @@ export default function DashboardPage() {
               onKeyDown={(e) => e.key === "Enter" && saveBalance()}
             />
             <div className="flex gap-3">
-              <button onClick={() => setShowBalanceModal(false)} className="flex-1 py-2 rounded-lg border border-gray-600 hover:bg-gray-800 transition">
+              <button onClick={() => setShowBalanceModal(false)} className="flex-1 py-2 rounded-lg border border-[--border] hover:bg-[--bg-hover] transition">
                 Annuler
               </button>
               <button onClick={saveBalance} className="flex-1 py-2 rounded-lg btn-primary text-white font-medium">
@@ -391,7 +391,7 @@ export default function DashboardPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass rounded-2xl p-6 w-full max-w-sm">
             <h3 className="text-lg font-bold mb-4">Objectif Mensuel</h3>
-            <p className="text-sm text-gray-400 mb-4">Définissez votre objectif de profit mensuel en euros.</p>
+            <p className="text-sm text-[--text-muted] mb-4">Définissez votre objectif de profit mensuel en euros.</p>
             <input
               type="number"
               step="0.01"
@@ -403,7 +403,7 @@ export default function DashboardPage() {
               onKeyDown={(e) => e.key === "Enter" && saveGoal()}
             />
             <div className="flex gap-3">
-              <button onClick={() => setShowGoalModal(false)} className="flex-1 py-2 rounded-lg border border-gray-600 hover:bg-gray-800 transition">
+              <button onClick={() => setShowGoalModal(false)} className="flex-1 py-2 rounded-lg border border-[--border] hover:bg-[--bg-hover] transition">
                 Annuler
               </button>
               <button onClick={saveGoal} className="flex-1 py-2 rounded-lg btn-primary text-white font-medium">

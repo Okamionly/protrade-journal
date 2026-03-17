@@ -56,13 +56,13 @@ function MessageBubble({
         <div className="flex items-center gap-2 mb-1">
           <span className="font-semibold text-sm">{msg.user.name || msg.user.email.split("@")[0]}</span>
           {msg.isPinned && <Pin className="w-3 h-3 text-cyan-400" />}
-          <span className="text-xs text-gray-500">{formatDate(msg.createdAt)} {formatTime(msg.createdAt)}</span>
+          <span className="text-xs text-[--text-muted]">{formatDate(msg.createdAt)} {formatTime(msg.createdAt)}</span>
           {adminSecret && (
             <div className="hidden group-hover:flex items-center gap-1 ml-auto">
-              <button onClick={() => onPin(msg.id)} className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-cyan-400" title={msg.isPinned ? "Désépingler" : "Épingler"}>
+              <button onClick={() => onPin(msg.id)} className="p-1 rounded hover:bg-white/10 text-[--text-secondary] hover:text-cyan-400" title={msg.isPinned ? "Désépingler" : "Épingler"}>
                 <Pin className="w-3 h-3" />
               </button>
-              <button onClick={() => onDelete(msg.id)} className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-rose-400" title="Supprimer">
+              <button onClick={() => onDelete(msg.id)} className="p-1 rounded hover:bg-white/10 text-[--text-secondary] hover:text-rose-400" title="Supprimer">
                 <Trash2 className="w-3 h-3" />
               </button>
             </div>
@@ -72,7 +72,7 @@ function MessageBubble({
         {msg.imageUrl && (
           <div className="mt-2">
             <img src={msg.imageUrl} alt="Capture partagée"
-              className="max-w-xs max-h-60 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-90 transition object-cover"
+              className="max-w-xs max-h-60 rounded-xl border border-gray-200 dark:border-[--border] cursor-pointer hover:opacity-90 transition object-cover"
               onClick={() => onImageClick(msg.imageUrl!)} />
           </div>
         )}
@@ -193,7 +193,7 @@ export default function ChatPage() {
   const pinnedMessages = messages.filter((m) => m.isPinned);
 
   if (roomsLoading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-gray-400">Chargement du chat...</div></div>;
+    return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">Chargement du chat...</div></div>;
   }
 
   return (
@@ -205,7 +205,7 @@ export default function ChatPage() {
             <h3 className="font-semibold text-sm flex items-center gap-2">
               <MessageCircle className="w-4 h-4 text-cyan-400" /> Salons
             </h3>
-            <button onClick={() => setShowAdminInput(!showAdminInput)} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-amber-400 transition" title="Mode admin">
+            <button onClick={() => setShowAdminInput(!showAdminInput)} className="p-1.5 rounded-lg hover:bg-white/10 text-[--text-secondary] hover:text-amber-400 transition" title="Mode admin">
               <Shield className="w-4 h-4" />
             </button>
           </div>
@@ -226,17 +226,17 @@ export default function ChatPage() {
             {rooms.map((room) => (
               <button key={room.id} onClick={() => setActiveRoomId(room.id)}
                 className={`chat-sidebar-item flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all ${
-                  room.id === activeRoomId ? "active" : "hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400"
+                  room.id === activeRoomId ? "active" : "hover:bg-gray-100 dark:hover:bg-white/5 text-[--text-muted] dark:text-[--text-secondary]"
                 }`}>
                 <RoomIcon icon={room.icon} className="w-4 h-4 flex-shrink-0" />
                 <span className="font-medium">{room.name}</span>
-                {room.messageCount > 0 && <span className="text-xs text-gray-500 ml-auto hidden lg:inline">{room.messageCount}</span>}
+                {room.messageCount > 0 && <span className="text-xs text-[--text-muted] ml-auto hidden lg:inline">{room.messageCount}</span>}
               </button>
             ))}
           </div>
 
           {adminSecret && (
-            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-[--border]">
               <p className="text-xs text-amber-500 flex items-center gap-1"><Shield className="w-3 h-3" /> Mode admin actif</p>
             </div>
           )}
@@ -246,23 +246,23 @@ export default function ChatPage() {
       {/* Messages area */}
       <div className="flex-1 glass rounded-2xl flex flex-col min-h-0">
         {activeRoom && (
-          <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-[--border]">
             <RoomIcon icon={activeRoom.icon} className="w-5 h-5 text-cyan-400" />
             <div>
               <h3 className="font-semibold">{activeRoom.name}</h3>
-              {activeRoom.description && <p className="text-xs text-gray-400">{activeRoom.description}</p>}
+              {activeRoom.description && <p className="text-xs text-[--text-secondary]">{activeRoom.description}</p>}
             </div>
           </div>
         )}
 
         {pinnedMessages.length > 0 && (
-          <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-cyan-50 dark:bg-cyan-500/5">
+          <div className="px-4 py-2 border-b border-gray-200 dark:border-[--border] bg-cyan-50 dark:bg-cyan-500/5">
             <div className="flex items-center gap-2 text-xs text-cyan-600 dark:text-cyan-400 mb-1">
               <Pin className="w-3 h-3" />
               <span className="font-medium">{pinnedMessages.length} message{pinnedMessages.length > 1 ? "s" : ""} épinglé{pinnedMessages.length > 1 ? "s" : ""}</span>
             </div>
             {pinnedMessages.slice(0, 2).map((m) => (
-              <p key={m.id} className="text-xs text-gray-600 dark:text-gray-300 truncate">
+              <p key={m.id} className="text-xs text-[--text-muted] dark:text-gray-300 truncate">
                 <span className="font-medium">{m.user.name || m.user.email.split("@")[0]}:</span> {m.content}
               </p>
             ))}
@@ -271,16 +271,16 @@ export default function ChatPage() {
 
         <div ref={messagesContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-1">
           {msgsLoading ? (
-            <div className="flex items-center justify-center h-full"><p className="text-gray-400">Chargement des messages...</p></div>
+            <div className="flex items-center justify-center h-full"><p className="text-[--text-secondary]">Chargement des messages...</p></div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <div className="flex flex-col items-center justify-center h-full text-[--text-muted]">
               <MessageCircle className="w-12 h-12 mb-3 opacity-30" />
               <p>Aucun message dans ce salon.</p>
               <p className="text-sm mb-4">Soyez le premier !</p>
               <div className="flex flex-wrap gap-2 justify-center max-w-md">
                 {["Quel est votre setup du jour ?", "Je suis bullish sur EUR/USD", "Le NFP arrive cette semaine !", "Quelqu'un trade le gold ?"].map((s) => (
                   <button key={s} onClick={() => setInput(s)}
-                    className="px-3 py-1.5 rounded-full text-xs border border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400 hover:border-cyan-400 dark:hover:border-cyan-500/50 transition">
+                    className="px-3 py-1.5 rounded-full text-xs border border-gray-300 dark:border-[--border] text-[--text-muted] dark:text-[--text-secondary] hover:text-cyan-500 dark:hover:text-cyan-400 hover:border-cyan-400 dark:hover:border-cyan-500/50 transition">
                     {s}
                   </button>
                 ))}
@@ -296,27 +296,27 @@ export default function ChatPage() {
 
         {/* Image preview */}
         {imagePreview && (
-          <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex items-center gap-3">
+          <div className="px-4 py-2 border-t border-gray-200 dark:border-[--border] bg-gray-50 dark:bg-[--bg-secondary]/50 flex items-center gap-3">
             <img src={imagePreview} alt="Aperçu" className="w-16 h-16 object-cover rounded-lg border border-gray-300 dark:border-gray-600" />
-            <div className="flex-1 text-xs text-gray-500">Image prête à envoyer</div>
+            <div className="flex-1 text-xs text-[--text-muted]">Image prête à envoyer</div>
             <button onClick={() => { setImageFile(null); setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-gray-400 hover:text-rose-400 transition">
+              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-[--text-secondary] hover:text-rose-400 transition">
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
         {/* Input */}
-        <form onSubmit={handleSend} className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <form onSubmit={handleSend} className="p-4 border-t border-gray-200 dark:border-[--border]">
           <div className="flex gap-2">
             <input type="file" ref={fileInputRef} accept="image/*" onChange={handleImageSelect} className="hidden" />
             <button type="button" onClick={() => fileInputRef.current?.click()}
-              className="flex-shrink-0 p-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400 hover:border-cyan-400 dark:hover:border-cyan-500/50 transition"
+              className="flex-shrink-0 p-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-[--text-secondary] hover:text-cyan-500 dark:hover:text-cyan-400 hover:border-cyan-400 dark:hover:border-cyan-500/50 transition"
               title="Partager une capture d'écran">
               <ImagePlus className="w-5 h-5" />
             </button>
             <button type="button" onClick={() => setShowTradeModal(true)}
-              className="flex-shrink-0 p-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400 hover:border-cyan-400 dark:hover:border-cyan-500/50 transition"
+              className="flex-shrink-0 p-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-[--text-secondary] hover:text-cyan-500 dark:hover:text-cyan-400 hover:border-cyan-400 dark:hover:border-cyan-500/50 transition"
               title="Partager un trade">
               <Share2 className="w-5 h-5" />
             </button>

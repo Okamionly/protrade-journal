@@ -29,6 +29,11 @@ import {
   BookMarked,
   Award,
   Activity,
+  Calculator,
+  Brain,
+  Play,
+  GitCompare,
+  Layers,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -55,6 +60,12 @@ const navItems = [
   { href: "/currency-strength", label: "Force Devises", icon: Zap },
   { href: "/news", label: "News", icon: Newspaper },
   { href: "/market", label: "Market Data", icon: Activity },
+  { divider: true, label: "AVANCÉ" },
+  { href: "/ai-coach", label: "AI Coach", icon: Brain },
+  { href: "/calculator", label: "Calculateur", icon: Calculator },
+  { href: "/replay", label: "Replay", icon: Play },
+  { href: "/correlation", label: "Corrélation", icon: Layers },
+  { href: "/compare", label: "Comparaison", icon: GitCompare },
   { divider: true, label: "OUTILS" },
   { href: "/recaps", label: "Recaps", icon: FileBarChart },
   { href: "/screenshots", label: "Screenshots", icon: Camera },

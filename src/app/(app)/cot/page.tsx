@@ -185,22 +185,22 @@ export default function CotPage() {
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <button onClick={() => setView("overview")} className="p-2 rounded-lg hover:bg-white/10 transition">
-            <ArrowLeft className="w-5 h-5 text-gray-400" />
+            <ArrowLeft className="w-5 h-5 text-[--text-secondary]" />
           </button>
           <div>
             <h1 className="text-2xl font-bold">{asset} — {currentContract?.name}</h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 text-xs">{currentContract?.category}</span>
-              <span className="mono text-xs text-gray-500">CFTC #{currentContract?.code}</span>
+              <span className="mono text-xs text-[--text-muted]">CFTC #{currentContract?.code}</span>
             </div>
           </div>
           <button onClick={() => loadDetail(asset)} className="ml-auto p-2 rounded-lg hover:bg-white/5 transition">
-            <RefreshCw className={`w-5 h-5 text-gray-400 ${detailLoading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${detailLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
         {detailLoading ? (
-          <div className="glass rounded-2xl p-6 animate-pulse"><div className="h-[300px] bg-gray-700/30 rounded" /></div>
+          <div className="glass rounded-2xl p-6 animate-pulse"><div className="h-[300px] bg-[--bg-secondary]/30 rounded" /></div>
         ) : (
           <>
             {last && (
@@ -214,7 +214,7 @@ export default function CotPage() {
                   const chg = m.prev != null ? m.value - m.prev : 0;
                   return (
                     <div key={m.label} className="glass rounded-xl p-4">
-                      <p className="text-xs text-gray-400 mb-1">{m.label}</p>
+                      <p className="text-xs text-[--text-secondary] mb-1">{m.label}</p>
                       <p className={`text-xl font-bold mono ${m.color}`}>{m.value.toLocaleString()}</p>
                       {chg !== 0 && (
                         <p className={`text-xs mono mt-1 ${chg > 0 ? "text-emerald-400" : "text-rose-400"}`}>
@@ -243,21 +243,21 @@ export default function CotPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-gray-400 border-b border-gray-700">
+                    <tr className="text-left text-[--text-secondary] border-b border-[--border]">
                       <th className="pb-3 px-2">Date</th><th className="pb-3 px-2">NC Long</th><th className="pb-3 px-2">NC Short</th>
                       <th className="pb-3 px-2">NC Net</th><th className="pb-3 px-2">Comm Net</th><th className="pb-3 px-2">Retail Net</th><th className="pb-3 px-2">OI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {detailData.slice(-10).reverse().map((r) => (
-                      <tr key={r.date} className="border-b border-gray-800 hover:bg-white/5">
-                        <td className="py-2.5 px-2 mono text-gray-400">{r.date}</td>
+                      <tr key={r.date} className="border-b border-[--border-subtle] hover:bg-white/5">
+                        <td className="py-2.5 px-2 mono text-[--text-secondary]">{r.date}</td>
                         <td className="py-2.5 px-2 mono">{r.nonCommLong.toLocaleString()}</td>
                         <td className="py-2.5 px-2 mono">{r.nonCommShort.toLocaleString()}</td>
                         <td className={`py-2.5 px-2 mono font-bold ${r.nonCommNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{r.nonCommNet.toLocaleString()}</td>
                         <td className={`py-2.5 px-2 mono ${r.commNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{r.commNet.toLocaleString()}</td>
                         <td className={`py-2.5 px-2 mono ${r.retailNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{r.retailNet.toLocaleString()}</td>
-                        <td className="py-2.5 px-2 mono text-gray-400">{r.openInterest.toLocaleString()}</td>
+                        <td className="py-2.5 px-2 mono text-[--text-secondary]">{r.openInterest.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -276,10 +276,10 @@ export default function CotPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Rapport COT</h1>
-          <p className="text-sm text-gray-400 mt-1">Analyse des positions des traders engagés</p>
+          <p className="text-sm text-[--text-secondary] mt-1">Analyse des positions des traders engagés</p>
         </div>
         <button onClick={loadOverview} className="p-2 rounded-lg hover:bg-white/5 transition" title="Rafraichir">
-          <RefreshCw className={`w-5 h-5 text-gray-400 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
 
@@ -291,16 +291,16 @@ export default function CotPage() {
               className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
                 category === cat
                   ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
-                  : "text-gray-400 hover:text-white hover:bg-white/5 border border-gray-700"
+                  : "text-[--text-secondary] hover:text-white hover:bg-white/5 border border-[--border]"
               }`}>
               {cat}
             </button>
           ))}
         </div>
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--text-muted]" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher des symboles, des noms ou des secteurs..."
-            className="w-full bg-gray-800/50 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm focus:border-cyan-500/50 focus:outline-none transition" />
+            className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg pl-10 pr-4 py-2 text-sm focus:border-cyan-500/50 focus:outline-none transition" />
         </div>
       </div>
 
@@ -310,7 +310,7 @@ export default function CotPage() {
         <div className="glass rounded-2xl p-6 animate-pulse">
           <div className="space-y-3">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="h-12 bg-gray-700/30 rounded" />
+              <div key={i} className="h-12 bg-[--bg-secondary]/30 rounded" />
             ))}
           </div>
         </div>
@@ -319,7 +319,7 @@ export default function CotPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-400 border-b border-gray-700 text-xs uppercase tracking-wider">
+                <tr className="text-left text-[--text-secondary] border-b border-[--border] text-xs uppercase tracking-wider">
                   <th className="px-4 py-3">Symbole</th>
                   <th className="px-4 py-3">Nom</th>
                   <th className="px-4 py-3">Catégorie</th>
@@ -338,11 +338,11 @@ export default function CotPage() {
                   return (
                     <tr key={r.key}
                       onClick={() => openDetail(r.key)}
-                      className="border-b border-gray-800/50 hover:bg-white/5 cursor-pointer transition">
+                      className="border-b border-[--border-subtle]/50 hover:bg-white/5 cursor-pointer transition">
                       <td className="px-4 py-3 font-bold text-white">{r.key}</td>
                       <td className="px-4 py-3 text-gray-300 text-xs">{r.name}</td>
                       <td className="px-4 py-3">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">{r.category}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[--bg-secondary]/50 text-[--text-secondary]">{r.category}</span>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-medium px-2.5 py-1 rounded-md ${
@@ -362,16 +362,16 @@ export default function CotPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-gray-700 rounded-full overflow-hidden">
+                          <div className="w-16 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
                             <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(r.longPct, 100)}%` }} />
                           </div>
                           <span className="mono text-xs text-emerald-400">{r.longPct.toFixed(1)}%</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 mono text-xs text-gray-500">{r.prevLongPct.toFixed(1)}%</td>
+                      <td className="px-4 py-3 mono text-xs text-[--text-muted]">{r.prevLongPct.toFixed(1)}%</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-gray-700 rounded-full overflow-hidden">
+                          <div className="w-16 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
                             <div className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.min(r.shortPct, 100)}%` }} />
                           </div>
                           <span className="mono text-xs text-rose-400">{r.shortPct.toFixed(1)}%</span>
@@ -380,8 +380,8 @@ export default function CotPage() {
                       <td className={`px-4 py-3 text-right mono font-bold ${r.netPosition >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                         {r.netPosition.toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-right mono text-xs text-gray-500">{r.prevNet.toLocaleString()}</td>
-                      <td className={`px-4 py-3 text-right mono text-xs font-medium ${changePct > 0 ? "text-emerald-400" : changePct < 0 ? "text-rose-400" : "text-gray-500"}`}>
+                      <td className="px-4 py-3 text-right mono text-xs text-[--text-muted]">{r.prevNet.toLocaleString()}</td>
+                      <td className={`px-4 py-3 text-right mono text-xs font-medium ${changePct > 0 ? "text-emerald-400" : changePct < 0 ? "text-rose-400" : "text-[--text-muted]"}`}>
                         {changePct > 0 ? "+" : ""}{changePct.toFixed(2)}%
                         {changePct !== 0 && (
                           changePct > 0
@@ -396,7 +396,7 @@ export default function CotPage() {
             </table>
           </div>
           {filteredRows.length === 0 && (
-            <div className="p-8 text-center text-gray-500">Aucun résultat avec ces filtres</div>
+            <div className="p-8 text-center text-[--text-muted]">Aucun résultat avec ces filtres</div>
           )}
         </div>
       )}

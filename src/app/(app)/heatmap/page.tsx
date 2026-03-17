@@ -8,7 +8,7 @@ const MONTHS_FR = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Se
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 function getColor(value: number, max: number): string {
-  if (value === 0) return "bg-gray-800/50";
+  if (value === 0) return "bg-[--bg-secondary]/50";
   const intensity = Math.min(Math.abs(value) / Math.max(max, 1), 1);
   if (value > 0) {
     if (intensity > 0.7) return "bg-emerald-500";
@@ -23,7 +23,7 @@ function getColor(value: number, max: number): string {
 export default function HeatmapPage() {
   const { trades, loading } = useTrades();
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Chargement...</div>;
+  if (loading) return <div className="flex items-center justify-center h-64 text-[--text-secondary]">Chargement...</div>;
 
   // Calendar heatmap - last 365 days
   const today = new Date();
@@ -93,7 +93,7 @@ export default function HeatmapPage() {
           <Flame className="w-6 h-6 text-orange-400" />
           Heatmap Performance
         </h1>
-        <p className="text-sm text-gray-400 mt-1">Visualise tes patterns de trading</p>
+        <p className="text-sm text-[--text-secondary] mt-1">Visualise tes patterns de trading</p>
       </div>
 
       {/* GitHub-style calendar */}
@@ -102,7 +102,7 @@ export default function HeatmapPage() {
         <div className="flex gap-[3px] min-w-[700px]">
           <div className="flex flex-col gap-[3px] mr-1">
             {DAYS_FR.map((d, i) => (
-              <div key={i} className="h-[14px] text-[9px] text-gray-500 flex items-center">{i % 2 === 1 ? d : ""}</div>
+              <div key={i} className="h-[14px] text-[9px] text-[--text-muted] flex items-center">{i % 2 === 1 ? d : ""}</div>
             ))}
           </div>
           {weeks.map((week, wi) => (
@@ -116,11 +116,11 @@ export default function HeatmapPage() {
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-2 mt-3 text-[10px] text-gray-500">
+        <div className="flex items-center gap-2 mt-3 text-[10px] text-[--text-muted]">
           <span>Moins</span>
           <div className="w-3 h-3 rounded-sm bg-rose-500" />
           <div className="w-3 h-3 rounded-sm bg-rose-500/40" />
-          <div className="w-3 h-3 rounded-sm bg-gray-800/50" />
+          <div className="w-3 h-3 rounded-sm bg-[--bg-secondary]/50" />
           <div className="w-3 h-3 rounded-sm bg-emerald-500/40" />
           <div className="w-3 h-3 rounded-sm bg-emerald-500" />
           <span>Plus</span>
@@ -138,7 +138,7 @@ export default function HeatmapPage() {
                   className={`w-full aspect-square rounded ${getColor(hourPnL[h] || 0, maxHourPnL)} transition`}
                   title={`${h}h: ${(hourPnL[h] || 0) > 0 ? "+" : ""}€${(hourPnL[h] || 0).toFixed(0)} (${hourCount[h] || 0} trades)`}
                 />
-                <span className="text-[9px] text-gray-500 mt-1">{h}</span>
+                <span className="text-[9px] text-[--text-muted] mt-1">{h}</span>
               </div>
             ))}
           </div>
@@ -154,8 +154,8 @@ export default function HeatmapPage() {
               const width = maxDayPnL > 0 ? (Math.abs(pnl) / maxDayPnL) * 100 : 0;
               return (
                 <div key={i} className="flex items-center gap-3">
-                  <span className="text-xs text-gray-400 w-8">{name}</span>
-                  <div className="flex-1 h-7 bg-gray-800/30 rounded-lg overflow-hidden relative">
+                  <span className="text-xs text-[--text-secondary] w-8">{name}</span>
+                  <div className="flex-1 h-7 bg-[--bg-secondary]/30 rounded-lg overflow-hidden relative">
                     <div className={`h-full rounded-lg ${pnl >= 0 ? "bg-emerald-500/40" : "bg-rose-500/40"}`} style={{ width: `${width}%` }} />
                     <span className={`absolute right-2 top-1/2 -translate-y-1/2 text-[10px] mono font-bold ${pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {pnl > 0 ? "+" : ""}€{pnl.toFixed(0)} ({count})
@@ -182,7 +182,7 @@ export default function HeatmapPage() {
                     style={{ height: `${Math.max(height, 4)}%` }}
                     title={`${MONTHS_FR[parseInt(m) - 1]} ${y}: ${pnl > 0 ? "+" : ""}€${pnl.toFixed(0)}`} />
                 </div>
-                <span className="text-[10px] text-gray-500 mt-1">{MONTHS_FR[parseInt(m) - 1]}</span>
+                <span className="text-[10px] text-[--text-muted] mt-1">{MONTHS_FR[parseInt(m) - 1]}</span>
               </div>
             );
           })}

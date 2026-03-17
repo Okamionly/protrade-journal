@@ -22,8 +22,8 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 opacity-10 rounded-full -mr-16 -mt-16" />
         <div className="flex justify-between items-start mb-4">
           <div>
-            <p className="text-gray-400 text-sm font-medium">Balance Totale</p>
-            <h3 className="text-3xl font-bold mono mt-1">
+            <p className="text-[--text-secondary] text-sm font-medium">Balance Totale</p>
+            <h3 className="text-3xl font-bold mono mt-1" style={{ color: "var(--text-primary)" }}>
               €{totalBalance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
             </h3>
           </div>
@@ -31,10 +31,10 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
             {onEditBalance && (
               <button
                 onClick={onEditBalance}
-                className="w-8 h-8 rounded-lg bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                className="w-8 h-8 rounded-lg hover:bg-[--bg-hover] flex items-center justify-center opacity-0 group-hover:opacity-100 transition border border-[--border-subtle]"
                 title="Modifier la balance"
               >
-                <Pencil className="text-gray-400 w-3.5 h-3.5" />
+                <Pencil className="text-[--text-muted] w-3.5 h-3.5" />
               </button>
             )}
             <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
@@ -46,9 +46,9 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
           <span className={`${stats.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"} font-medium`}>
             {stats.netProfit >= 0 ? "+" : ""}{profitPercent}%
           </span>
-          <span className="text-gray-500 ml-2">ce mois</span>
+          <span className="text-[--text-muted] ml-2">ce mois</span>
         </div>
-        <div className="mt-1 text-xs text-gray-500">
+        <div className="mt-1 text-xs text-[--text-muted]">
           Capital initial: €{balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
         </div>
       </div>
@@ -57,7 +57,7 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500 opacity-10 rounded-full -mr-16 -mt-16" />
         <div className="flex justify-between items-start mb-4">
           <div>
-            <p className="text-gray-400 text-sm font-medium">Profit Net</p>
+            <p className="text-[--text-secondary] text-sm font-medium">Profit Net</p>
             <h3 className={`text-3xl font-bold mono mt-1 ${stats.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
               {stats.netProfit >= 0 ? "+" : ""}€{stats.netProfit.toFixed(2)}
             </h3>
@@ -67,7 +67,7 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
           </div>
         </div>
         <div className="flex items-center text-sm">
-          <span className="text-gray-400">Win Rate: </span>
+          <span className="text-[--text-secondary]">Win Rate: </span>
           <span className="text-emerald-400 ml-1 font-bold">{stats.winRate.toFixed(1)}%</span>
         </div>
       </Link>
@@ -76,7 +76,7 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
         <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500 opacity-10 rounded-full -mr-16 -mt-16" />
         <div className="flex justify-between items-start mb-4">
           <div>
-            <p className="text-gray-400 text-sm font-medium">Ratio R:R Moyen</p>
+            <p className="text-[--text-secondary] text-sm font-medium">Ratio R:R Moyen</p>
             <h3 className="text-3xl font-bold mono mt-1 text-purple-400">1:{stats.avgRR}</h3>
           </div>
           <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
@@ -89,8 +89,8 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
         <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500 opacity-10 rounded-full -mr-16 -mt-16" />
         <div className="flex justify-between items-start mb-4">
           <div>
-            <p className="text-gray-400 text-sm font-medium">Trades Ce Mois</p>
-            <h3 className="text-3xl font-bold mono mt-1">{stats.totalTrades}</h3>
+            <p className="text-[--text-secondary] text-sm font-medium">Trades Ce Mois</p>
+            <h3 className="text-3xl font-bold mono mt-1" style={{ color: "var(--text-primary)" }}>{stats.totalTrades}</h3>
           </div>
           <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
             <ArrowLeftRight className="text-orange-400 w-5 h-5" />
@@ -98,7 +98,7 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
         </div>
         <div className="flex items-center text-sm">
           <span className="text-emerald-400 font-medium">{stats.wins} Gagnés</span>
-          <span className="text-gray-500 mx-2">|</span>
+          <span className="text-[--text-muted] mx-2">|</span>
           <span className="text-rose-400 font-medium">{stats.losses} Perdus</span>
         </div>
       </Link>
