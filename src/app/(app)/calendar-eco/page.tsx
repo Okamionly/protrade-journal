@@ -92,7 +92,7 @@ export default function CalendarEcoPage() {
                     ? imp === "all"
                       ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
                       : `${config!.bg} ${config!.text} border ${config!.border}`
-                    : "text-[--text-secondary] hover:text-white border border-[--border] hover:border-gray-600"
+                    : "text-[--text-secondary] hover:text-[--text-primary] border border-[--border] hover:border-[--text-muted]"
                 }`}>
                 {config && <span className={`w-2 h-2 rounded-full ${config.dot}`} />}
                 {imp === "all" ? "Tous" : config!.label}

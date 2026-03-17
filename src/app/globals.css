@@ -92,6 +92,27 @@ html:not(.dark):not(.oled) table td {
   color: var(--text-primary);
 }
 
+/* Fix hover:text-white on light mode — keep text visible */
+html:not(.dark):not(.oled) .hover\:text-white:hover {
+  color: var(--text-primary) !important;
+}
+
+/* Fix hardcoded text-white inside metric-card / glass on light mode */
+html:not(.dark):not(.oled) .metric-card .text-white:not(button .text-white):not(.bg-gradient-to-r .text-white):not(.bg-gradient-to-br .text-white),
+html:not(.dark):not(.oled) .glass .text-white:not(button .text-white):not(.bg-gradient-to-r .text-white):not(.bg-gradient-to-br .text-white) {
+  color: var(--text-primary);
+}
+
+/* Fix hover:bg-white/5 on light mode — use proper hover bg */
+html:not(.dark):not(.oled) .hover\:bg-white\/5:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Fix text-gray-300 on light mode */
+html:not(.dark):not(.oled) table .text-gray-300 {
+  color: var(--text-secondary) !important;
+}
+
 /* ========== BODY ========== */
 body {
   font-family: 'Inter', sans-serif;

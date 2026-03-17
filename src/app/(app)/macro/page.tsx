@@ -120,7 +120,7 @@ export default function MacroPage() {
               <h3 className="text-lg font-semibold">{selected.label}</h3>
               <p className="text-xs text-[--text-secondary]">{selected.frequency} — {selected.unit} — {selected.observations.length} points</p>
             </div>
-            <button onClick={() => setSelected(null)} className="p-1 text-[--text-secondary] hover:text-white">
+            <button onClick={() => setSelected(null)} className="p-1 text-[--text-secondary] hover:text-[--text-primary]">
               <X className="w-5 h-5" />
             </button>
           </div>

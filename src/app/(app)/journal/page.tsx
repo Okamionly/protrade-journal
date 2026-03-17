@@ -130,7 +130,7 @@ export default function JournalPage() {
         <div className="flex items-center gap-3 mb-4">
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm" />
           {hasFilters && (
-            <button onClick={resetFilters} className="flex items-center gap-1 text-sm text-[--text-secondary] hover:text-white transition">
+            <button onClick={resetFilters} className="flex items-center gap-1 text-sm text-[--text-secondary] hover:text-[--text-primary] transition">
               <FilterX className="w-4 h-4" />
               Réinitialiser
             </button>

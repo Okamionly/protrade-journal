@@ -291,7 +291,7 @@ export default function CotPage() {
               className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
                 category === cat
                   ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
-                  : "text-[--text-secondary] hover:text-white hover:bg-white/5 border border-[--border]"
+                  : "text-[--text-secondary] hover:text-[--text-primary] hover:bg-[--bg-hover] border border-[--border]"
               }`}>
               {cat}
             </button>
@@ -339,8 +339,8 @@ export default function CotPage() {
                     <tr key={r.key}
                       onClick={() => openDetail(r.key)}
                       className="border-b border-[--border-subtle]/50 hover:bg-white/5 cursor-pointer transition">
-                      <td className="px-4 py-3 font-bold text-white">{r.key}</td>
-                      <td className="px-4 py-3 text-gray-300 text-xs">{r.name}</td>
+                      <td className="px-4 py-3 font-bold text-[--text-primary]">{r.key}</td>
+                      <td className="px-4 py-3 text-[--text-secondary] text-xs">{r.name}</td>
                       <td className="px-4 py-3">
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-[--bg-secondary]/50 text-[--text-secondary]">{r.category}</span>
                       </td>
