@@ -63,5 +63,7 @@ export const config = {
     "/api/tags/:path*",
     "/api/monthly-goals/:path*",
     "/api/trading-rules/:path*",
+    "/admin/:path*",
+    "/api/admin/users/:path*",
   ],
 };

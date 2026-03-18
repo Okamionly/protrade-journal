@@ -44,6 +44,14 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
+// Admin nav item (shown only for ADMIN users)
+const adminItem = {
+  href: "/admin",
+  label: "Admin Panel",
+  icon: Shield,
+  isAdmin: true,
+};
+
 const navItems = [
   // TRADING
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -104,10 +112,20 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("sidebar-collapsed");
     if (stored === "true") setCollapsed(true);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/user/role")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.role) setUserRole(data.role);
+      })
+      .catch(() => {});
   }, []);
 
   const toggleCollapsed = () => {
@@ -137,6 +155,38 @@ export function Sidebar() {
 
       {/* Nav items */}
       <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto scrollbar-thin">
+        {/* Admin link - only visible for ADMIN users */}
+        {userRole === "ADMIN" && (() => {
+          const isActive = pathname === adminItem.href || pathname?.startsWith(adminItem.href + "/");
+          const AdminIcon = adminItem.icon;
+          return (
+            <>
+              <Link
+                href={adminItem.href}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all group relative ${
+                  isActive
+                    ? "bg-rose-500/15 text-rose-400"
+                    : "text-rose-500/80 dark:text-rose-400/80 hover:text-rose-400 hover:bg-rose-500/10"
+                }`}
+                title={collapsed ? adminItem.label : undefined}
+              >
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-rose-400" />
+                )}
+                <AdminIcon className={`w-[18px] h-[18px] flex-shrink-0 ${
+                  isActive ? "text-rose-400" : "text-rose-500/70 dark:text-rose-400/70 group-hover:text-rose-400"
+                }`} />
+                {!collapsed && <span className="truncate">{adminItem.label}</span>}
+              </Link>
+              <div className="pt-1 pb-1">
+                {!collapsed && (
+                  <span className="px-3 text-[10px] font-bold tracking-widest text-gray-400 dark:text-gray-600 uppercase">TRADING</span>
+                )}
+                {collapsed && <div className="border-t border-gray-200 dark:border-gray-800 mx-2" />}
+              </div>
+            </>
+          );
+        })()}
         {navItems.map((item, i) => {
           if ("divider" in item && item.divider) {
             return (
