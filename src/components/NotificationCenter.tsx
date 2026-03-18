@@ -54,7 +54,7 @@ const TIPS = [
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "À l\u2019instant";
+  if (mins < 1) return "À l\’instant";
   if (mins < 60) return `il y a ${mins}min`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `il y a ${hrs}h`;
@@ -132,7 +132,7 @@ export function useNotifications(trades: Trade[]) {
         id: `warn-loss-${today}`,
         type: "WARNING",
         title: "Attention !",
-        message: `${losses} pertes d\u2019affil\u00e9e aujourd\u2019hui. Fais une pause.`,
+        message: `${losses} pertes d\’affilée aujourd\’hui. Fais une pause.`,
         createdAt: now - 600000,
         tab: "trading",
       });
@@ -148,7 +148,7 @@ export function useNotifications(trades: Trade[]) {
           id: `goal-${month}`,
           type: "GOAL",
           title: "Objectif mensuel",
-          message: `Objectif mensuel atteint \u00e0 ${Math.round(winRate * 100)}% !`,
+          message: `Objectif mensuel atteint à ${Math.round(winRate * 100)}% !`,
           createdAt: now - 7200000,
           tab: "trading",
         });
@@ -161,7 +161,7 @@ export function useNotifications(trades: Trade[]) {
         id: `risk-limit-${today}`,
         type: "RISK",
         title: "Limite de trades",
-        message: `Tu as d\u00e9pass\u00e9 ta limite avec ${todayTrades.length} trades aujourd\u2019hui.`,
+        message: `Tu as dépassé ta limite avec ${todayTrades.length} trades aujourd\’hui.`,
         createdAt: now - 300000,
         tab: "system",
       });

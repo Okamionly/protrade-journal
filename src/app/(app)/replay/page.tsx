@@ -183,7 +183,7 @@ function AnimatedPriceChart({
         fill="#06b6d4"
         fontFamily="monospace"
       >
-        Entr\u00E9e {trade.entry.toFixed(5)}
+        Entrée {trade.entry.toFixed(5)}
       </text>
 
       {/* SL line - red dashed */}
@@ -404,22 +404,22 @@ function computeTradeScore(trade: Trade): {
     rrAchieved: rrScore,
     details: [
       {
-        label: "Qualit\u00E9 d'entr\u00E9e",
+        label: "Qualité d'entrée",
         score: entryQuality,
         max: 10,
-        desc: "Proximit\u00E9 de l'entr\u00E9e par rapport au SL/TP",
+        desc: "Proximité de l'entrée par rapport au SL/TP",
       },
       {
         label: "Discipline",
         score: disciplineScore,
         max: 10,
-        desc: "Respect du plan et de la strat\u00E9gie",
+        desc: "Respect du plan et de la stratégie",
       },
       {
-        label: "R:R r\u00E9alis\u00E9",
+        label: "R:R réalisé",
         score: rrScore,
         max: 10,
-        desc: "Ratio risque/r\u00E9compense obtenu vs pr\u00E9vu",
+        desc: "Ratio risque/récompense obtenu vs prévu",
       },
     ],
   };
@@ -633,17 +633,17 @@ export default function ReplayPage() {
 
     return {
       cutAt1R: {
-        label: "Si tu avais coup\u00E9 \u00E0 1R",
+        label: "Si tu avais coupé à 1R",
         price: oneRTarget,
         pl: oneRPL,
       },
       letRunToTP: {
-        label: "Si tu avais laiss\u00E9 courir au TP",
+        label: "Si tu avais laissé courir au TP",
         price: selected.tp,
         pl: tpPL,
       },
       doublePosition: {
-        label: "Si tu avais doubl\u00E9 ta position",
+        label: "Si tu avais doublé ta position",
         lots: selected.lots * 2,
         pl: doublePL,
       },
@@ -673,7 +673,7 @@ export default function ReplayPage() {
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <Rewind className="w-10 h-10 text-cyan-400 opacity-50" />
         <p style={{ color: "var(--text-muted)" }}>
-          Aucun trade cl\u00F4tur\u00E9 \u00E0 rejouer
+          Aucun trade clôturé à rejouer
         </p>
       </div>
     );
@@ -701,7 +701,7 @@ export default function ReplayPage() {
             disabled={currentIndex <= 0}
             className="glass p-2 rounded-lg hover:opacity-80 transition-opacity disabled:opacity-30"
             style={{ color: "var(--text-secondary)" }}
-            title="Trade pr\u00E9c\u00E9dent (\u2190)"
+            title="Trade précédent (\←)"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -719,7 +719,7 @@ export default function ReplayPage() {
             disabled={currentIndex >= closedTrades.length - 1}
             className="glass p-2 rounded-lg hover:opacity-80 transition-opacity disabled:opacity-30"
             style={{ color: "var(--text-secondary)" }}
-            title="Trade suivant (\u2192)"
+            title="Trade suivant (\→)"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -732,7 +732,7 @@ export default function ReplayPage() {
           className="text-xs font-medium mb-2 block"
           style={{ color: "var(--text-muted)" }}
         >
-          S\u00E9lectionner un trade
+          Sélectionner un trade
         </label>
         <select
           value={selectedId || ""}
@@ -748,11 +748,11 @@ export default function ReplayPage() {
             <optgroup key={dateKey} label={formatDateGroup(dateKey)}>
               {grouped[dateKey].map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.asset} {t.direction === "LONG" ? "\u25B2" : "\u25BC"}{" "}
+                  {t.asset} {t.direction === "LONG" ? "\▲" : "\▼"}{" "}
                   {t.direction} &mdash;{" "}
                   {t.result >= 0 ? "+" : ""}
-                  {t.result.toFixed(2)}\u20AC
-                  {t.strategy ? ` \u2014 ${t.strategy}` : ""}
+                  {t.result.toFixed(2)}€
+                  {t.strategy ? ` \— ${t.strategy}` : ""}
                 </option>
               ))}
             </optgroup>
@@ -806,7 +806,7 @@ export default function ReplayPage() {
                   onClick={handleReset}
                   className="glass p-1.5 rounded-lg hover:opacity-80 transition-opacity"
                   style={{ color: "var(--text-secondary)" }}
-                  title="R\u00E9initialiser"
+                  title="Réinitialiser"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
@@ -876,7 +876,7 @@ export default function ReplayPage() {
                 className="text-sm font-semibold mb-4 flex items-center gap-2"
                 style={{ color: "var(--text-primary)" }}
               >
-                <Target className="w-4 h-4 text-cyan-400" /> D\u00E9tails du
+                <Target className="w-4 h-4 text-cyan-400" /> Détails du
                 Trade
               </h3>
               <div className="space-y-2.5">
@@ -893,7 +893,7 @@ export default function ReplayPage() {
                   { label: "Date", value: formatDate(selected.date) },
                   { label: "Lots", value: selected.lots.toString() },
                   {
-                    label: "Entr\u00E9e",
+                    label: "Entrée",
                     value: selected.entry.toFixed(5),
                     mono: true,
                   },
@@ -915,13 +915,13 @@ export default function ReplayPage() {
                     color: "#10b981",
                   },
                   {
-                    label: "R:R planifi\u00E9",
-                    value: stats ? stats.rr.toFixed(2) : "\u2014",
+                    label: "R:R planifié",
+                    value: stats ? stats.rr.toFixed(2) : "\—",
                     mono: true,
                   },
                   {
-                    label: "R:R r\u00E9alis\u00E9",
-                    value: stats ? stats.achievedRR.toFixed(2) + "R" : "\u2014",
+                    label: "R:R réalisé",
+                    value: stats ? stats.achievedRR.toFixed(2) + "R" : "\—",
                     mono: true,
                     color: stats
                       ? stats.achievedRR >= 0
@@ -930,24 +930,24 @@ export default function ReplayPage() {
                       : undefined,
                   },
                   {
-                    label: "R\u00E9sultat",
-                    value: `${selected.result >= 0 ? "+" : ""}${selected.result.toFixed(2)}\u20AC`,
+                    label: "Résultat",
+                    value: `${selected.result >= 0 ? "+" : ""}${selected.result.toFixed(2)}€`,
                     color:
                       selected.result >= 0 ? "#10b981" : "#f43f5e",
                     mono: true,
                   },
                   {
-                    label: "Strat\u00E9gie",
-                    value: selected.strategy || "\u2014",
+                    label: "Stratégie",
+                    value: selected.strategy || "\—",
                   },
                   {
-                    label: "\u00C9motion",
-                    value: selected.emotion || "\u2014",
+                    label: "Émotion",
+                    value: selected.emotion || "\—",
                   },
-                  { label: "Tags", value: selected.tags || "\u2014" },
+                  { label: "Tags", value: selected.tags || "\—" },
                   {
                     label: "Setup",
-                    value: selected.setup || "\u2014",
+                    value: selected.setup || "\—",
                   },
                 ].map((item) => (
                   <div
@@ -1041,7 +1041,7 @@ export default function ReplayPage() {
                         className="text-xs mt-1"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        \u00C9valuation automatique bas\u00E9e sur l&apos;ex\u00E9cution
+                        Évaluation automatique basée sur l&apos;exécution
                       </p>
                     </div>
                   </div>
@@ -1052,7 +1052,7 @@ export default function ReplayPage() {
                       <div key={d.label}>
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            {d.label.includes("entr\u00E9e") ? (
+                            {d.label.includes("entrée") ? (
                               <Target
                                 className="w-3 h-3"
                                 style={{
@@ -1149,13 +1149,13 @@ export default function ReplayPage() {
                         }}
                       >
                         {alternatives.cutAt1R.pl >= 0 ? "+" : ""}
-                        {alternatives.cutAt1R.pl.toFixed(2)}\u20AC
+                        {alternatives.cutAt1R.pl.toFixed(2)}€
                       </p>
                       <p
                         className="text-[10px] mono mt-1"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        Sortie \u00E0{" "}
+                        Sortie à{" "}
                         {alternatives.cutAt1R.price.toFixed(5)}
                       </p>
                       <div className="mt-2 flex items-center gap-1">
@@ -1176,7 +1176,7 @@ export default function ReplayPage() {
                           {(
                             alternatives.cutAt1R.pl - selected.result
                           ).toFixed(2)}
-                          \u20AC vs r\u00E9el
+                          € vs réel
                         </span>
                       </div>
                     </div>
@@ -1205,13 +1205,13 @@ export default function ReplayPage() {
                         }}
                       >
                         {alternatives.letRunToTP.pl >= 0 ? "+" : ""}
-                        {alternatives.letRunToTP.pl.toFixed(2)}\u20AC
+                        {alternatives.letRunToTP.pl.toFixed(2)}€
                       </p>
                       <p
                         className="text-[10px] mono mt-1"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        Sortie \u00E0{" "}
+                        Sortie à{" "}
                         {alternatives.letRunToTP.price.toFixed(5)}
                       </p>
                       <div className="mt-2 flex items-center gap-1">
@@ -1233,7 +1233,7 @@ export default function ReplayPage() {
                           {(
                             alternatives.letRunToTP.pl - selected.result
                           ).toFixed(2)}
-                          \u20AC vs r\u00E9el
+                          € vs réel
                         </span>
                       </div>
                     </div>
@@ -1262,7 +1262,7 @@ export default function ReplayPage() {
                         }}
                       >
                         {alternatives.doublePosition.pl >= 0 ? "+" : ""}
-                        {alternatives.doublePosition.pl.toFixed(2)}\u20AC
+                        {alternatives.doublePosition.pl.toFixed(2)}€
                       </p>
                       <p
                         className="text-[10px] mono mt-1"
@@ -1292,7 +1292,7 @@ export default function ReplayPage() {
                             alternatives.doublePosition.pl -
                             selected.result
                           ).toFixed(2)}
-                          \u20AC vs r\u00E9el
+                          € vs réel
                         </span>
                       </div>
                     </div>
@@ -1315,7 +1315,7 @@ export default function ReplayPage() {
                         className="text-xs"
                         style={{ color: "var(--text-secondary)" }}
                       >
-                        R\u00E9sultat r\u00E9el
+                        Résultat réel
                       </span>
                     </div>
                     <span
@@ -1326,7 +1326,7 @@ export default function ReplayPage() {
                       }}
                     >
                       {selected.result >= 0 ? "+" : ""}
-                      {selected.result.toFixed(2)}\u20AC
+                      {selected.result.toFixed(2)}€
                     </span>
                   </div>
                 </div>
@@ -1342,7 +1342,7 @@ export default function ReplayPage() {
                 style={{ color: "var(--text-primary)" }}
               >
                 <Camera className="w-4 h-4 text-cyan-400" /> Captures
-                d&apos;\u00E9cran
+                d&apos;écran
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {selected.screenshots.map((ss) => (
@@ -1402,7 +1402,7 @@ export default function ReplayPage() {
                   value={currentNote}
                   onChange={(e) => setCurrentNote(e.target.value)}
                   rows={4}
-                  placeholder="Ajoutez vos observations, le\u00E7ons apprises..."
+                  placeholder="Ajoutez vos observations, leçons apprises..."
                   className="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none transition-colors"
                   style={{
                     background: "var(--bg-primary)",
@@ -1489,7 +1489,7 @@ export default function ReplayPage() {
                 color: "var(--text-secondary)",
               }}
             >
-              <ArrowLeft className="w-4 h-4" /> Trade pr\u00E9c\u00E9dent
+              <ArrowLeft className="w-4 h-4" /> Trade précédent
             </button>
             <div
               className="text-xs mono"
@@ -1503,7 +1503,7 @@ export default function ReplayPage() {
                 }}
               >
                 {selected.result >= 0 ? "+" : ""}
-                {selected.result.toFixed(2)}\u20AC
+                {selected.result.toFixed(2)}€
               </span>
             </div>
             <button

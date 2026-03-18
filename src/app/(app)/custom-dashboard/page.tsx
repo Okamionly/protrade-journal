@@ -53,14 +53,14 @@ type PresetName = "scalping" | "swing" | "review";
 
 const WIDGETS: WidgetMeta[] = [
   { id: "equity-curve", label: "Courbe de Capital", icon: <TrendingUp size={16} />, wide: true },
-  { id: "win-rate", label: "Taux de R\u00e9ussite", icon: <Target size={16} />, wide: false },
+  { id: "win-rate", label: "Taux de Réussite", icon: <Target size={16} />, wide: false },
   { id: "today-pnl", label: "P&L du Jour", icon: <DollarSign size={16} />, wide: false },
-  { id: "recent-trades", label: "Trades R\u00e9cents", icon: <List size={16} />, wide: true },
+  { id: "recent-trades", label: "Trades Récents", icon: <List size={16} />, wide: true },
   { id: "calendar", label: "Calendrier G/P", icon: <CalendarDays size={16} />, wide: true },
   { id: "best-asset", label: "Meilleur Actif", icon: <Award size={16} />, wide: false },
-  { id: "streak", label: "S\u00e9rie en Cours", icon: <Flame size={16} />, wide: false },
+  { id: "streak", label: "Série en Cours", icon: <Flame size={16} />, wide: false },
   { id: "daily-target", label: "Objectif Journalier", icon: <Gauge size={16} />, wide: false },
-  { id: "emotion-dist", label: "\u00c9motions", icon: <PieChart size={16} />, wide: false },
+  { id: "emotion-dist", label: "\Émotions", icon: <PieChart size={16} />, wide: false },
   { id: "quick-stats", label: "Stats Rapides", icon: <BarChart3 size={16} />, wide: false },
 ];
 
@@ -137,7 +137,7 @@ function EquityCurveWidget({ trades }: { trades: Trade[] }) {
   if (cumulative.length < 2) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 120, color: "var(--text-muted)" }}>
-        Pas assez de donn\u00e9es
+        Pas assez de données
       </div>
     );
   }
@@ -279,7 +279,7 @@ function RecentTradesWidget({ trades }: { trades: Trade[] }) {
             <th style={{ padding: "4px 8px", fontWeight: 500 }}>Date</th>
             <th style={{ padding: "4px 8px", fontWeight: 500 }}>Actif</th>
             <th style={{ padding: "4px 8px", fontWeight: 500 }}>Dir.</th>
-            <th style={{ padding: "4px 8px", fontWeight: 500, textAlign: "right" }}>R\u00e9sultat</th>
+            <th style={{ padding: "4px 8px", fontWeight: 500, textAlign: "right" }}>Résultat</th>
           </tr>
         </thead>
         <tbody>
@@ -429,7 +429,7 @@ function BestAssetWidget({ trades }: { trades: Trade[] }) {
   if (!best) {
     return (
       <div style={{ color: "var(--text-muted)", textAlign: "center", padding: 16 }}>
-        Aucune donn\u00e9e
+        Aucune donnée
       </div>
     );
   }
@@ -472,10 +472,10 @@ function StreakWidget({ trades }: { trades: Trade[] }) {
   const color = streak.type === "win" ? "#10b981" : streak.type === "loss" ? "#f43f5e" : "var(--text-muted)";
   const label =
     streak.type === "win"
-      ? "Victoires cons\u00e9cutives"
+      ? "Victoires consécutives"
       : streak.type === "loss"
-      ? "D\u00e9faites cons\u00e9cutives"
-      : "Aucune s\u00e9rie";
+      ? "Défaites consécutives"
+      : "Aucune série";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 4, padding: "12px 0" }}>
@@ -538,9 +538,9 @@ const EMOTION_COLORS: Record<string, string> = {
   confiant: "#10b981",
   calme: "#06b6d4",
   neutre: "#6b7280",
-  stress\u00e9: "#f59e0b",
+  stressé: "#f59e0b",
   anxieux: "#f97316",
-  frustr\u00e9: "#f43f5e",
+  frustré: "#f43f5e",
   euphorique: "#8b5cf6",
   impatient: "#ec4899",
 };
@@ -562,7 +562,7 @@ function EmotionDistWidget({ trades }: { trades: Trade[] }) {
   if (data.entries.length === 0) {
     return (
       <div style={{ color: "var(--text-muted)", textAlign: "center", padding: 16 }}>
-        Aucune \u00e9motion enregistr\u00e9e
+        Aucune émotion enregistrée
       </div>
     );
   }
@@ -634,7 +634,7 @@ function QuickStatsWidget({ trades }: { trades: Trade[] }) {
   }, [trades]);
 
   const items = [
-    { label: "Aujourd\u2019hui", value: stats.today },
+    { label: "Aujourd\’hui", value: stats.today },
     { label: "Cette semaine", value: stats.week },
     { label: "Ce mois", value: stats.month },
   ];
@@ -888,7 +888,7 @@ export default function CustomDashboardPage() {
             {/* Presets in panel */}
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
               <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600, letterSpacing: 1 }}>
-                Pr\u00e9r\u00e9glages
+                Préréglages
               </span>
               <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
                 {(Object.keys(PRESETS) as PresetName[]).map((name) => (

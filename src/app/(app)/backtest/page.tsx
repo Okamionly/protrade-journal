@@ -242,30 +242,30 @@ function generateInsights(actual: Stats, simulated: Stats, config: SimConfig): s
   const pnlPct = actual.totalPnL !== 0 ? ((pnlDiff / Math.abs(actual.totalPnL)) * 100).toFixed(0) : "0";
 
   if (config.tpRR > 0 && pnlDiff !== 0) {
-    insights.push(`En coupant \u00e0 ${config.tpRR}R, tu aurais ${pnlDiff > 0 ? "gagn\u00e9" : "perdu"} ${Math.abs(pnlDiff).toFixed(0)}\u20ac ${pnlDiff > 0 ? "de plus" : "de moins"} (${pnlDiff > 0 ? "+" : ""}${pnlPct}%).`);
+    insights.push(`En coupant à ${config.tpRR}R, tu aurais ${pnlDiff > 0 ? "gagné" : "perdu"} ${Math.abs(pnlDiff).toFixed(0)}€ ${pnlDiff > 0 ? "de plus" : "de moins"} (${pnlDiff > 0 ? "+" : ""}${pnlPct}%).`);
   }
   if (config.removeWorst > 0 && simulated.profitFactor !== actual.profitFactor) {
-    insights.push(`Sans tes ${config.removeWorst} pires trades, ton profit factor passe de ${actual.profitFactor} \u00e0 ${simulated.profitFactor}.`);
+    insights.push(`Sans tes ${config.removeWorst} pires trades, ton profit factor passe de ${actual.profitFactor} à ${simulated.profitFactor}.`);
   }
   if (config.removeLosing && simulated.winRate !== actual.winRate) {
-    insights.push(`Sans les jours rouges, ton win rate passe de ${actual.winRate}% \u00e0 ${simulated.winRate}%.`);
+    insights.push(`Sans les jours rouges, ton win rate passe de ${actual.winRate}% à ${simulated.winRate}%.`);
   }
   if (config.maxPerDay < 10) {
     const tradeDiff = actual.totalTrades - simulated.totalTrades;
-    if (tradeDiff > 0) insights.push(`Limiter \u00e0 ${config.maxPerDay} trades/jour supprime ${tradeDiff} trades (souvent du revenge trading).`);
+    if (tradeDiff > 0) insights.push(`Limiter à ${config.maxPerDay} trades/jour supprime ${tradeDiff} trades (souvent du revenge trading).`);
   }
   if (config.strategyFilter !== "all") {
     insights.push(`En ne gardant que "${config.strategyFilter}", tu aurais un Sharpe de ${simulated.sharpe} vs ${actual.sharpe}.`);
   }
   if (simulated.maxDrawdown < actual.maxDrawdown) {
     const ddImprove = ((actual.maxDrawdown - simulated.maxDrawdown) / actual.maxDrawdown * 100).toFixed(0);
-    insights.push(`Le drawdown max diminue de ${ddImprove}%, passant de ${actual.maxDrawdown}\u20ac \u00e0 ${simulated.maxDrawdown}\u20ac.`);
+    insights.push(`Le drawdown max diminue de ${ddImprove}%, passant de ${actual.maxDrawdown}€ à ${simulated.maxDrawdown}€.`);
   }
   if (config.sizeMultiplier !== 1) {
-    insights.push(`Avec un multiplicateur de ${config.sizeMultiplier}x, le P&L passe de ${actual.totalPnL}\u20ac \u00e0 ${simulated.totalPnL}\u20ac.`);
+    insights.push(`Avec un multiplicateur de ${config.sizeMultiplier}x, le P&L passe de ${actual.totalPnL}€ à ${simulated.totalPnL}€.`);
   }
   if (insights.length === 0) {
-    insights.push("Ajuste les param\u00e8tres pour d\u00e9couvrir des sc\u00e9narios alternatifs.");
+    insights.push("Ajuste les paramètres pour découvrir des scénarios alternatifs.");
   }
   return insights.slice(0, 5);
 }
@@ -321,10 +321,10 @@ export default function BacktestPage() {
     );
   }
 
-  const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}\u20ac`;
+  const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}€`;
   const fmtPct = (v: number) => `${v.toFixed(1)}%`;
   const fmtNum = (v: number) => `${v}`;
-  const fmtRatio = (v: number) => (isFinite(v) ? v.toFixed(2) : "\u221e");
+  const fmtRatio = (v: number) => (isFinite(v) ? v.toFixed(2) : "\∞");
 
   return (
     <div className="space-y-6 pb-12">
@@ -335,7 +335,7 @@ export default function BacktestPage() {
         </div>
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>What If &mdash; Backtesting Simulator</h1>
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>Simule des sc\u00e9narios alternatifs sur tes trades r\u00e9els</p>
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>Simule des scénarios alternatifs sur tes trades réels</p>
         </div>
       </div>
 
@@ -364,10 +364,10 @@ export default function BacktestPage() {
         <div className="lg:col-span-1 space-y-4">
           <div className="glass p-5 rounded-xl">
             <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-              <SlidersHorizontal className="w-4 h-4 text-cyan-400" /> Param\u00e8tres de Simulation
+              <SlidersHorizontal className="w-4 h-4 text-cyan-400" /> Paramètres de Simulation
             </h2>
 
-            <Slider label="Take Profit \u00e0 X R:R" icon={Target} value={config.tpRR} min={0} max={5} step={0.5}
+            <Slider label="Take Profit à X R:R" icon={Target} value={config.tpRR} min={0} max={5} step={0.5}
               format={(v) => v === 0 ? "Off" : `${v}R`} onChange={(v) => set("tpRR", v)} />
 
             <Slider label="Modificateur Stop Loss" icon={ShieldCheck} value={config.slModifier} min={-50} max={50} step={5}
@@ -397,12 +397,12 @@ export default function BacktestPage() {
             {/* Strategy filter */}
             <div className="mt-2">
               <span className="text-xs flex items-center gap-1.5 mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                <ChevronDown className="w-3.5 h-3.5 text-cyan-400" /> Strat\u00e9gie uniquement
+                <ChevronDown className="w-3.5 h-3.5 text-cyan-400" /> Stratégie uniquement
               </span>
               <select value={config.strategyFilter} onChange={(e) => set("strategyFilter", e.target.value)}
                 className="w-full text-xs rounded-lg px-3 py-2 glass appearance-none cursor-pointer"
                 style={{ color: "var(--text-primary)", border: "1px solid var(--border)", background: "var(--bg-primary)" }}>
-                <option value="all">Toutes les strat\u00e9gies</option>
+                <option value="all">Toutes les stratégies</option>
                 {strategies.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
@@ -430,14 +430,14 @@ export default function BacktestPage() {
           <div className="glass p-5 rounded-xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-                <BarChart3 className="w-4 h-4 text-cyan-400" /> Comparaison des R\u00e9sultats
+                <BarChart3 className="w-4 h-4 text-cyan-400" /> Comparaison des Résultats
               </h2>
             </div>
             {/* Column headers */}
             <div className="flex items-center pb-2 border-b mb-1" style={{ borderColor: "var(--border)" }}>
-              <span className="text-xs flex-1" style={{ color: "var(--text-muted)" }}>M\u00e9trique</span>
+              <span className="text-xs flex-1" style={{ color: "var(--text-muted)" }}>Métrique</span>
               <span className="text-xs w-24 text-right" style={{ color: "var(--text-muted)" }}>Actuel</span>
-              <span className="text-xs w-24 text-right font-semibold text-cyan-400">Simul\u00e9</span>
+              <span className="text-xs w-24 text-right font-semibold text-cyan-400">Simulé</span>
               <span className="text-xs w-20 text-right" style={{ color: "var(--text-muted)" }}>Delta</span>
             </div>
             <StatRow label="Total P&L" actual={actualStats.totalPnL} simulated={simStats.totalPnL} format={fmt} />
@@ -452,7 +452,7 @@ export default function BacktestPage() {
             {/* Summary banner */}
             <div className="mt-4 p-3 rounded-lg flex items-center justify-between"
               style={{ background: simStats.totalPnL >= actualStats.totalPnL ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)" }}>
-              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Diff\u00e9rence nette</span>
+              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Différence nette</span>
               <span className={`mono text-sm font-bold ${simStats.totalPnL >= actualStats.totalPnL ? "text-emerald-400" : "text-red-400"}`}>
                 {(simStats.totalPnL - actualStats.totalPnL) >= 0 ? "+" : ""}{(simStats.totalPnL - actualStats.totalPnL).toFixed(2)}&euro;
               </span>

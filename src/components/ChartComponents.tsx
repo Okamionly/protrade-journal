@@ -390,7 +390,7 @@ export function AdvancedEquityChart({ trades }: { trades: any[] }) {
             position: "left",
             title: {
               display: true,
-              text: "Equity (\u20ac)",
+              text: "Equity (€)",
               color: textColor,
             },
             grid: { color: gridColor },

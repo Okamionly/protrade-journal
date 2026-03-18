@@ -70,11 +70,11 @@ const MARKET_TABS = ["Tous", "Forex", "Indices", "Crypto", "Actions"] as const;
 
 const ACHIEVEMENTS = [
   { label: "Meilleur win streak: 14", user: "ScalpMaster", icon: Flame, color: "text-orange-400" },
-  { label: "Plus gros trade: +5 230\u20ac", user: "GoldHunter", icon: TrendingUp, color: "text-emerald-400" },
+  { label: "Plus gros trade: +5 230€", user: "GoldHunter", icon: TrendingUp, color: "text-emerald-400" },
   { label: "Meilleur win rate: 82%", user: "TradeurParis", icon: Target, color: "text-cyan-400" },
   { label: "Plus de trades: 342", user: "NightScalper", icon: Zap, color: "text-yellow-400" },
   { label: "Profit Factor 3.2", user: "EliteSwing", icon: Star, color: "text-purple-400" },
-  { label: "10 jours cons\u00e9cutifs", user: "ForexPro_FR", icon: Crown, color: "text-amber-400" },
+  { label: "10 jours consécutifs", user: "ForexPro_FR", icon: Crown, color: "text-amber-400" },
 ];
 
 export default function LeaderboardPage() {

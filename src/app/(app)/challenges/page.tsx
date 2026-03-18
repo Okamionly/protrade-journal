@@ -188,7 +188,7 @@ export default function ChallengesPage() {
       {
         id: "profit",
         title: "Profit Target",
-        description: "500\u20AC de profit ce mois",
+        description: "500€ de profit ce mois",
         icon: <Target size={20} />,
         current: Math.min(Math.max(monthProfit, 0), 500),
         target: 500,
@@ -291,8 +291,8 @@ export default function ChallengesPage() {
       { id: "winrate-60", title: "Win Rate > 60%", description: "Atteindre 60% de win rate", icon: <TrendingUp size={20} />, unlocked: winRate > 60 && sorted.length >= 10, color: "#10b981" },
       { id: "pf-2", title: "Profit Factor > 2", description: "Profit factor superieur a 2", icon: <Gem size={20} />, unlocked: pf > 2 && sorted.length >= 10, color: "#ec4899" },
       { id: "diamond", title: "Diamond Score", description: "PF > 2 et Win Rate > 55%", icon: <Sparkles size={20} />, unlocked: diamondScore && sorted.length >= 20, color: "#a855f7" },
-      { id: "1000-profit", title: "1000\u20AC Profit", description: "Accumuler 1000\u20AC de profit", icon: <Award size={20} />, unlocked: totalPnL >= 1000, color: "#f59e0b" },
-      { id: "best-month", title: "Best Month", description: "Mois avec 500\u20AC+ de profit", icon: <Medal size={20} />, unlocked: bestMonth >= 500, color: "#ef4444" },
+      { id: "1000-profit", title: "1000€ Profit", description: "Accumuler 1000€ de profit", icon: <Award size={20} />, unlocked: totalPnL >= 1000, color: "#f59e0b" },
+      { id: "best-month", title: "Best Month", description: "Mois avec 500€+ de profit", icon: <Medal size={20} />, unlocked: bestMonth >= 500, color: "#ef4444" },
     ];
   }, [sorted]);
 
@@ -527,7 +527,7 @@ export default function ChallengesPage() {
               current: monthly.pnl,
               target: 500,
               last: monthly.lastPnl,
-              format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}\u20AC`,
+              format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}€`,
               color: monthly.pnl >= 0 ? "#10b981" : "#ef4444",
             },
           ].map((m) => {
