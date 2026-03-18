@@ -131,42 +131,42 @@ export default function PnLCalendarPage() {
       </div>
 
       {/* Monthly Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted] mb-1">P&L Mois</p>
-          <p className={`text-xl font-bold mono ${stats.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-            {stats.totalPnl >= 0 ? "+" : ""}{stats.totalPnl.toFixed(2)}€
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">P&L Mois</p>
+          <p className={`text-base font-bold mono truncate ${stats.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+            {stats.totalPnl >= 0 ? "+" : ""}{stats.totalPnl.toFixed(0)}€
           </p>
         </div>
-        <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted] mb-1">Total Trades</p>
-          <p className="text-xl font-bold text-cyan-400">{monthTrades.length}</p>
+        <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Trades</p>
+          <p className="text-base font-bold text-cyan-400">{monthTrades.length}</p>
           <p className="text-[10px] text-[--text-muted]">{monthTrades.filter(t => t.result > 0).length}W / {monthTrades.filter(t => t.result <= 0).length}L</p>
         </div>
-        <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted] mb-1">Jours Gagnants</p>
-          <p className="text-xl font-bold text-emerald-400">{stats.winDays}</p>
+        <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Jours +</p>
+          <p className="text-base font-bold text-emerald-400">{stats.winDays}</p>
         </div>
-        <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted] mb-1">Jours Perdants</p>
-          <p className="text-xl font-bold text-rose-400">{stats.lossDays}</p>
+        <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Jours -</p>
+          <p className="text-base font-bold text-rose-400">{stats.lossDays}</p>
         </div>
-        <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted] mb-1">Meilleur Jour</p>
-          <p className="text-xl font-bold text-emerald-400 mono">
+        <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Best Day</p>
+          <p className="text-base font-bold text-emerald-400 mono truncate">
             {stats.bestDay ? `+${(+stats.bestDay[1]).toFixed(0)}€` : "—"}
           </p>
         </div>
-        <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted] mb-1">Pire Jour</p>
-          <p className="text-xl font-bold text-rose-400 mono">
+        <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Worst Day</p>
+          <p className="text-base font-bold text-rose-400 mono truncate">
             {stats.worstDay ? `${(+stats.worstDay[1]).toFixed(0)}€` : "—"}
           </p>
         </div>
-        <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted] mb-1">Série Wins</p>
-          <p className="text-xl font-bold text-amber-400 flex items-center justify-center gap-1">
-            <Flame className="w-5 h-5" /> {stats.maxStreak}
+        <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Série W</p>
+          <p className="text-base font-bold text-amber-400 flex items-center justify-center gap-1">
+            <Flame className="w-4 h-4" /> {stats.maxStreak}
           </p>
         </div>
       </div>
