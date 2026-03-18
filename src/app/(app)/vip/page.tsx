@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Crown,
@@ -189,7 +189,15 @@ function PostDetail({
   );
 }
 
-export default function VipPage() {
+export default function VipPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" style={{color: "var(--text-muted)"}} /></div>}>
+      <VipPage />
+    </Suspense>
+  );
+}
+
+function VipPage() {
   const [isVip, setIsVip] = useState(false);
   const [loading, setLoading] = useState(false);
   const [postsLoading, setPostsLoading] = useState(true);
