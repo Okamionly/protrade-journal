@@ -24,6 +24,13 @@ export interface SharedTrade {
   date: string;
 }
 
+export interface ReactionGroup {
+  emoji: string;
+  count: number;
+  users: string[];
+  hasReacted: boolean;
+}
+
 export interface ChatMessage {
   id: string;
   content: string;
@@ -33,6 +40,7 @@ export interface ChatMessage {
   roomId: string;
   trade: SharedTrade | null;
   isPinned: boolean;
+  reactions: { id: string; emoji: string; userId: string; user: { id: string; name: string | null } }[];
   createdAt: string;
 }
 
@@ -82,7 +90,6 @@ export function useChat(roomId: string) {
       const data = await res.json();
 
       if (isPolling && latestTimestamp.current) {
-        // Append new messages
         if (data.messages.length > 0) {
           setMessages((prev) => {
             const existingIds = new Set(prev.map((m) => m.id));
@@ -94,7 +101,6 @@ export function useChat(roomId: string) {
           });
         }
       } else {
-        // Full load
         setMessages(data.messages);
         if (data.messages.length > 0) {
           latestTimestamp.current = data.messages[data.messages.length - 1].createdAt;
@@ -107,7 +113,6 @@ export function useChat(roomId: string) {
     }
   }, [roomId]);
 
-  // Reset when room changes
   useEffect(() => {
     if (prevRoomId.current !== roomId) {
       setMessages([]);
@@ -118,14 +123,12 @@ export function useChat(roomId: string) {
     fetchMessages(false);
   }, [roomId, fetchMessages]);
 
-  // Polling every 3s
   useEffect(() => {
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         fetchMessages(true);
       }
     }, 3000);
-
     return () => clearInterval(interval);
   }, [fetchMessages]);
 
@@ -144,7 +147,7 @@ export function useChat(roomId: string) {
           const exists = prev.some((m) => m.id === msg.id);
           if (exists) return prev;
           latestTimestamp.current = msg.createdAt;
-          return [...prev, msg];
+          return [...prev, { ...msg, reactions: msg.reactions || [] }];
         });
         return true;
       }
@@ -191,5 +194,34 @@ export function useChat(roomId: string) {
     }
   }, []);
 
-  return { messages, loading, sending, sendMessage, deleteMessage, pinMessage, fetchMessages };
+  const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
+    try {
+      const res = await fetch("/api/chat/reactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, emoji }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id !== messageId) return m;
+            if (data.action === "added") {
+              return { ...m, reactions: [...m.reactions, data.reaction] };
+            } else {
+              return { ...m, reactions: m.reactions.filter((r) => !(r.emoji === emoji && r.userId === data.reaction?.userId)) };
+            }
+          })
+        );
+        // Refetch to get accurate state
+        fetchMessages(false);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, [fetchMessages]);
+
+  return { messages, loading, sending, sendMessage, deleteMessage, pinMessage, toggleReaction, fetchMessages };
 }

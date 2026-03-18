@@ -502,15 +502,10 @@ export default function PnLCalendarPage() {
                             <span className="text-[--text-muted] mono">{trade.lots} lots</span>
                           </div>
 
-                          {/* Row 3: Emotion + Notes */}
-                          {(trade.emotion || trade.notes) && (
-                            <div className="mt-2 flex items-start gap-3 text-xs">
-                              {trade.emotion && (
-                                <span className="px-2 py-0.5 rounded-full bg-[--bg-hover] text-[--text-secondary]">{trade.emotion}</span>
-                              )}
-                              {trade.notes && (
-                                <p className="text-[--text-muted] italic flex-1 line-clamp-1">{trade.notes}</p>
-                              )}
+                          {/* Row 3: Emotion */}
+                          {trade.emotion && (
+                            <div className="mt-2 text-xs">
+                              <span className="px-2 py-0.5 rounded-full bg-[--bg-hover] text-[--text-secondary]">{trade.emotion}</span>
                             </div>
                           )}
                         </div>

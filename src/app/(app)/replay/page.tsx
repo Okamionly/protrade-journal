@@ -1,110 +1,468 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTrades, Trade } from "@/hooks/useTrades";
 import {
-  Play, Rewind, FastForward, Target, TrendingUp,
-  TrendingDown, Camera, Edit3, Calculator, ArrowRight,
+  Play,
+  Pause,
+  RotateCcw,
+  Rewind,
+  FastForward,
+  Target,
+  TrendingUp,
+  TrendingDown,
+  Camera,
+  Edit3,
+  Calculator,
+  ArrowRight,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Gauge,
+  Star,
+  Zap,
+  Shield,
+  Award,
+  Clock,
+  BarChart3,
+  Activity,
 } from "lucide-react";
 
+/* ─── Helpers ─── */
+
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(d).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-function PriceChart({ trade, whatIfSL, whatIfTP }: { trade: Trade; whatIfSL: number | null; whatIfTP: number | null }) {
-  const isLong = trade.direction === "LONG";
-  const prices = [trade.entry, trade.sl, trade.tp, trade.exit ?? trade.entry];
-  if (whatIfSL !== null) prices.push(whatIfSL);
-  if (whatIfTP !== null) prices.push(whatIfTP);
-  const min = Math.min(...prices) * 0.9995;
-  const max = Math.max(...prices) * 1.0005;
-  const range = max - min || 1;
-  const toY = (p: number) => 100 - ((p - min) / range) * 100;
+function formatDateGroup(d: string) {
+  return new Date(d).toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
 
-  const markers = [
-    { price: trade.entry, label: "Entrée", color: "#10b981", x: 15 },
-    { price: trade.sl, label: "SL", color: "#f43f5e", x: 35 },
-    { price: trade.tp, label: "TP", color: "#06b6d4", x: 60 },
-    { price: trade.exit ?? trade.entry, label: "Sortie", color: "#eab308", x: 85 },
-  ];
+function groupByDate(trades: Trade[]): Record<string, Trade[]> {
+  const groups: Record<string, Trade[]> = {};
+  for (const t of trades) {
+    const key = t.date.slice(0, 10);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  }
+  return groups;
+}
+
+function clamp(v: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, v));
+}
+
+/* ─── Animated Price Chart ─── */
+
+function AnimatedPriceChart({
+  trade,
+  progress,
+}: {
+  trade: Trade;
+  progress: number; // 0..1
+}) {
+  const isLong = trade.direction === "LONG";
+  const exitPrice = trade.exit ?? trade.entry;
+  const isWin = trade.result >= 0;
+
+  const allPrices = [trade.entry, trade.sl, trade.tp, exitPrice];
+  const min = Math.min(...allPrices) * 0.9998;
+  const max = Math.max(...allPrices) * 1.0002;
+  const range = max - min || 1;
+  const toY = (p: number) => 10 + ((max - p) / range) * 80;
+
+  // Generate a pseudo-random but deterministic price path
+  const pathPoints = useMemo(() => {
+    const points: { x: number; y: number }[] = [];
+    const steps = 60;
+    const seed = trade.id
+      .split("")
+      .reduce((a, c) => a + c.charCodeAt(0), 0);
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const x = 5 + t * 90;
+      // Interpolate from entry to exit with noise
+      const basePrice = trade.entry + (exitPrice - trade.entry) * t;
+      // Deterministic noise based on seed and step
+      const noiseAmplitude = range * 0.15;
+      const noise =
+        Math.sin(seed * 0.1 + i * 1.7) * noiseAmplitude * 0.5 +
+        Math.sin(seed * 0.3 + i * 3.1) * noiseAmplitude * 0.3 +
+        Math.sin(seed * 0.7 + i * 0.5) * noiseAmplitude * 0.2;
+      const price = clamp(basePrice + noise, min, max);
+      points.push({ x, y: toY(price) });
+    }
+    return points;
+  }, [trade.id, trade.entry, exitPrice, min, max, range, toY]);
+
+  // Build the visible portion of the path based on progress
+  const visibleCount = Math.max(1, Math.floor(progress * pathPoints.length));
+  const visiblePoints = pathPoints.slice(0, visibleCount);
+  const pathD = visiblePoints
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
+    .join(" ");
+
+  const currentPoint = visiblePoints[visiblePoints.length - 1];
 
   return (
-    <div className="metric-card p-5">
-      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-        <Play className="w-4 h-4 text-cyan-400" /> Visualisation du Trade
-      </h3>
-      <div className="relative h-56 rounded-lg" style={{ background: "var(--bg-hover)" }}>
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-          {/* Grid lines */}
-          {[0, 25, 50, 75, 100].map((y) => (
-            <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="0.3" />
-          ))}
-          {/* Entry to Exit path */}
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      className="w-full h-full"
+      style={{ overflow: "visible" }}
+    >
+      {/* Background grid */}
+      {[0, 20, 40, 60, 80, 100].map((y) => (
+        <line
+          key={`g-${y}`}
+          x1="0"
+          y1={y}
+          x2="100"
+          y2={y}
+          stroke="rgba(255,255,255,0.04)"
+          strokeWidth="0.2"
+        />
+      ))}
+      {[0, 20, 40, 60, 80, 100].map((x) => (
+        <line
+          key={`gv-${x}`}
+          x1={x}
+          y1="0"
+          x2={x}
+          y2="100"
+          stroke="rgba(255,255,255,0.03)"
+          strokeWidth="0.2"
+        />
+      ))}
+
+      {/* SL zone fill */}
+      <rect
+        x="0"
+        y={isLong ? toY(trade.entry) : toY(trade.sl)}
+        width="100"
+        height={Math.abs(toY(trade.entry) - toY(trade.sl))}
+        fill="#f43f5e"
+        opacity="0.04"
+      />
+
+      {/* TP zone fill */}
+      <rect
+        x="0"
+        y={isLong ? toY(trade.tp) : toY(trade.entry)}
+        width="100"
+        height={Math.abs(toY(trade.tp) - toY(trade.entry))}
+        fill="#10b981"
+        opacity="0.04"
+      />
+
+      {/* Entry line - cyan dashed */}
+      <line
+        x1="0"
+        y1={toY(trade.entry)}
+        x2="100"
+        y2={toY(trade.entry)}
+        stroke="#06b6d4"
+        strokeWidth="0.3"
+        strokeDasharray="2,1.5"
+        opacity="0.7"
+      />
+      <text
+        x="1"
+        y={toY(trade.entry) - 1.5}
+        fontSize="2.8"
+        fill="#06b6d4"
+        fontFamily="monospace"
+      >
+        Entr\u00E9e {trade.entry.toFixed(5)}
+      </text>
+
+      {/* SL line - red dashed */}
+      <line
+        x1="0"
+        y1={toY(trade.sl)}
+        x2="100"
+        y2={toY(trade.sl)}
+        stroke="#f43f5e"
+        strokeWidth="0.3"
+        strokeDasharray="1.5,1"
+        opacity="0.7"
+      />
+      <text
+        x="1"
+        y={toY(trade.sl) + 4}
+        fontSize="2.8"
+        fill="#f43f5e"
+        fontFamily="monospace"
+      >
+        SL {trade.sl.toFixed(5)}
+      </text>
+
+      {/* TP line - green dashed */}
+      <line
+        x1="0"
+        y1={toY(trade.tp)}
+        x2="100"
+        y2={toY(trade.tp)}
+        stroke="#10b981"
+        strokeWidth="0.3"
+        strokeDasharray="1.5,1"
+        opacity="0.7"
+      />
+      <text
+        x="1"
+        y={toY(trade.tp) - 1.5}
+        fontSize="2.8"
+        fill="#10b981"
+        fontFamily="monospace"
+      >
+        TP {trade.tp.toFixed(5)}
+      </text>
+
+      {/* Exit line - green if win, red if loss */}
+      {progress >= 1 && (
+        <>
           <line
-            x1={markers[0].x} y1={toY(trade.entry)}
-            x2={markers[3].x} y2={toY(trade.exit ?? trade.entry)}
-            stroke={isLong ? "#10b981" : "#f43f5e"} strokeWidth="0.6" strokeDasharray="2,1" opacity="0.5"
+            x1="0"
+            y1={toY(exitPrice)}
+            x2="100"
+            y2={toY(exitPrice)}
+            stroke={isWin ? "#10b981" : "#f43f5e"}
+            strokeWidth="0.35"
+            strokeDasharray="1,1"
+            opacity="0.6"
           />
-          {/* SL zone */}
-          <rect x="5" y={Math.min(toY(trade.entry), toY(trade.sl))} width="90"
-            height={Math.abs(toY(trade.entry) - toY(trade.sl))} fill="#f43f5e" opacity="0.06" />
-          {/* TP zone */}
-          <rect x="5" y={Math.min(toY(trade.entry), toY(trade.tp))} width="90"
-            height={Math.abs(toY(trade.entry) - toY(trade.tp))} fill="#10b981" opacity="0.06" />
-          {/* What-if SL line */}
-          {whatIfSL !== null && (
-            <line x1="5" y1={toY(whatIfSL)} x2="95" y2={toY(whatIfSL)}
-              stroke="#f43f5e" strokeWidth="0.4" strokeDasharray="1.5,1" opacity="0.7" />
-          )}
-          {/* What-if TP line */}
-          {whatIfTP !== null && (
-            <line x1="5" y1={toY(whatIfTP)} x2="95" y2={toY(whatIfTP)}
-              stroke="#06b6d4" strokeWidth="0.4" strokeDasharray="1.5,1" opacity="0.7" />
-          )}
-          {/* Markers */}
-          {markers.map((m) => (
-            <g key={m.label}>
-              <circle cx={m.x} cy={toY(m.price)} r="2.2" fill={m.color} />
-              <circle cx={m.x} cy={toY(m.price)} r="3.5" fill="none" stroke={m.color} strokeWidth="0.3" opacity="0.5" />
-              <line x1={m.x} y1={toY(m.price) - 4} x2={m.x} y2={toY(m.price) + 4}
-                stroke={m.color} strokeWidth="0.3" opacity="0.4" />
-            </g>
-          ))}
-        </svg>
-        {/* Price labels */}
-        {markers.map((m) => (
-          <div key={m.label} className="absolute text-[10px] font-mono"
-            style={{ left: `${m.x}%`, top: `${toY(m.price)}%`, transform: "translate(-50%, -180%)", color: m.color }}>
-            <span className="block text-center">{m.label}</span>
-            <span className="block text-center opacity-75">{m.price.toFixed(5)}</span>
-          </div>
-        ))}
-        {/* Y-axis price scale */}
-        <div className="absolute right-2 top-0 bottom-0 flex flex-col justify-between py-2">
-          {[max, (max + min) / 2, min].map((p, i) => (
-            <span key={i} className="text-[9px] font-mono" style={{ color: "var(--text-muted)" }}>
-              {p.toFixed(4)}
-            </span>
-          ))}
-        </div>
-      </div>
-    </div>
+          <text
+            x="70"
+            y={toY(exitPrice) + (isWin === isLong ? 4 : -1.5)}
+            fontSize="2.8"
+            fill={isWin ? "#10b981" : "#f43f5e"}
+            fontFamily="monospace"
+          >
+            Sortie {exitPrice.toFixed(5)}
+          </text>
+        </>
+      )}
+
+      {/* Price path */}
+      <path
+        d={pathD}
+        fill="none"
+        stroke={isWin ? "#10b981" : "#f43f5e"}
+        strokeWidth="0.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.9"
+      />
+
+      {/* Glow effect on path */}
+      <path
+        d={pathD}
+        fill="none"
+        stroke={isWin ? "#10b981" : "#f43f5e"}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.15"
+      />
+
+      {/* Current position dot */}
+      {currentPoint && (
+        <>
+          <circle
+            cx={currentPoint.x}
+            cy={currentPoint.y}
+            r="1.8"
+            fill={isWin ? "#10b981" : "#f43f5e"}
+          />
+          <circle
+            cx={currentPoint.x}
+            cy={currentPoint.y}
+            r="3.5"
+            fill="none"
+            stroke={isWin ? "#10b981" : "#f43f5e"}
+            strokeWidth="0.25"
+            opacity="0.5"
+          >
+            <animate
+              attributeName="r"
+              from="2"
+              to="5"
+              dur="1.5s"
+              repeatCount="indefinite"
+            />
+            <animate
+              attributeName="opacity"
+              from="0.6"
+              to="0"
+              dur="1.5s"
+              repeatCount="indefinite"
+            />
+          </circle>
+        </>
+      )}
+
+      {/* Entry marker */}
+      <circle cx="5" cy={toY(trade.entry)} r="1.5" fill="#06b6d4" />
+
+      {/* Exit marker when complete */}
+      {progress >= 1 && (
+        <circle
+          cx="95"
+          cy={toY(exitPrice)}
+          r="1.5"
+          fill={isWin ? "#10b981" : "#f43f5e"}
+        />
+      )}
+    </svg>
   );
 }
+
+/* ─── Trade Score Calculator ─── */
+
+function computeTradeScore(trade: Trade): {
+  total: number;
+  entryQuality: number;
+  discipline: number;
+  rrAchieved: number;
+  details: { label: string; score: number; max: number; desc: string }[];
+} {
+  const isLong = trade.direction === "LONG";
+  const exitPrice = trade.exit ?? trade.entry;
+
+  // Entry quality: how close was entry to the ideal (far from SL, close to best entry)
+  const riskDistance = Math.abs(trade.entry - trade.sl);
+  const rewardDistance = Math.abs(trade.tp - trade.entry);
+  const totalRange = riskDistance + rewardDistance;
+
+  // Higher score if entry is closer to SL (better entry for a long, worse for short but we flip)
+  let entryRatio = totalRange > 0 ? riskDistance / totalRange : 0.5;
+  // A small risk distance relative to reward means a good entry
+  const entryQuality = Math.round(clamp((1 - entryRatio) * 10, 0, 10));
+
+  // Discipline: did result align with the strategy direction?
+  // If trade hit TP or exited between entry and TP, good discipline
+  let disciplineScore = 5; // base
+  const exitDistFromEntry = isLong
+    ? exitPrice - trade.entry
+    : trade.entry - exitPrice;
+  const tpDistFromEntry = isLong
+    ? trade.tp - trade.entry
+    : trade.entry - trade.tp;
+  const slDistFromEntry = isLong
+    ? trade.entry - trade.sl
+    : trade.sl - trade.entry;
+
+  if (tpDistFromEntry > 0) {
+    const exitRatio = exitDistFromEntry / tpDistFromEntry;
+    if (exitRatio >= 0.9) disciplineScore = 9; // exited near TP
+    else if (exitRatio >= 0.5) disciplineScore = 7;
+    else if (exitRatio >= 0) disciplineScore = 5;
+    else {
+      // Exited at loss
+      if (slDistFromEntry > 0) {
+        const lossRatio = Math.abs(exitDistFromEntry) / slDistFromEntry;
+        if (lossRatio <= 1.05) disciplineScore = 6; // respected SL
+        else disciplineScore = 2; // went past SL
+      } else {
+        disciplineScore = 3;
+      }
+    }
+  }
+
+  // R:R achieved vs planned
+  const plannedRR =
+    riskDistance > 0 ? rewardDistance / riskDistance : 1;
+  const achievedRR =
+    riskDistance > 0 ? exitDistFromEntry / riskDistance : 0;
+  let rrScore = 5;
+  if (plannedRR > 0) {
+    const rrRatio = achievedRR / plannedRR;
+    if (rrRatio >= 1) rrScore = 10;
+    else if (rrRatio >= 0.75) rrScore = 8;
+    else if (rrRatio >= 0.5) rrScore = 6;
+    else if (rrRatio >= 0) rrScore = 4;
+    else rrScore = Math.max(0, Math.round(3 + rrRatio * 3));
+  }
+  rrScore = clamp(rrScore, 0, 10);
+
+  const total = Math.round((entryQuality + disciplineScore + rrScore) / 3);
+
+  return {
+    total: clamp(total, 0, 10),
+    entryQuality,
+    discipline: disciplineScore,
+    rrAchieved: rrScore,
+    details: [
+      {
+        label: "Qualit\u00E9 d'entr\u00E9e",
+        score: entryQuality,
+        max: 10,
+        desc: "Proximit\u00E9 de l'entr\u00E9e par rapport au SL/TP",
+      },
+      {
+        label: "Discipline",
+        score: disciplineScore,
+        max: 10,
+        desc: "Respect du plan et de la strat\u00E9gie",
+      },
+      {
+        label: "R:R r\u00E9alis\u00E9",
+        score: rrScore,
+        max: 10,
+        desc: "Ratio risque/r\u00E9compense obtenu vs pr\u00E9vu",
+      },
+    ],
+  };
+}
+
+function getScoreColor(score: number) {
+  if (score >= 8) return "#10b981";
+  if (score >= 5) return "#eab308";
+  return "#f43f5e";
+}
+
+function getScoreLabel(score: number) {
+  if (score >= 9) return "Excellent";
+  if (score >= 7) return "Bon";
+  if (score >= 5) return "Moyen";
+  if (score >= 3) return "Faible";
+  return "Mauvais";
+}
+
+/* ─── Main Page ─── */
 
 export default function ReplayPage() {
   const { trades, loading } = useTrades();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [whatIfSL, setWhatIfSL] = useState<string>("");
-  const [whatIfTP, setWhatIfTP] = useState<string>("");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [editingNote, setEditingNote] = useState(false);
   const [currentNote, setCurrentNote] = useState("");
 
+  // Animation state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [speed, setSpeed] = useState(1);
+  const animRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
+
   // Load notes from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("replay-notes");
-    if (saved) setNotes(JSON.parse(saved));
+    try {
+      const saved = localStorage.getItem("replay-notes");
+      if (saved) setNotes(JSON.parse(saved));
+    } catch {
+      // ignore
+    }
   }, []);
 
   const saveNote = (tradeId: string, text: string) => {
@@ -114,77 +472,197 @@ export default function ReplayPage() {
     setEditingNote(false);
   };
 
-  const closedTrades = useMemo(() => trades.filter((t) => t.exit !== null), [trades]);
-  const selected = useMemo(() => closedTrades.find((t) => t.id === selectedId) ?? null, [closedTrades, selectedId]);
+  const closedTrades = useMemo(
+    () =>
+      trades
+        .filter((t) => t.exit !== null)
+        .sort(
+          (a, b) =>
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        ),
+    [trades]
+  );
+
+  const grouped = useMemo(() => groupByDate(closedTrades), [closedTrades]);
+  const dateKeys = useMemo(
+    () =>
+      Object.keys(grouped).sort(
+        (a, b) => new Date(b).getTime() - new Date(a).getTime()
+      ),
+    [grouped]
+  );
+
+  const selected = useMemo(
+    () => closedTrades.find((t) => t.id === selectedId) ?? null,
+    [closedTrades, selectedId]
+  );
+
+  const currentIndex = useMemo(
+    () => closedTrades.findIndex((t) => t.id === selectedId),
+    [closedTrades, selectedId]
+  );
 
   // Auto-select first trade
   useEffect(() => {
-    if (!selectedId && closedTrades.length > 0) setSelectedId(closedTrades[0].id);
+    if (!selectedId && closedTrades.length > 0)
+      setSelectedId(closedTrades[0].id);
   }, [closedTrades, selectedId]);
 
-  // Reset what-if on trade change
+  // Reset on trade change
   useEffect(() => {
-    setWhatIfSL("");
-    setWhatIfTP("");
     setEditingNote(false);
+    setIsPlaying(false);
+    setProgress(0);
     if (selected) setCurrentNote(notes[selected.id] || "");
-  }, [selectedId, selected, notes]);
+  }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const navigate = (dir: number) => {
-    const idx = closedTrades.findIndex((t) => t.id === selectedId);
-    const next = idx + dir;
-    if (next >= 0 && next < closedTrades.length) setSelectedId(closedTrades[next].id);
+  // Animation loop
+  useEffect(() => {
+    if (!isPlaying) {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      return;
+    }
+
+    const animate = (time: number) => {
+      if (lastTimeRef.current === 0) lastTimeRef.current = time;
+      const delta = time - lastTimeRef.current;
+      lastTimeRef.current = time;
+
+      setProgress((prev) => {
+        const next = prev + (delta / (4000 / speed));
+        if (next >= 1) {
+          setIsPlaying(false);
+          return 1;
+        }
+        return next;
+      });
+
+      animRef.current = requestAnimationFrame(animate);
+    };
+
+    lastTimeRef.current = 0;
+    animRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+  }, [isPlaying, speed]);
+
+  const handlePlay = () => {
+    if (progress >= 1) setProgress(0);
+    setIsPlaying(true);
+  };
+  const handlePause = () => setIsPlaying(false);
+  const handleReset = () => {
+    setIsPlaying(false);
+    setProgress(0);
   };
 
-  // What-if calculations
-  const whatIfCalc = useMemo(() => {
-    if (!selected) return null;
-    const isLong = selected.direction === "LONG";
-    const slNum = whatIfSL ? parseFloat(whatIfSL) : null;
-    const tpNum = whatIfTP ? parseFloat(whatIfTP) : null;
+  const navigate = useCallback(
+    (dir: number) => {
+      const idx = closedTrades.findIndex((t) => t.id === selectedId);
+      const next = idx + dir;
+      if (next >= 0 && next < closedTrades.length)
+        setSelectedId(closedTrades[next].id);
+    },
+    [closedTrades, selectedId]
+  );
 
-    const originalPL = selected.result;
-    let modifiedPL = originalPL;
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      )
+        return;
 
-    if (slNum !== null && !isNaN(slNum)) {
-      const wouldHitSL = isLong
-        ? (selected.exit ?? selected.entry) <= slNum
-        : (selected.exit ?? selected.entry) >= slNum;
-      if (wouldHitSL) {
-        modifiedPL = isLong
-          ? (slNum - selected.entry) * selected.lots * 100000
-          : (selected.entry - slNum) * selected.lots * 100000;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        navigate(1);
+      } else if (e.key === " ") {
+        e.preventDefault();
+        if (isPlaying) handlePause();
+        else handlePlay();
       }
-    }
-    if (tpNum !== null && !isNaN(tpNum)) {
-      const wouldHitTP = isLong
-        ? (selected.exit ?? selected.entry) >= tpNum
-        : (selected.exit ?? selected.entry) <= tpNum;
-      if (wouldHitTP) {
-        modifiedPL = isLong
-          ? (tpNum - selected.entry) * selected.lots * 100000
-          : (selected.entry - tpNum) * selected.lots * 100000;
-      }
-    }
-
-    return { originalPL, modifiedPL, diff: modifiedPL - originalPL };
-  }, [selected, whatIfSL, whatIfTP]);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [navigate, isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Trade stats
   const stats = useMemo(() => {
     if (!selected) return null;
     const isLong = selected.direction === "LONG";
+    const exitPrice = selected.exit ?? selected.entry;
     const riskPips = Math.abs(selected.entry - selected.sl);
     const rewardPips = Math.abs(selected.tp - selected.entry);
-    const rr = riskPips > 0 ? (rewardPips / riskPips).toFixed(2) : "N/A";
+    const rr = riskPips > 0 ? rewardPips / riskPips : 0;
+    const achievedPips = isLong
+      ? exitPrice - selected.entry
+      : selected.entry - exitPrice;
+    const achievedRR = riskPips > 0 ? achievedPips / riskPips : 0;
     const riskAmount = riskPips * selected.lots * 100000;
     const rewardAmount = rewardPips * selected.lots * 100000;
-    return { rr, riskAmount, rewardAmount, isLong };
+    return { rr, achievedRR, riskAmount, rewardAmount, isLong, riskPips, rewardPips };
+  }, [selected]);
+
+  // What Would Have Happened - alternatives
+  const alternatives = useMemo(() => {
+    if (!selected || !stats) return null;
+    const isLong = selected.direction === "LONG";
+    const riskPips = stats.riskPips;
+    const lotMultiplier = selected.lots * 100000;
+
+    // 1R cut scenario
+    const oneRTarget = isLong
+      ? selected.entry + riskPips
+      : selected.entry - riskPips;
+    const oneRPL = riskPips * lotMultiplier;
+
+    // Let it run to TP
+    const tpPips = Math.abs(selected.tp - selected.entry);
+    const tpPL = tpPips * lotMultiplier;
+
+    // Double position
+    const doublePL = selected.result * 2;
+
+    return {
+      cutAt1R: {
+        label: "Si tu avais coup\u00E9 \u00E0 1R",
+        price: oneRTarget,
+        pl: oneRPL,
+      },
+      letRunToTP: {
+        label: "Si tu avais laiss\u00E9 courir au TP",
+        price: selected.tp,
+        pl: tpPL,
+      },
+      doublePosition: {
+        label: "Si tu avais doubl\u00E9 ta position",
+        lots: selected.lots * 2,
+        pl: doublePL,
+      },
+    };
+  }, [selected, stats]);
+
+  // Trade score
+  const score = useMemo(() => {
+    if (!selected) return null;
+    return computeTradeScore(selected);
   }, [selected]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64" style={{ color: "var(--text-muted)" }}>
+      <div
+        className="flex items-center justify-center h-64"
+        style={{ color: "var(--text-muted)" }}
+      >
+        <Activity className="w-5 h-5 animate-spin mr-2" />
         Chargement...
       </div>
     );
@@ -194,7 +672,9 @@ export default function ReplayPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <Rewind className="w-10 h-10 text-cyan-400 opacity-50" />
-        <p style={{ color: "var(--text-muted)" }}>Aucun trade clôturé à rejouer</p>
+        <p style={{ color: "var(--text-muted)" }}>
+          Aucun trade cl\u00F4tur\u00E9 \u00E0 rejouer
+        </p>
       </div>
     );
   }
@@ -202,186 +682,683 @@ export default function ReplayPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: "var(--text-primary)" }}>
+          <h1
+            className="text-2xl font-bold flex items-center gap-3"
+            style={{ color: "var(--text-primary)" }}
+          >
             <Play className="w-6 h-6 text-cyan-400" /> Replay de Trade
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            Analysez et rejouez vos trades avec le simulateur What-If
+            Rejouez, analysez et scorez vos trades &mdash; Raccourcis: &larr;
+            &rarr; naviguer, Espace play/pause
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate(-1)} className="glass p-2 rounded-lg hover:opacity-80 transition-opacity"
-            style={{ color: "var(--text-secondary)" }}>
-            <Rewind className="w-4 h-4" />
+          <button
+            onClick={() => navigate(-1)}
+            disabled={currentIndex <= 0}
+            className="glass p-2 rounded-lg hover:opacity-80 transition-opacity disabled:opacity-30"
+            style={{ color: "var(--text-secondary)" }}
+            title="Trade pr\u00E9c\u00E9dent (\u2190)"
+          >
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-xs font-mono px-3" style={{ color: "var(--text-muted)" }}>
-            {closedTrades.findIndex((t) => t.id === selectedId) + 1}/{closedTrades.length}
+          <span
+            className="text-xs mono px-3 py-1 rounded"
+            style={{
+              color: "var(--text-muted)",
+              background: "rgba(255,255,255,0.05)",
+            }}
+          >
+            {currentIndex + 1} / {closedTrades.length}
           </span>
-          <button onClick={() => navigate(1)} className="glass p-2 rounded-lg hover:opacity-80 transition-opacity"
-            style={{ color: "var(--text-secondary)" }}>
-            <FastForward className="w-4 h-4" />
+          <button
+            onClick={() => navigate(1)}
+            disabled={currentIndex >= closedTrades.length - 1}
+            className="glass p-2 rounded-lg hover:opacity-80 transition-opacity disabled:opacity-30"
+            style={{ color: "var(--text-secondary)" }}
+            title="Trade suivant (\u2192)"
+          >
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Trade Selector */}
-      <div className="metric-card p-4">
-        <label className="text-xs font-medium mb-2 block" style={{ color: "var(--text-muted)" }}>
-          Sélectionner un trade
+      {/* Trade Selector - Grouped by Date */}
+      <div className="glass rounded-xl p-4">
+        <label
+          className="text-xs font-medium mb-2 block"
+          style={{ color: "var(--text-muted)" }}
+        >
+          S\u00E9lectionner un trade
         </label>
         <select
           value={selectedId || ""}
           onChange={(e) => setSelectedId(e.target.value)}
-          className="w-full rounded-lg px-4 py-2.5 text-sm font-mono outline-none border border-white/10 focus:border-cyan-400/50 transition-colors"
-          style={{ background: "var(--bg-hover)", color: "var(--text-primary)" }}
+          className="w-full rounded-lg px-4 py-2.5 text-sm mono outline-none transition-colors"
+          style={{
+            background: "var(--bg-primary)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border)",
+          }}
         >
-          {closedTrades.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.asset} — {formatDate(t.date)} — {t.direction} — {t.result >= 0 ? "+" : ""}{t.result.toFixed(2)}€
-            </option>
+          {dateKeys.map((dateKey) => (
+            <optgroup key={dateKey} label={formatDateGroup(dateKey)}>
+              {grouped[dateKey].map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.asset} {t.direction === "LONG" ? "\u25B2" : "\u25BC"}{" "}
+                  {t.direction} &mdash;{" "}
+                  {t.result >= 0 ? "+" : ""}
+                  {t.result.toFixed(2)}\u20AC
+                  {t.strategy ? ` \u2014 ${t.strategy}` : ""}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
 
       {selected && (
         <>
-          {/* Visual Chart */}
-          <PriceChart
-            trade={selected}
-            whatIfSL={whatIfSL ? parseFloat(whatIfSL) : null}
-            whatIfTP={whatIfTP ? parseFloat(whatIfTP) : null}
-          />
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Trade Details */}
-            <div className="metric-card p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-                <Target className="w-4 h-4 text-cyan-400" /> Détails du Trade
+          {/* Visual Trade Chart with Animation */}
+          <div className="glass rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <h3
+                className="text-sm font-semibold flex items-center gap-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                <BarChart3 className="w-4 h-4 text-cyan-400" /> Simulation du
+                prix
               </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Actif", value: selected.asset },
-                  { label: "Direction", value: selected.direction, color: selected.direction === "LONG" ? "text-emerald-400" : "text-rose-400" },
-                  { label: "Date", value: formatDate(selected.date) },
-                  { label: "Lots", value: selected.lots.toString() },
-                  { label: "Entrée", value: selected.entry.toFixed(5) },
-                  { label: "Sortie", value: (selected.exit ?? 0).toFixed(5) },
-                  { label: "Stop Loss", value: selected.sl.toFixed(5) },
-                  { label: "Take Profit", value: selected.tp.toFixed(5) },
-                  { label: "Stratégie", value: selected.strategy || "—" },
-                  { label: "Émotion", value: selected.emotion || "—" },
-                  { label: "Tags", value: selected.tags || "—" },
-                  { label: "Résultat", value: `${selected.result >= 0 ? "+" : ""}${selected.result.toFixed(2)}€`,
-                    color: selected.result >= 0 ? "text-emerald-400" : "text-rose-400" },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-lg p-2.5" style={{ background: "var(--bg-hover)" }}>
-                    <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>
-                      {item.label}
-                    </p>
-                    <p className={`text-sm font-mono font-medium ${item.color || ""}`}
-                      style={item.color ? undefined : { color: "var(--text-primary)" }}>
-                      {item.value}
-                    </p>
-                  </div>
-                ))}
+              <div className="flex items-center gap-2">
+                {/* Speed control */}
+                <div className="flex items-center gap-1 mr-2">
+                  <Gauge
+                    className="w-3.5 h-3.5"
+                    style={{ color: "var(--text-muted)" }}
+                  />
+                  {[1, 2, 5].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setSpeed(s)}
+                      className="px-2 py-0.5 rounded text-xs mono transition-all"
+                      style={{
+                        background:
+                          speed === s
+                            ? "rgba(6,182,212,0.2)"
+                            : "rgba(255,255,255,0.05)",
+                        color:
+                          speed === s ? "#06b6d4" : "var(--text-muted)",
+                        border:
+                          speed === s
+                            ? "1px solid rgba(6,182,212,0.3)"
+                            : "1px solid transparent",
+                      }}
+                    >
+                      {s}x
+                    </button>
+                  ))}
+                </div>
+                {/* Playback controls */}
+                <button
+                  onClick={handleReset}
+                  className="glass p-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                  style={{ color: "var(--text-secondary)" }}
+                  title="R\u00E9initialiser"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+                {isPlaying ? (
+                  <button
+                    onClick={handlePause}
+                    className="p-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                    style={{
+                      background: "rgba(6,182,212,0.2)",
+                      color: "#06b6d4",
+                    }}
+                    title="Pause"
+                  >
+                    <Pause className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePlay}
+                    className="p-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                    style={{
+                      background: "rgba(6,182,212,0.2)",
+                      color: "#06b6d4",
+                    }}
+                    title="Lecture (Espace)"
+                  >
+                    <Play className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Statistics */}
-            <div className="metric-card p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-                {stats?.isLong ? <TrendingUp className="w-4 h-4 text-emerald-400" /> : <TrendingDown className="w-4 h-4 text-rose-400" />}
-                Statistiques du Trade
+            {/* Progress bar */}
+            <div
+              className="w-full h-1 rounded-full mb-4 overflow-hidden"
+              style={{ background: "rgba(255,255,255,0.05)" }}
+            >
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${progress * 100}%`,
+                  background:
+                    selected.result >= 0
+                      ? "linear-gradient(90deg, #06b6d4, #10b981)"
+                      : "linear-gradient(90deg, #06b6d4, #f43f5e)",
+                  transition: isPlaying ? "none" : "width 0.3s",
+                }}
+              />
+            </div>
+
+            {/* Chart */}
+            <div
+              className="relative rounded-lg overflow-hidden"
+              style={{
+                height: "280px",
+                background:
+                  "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)",
+              }}
+            >
+              <AnimatedPriceChart trade={selected} progress={progress} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Trade Details Panel */}
+            <div className="lg:col-span-1 glass rounded-xl p-5">
+              <h3
+                className="text-sm font-semibold mb-4 flex items-center gap-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                <Target className="w-4 h-4 text-cyan-400" /> D\u00E9tails du
+                Trade
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {[
-                  { label: "Ratio R:R", value: stats?.rr ?? "—", icon: Target },
-                  { label: "Risque (€)", value: `${stats?.riskAmount.toFixed(2) ?? "0"}€`, icon: TrendingDown, color: "text-rose-400" },
-                  { label: "Récompense (€)", value: `${stats?.rewardAmount.toFixed(2) ?? "0"}€`, icon: TrendingUp, color: "text-emerald-400" },
-                  { label: "P&L réalisé", value: `${selected.result >= 0 ? "+" : ""}${selected.result.toFixed(2)}€`,
-                    color: selected.result >= 0 ? "text-emerald-400" : "text-rose-400", icon: Target },
-                  { label: "Émotion", value: selected.emotion || "Non renseigné", icon: Edit3 },
+                  { label: "Actif", value: selected.asset },
+                  {
+                    label: "Direction",
+                    value: selected.direction,
+                    color:
+                      selected.direction === "LONG"
+                        ? "#10b981"
+                        : "#f43f5e",
+                  },
+                  { label: "Date", value: formatDate(selected.date) },
+                  { label: "Lots", value: selected.lots.toString() },
+                  {
+                    label: "Entr\u00E9e",
+                    value: selected.entry.toFixed(5),
+                    mono: true,
+                  },
+                  {
+                    label: "Sortie",
+                    value: (selected.exit ?? 0).toFixed(5),
+                    mono: true,
+                  },
+                  {
+                    label: "Stop Loss",
+                    value: selected.sl.toFixed(5),
+                    mono: true,
+                    color: "#f43f5e",
+                  },
+                  {
+                    label: "Take Profit",
+                    value: selected.tp.toFixed(5),
+                    mono: true,
+                    color: "#10b981",
+                  },
+                  {
+                    label: "R:R planifi\u00E9",
+                    value: stats ? stats.rr.toFixed(2) : "\u2014",
+                    mono: true,
+                  },
+                  {
+                    label: "R:R r\u00E9alis\u00E9",
+                    value: stats ? stats.achievedRR.toFixed(2) + "R" : "\u2014",
+                    mono: true,
+                    color: stats
+                      ? stats.achievedRR >= 0
+                        ? "#10b981"
+                        : "#f43f5e"
+                      : undefined,
+                  },
+                  {
+                    label: "R\u00E9sultat",
+                    value: `${selected.result >= 0 ? "+" : ""}${selected.result.toFixed(2)}\u20AC`,
+                    color:
+                      selected.result >= 0 ? "#10b981" : "#f43f5e",
+                    mono: true,
+                  },
+                  {
+                    label: "Strat\u00E9gie",
+                    value: selected.strategy || "\u2014",
+                  },
+                  {
+                    label: "\u00C9motion",
+                    value: selected.emotion || "\u2014",
+                  },
+                  { label: "Tags", value: selected.tags || "\u2014" },
+                  {
+                    label: "Setup",
+                    value: selected.setup || "\u2014",
+                  },
                 ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between rounded-lg p-3"
-                    style={{ background: "var(--bg-hover)" }}>
-                    <div className="flex items-center gap-2">
-                      <item.icon className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
-                      <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{item.label}</span>
-                    </div>
-                    <span className={`text-sm font-mono font-semibold ${item.color || ""}`}
-                      style={item.color ? undefined : { color: "var(--text-primary)" }}>
+                  <div
+                    key={item.label}
+                    className="flex items-center justify-between py-1.5 px-2 rounded"
+                    style={{
+                      background: "rgba(255,255,255,0.02)",
+                      borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    }}
+                  >
+                    <span
+                      className="text-xs"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {item.label}
+                    </span>
+                    <span
+                      className={`text-sm font-medium ${item.mono ? "mono" : ""}`}
+                      style={{
+                        color: item.color || "var(--text-primary)",
+                      }}
+                    >
                       {item.value}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* What-If Calculator */}
-          <div className="metric-card p-5">
-            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-              <Calculator className="w-4 h-4 text-cyan-400" /> Calculateur What-If
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: "var(--text-muted)" }}>
-                  Si j&apos;avais déplacé mon SL à...
-                </label>
-                <input type="number" step="any" value={whatIfSL} onChange={(e) => setWhatIfSL(e.target.value)}
-                  placeholder={selected.sl.toFixed(5)}
-                  className="w-full rounded-lg px-3 py-2 text-sm font-mono outline-none border border-white/10 focus:border-rose-400/50 transition-colors"
-                  style={{ background: "var(--bg-hover)", color: "var(--text-primary)" }} />
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: "var(--text-muted)" }}>
-                  Si j&apos;avais déplacé mon TP à...
-                </label>
-                <input type="number" step="any" value={whatIfTP} onChange={(e) => setWhatIfTP(e.target.value)}
-                  placeholder={selected.tp.toFixed(5)}
-                  className="w-full rounded-lg px-3 py-2 text-sm font-mono outline-none border border-cyan-400/50 transition-colors"
-                  style={{ background: "var(--bg-hover)", color: "var(--text-primary)" }} />
-              </div>
+            {/* Right column: Score + Alternatives */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Trade Score */}
+              {score && (
+                <div className="glass rounded-xl p-5">
+                  <h3
+                    className="text-sm font-semibold mb-4 flex items-center gap-2"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    <Award className="w-4 h-4 text-cyan-400" /> Score du Trade
+                  </h3>
+
+                  {/* Overall score */}
+                  <div className="flex items-center gap-6 mb-5">
+                    <div
+                      className="relative flex items-center justify-center"
+                      style={{ width: 80, height: 80 }}
+                    >
+                      <svg viewBox="0 0 36 36" className="w-full h-full">
+                        {/* Background circle */}
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="rgba(255,255,255,0.08)"
+                          strokeWidth="3"
+                        />
+                        {/* Score arc */}
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke={getScoreColor(score.total)}
+                          strokeWidth="3"
+                          strokeDasharray={`${score.total * 10}, 100`}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div
+                        className="absolute inset-0 flex flex-col items-center justify-center"
+                      >
+                        <span
+                          className="text-xl font-bold mono"
+                          style={{ color: getScoreColor(score.total) }}
+                        >
+                          {score.total}
+                        </span>
+                        <span
+                          className="text-[9px]"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          /10
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <p
+                        className="text-lg font-semibold"
+                        style={{ color: getScoreColor(score.total) }}
+                      >
+                        {getScoreLabel(score.total)}
+                      </p>
+                      <p
+                        className="text-xs mt-1"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        \u00C9valuation automatique bas\u00E9e sur l&apos;ex\u00E9cution
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Score breakdown */}
+                  <div className="space-y-3">
+                    {score.details.map((d) => (
+                      <div key={d.label}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            {d.label.includes("entr\u00E9e") ? (
+                              <Target
+                                className="w-3 h-3"
+                                style={{
+                                  color: getScoreColor(d.score),
+                                }}
+                              />
+                            ) : d.label.includes("Discipline") ? (
+                              <Shield
+                                className="w-3 h-3"
+                                style={{
+                                  color: getScoreColor(d.score),
+                                }}
+                              />
+                            ) : (
+                              <Zap
+                                className="w-3 h-3"
+                                style={{
+                                  color: getScoreColor(d.score),
+                                }}
+                              />
+                            )}
+                            <span
+                              className="text-xs"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              {d.label}
+                            </span>
+                          </div>
+                          <span
+                            className="text-xs mono font-semibold"
+                            style={{ color: getScoreColor(d.score) }}
+                          >
+                            {d.score}/{d.max}
+                          </span>
+                        </div>
+                        <div
+                          className="w-full h-1.5 rounded-full overflow-hidden"
+                          style={{
+                            background: "rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${(d.score / d.max) * 100}%`,
+                              background: getScoreColor(d.score),
+                            }}
+                          />
+                        </div>
+                        <p
+                          className="text-[10px] mt-0.5"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          {d.desc}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* What Would Have Happened */}
+              {alternatives && (
+                <div className="glass rounded-xl p-5">
+                  <h3
+                    className="text-sm font-semibold mb-4 flex items-center gap-2"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    <Calculator className="w-4 h-4 text-cyan-400" /> Et si...
+                    ?
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Cut at 1R */}
+                    <div
+                      className="rounded-xl p-4"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <p
+                        className="text-xs mb-3"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {alternatives.cutAt1R.label}
+                      </p>
+                      <p
+                        className="text-lg font-bold mono"
+                        style={{
+                          color:
+                            alternatives.cutAt1R.pl >= 0
+                              ? "#10b981"
+                              : "#f43f5e",
+                        }}
+                      >
+                        {alternatives.cutAt1R.pl >= 0 ? "+" : ""}
+                        {alternatives.cutAt1R.pl.toFixed(2)}\u20AC
+                      </p>
+                      <p
+                        className="text-[10px] mono mt-1"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        Sortie \u00E0{" "}
+                        {alternatives.cutAt1R.price.toFixed(5)}
+                      </p>
+                      <div className="mt-2 flex items-center gap-1">
+                        <span
+                          className="text-[10px] mono"
+                          style={{
+                            color:
+                              alternatives.cutAt1R.pl -
+                                selected.result >=
+                              0
+                                ? "#10b981"
+                                : "#f43f5e",
+                          }}
+                        >
+                          {alternatives.cutAt1R.pl - selected.result >= 0
+                            ? "+"
+                            : ""}
+                          {(
+                            alternatives.cutAt1R.pl - selected.result
+                          ).toFixed(2)}
+                          \u20AC vs r\u00E9el
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Let run to TP */}
+                    <div
+                      className="rounded-xl p-4"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <p
+                        className="text-xs mb-3"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {alternatives.letRunToTP.label}
+                      </p>
+                      <p
+                        className="text-lg font-bold mono"
+                        style={{
+                          color:
+                            alternatives.letRunToTP.pl >= 0
+                              ? "#10b981"
+                              : "#f43f5e",
+                        }}
+                      >
+                        {alternatives.letRunToTP.pl >= 0 ? "+" : ""}
+                        {alternatives.letRunToTP.pl.toFixed(2)}\u20AC
+                      </p>
+                      <p
+                        className="text-[10px] mono mt-1"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        Sortie \u00E0{" "}
+                        {alternatives.letRunToTP.price.toFixed(5)}
+                      </p>
+                      <div className="mt-2 flex items-center gap-1">
+                        <span
+                          className="text-[10px] mono"
+                          style={{
+                            color:
+                              alternatives.letRunToTP.pl -
+                                selected.result >=
+                              0
+                                ? "#10b981"
+                                : "#f43f5e",
+                          }}
+                        >
+                          {alternatives.letRunToTP.pl - selected.result >=
+                          0
+                            ? "+"
+                            : ""}
+                          {(
+                            alternatives.letRunToTP.pl - selected.result
+                          ).toFixed(2)}
+                          \u20AC vs r\u00E9el
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Double position */}
+                    <div
+                      className="rounded-xl p-4"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <p
+                        className="text-xs mb-3"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {alternatives.doublePosition.label}
+                      </p>
+                      <p
+                        className="text-lg font-bold mono"
+                        style={{
+                          color:
+                            alternatives.doublePosition.pl >= 0
+                              ? "#10b981"
+                              : "#f43f5e",
+                        }}
+                      >
+                        {alternatives.doublePosition.pl >= 0 ? "+" : ""}
+                        {alternatives.doublePosition.pl.toFixed(2)}\u20AC
+                      </p>
+                      <p
+                        className="text-[10px] mono mt-1"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {alternatives.doublePosition.lots} lots au lieu de{" "}
+                        {selected.lots}
+                      </p>
+                      <div className="mt-2 flex items-center gap-1">
+                        <span
+                          className="text-[10px] mono"
+                          style={{
+                            color:
+                              alternatives.doublePosition.pl -
+                                selected.result >=
+                              0
+                                ? "#10b981"
+                                : "#f43f5e",
+                          }}
+                        >
+                          {alternatives.doublePosition.pl -
+                            selected.result >=
+                          0
+                            ? "+"
+                            : ""}
+                          {(
+                            alternatives.doublePosition.pl -
+                            selected.result
+                          ).toFixed(2)}
+                          \u20AC vs r\u00E9el
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comparison bar */}
+                  <div
+                    className="mt-4 rounded-lg p-3 flex items-center justify-between flex-wrap gap-3"
+                    style={{
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Star
+                        className="w-4 h-4"
+                        style={{ color: "var(--text-muted)" }}
+                      />
+                      <span
+                        className="text-xs"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        R\u00E9sultat r\u00E9el
+                      </span>
+                    </div>
+                    <span
+                      className="text-sm mono font-bold"
+                      style={{
+                        color:
+                          selected.result >= 0 ? "#10b981" : "#f43f5e",
+                      }}
+                    >
+                      {selected.result >= 0 ? "+" : ""}
+                      {selected.result.toFixed(2)}\u20AC
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
-            {whatIfCalc && (whatIfSL || whatIfTP) && (
-              <div className="rounded-lg p-4 flex items-center justify-between" style={{ background: "var(--bg-hover)" }}>
-                <div className="text-center">
-                  <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>P&L Original</p>
-                  <p className={`text-lg font-mono font-bold ${whatIfCalc.originalPL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {whatIfCalc.originalPL >= 0 ? "+" : ""}{whatIfCalc.originalPL.toFixed(2)}€
-                  </p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-cyan-400" />
-                <div className="text-center">
-                  <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>P&L Modifié</p>
-                  <p className={`text-lg font-mono font-bold ${whatIfCalc.modifiedPL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {whatIfCalc.modifiedPL >= 0 ? "+" : ""}{whatIfCalc.modifiedPL.toFixed(2)}€
-                  </p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-cyan-400" />
-                <div className="text-center">
-                  <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Différence</p>
-                  <p className={`text-lg font-mono font-bold ${whatIfCalc.diff >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {whatIfCalc.diff >= 0 ? "+" : ""}{whatIfCalc.diff.toFixed(2)}€
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Screenshots Gallery */}
           {selected.screenshots && selected.screenshots.length > 0 && (
-            <div className="metric-card p-5">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-                <Camera className="w-4 h-4 text-cyan-400" /> Captures d&apos;écran
+            <div className="glass rounded-xl p-5">
+              <h3
+                className="text-sm font-semibold mb-4 flex items-center gap-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                <Camera className="w-4 h-4 text-cyan-400" /> Captures
+                d&apos;\u00E9cran
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {selected.screenshots.map((ss) => (
-                  <a key={ss.id} href={ss.url} target="_blank" rel="noopener noreferrer"
-                    className="rounded-lg overflow-hidden border border-white/5 hover:border-cyan-400/30 transition-colors">
-                    <img src={ss.url} alt="Screenshot" className="w-full h-32 object-cover" />
+                  <a
+                    key={ss.id}
+                    href={ss.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg overflow-hidden hover:ring-2 ring-cyan-400/30 transition-all"
+                    style={{ border: "1px solid var(--border)" }}
+                  >
+                    <img
+                      src={ss.url}
+                      alt="Screenshot"
+                      className="w-full h-32 object-cover"
+                    />
                   </a>
                 ))}
               </div>
@@ -389,30 +1366,66 @@ export default function ReplayPage() {
           )}
 
           {/* Notes & Annotations */}
-          <div className="metric-card p-5">
-            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-              <Edit3 className="w-4 h-4 text-cyan-400" /> Notes & Annotations
+          <div className="glass rounded-xl p-5">
+            <h3
+              className="text-sm font-semibold mb-4 flex items-center gap-2"
+              style={{ color: "var(--text-primary)" }}
+            >
+              <Edit3 className="w-4 h-4 text-cyan-400" /> Notes &amp;
+              Annotations
             </h3>
             {selected.setup && (
-              <div className="rounded-lg p-3 mb-3" style={{ background: "var(--bg-hover)" }}>
-                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Setup du trade</p>
-                <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{selected.setup}</p>
+              <div
+                className="rounded-lg p-3 mb-3"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <p
+                  className="text-[10px] uppercase tracking-wider mb-1"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Setup du trade
+                </p>
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {selected.setup}
+                </p>
               </div>
             )}
             {editingNote ? (
               <div className="space-y-2">
-                <textarea value={currentNote} onChange={(e) => setCurrentNote(e.target.value)} rows={4}
-                  placeholder="Ajoutez vos observations, leçons apprises..."
-                  className="w-full rounded-lg px-3 py-2 text-sm outline-none border border-white/10 focus:border-cyan-400/50 resize-none transition-colors"
-                  style={{ background: "var(--bg-hover)", color: "var(--text-primary)" }} />
+                <textarea
+                  value={currentNote}
+                  onChange={(e) => setCurrentNote(e.target.value)}
+                  rows={4}
+                  placeholder="Ajoutez vos observations, le\u00E7ons apprises..."
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none transition-colors"
+                  style={{
+                    background: "var(--bg-primary)",
+                    color: "var(--text-primary)",
+                    border: "1px solid var(--border)",
+                  }}
+                />
                 <div className="flex gap-2">
-                  <button onClick={() => saveNote(selected.id, currentNote)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors">
+                  <button
+                    onClick={() => saveNote(selected.id, currentNote)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    style={{
+                      background: "rgba(6,182,212,0.15)",
+                      color: "#06b6d4",
+                    }}
+                  >
                     Sauvegarder
                   </button>
-                  <button onClick={() => setEditingNote(false)}
+                  <button
+                    onClick={() => setEditingNote(false)}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium hover:opacity-80 transition-opacity"
-                    style={{ color: "var(--text-muted)" }}>
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     Annuler
                   </button>
                 </div>
@@ -420,23 +1433,90 @@ export default function ReplayPage() {
             ) : (
               <div>
                 {notes[selected.id] ? (
-                  <div className="rounded-lg p-3 mb-3" style={{ background: "var(--bg-hover)" }}>
-                    <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--text-secondary)" }}>
+                  <div
+                    className="rounded-lg p-3 mb-3"
+                    style={{
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <p
+                      className="text-sm whitespace-pre-wrap"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
                       {notes[selected.id]}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>
+                  <p
+                    className="text-sm mb-3"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     Aucune note pour ce trade
                   </p>
                 )}
-                <button onClick={() => { setCurrentNote(notes[selected.id] || ""); setEditingNote(true); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 transition-colors"
-                  style={{ color: "var(--text-secondary)" }}>
-                  <Edit3 className="w-3 h-3" /> {notes[selected.id] ? "Modifier la note" : "Ajouter une note"}
+                <button
+                  onClick={() => {
+                    setCurrentNote(notes[selected.id] || "");
+                    setEditingNote(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <Edit3 className="w-3 h-3" />{" "}
+                  {notes[selected.id]
+                    ? "Modifier la note"
+                    : "Ajouter une note"}
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Bottom Navigation */}
+          <div
+            className="flex items-center justify-between py-4"
+            style={{ borderTop: "1px solid var(--border)" }}
+          >
+            <button
+              onClick={() => navigate(-1)}
+              disabled={currentIndex <= 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-30"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              <ArrowLeft className="w-4 h-4" /> Trade pr\u00E9c\u00E9dent
+            </button>
+            <div
+              className="text-xs mono"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {selected.asset} &bull; {formatDate(selected.date)} &bull;{" "}
+              <span
+                style={{
+                  color:
+                    selected.result >= 0 ? "#10b981" : "#f43f5e",
+                }}
+              >
+                {selected.result >= 0 ? "+" : ""}
+                {selected.result.toFixed(2)}\u20AC
+              </span>
+            </div>
+            <button
+              onClick={() => navigate(1)}
+              disabled={currentIndex >= closedTrades.length - 1}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-30"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              Trade suivant <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </>
       )}
