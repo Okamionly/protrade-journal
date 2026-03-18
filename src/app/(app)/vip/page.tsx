@@ -316,7 +316,7 @@ export default function VipPage() {
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  S&apos;abonner - 29.99&euro;/mois
+                  S&apos;abonner - 9.99&euro;/mois
                 </>
               )}
             </button>
@@ -344,7 +344,7 @@ export default function VipPage() {
             >
               <div className="flex items-baseline justify-center gap-1 mb-1">
                 <span className="text-4xl font-bold mono" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-                  29.99&euro;
+                  9.99&euro;
                 </span>
                 <span className="text-sm" style={{ color: "var(--text-secondary, #9ca3af)" }}>
                   /mois
