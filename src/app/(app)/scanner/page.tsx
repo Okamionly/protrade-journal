@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, RefreshCw, TrendingUp, TrendingDown, Zap, Filter, ArrowUpRight, ArrowDownRight, BarChart3, Volume2 } from "lucide-react";
+import { Search, RefreshCw, TrendingUp, TrendingDown, Zap, Filter, ArrowUpRight, ArrowDownRight, BarChart3, Volume2, AlertTriangle, X } from "lucide-react";
 
 interface ScanResult {
   symbol: string;
@@ -51,6 +51,8 @@ const SIGNAL_STYLES: Record<string, { label: string; cls: string; icon: string }
 export default function ScannerPage() {
   const [results, setResults] = useState<ScanResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [usingFallback, setUsingFallback] = useState(false);
   const [search, setSearch] = useState("");
   const [filterSignal, setFilterSignal] = useState<string>("all");
   const [filterSector, setFilterSector] = useState<string>("all");
@@ -58,6 +60,8 @@ export default function ScannerPage() {
 
   const runScan = useCallback(async () => {
     setLoading(true);
+    setError(null);
+    setUsingFallback(false);
     try {
       const symbols = SCAN_SYMBOLS.map((s) => s.symbol).join(",");
       const res = await fetch(`/api/market-data/quotes?symbols=${symbols}`);
@@ -102,6 +106,8 @@ export default function ScannerPage() {
         }
       }
     } catch {
+      setError("Impossible de charger les données. Réessayez.");
+      setUsingFallback(true);
       // Generate fallback data
       const fallback: ScanResult[] = SCAN_SYMBOLS.map((s) => ({
         symbol: s.symbol,
@@ -154,6 +160,28 @@ export default function ScannerPage() {
 
   return (
     <div className="space-y-6">
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <span className="text-sm font-medium">{error}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={runScan} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Réessayer</button>
+            <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+      )}
+
+      {/* Fallback Warning */}
+      {usingFallback && !error && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <span className="text-sm">Données de démonstration — API indisponible</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

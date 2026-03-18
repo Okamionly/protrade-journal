@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Star, Search } from "lucide-react";
+import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Star, Search, AlertTriangle, X } from "lucide-react";
 
 interface WatchItem {
   symbol: string;
@@ -37,6 +37,8 @@ export default function WatchlistPage() {
   const [items, setItems] = useState<WatchItem[]>([]);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [addSymbol, setAddSymbol] = useState("");
@@ -81,9 +83,13 @@ export default function WatchlistPage() {
             };
           });
           setQuotes(newQuotes);
+          setLastUpdated(new Date());
+          setError(null);
         }
       }
-    } catch { /* silent */ }
+    } catch {
+      setError("Impossible de charger les cotations. Réessayez.");
+    }
     setLoading(false);
   }, [items]);
 
@@ -154,8 +160,35 @@ export default function WatchlistPage() {
     );
   };
 
+  const isStale = lastUpdated && (Date.now() - lastUpdated.getTime()) > 120000; // 2 minutes
+
   return (
     <div className="space-y-6">
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <span className="text-sm font-medium">{error}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Réessayer</button>
+            <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+      )}
+
+      {/* Stale Data Warning */}
+      {isStale && !error && (
+        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm">Données obsolètes — dernière mise à jour il y a plus de 2 minutes</span>
+          </div>
+          <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-medium transition">Rafraîchir</button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

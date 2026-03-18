@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import { Sun, Moon, Download, LogOut, Monitor } from "lucide-react";
 import { useState, useEffect } from "react";
 import { NotificationCenter } from "./NotificationCenter";
+import { NewsTicker } from "./NewsTicker";
 import { useTrades } from "@/hooks/useTrades";
 
 export function Header() {
@@ -29,7 +30,10 @@ export function Header() {
 
   return (
     <header className="fixed top-8 right-0 left-0 z-40 h-14 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-      <div className="h-full flex items-center justify-end gap-2 px-4 sm:px-6">
+      <div className="h-full flex items-center gap-2 px-4 sm:px-6">
+        {/* News ticker in the middle */}
+        <NewsTicker />
+
         {/* Theme toggle: dark → light → oled → dark */}
         <button
           onClick={() => {

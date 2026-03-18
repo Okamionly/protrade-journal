@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { RefreshCw, TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
+import { RefreshCw, TrendingUp, TrendingDown, Minus, Activity, AlertTriangle, X } from "lucide-react";
 
 interface FearGreedEntry {
   value: string;
@@ -72,27 +72,33 @@ function GaugeChart({ value }: { value: number }) {
 export default function SentimentPage() {
   const [data, setData] = useState<FearGreedEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState<RangeOption>(30);
 
   const load = async (days: number) => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/fear-greed?days=${days}`);
       if (res.ok) {
         const json = await res.json();
         setData(json.data || []);
+      } else {
+        setError("Impossible de charger les données de sentiment. Réessayez.");
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      setError("Impossible de charger les données de sentiment. Réessayez.");
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { load(range); }, [range]);
 
-  const current = data[0];
-  const yesterday = data[1];
-  const weekAgo = data[7];
-  const monthAgo = data[29];
+  const current = data && data.length > 0 ? data[0] : undefined;
+  const yesterday = data && data.length > 1 ? data[1] : undefined;
+  const weekAgo = data && data.length > 7 ? data[7] : undefined;
+  const monthAgo = data && data.length > 29 ? data[29] : undefined;
 
   const currentVal = current ? parseInt(current.value) : 50;
   const config = current ? CLASSIFICATION_CONFIG[current.value_classification] || CLASSIFICATION_CONFIG["Neutral"] : CLASSIFICATION_CONFIG["Neutral"];
@@ -138,6 +144,20 @@ export default function SentimentPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <span className="text-sm font-medium">{error}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => load(range)} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Réessayer</button>
+            <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Sentiment du Marché</h1>

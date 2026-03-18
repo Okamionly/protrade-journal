@@ -6,10 +6,7 @@ import {
   LayoutDashboard,
   BookOpen,
   BarChart3,
-  TrendingUp,
-  Globe,
   CalendarDays,
-  Camera,
   MessageCircle,
   ChevronLeft,
   ChevronRight,
@@ -17,16 +14,10 @@ import {
   Gauge,
   Trophy,
   Grid3x3,
-  Target,
-  Zap,
   Upload,
   Crosshair,
-  FileBarChart,
-  Shield,
-  AlertOctagon,
   Clock,
   BookMarked,
-  Award,
   Activity,
   Calculator,
   Brain,
@@ -40,57 +31,52 @@ import {
   Monitor,
   Medal,
   FileText,
-  Bell,
+  Crown,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const navItems = [
+  // TRADING
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/journal", label: "Journal", icon: BookOpen },
+  { href: "/calendar", label: "Calendrier P&L", icon: CalendarDays },
+  { href: "/import", label: "Import CSV", icon: Upload },
+  // ANALYSE
+  { divider: true, label: "ANALYSE" },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/analytics/distribution", label: "Distribution", icon: Clock },
-  { href: "/risk", label: "Risk Manager", icon: Shield },
-  { href: "/mistakes", label: "Erreurs", icon: AlertOctagon },
-  { href: "/strategies", label: "Stratégies", icon: Crosshair },
-  { href: "/playbook", label: "Playbook", icon: BookMarked },
-  { href: "/checklist", label: "Checklist", icon: CheckSquare },
-  { href: "/import", label: "Import CSV", icon: Upload },
-  { divider: true, label: "PERFORMANCE" },
   { href: "/performance", label: "Score", icon: Trophy },
-  { href: "/performance/grading", label: "Notation", icon: Award },
-  { href: "/calendar", label: "P&L Calendar", icon: CalendarDays },
-  { href: "/heatmap", label: "Heatmap", icon: Grid3x3 },
-  { href: "/daily-bias", label: "Daily Bias", icon: Target },
-  { href: "/challenges", label: "Challenges", icon: Swords },
-  { href: "/leaderboard", label: "Leaderboard", icon: Medal },
-  { divider: true, label: "MARCHÉ" },
-  { href: "/cot", label: "Rapport COT", icon: TrendingUp },
-  { href: "/macro", label: "Macro", icon: Globe },
-  { href: "/calendar-eco", label: "Calendrier Éco", icon: CalendarDays },
-  { href: "/sentiment", label: "Sentiment", icon: Gauge },
-  { href: "/currency-strength", label: "Force Devises", icon: Zap },
-  { href: "/news", label: "News", icon: Newspaper },
-  { href: "/market", label: "Market Data", icon: Activity },
-  { href: "/scanner", label: "Scanner", icon: Crosshair },
-  { href: "/watchlist", label: "Watchlist", icon: Eye },
-  { href: "/sector-heatmap", label: "Heatmap Secteurs", icon: Grid3x3 },
-  { href: "/volatility", label: "Volatilité", icon: Gauge },
-  { href: "/earnings", label: "Earnings", icon: CalendarDays },
-  { href: "/flow", label: "Options Flow", icon: Zap },
-  { divider: true, label: "AVANCÉ" },
   { href: "/ai-coach", label: "AI Coach", icon: Brain },
-  { href: "/war-room", label: "War Room", icon: Monitor },
-  { href: "/backtest", label: "Backtesting", icon: FlaskConical },
-  { href: "/calculator", label: "Calculateur", icon: Calculator },
-  { href: "/replay", label: "Replay", icon: Play },
   { href: "/correlation", label: "Corrélation", icon: Layers },
   { href: "/compare", label: "Comparaison", icon: GitCompare },
+  // MARCHÉ
+  { divider: true, label: "MARCHÉ" },
+  { href: "/news", label: "News", icon: Newspaper },
+  { href: "/calendar-eco", label: "Calendrier Éco", icon: CalendarDays },
+  { href: "/sentiment", label: "Sentiment", icon: Gauge },
+  { href: "/scanner", label: "Scanner", icon: Crosshair },
+  { href: "/watchlist", label: "Watchlist", icon: Eye },
+  { href: "/sector-heatmap", label: "Heatmap", icon: Grid3x3 },
+  { href: "/market", label: "Market Data", icon: Activity },
+  // OUTILS
   { divider: true, label: "OUTILS" },
+  { href: "/war-room", label: "War Room", icon: Monitor },
+  { href: "/backtest", label: "Backtesting", icon: FlaskConical },
+  { href: "/challenges", label: "Challenges", icon: Swords },
+  { href: "/leaderboard", label: "Leaderboard", icon: Medal },
+  { href: "/replay", label: "Replay", icon: Play },
+  { href: "/calculator", label: "Calculateur", icon: Calculator },
+  { href: "/chat", label: "Chat", icon: MessageCircle },
+  // MON ESPACE
+  { divider: true, label: "MON ESPACE" },
   { href: "/custom-dashboard", label: "Mon Dashboard", icon: Layers },
   { href: "/reports", label: "Rapports PDF", icon: FileText },
-  { href: "/recaps", label: "Recaps", icon: FileBarChart },
-  { href: "/screenshots", label: "Screenshots", icon: Camera },
-  { href: "/chat", label: "Chat", icon: MessageCircle },
+  { href: "/playbook", label: "Playbook", icon: BookMarked },
+  { href: "/strategies", label: "Stratégies", icon: Crosshair },
+  { href: "/checklist", label: "Checklist", icon: CheckSquare },
+  // VIP
+  { divider: true, label: "PREMIUM" },
+  { href: "/vip", label: "VIP", icon: Crown, isVip: true },
 ] as const;
 
 export function Sidebar() {
@@ -144,22 +130,31 @@ export function Sidebar() {
           if (!("href" in item)) return null;
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+          const isVipItem = "isVip" in item && item.isVip;
 
           return (
             <Link
               key={item.href}
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all group relative ${
-                isActive
-                  ? "bg-cyan-500/15 text-cyan-400"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
+                isVipItem
+                  ? isActive
+                    ? "bg-amber-500/15 text-amber-400"
+                    : "text-amber-500/80 dark:text-amber-400/80 hover:text-amber-400 hover:bg-amber-500/10"
+                  : isActive
+                    ? "bg-cyan-500/15 text-cyan-400"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
               }`}
               title={collapsed ? item.label : undefined}
             >
               {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-cyan-400 rounded-r-full" />
+                <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full ${isVipItem ? "bg-amber-400" : "bg-cyan-400"}`} />
               )}
-              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? "text-cyan-400" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300"}`} />
+              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${
+                isVipItem
+                  ? isActive ? "text-amber-400" : "text-amber-500/70 dark:text-amber-400/70 group-hover:text-amber-400"
+                  : isActive ? "text-cyan-400" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+              }`} />
               {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           );
