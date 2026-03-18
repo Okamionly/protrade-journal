@@ -83,42 +83,37 @@ export function NewsTicker() {
   }
 
   const doubled = [...news, ...news];
+  const duration = news.length * 6;
 
   return (
-    <div className="flex-1 overflow-hidden mx-4 relative mask-fade">
-      <style jsx>{`
+    <div
+      className="flex-1 overflow-hidden mx-4 relative"
+      style={{
+        maskImage:
+          "linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent)",
+        WebkitMaskImage:
+          "linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent)",
+      }}
+    >
+      <style>{`
         @keyframes marquee {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-        .animate-marquee {
-          animation: marquee ${news.length * 6}s linear infinite;
-        }
-        .animate-marquee:hover {
-          animation-play-state: paused;
-        }
-        .mask-fade {
-          mask-image: linear-gradient(
-            to right,
-            transparent,
-            black 24px,
-            black calc(100% - 24px),
-            transparent
-          );
-          -webkit-mask-image: linear-gradient(
-            to right,
-            transparent,
-            black 24px,
-            black calc(100% - 24px),
-            transparent
-          );
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
         }
       `}</style>
-      <div className="flex items-center h-full whitespace-nowrap animate-marquee">
+      <div
+        className="flex items-center h-full whitespace-nowrap"
+        style={{
+          animation: `marquee ${duration}s linear infinite`,
+          willChange: "transform",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.animationPlayState = "paused";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.animationPlayState = "running";
+        }}
+      >
         {doubled.map((item, i) => (
           <a
             key={`${item.id}-${i}`}
