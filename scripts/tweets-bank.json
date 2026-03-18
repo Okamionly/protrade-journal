@@ -1,0 +1,201 @@
+{
+  "categories": {
+    "feature_showcase": [
+      {
+        "id": "feat-1",
+        "type": "single",
+        "text": "Most trading journals cost $50/month and give you a spreadsheet.\n\nMarketPhase gives you 35+ tools for FREE:\n\n- AI Trading Coach\n- War Room analytics\n- Backtesting engine\n- Full gamification system\n- Advanced charting\n\nYour edge starts here: https://marketphase.vercel.app"
+      },
+      {
+        "id": "feat-2",
+        "type": "single",
+        "text": "Just shipped the AI Coach in MarketPhase.\n\nIt reviews your trades, spots patterns you miss, and gives you actionable feedback.\n\nLike having a trading mentor that never sleeps.\n\nTry it free: https://marketphase.vercel.app"
+      },
+      {
+        "id": "feat-3",
+        "type": "single",
+        "text": "The War Room in MarketPhase is where serious traders go to dissect their performance.\n\nWin rate, R:R breakdown, time-based analysis, instrument heat maps... all in one dashboard.\n\nFree. No paywall. No trial.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "feat-4",
+        "type": "single",
+        "text": "Stop paying $50/month for a trading journal.\n\nMarketPhase has backtesting, AI coaching, gamification, and 35+ tools.\n\nThe price? $0.\n\nSwitch today: https://marketphase.vercel.app"
+      },
+      {
+        "id": "feat-5",
+        "type": "single",
+        "text": "Backtesting your strategy shouldn't require a PhD.\n\nMarketPhase makes it dead simple:\n1. Import your trades\n2. Run the backtest\n3. Get clear performance metrics\n\nAll free: https://marketphase.vercel.app"
+      },
+      {
+        "id": "feat-6",
+        "type": "thread",
+        "tweets": [
+          "Why I built MarketPhase as a free trading journal (a thread):\n\nTrading is already expensive. Spreads, commissions, blown accounts while learning...\n\nThe last thing you need is a $50/month journaling tool. 1/4",
+          "Most paid journals give you:\n- Trade logging\n- Basic stats\n- Maybe a chart\n\nMarketPhase gives you 35+ tools including AI Coach, War Room, Backtesting, and Gamification.\n\nFor $0. 2/4",
+          "The gamification system keeps you accountable.\n\nEarn XP for journaling, hit streaks, unlock achievements. Sounds silly until you realize consistency is the #1 edge in trading. 3/4",
+          "If you're still using spreadsheets or paying for a basic journal, give MarketPhase a shot.\n\nFree forever. No credit card. No trial that expires.\n\nhttps://marketphase.vercel.app 4/4"
+        ]
+      },
+      {
+        "id": "feat-7",
+        "type": "single",
+        "text": "Your trading journal should work harder than you do.\n\nMarketPhase auto-calculates:\n- Win rate\n- Profit factor\n- Average R:R\n- Max drawdown\n- Streak analysis\n- Time-based performance\n\nAll free: https://marketphase.vercel.app"
+      }
+    ],
+    "trading_tips": [
+      {
+        "id": "tip-1",
+        "type": "single",
+        "text": "The traders who journal consistently outperform those who don't.\n\nThis isn't opinion. It's data.\n\nStart journaling for free: https://marketphase.vercel.app"
+      },
+      {
+        "id": "tip-2",
+        "type": "single",
+        "text": "Your biggest edge isn't a setup or indicator.\n\nIt's knowing EXACTLY when you perform best and worst.\n\nA good journal tells you:\n- Best trading hours\n- Worst days of the week\n- Which setups actually work\n\nTrack it all free: https://marketphase.vercel.app"
+      },
+      {
+        "id": "tip-3",
+        "type": "single",
+        "text": "Revenge trading destroyed more accounts than any bear market.\n\nThe fix? Review your journal before every session.\n\nMarketPhase makes that review instant with AI-powered insights.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "tip-4",
+        "type": "single",
+        "text": "If you can't explain WHY you entered a trade, you're gambling.\n\nJournal every trade. Every reason. Every emotion.\n\nThat's how gamblers become traders.\n\nStart here: https://marketphase.vercel.app"
+      },
+      {
+        "id": "tip-5",
+        "type": "single",
+        "text": "The 3 things that actually improved my trading:\n\n1. Smaller position sizes\n2. Journaling EVERY trade\n3. Reviewing my journal weekly\n\n2 out of 3 require a journal.\n\nGet one free: https://marketphase.vercel.app"
+      },
+      {
+        "id": "tip-6",
+        "type": "single",
+        "text": "Pro tip: Your best trades and your worst trades have something in common.\n\nPatterns.\n\nA trading journal helps you find them. An AI coach helps you act on them.\n\nMarketPhase has both. Free.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "tip-7",
+        "type": "thread",
+        "tweets": [
+          "5 journaling habits that separate profitable traders from the rest:\n\n(thread)",
+          "1. Log BEFORE the trade\n\nWrite your thesis, entry, stop, and target BEFORE you click buy/sell.\n\nThis alone eliminates impulse trades.",
+          "2. Score your emotions (1-10)\n\nWere you calm? Anxious? Revenge trading?\n\nOver time, you'll see which emotional states lead to your best and worst trades.",
+          "3. Review weekly, not daily\n\nDaily reviews = overreacting to noise.\nWeekly reviews = spotting real patterns.\n\nMarketPhase's War Room makes weekly reviews effortless.",
+          "4. Track what you DIDN'T trade\n\nThe setups you skipped matter. Were they winners? Losers?\n\nThis reveals if your filter is too tight or too loose.",
+          "5. Use AI to find blind spots\n\nYou can't see your own patterns objectively.\n\nMarketPhase's AI Coach analyzes your trades and shows you what you're missing.\n\nAll free: https://marketphase.vercel.app"
+        ]
+      }
+    ],
+    "motivational": [
+      {
+        "id": "mot-1",
+        "type": "single",
+        "text": "Every profitable trader was once a beginner who refused to quit.\n\nThe difference? They tracked their progress and learned from every loss.\n\nStart your trading journal today: https://marketphase.vercel.app"
+      },
+      {
+        "id": "mot-2",
+        "type": "single",
+        "text": "You don't need:\n- A $10k course\n- A $50/month journal\n- A paid Discord\n\nYou need:\n- Screen time\n- Discipline\n- A journal you'll actually use\n\nMarketPhase is free and built for traders who want to improve.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "mot-3",
+        "type": "single",
+        "text": "Losing streaks don't end your trading career.\n\nNot learning from them does.\n\nJournal. Review. Adapt.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "mot-4",
+        "type": "single",
+        "text": "6 months from now, you'll wish you started journaling today.\n\nMarketPhase is free. No excuses.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "mot-5",
+        "type": "single",
+        "text": "The market doesn't care about your feelings.\n\nBut your trading journal should.\n\nMarketPhase tracks emotions, psychology, and performance together.\n\nBecause mindset IS the edge.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "mot-6",
+        "type": "single",
+        "text": "Consistency > perfection.\n\nYou don't need to win every trade. You need to journal every trade.\n\nThat's how you find your edge.\n\nhttps://marketphase.vercel.app"
+      }
+    ],
+    "engagement": [
+      {
+        "id": "eng-1",
+        "type": "single",
+        "text": "Honest question: do you journal your trades?\n\n- Yes, every single one\n- Sometimes\n- I keep meaning to start\n- What's a trading journal?\n\n(If you picked 3 or 4, check out https://marketphase.vercel.app - it's free)"
+      },
+      {
+        "id": "eng-2",
+        "type": "single",
+        "text": "What's your biggest struggle with trading right now?\n\nA) Finding good entries\nB) Managing risk\nC) Emotional control\nD) Consistency\n\nDrop your answer below. MarketPhase's AI Coach can help with all 4: https://marketphase.vercel.app"
+      },
+      {
+        "id": "eng-3",
+        "type": "single",
+        "text": "Traders who journal vs traders who don't:\n\nWho do you think is more profitable after 1 year?\n\nThe data isn't even close."
+      },
+      {
+        "id": "eng-4",
+        "type": "single",
+        "text": "How much are you paying for your trading journal?\n\nA) $0 (spreadsheet)\nB) $20-30/month\nC) $50+/month\nD) I don't journal\n\nIf it's not A... why? MarketPhase is free with 35+ tools.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "eng-5",
+        "type": "single",
+        "text": "What feature would make you switch trading journals?\n\nWe already have:\n- AI Coach\n- Backtesting\n- War Room analytics\n- Gamification\n- 35+ tools\n\nAnd it's free.\n\nSeriously, what are we missing? Let us know.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "eng-6",
+        "type": "single",
+        "text": "Unpopular opinion: if you're not journaling your trades, you don't actually want to be profitable.\n\nChange my mind."
+      },
+      {
+        "id": "eng-7",
+        "type": "single",
+        "text": "Tag a trader who needs to hear this:\n\nYour P&L screenshots mean nothing without a journal behind them.\n\nTrack the process, not just the results.\n\nhttps://marketphase.vercel.app"
+      }
+    ],
+    "memes_relatable": [
+      {
+        "id": "meme-1",
+        "type": "single",
+        "text": "Me: \"I'll journal this trade later\"\n\nNarrator: He did not journal that trade.\n\nDon't be like me. Use MarketPhase. It takes 30 seconds.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "meme-2",
+        "type": "single",
+        "text": "Paying $50/month for a trading journal is crazy when MarketPhase exists.\n\nThat's $600/year.\n\nYou know what else costs $600? A nice monitor to watch your charts on.\n\nJust saying.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "meme-3",
+        "type": "single",
+        "text": "POV: You revenge traded, didn't journal it, and now you can't figure out why your account is down 15%.\n\nJournal. Every. Trade.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "meme-4",
+        "type": "single",
+        "text": "Stages of a trader:\n\n1. No journal\n2. Spreadsheet journal\n3. Paid journal ($50/month)\n4. Discovers MarketPhase (free, 35+ tools)\n5. Wonders why they ever paid\n\nSkip to step 4: https://marketphase.vercel.app"
+      },
+      {
+        "id": "meme-5",
+        "type": "single",
+        "text": "\"I don't need a trading journal, I remember all my trades\"\n\n- Someone who is about to blow their account\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "meme-6",
+        "type": "single",
+        "text": "Trading journal companies charging $50/month watching MarketPhase drop 35+ tools for free:\n\n*nervous sweating*\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "meme-7",
+        "type": "single",
+        "text": "My trading strategy: meticulous\nMy risk management: flawless\nMy journaling: non-existent\n\nFixed that last one with MarketPhase.\n\nhttps://marketphase.vercel.app"
+      },
+      {
+        "id": "meme-8",
+        "type": "single",
+        "text": "Trader: \"I have an edge\"\n\nAlso trader: *has no journal, no data, no stats*\n\nBrother, you have a hunch. Not an edge.\n\nBuild a real edge: https://marketphase.vercel.app"
+      }
+    ]
+  }
+}
