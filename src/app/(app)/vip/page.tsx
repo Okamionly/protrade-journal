@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Crown,
   Lock,
@@ -219,8 +219,23 @@ function LockedOverlay() {
 // --- Main Page ---
 
 export default function VipPage() {
-  const isVip = false;
+  const [isVip, setIsVip] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/user/role")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.role) {
+          setUserRole(data.role);
+          if (data.role === "ADMIN" || data.role === "VIP") {
+            setIsVip(true);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleSubscribe() {
     setLoading(true);
