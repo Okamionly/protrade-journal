@@ -312,6 +312,30 @@ export default function PnLCalendarPage() {
               </div>
             </div>
           </div>
+
+          {/* Best / Worst Day Cards */}
+          {(stats.bestDay || stats.worstDay) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {stats.bestDay && (
+                <div className="metric-card rounded-xl p-4 border-l-4 border-emerald-400">
+                  <p className="text-xs text-[--text-muted]">Meilleur Jour du Mois</p>
+                  <p className="text-lg font-bold text-emerald-400 mono">+{(+stats.bestDay[1]).toFixed(2)}€</p>
+                  <p className="text-xs text-[--text-secondary]">
+                    {new Date(year, month, +stats.bestDay[0]).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+                  </p>
+                </div>
+              )}
+              {stats.worstDay && (
+                <div className="metric-card rounded-xl p-4 border-l-4 border-rose-400">
+                  <p className="text-xs text-[--text-muted]">Pire Jour du Mois</p>
+                  <p className="text-lg font-bold text-rose-400 mono">{(+stats.worstDay[1]).toFixed(2)}€</p>
+                  <p className="text-xs text-[--text-secondary]">
+                    {new Date(year, month, +stats.worstDay[0]).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </>
       ) : (
         /* Year View */

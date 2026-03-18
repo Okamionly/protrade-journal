@@ -10,7 +10,7 @@ import {
   Globe,
   CalendarDays,
   Camera,
-  CalendarRange,
+
   MessageCircle,
   ChevronLeft,
   ChevronRight,
@@ -53,7 +53,7 @@ const navItems = [
   { divider: true, label: "PERFORMANCE" },
   { href: "/performance", label: "Score", icon: Trophy },
   { href: "/performance/grading", label: "Notation", icon: Award },
-  { href: "/pnl-calendar", label: "P&L Calendar", icon: CalendarDays },
+  { href: "/calendar", label: "P&L Calendar", icon: CalendarDays },
   { href: "/heatmap", label: "Heatmap", icon: Grid3x3 },
   { href: "/daily-bias", label: "Daily Bias", icon: Target },
   { divider: true, label: "MARCHÉ" },
@@ -79,7 +79,6 @@ const navItems = [
   { divider: true, label: "OUTILS" },
   { href: "/recaps", label: "Recaps", icon: FileBarChart },
   { href: "/screenshots", label: "Screenshots", icon: Camera },
-  { href: "/calendar", label: "Planning", icon: CalendarRange },
   { href: "/chat", label: "Chat", icon: MessageCircle },
 ] as const;
 
