@@ -6,6 +6,7 @@ import {
   Brain, AlertTriangle, TrendingUp, TrendingDown, Clock,
   Calendar, Target, Shield, Zap, BarChart3, Award,
   Activity, Gauge, Scale, ArrowDownRight, ArrowUpRight, Timer,
+  Grid3X3, Heart, Crosshair, Flame,
 } from "lucide-react";
 
 const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
@@ -243,6 +244,82 @@ export default function AICoachPage() {
       sizingAdvice = { label: "Risque normal (1-2%)", detail: trailingWins > 0 ? `Serie de ${trailingWins} gain(s). Restez discipline.` : "Aucune serie en cours.", color: "text-emerald-400" };
     }
 
+    // --- Heatmap Horaire: P&L by day-of-week x hour ---
+    const heatmapData: Record<string, Record<number, { pnl: number; count: number }>> = {};
+    for (let d = 0; d < 7; d++) {
+      heatmapData[d] = {};
+      for (let h = 0; h < 24; h++) heatmapData[d][h] = { pnl: 0, count: 0 };
+    }
+    for (const t of trades) {
+      const dt = new Date(t.date);
+      heatmapData[dt.getDay()][dt.getHours()].pnl += t.result;
+      heatmapData[dt.getDay()][dt.getHours()].count++;
+    }
+    const heatmapMax = Math.max(
+      ...Object.values(heatmapData).flatMap(row => Object.values(row).map(c => Math.abs(c.pnl))),
+      1
+    );
+
+    // --- Emotion Timeline ---
+    const emotionTimeline: { date: string; emotion: string; result: number; asset: string }[] = sorted
+      .filter(t => t.emotion)
+      .map(t => ({
+        date: t.date,
+        emotion: t.emotion || "N/A",
+        result: t.result,
+        asset: t.asset,
+      }));
+
+    // --- Forward Projection ---
+    // Calculate daily P&L over last 14 days for projection
+    const last14d = sorted.filter(t => new Date(t.date) >= new Date(Date.now() - 14 * 86400000));
+    const dailyPnlMap: Record<string, number> = {};
+    for (const t of last14d) {
+      const dk = new Date(t.date).toISOString().slice(0, 10);
+      dailyPnlMap[dk] = (dailyPnlMap[dk] || 0) + t.result;
+    }
+    const dailyPnlArr = Object.values(dailyPnlMap);
+    const avgDailyPnl = dailyPnlArr.length > 0 ? dailyPnlArr.reduce((s, v) => s + v, 0) / dailyPnlArr.length : 0;
+    // Running balance for drawdown projection
+    const totalPnl = trades.reduce((s, t) => s + t.result, 0);
+    // Project drawdown: if losing money, estimate days to reach a projected drawdown level
+    const projectedDrawdown = avgDailyPnl < 0 ? Math.abs(avgDailyPnl * 30) : 0;
+    const daysToDrawdown = avgDailyPnl < 0 && totalPnl > 0
+      ? Math.round(totalPnl / Math.abs(avgDailyPnl))
+      : null;
+
+    // --- Trade Management Quality Score ---
+    // Measures how well exits align with TP targets vs premature exits
+    const managedTrades = trades.filter(t => t.tp > 0 && t.exit !== null && t.exit !== 0 && t.entry > 0);
+    let tpReachedCount = 0;
+    let prematureExitCount = 0;
+    let avgTpCapture = 0;
+    const tpCaptures: number[] = [];
+
+    for (const t of managedTrades) {
+      const isLong = t.direction === "Long" || t.direction === "long" || t.direction === "BUY";
+      const entryPrice = t.entry;
+      const exitPrice = t.exit!;
+      const tpPrice = t.tp;
+
+      // Distance to TP from entry
+      const tpDistance = isLong ? tpPrice - entryPrice : entryPrice - tpPrice;
+      // Actual move from entry to exit
+      const actualMove = isLong ? exitPrice - entryPrice : entryPrice - exitPrice;
+
+      if (tpDistance > 0) {
+        const capture = Math.min(100, Math.max(0, (actualMove / tpDistance) * 100));
+        tpCaptures.push(capture);
+        if (capture >= 90) tpReachedCount++;
+        else if (t.result > 0 && capture < 60) prematureExitCount++;
+      }
+    }
+    avgTpCapture = tpCaptures.length > 0 ? tpCaptures.reduce((s, v) => s + v, 0) / tpCaptures.length : 0;
+    const mgmtScore = managedTrades.length > 0
+      ? Math.round(Math.min(100, avgTpCapture * 0.6 + (tpReachedCount / managedTrades.length) * 100 * 0.4))
+      : 0;
+    const mgmtGrade = mgmtScore >= 80 ? "A" : mgmtScore >= 65 ? "B" : mgmtScore >= 50 ? "C" : mgmtScore >= 35 ? "D" : "F";
+
     return {
       dayBW: bestWorst(dayMap), hourBW: bestWorst(hourMap), assetBW: bestWorst(assetMap),
       stratBW: bestWorst(stratMap), emotionBW: bestWorst(emotionMap),
@@ -261,6 +338,15 @@ export default function AICoachPage() {
       confidenceScore, confidenceLabel,
       // Position Sizing
       sizingAdvice,
+      // Heatmap Horaire
+      heatmapData, heatmapMax,
+      // Emotion Timeline
+      emotionTimeline,
+      // Forward Projection
+      avgDailyPnl, totalPnl, projectedDrawdown, daysToDrawdown, dailyPnlArr,
+      // Trade Management Quality
+      mgmtScore, mgmtGrade, avgTpCapture, tpReachedCount, prematureExitCount,
+      managedTradesCount: managedTrades.length, tpCaptures,
     };
   }, [trades]);
 
@@ -679,6 +765,380 @@ export default function AICoachPage() {
           </div>
         </div>
       </div>
+
+      {/* === NEW: Heatmap Horaire === */}
+      <div className="metric-card p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Grid3X3 className="text-cyan-400" size={18} />
+          <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Heatmap Horaire — P&L par Jour &times; Heure</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <svg viewBox="0 0 540 170" className="w-full" style={{ minWidth: 480 }}>
+            {/* Hour labels */}
+            {Array.from({ length: 24 }, (_, h) => (
+              <text key={`hl-${h}`} x={60 + h * 20 + 10} y={12} textAnchor="middle" fontSize="7" fill="var(--text-muted)" className="mono">
+                {h}h
+              </text>
+            ))}
+            {/* Day rows */}
+            {[1, 2, 3, 4, 5, 6, 0].map((d, ri) => (
+              <g key={`row-${d}`}>
+                <text x={52} y={24 + ri * 20 + 12} textAnchor="end" fontSize="8" fill="var(--text-muted)">{DAYS_SHORT[d]}</text>
+                {Array.from({ length: 24 }, (_, h) => {
+                  const cell = analysis.heatmapData[d][h];
+                  const intensity = analysis.heatmapMax > 0 ? Math.min(1, Math.abs(cell.pnl) / analysis.heatmapMax) : 0;
+                  const fillColor = cell.count === 0
+                    ? "var(--bg-hover)"
+                    : cell.pnl >= 0
+                      ? `rgba(16, 185, 129, ${0.15 + intensity * 0.7})`
+                      : `rgba(239, 68, 68, ${0.15 + intensity * 0.7})`;
+                  return (
+                    <g key={`cell-${d}-${h}`}>
+                      <rect
+                        x={60 + h * 20} y={20 + ri * 20}
+                        width={18} height={18} rx={3}
+                        fill={fillColor}
+                        stroke="var(--bg-card-solid)" strokeWidth={1}
+                      >
+                        <title>
+                          {DAYS_SHORT[d]} {h}h — {cell.count} trade{cell.count !== 1 ? "s" : ""} | {cell.pnl >= 0 ? "+" : ""}{cell.pnl.toFixed(0)}&euro;
+                        </title>
+                      </rect>
+                      {cell.count > 0 && (
+                        <text
+                          x={60 + h * 20 + 9} y={20 + ri * 20 + 12}
+                          textAnchor="middle" fontSize="6"
+                          fill={cell.pnl >= 0 ? "#6ee7b7" : "#fca5a5"}
+                          className="mono"
+                        >
+                          {cell.pnl >= 0 ? "+" : ""}{Math.abs(cell.pnl) >= 1000 ? `${(cell.pnl / 1000).toFixed(1)}k` : cell.pnl.toFixed(0)}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+              </g>
+            ))}
+            {/* Legend */}
+            <text x={60} y={168} fontSize="7" fill="var(--text-muted)">Perte</text>
+            <rect x={85} y={161} width={14} height={8} rx={2} fill="rgba(239, 68, 68, 0.7)" />
+            <rect x={101} y={161} width={14} height={8} rx={2} fill="rgba(239, 68, 68, 0.3)" />
+            <rect x={117} y={161} width={14} height={8} rx={2} fill="var(--bg-hover)" />
+            <rect x={133} y={161} width={14} height={8} rx={2} fill="rgba(16, 185, 129, 0.3)" />
+            <rect x={149} y={161} width={14} height={8} rx={2} fill="rgba(16, 185, 129, 0.7)" />
+            <text x={168} y={168} fontSize="7" fill="var(--text-muted)">Gain</text>
+          </svg>
+        </div>
+      </div>
+
+      {/* === NEW: Emotion Timeline === */}
+      <div className="metric-card p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Heart className="text-cyan-400" size={18} />
+          <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Timeline Emotionnelle</h2>
+        </div>
+        {analysis.emotionTimeline.length > 0 ? (
+          <div className="space-y-3">
+            {/* SVG timeline chart */}
+            <div className="overflow-x-auto">
+              <EmotionTimelineChart data={analysis.emotionTimeline} />
+            </div>
+            {/* Emotion legend */}
+            <div className="flex flex-wrap gap-2 text-xs" style={{ color: "var(--text-muted)" }}>
+              {Object.entries(
+                analysis.emotionTimeline.reduce<Record<string, { wins: number; total: number }>>((acc, t) => {
+                  if (!acc[t.emotion]) acc[t.emotion] = { wins: 0, total: 0 };
+                  acc[t.emotion].total++;
+                  if (t.result > 0) acc[t.emotion].wins++;
+                  return acc;
+                }, {})
+              ).sort((a, b) => b[1].total - a[1].total).map(([emo, data]) => (
+                <span key={emo} className="glass rounded px-2 py-1">
+                  {emo}: <span className="mono" style={{ color: data.wins / data.total >= 0.5 ? "#10b981" : "#ef4444" }}>
+                    {((data.wins / data.total) * 100).toFixed(0)}% WR
+                  </span>
+                  <span style={{ color: "var(--text-muted)" }}> ({data.total})</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
+            <Heart size={24} className="opacity-40" />
+            <span className="text-sm">Aucune emotion enregistree. Ajoute des emotions a tes trades.</span>
+          </div>
+        )}
+      </div>
+
+      {/* === NEW: Forward Projection + Trade Management Quality === */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Forward Projection */}
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Flame className="text-cyan-400" size={18} />
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Projection Forward</h2>
+          </div>
+          {analysis.dailyPnlArr.length >= 3 ? (
+            <div className="space-y-4">
+              <div className={`text-center p-4 rounded-lg border ${
+                analysis.avgDailyPnl >= 0
+                  ? "bg-emerald-500/10 border-emerald-500/30"
+                  : "bg-rose-500/10 border-rose-500/30"
+              }`}>
+                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>P&L journalier moyen (14j)</div>
+                <div className={`text-2xl font-bold mono ${analysis.avgDailyPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                  {analysis.avgDailyPnl >= 0 ? "+" : ""}&euro;{analysis.avgDailyPnl.toFixed(1)}
+                </div>
+              </div>
+
+              {analysis.avgDailyPnl < 0 ? (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle size={14} className="text-rose-400 shrink-0 mt-0.5" />
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                        <span className="font-semibold text-rose-400">A ce rythme</span>, drawdown estime de{" "}
+                        <span className="mono font-bold text-rose-400">&euro;{analysis.projectedDrawdown.toFixed(0)}</span>{" "}
+                        dans <span className="mono font-bold text-rose-400">30 jours</span>.
+                        {analysis.daysToDrawdown && analysis.daysToDrawdown > 0 && (
+                          <span> Profits actuels (&euro;{analysis.totalPnl.toFixed(0)}) epuises dans ~<span className="mono font-bold text-rose-400">{analysis.daysToDrawdown} jours</span>.</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Mini daily P&L bars */}
+                  <div className="flex items-end gap-1 h-12">
+                    {analysis.dailyPnlArr.slice(-14).map((v, i) => {
+                      const max = Math.max(...analysis.dailyPnlArr.map(Math.abs), 1);
+                      const pct = Math.abs(v) / max;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col justify-end h-full">
+                          <div
+                            className={`w-full rounded-sm ${v >= 0 ? "bg-emerald-500/60" : "bg-rose-500/60"}`}
+                            style={{ height: `${Math.max(pct * 100, 4)}%` }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between text-[9px]" style={{ color: "var(--text-muted)" }}>
+                    <span>Il y a 14j</span><span>Aujourd&apos;hui</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                    <div className="flex items-start gap-2">
+                      <TrendingUp size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                        Projection positive : <span className="mono font-bold text-emerald-400">+&euro;{(analysis.avgDailyPnl * 30).toFixed(0)}</span> sur les 30 prochains jours.
+                        Continue comme ca !
+                      </div>
+                    </div>
+                  </div>
+                  {/* Mini daily P&L bars */}
+                  <div className="flex items-end gap-1 h-12">
+                    {analysis.dailyPnlArr.slice(-14).map((v, i) => {
+                      const max = Math.max(...analysis.dailyPnlArr.map(Math.abs), 1);
+                      const pct = Math.abs(v) / max;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col justify-end h-full">
+                          <div
+                            className={`w-full rounded-sm ${v >= 0 ? "bg-emerald-500/60" : "bg-rose-500/60"}`}
+                            style={{ height: `${Math.max(pct * 100, 4)}%` }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between text-[9px]" style={{ color: "var(--text-muted)" }}>
+                    <span>Il y a 14j</span><span>Aujourd&apos;hui</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
+              <Flame size={24} className="opacity-40" />
+              <span className="text-sm">Min. 3 jours de trading pour la projection.</span>
+            </div>
+          )}
+        </div>
+
+        {/* Trade Management Quality Score */}
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Crosshair className="text-cyan-400" size={18} />
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Qualite de Gestion des Trades</h2>
+          </div>
+          {analysis.managedTradesCount > 0 ? (
+            <div className="space-y-4">
+              {/* Grade + Score */}
+              <div className="flex items-center gap-4">
+                <div className={`text-5xl font-bold mono ${
+                  analysis.mgmtScore >= 70 ? "text-emerald-400" :
+                  analysis.mgmtScore >= 50 ? "text-amber-400" : "text-rose-400"
+                }`}>
+                  {analysis.mgmtGrade}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span style={{ color: "var(--text-muted)" }}>Score global</span>
+                    <span className="mono" style={{ color: "var(--text-secondary)" }}>{analysis.mgmtScore}/100</span>
+                  </div>
+                  <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-hover)" }}>
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        analysis.mgmtScore >= 70 ? "bg-emerald-500" :
+                        analysis.mgmtScore >= 50 ? "bg-amber-500" : "bg-rose-500"
+                      }`}
+                      style={{ width: `${analysis.mgmtScore}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Metrics */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="glass rounded-lg p-3 text-center">
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>Capture TP moy.</div>
+                  <div className={`text-lg font-bold mono mt-1 ${analysis.avgTpCapture >= 70 ? "text-emerald-400" : analysis.avgTpCapture >= 50 ? "text-amber-400" : "text-rose-400"}`}>
+                    {analysis.avgTpCapture.toFixed(0)}%
+                  </div>
+                </div>
+                <div className="glass rounded-lg p-3 text-center">
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>TP atteints</div>
+                  <div className="text-lg font-bold mono mt-1 text-emerald-400">
+                    {analysis.tpReachedCount}
+                  </div>
+                  <div className="text-[9px] mono" style={{ color: "var(--text-muted)" }}>
+                    /{analysis.managedTradesCount}
+                  </div>
+                </div>
+                <div className="glass rounded-lg p-3 text-center">
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>Sorties prematurees</div>
+                  <div className="text-lg font-bold mono mt-1 text-amber-400">
+                    {analysis.prematureExitCount}
+                  </div>
+                </div>
+              </div>
+
+              {/* TP Capture Distribution - mini bar chart */}
+              {analysis.tpCaptures.length > 0 && (
+                <div>
+                  <div className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>Distribution de capture TP</div>
+                  <div className="flex items-end gap-[2px] h-10">
+                    {(() => {
+                      const buckets = [0, 0, 0, 0, 0]; // 0-20, 20-40, 40-60, 60-80, 80-100
+                      for (const c of analysis.tpCaptures) {
+                        const idx = Math.min(4, Math.floor(c / 20));
+                        buckets[idx]++;
+                      }
+                      const maxB = Math.max(...buckets, 1);
+                      return buckets.map((b, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                          <div className="w-full rounded-sm relative overflow-hidden" style={{ height: 40, background: "var(--bg-hover)" }}>
+                            <div
+                              className={`absolute bottom-0 w-full rounded-sm ${
+                                i >= 4 ? "bg-emerald-500/60" : i >= 3 ? "bg-emerald-500/40" : i >= 2 ? "bg-amber-500/40" : "bg-rose-500/40"
+                              }`}
+                              style={{ height: `${(b / maxB) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-[8px] mono" style={{ color: "var(--text-muted)" }}>{i * 20}-{(i + 1) * 20}%</span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Advice */}
+              <div className="p-3 rounded-lg text-xs" style={{ background: "var(--bg-hover)" }}>
+                <div className="flex items-start gap-2">
+                  <Target size={14} className="text-cyan-400 shrink-0 mt-0.5" />
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    {analysis.prematureExitCount > analysis.tpReachedCount
+                      ? "Tu coupes trop souvent tes gains avant le TP. Laisse courir tes winners."
+                      : analysis.avgTpCapture < 50
+                        ? "Ta capture TP moyenne est faible. Ajuste tes niveaux de sortie."
+                        : analysis.mgmtScore >= 70
+                          ? "Excellente gestion ! Tu laisses bien courir tes gains."
+                          : "Gestion correcte. Travaille a maximiser la capture de tes TP."
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
+              <Crosshair size={24} className="opacity-40" />
+              <span className="text-sm">Renseigne TP et prix de sortie pour analyser ta gestion.</span>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
+  );
+}
+
+/* === Emotion Timeline SVG Component === */
+function EmotionTimelineChart({ data }: { data: { date: string; emotion: string; result: number; asset: string }[] }) {
+  const EMOTION_COLORS: Record<string, string> = {
+    Confident: "#10b981", Calm: "#06b6d4", Focused: "#3b82f6", Disciplined: "#8b5cf6",
+    Happy: "#22c55e", Neutral: "#94a3b8", Excited: "#f59e0b",
+    Anxious: "#f97316", Fearful: "#ef4444", Frustrated: "#dc2626", Angry: "#b91c1c",
+    Revenge: "#991b1b", FOMO: "#ea580c", Impatient: "#d97706", Greedy: "#ca8a04",
+  };
+
+  const maxAbs = Math.max(...data.map(d => Math.abs(d.result)), 1);
+  const last40 = data.slice(-40);
+  const width = Math.max(600, last40.length * 22);
+  const chartH = 100;
+  const midY = chartH / 2;
+
+  return (
+    <svg viewBox={`0 0 ${width} ${chartH + 30}`} className="w-full" style={{ minWidth: 400 }}>
+      {/* Zero line */}
+      <line x1={0} y1={midY} x2={width} y2={midY} stroke="var(--text-muted)" strokeWidth={0.5} strokeDasharray="4 2" opacity={0.4} />
+      {/* Bars + emotion dots */}
+      {last40.map((d, i) => {
+        const x = 10 + i * ((width - 20) / last40.length);
+        const barW = Math.max(6, ((width - 20) / last40.length) - 4);
+        const normalized = (d.result / maxAbs) * (midY - 8);
+        const barH = Math.abs(normalized);
+        const isPos = d.result >= 0;
+        const barY = isPos ? midY - barH : midY;
+        const color = EMOTION_COLORS[d.emotion] || "#94a3b8";
+        const dateStr = new Date(d.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+
+        return (
+          <g key={i}>
+            <rect
+              x={x} y={barY} width={barW} height={Math.max(barH, 2)} rx={2}
+              fill={isPos ? "rgba(16, 185, 129, 0.4)" : "rgba(239, 68, 68, 0.4)"}
+            >
+              <title>{dateStr} — {d.emotion} | {d.asset} | {d.result >= 0 ? "+" : ""}{d.result.toFixed(0)}&euro;</title>
+            </rect>
+            {/* Emotion dot */}
+            <circle
+              cx={x + barW / 2} cy={isPos ? barY - 5 : barY + barH + 5} r={4}
+              fill={color} opacity={0.9}
+            >
+              <title>{d.emotion}</title>
+            </circle>
+            {/* Date label (sparse) */}
+            {(i % Math.max(1, Math.floor(last40.length / 10)) === 0) && (
+              <text x={x + barW / 2} y={chartH + 18} textAnchor="middle" fontSize="7" fill="var(--text-muted)" className="mono">
+                {dateStr}
+              </text>
+            )}
+          </g>
+        );
+      })}
+      {/* Labels */}
+      <text x={4} y={10} fontSize="7" fill="var(--text-muted)">Gains</text>
+      <text x={4} y={chartH - 2} fontSize="7" fill="var(--text-muted)">Pertes</text>
+    </svg>
   );
 }

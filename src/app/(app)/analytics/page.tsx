@@ -5,7 +5,7 @@ import { computeStats, computeStreaks, computeAssetPerformance, computeEmotionPe
 import { WeekdayChart, EquityChart, MonthlyComparisonChart, EmotionChart, AdvancedEquityChart } from "@/components/ChartComponents";
 import { AnalyticsSkeleton } from "@/components/Skeleton";
 import { useUser } from "@/hooks/useTrades";
-import { TrendingUp, TrendingDown, Zap, Flame } from "lucide-react";
+import { TrendingUp, TrendingDown, Zap, Flame, ArrowUpRight, ArrowDownRight, Clock, Activity, ChevronUp, ChevronDown, BarChart3, GitCompare } from "lucide-react";
 
 export default function AnalyticsPage() {
   const { trades, loading } = useTrades();
@@ -48,6 +48,271 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* Sortino Ratio, Calmar Ratio, Recovery Time */}
+      {(() => {
+        const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const results = sorted.map(t => t.result);
+        const mean = results.length > 0 ? results.reduce((a, b) => a + b, 0) / results.length : 0;
+
+        // Sortino Ratio: uses only downside deviation
+        const downsideReturns = results.filter(r => r < 0);
+        const downsideVariance = downsideReturns.length > 1
+          ? downsideReturns.reduce((s, r) => s + Math.pow(r, 2), 0) / downsideReturns.length
+          : 0;
+        const downsideDev = Math.sqrt(downsideVariance);
+        const sortino = downsideDev > 0 ? (mean / downsideDev) * Math.sqrt(252) : 0;
+
+        // Calmar Ratio: annualized return / max drawdown
+        const totalReturn = results.reduce((a, b) => a + b, 0);
+        const daysSpan = sorted.length >= 2
+          ? (new Date(sorted[sorted.length - 1].date).getTime() - new Date(sorted[0].date).getTime()) / (1000 * 60 * 60 * 24)
+          : 1;
+        const annualizedReturn = daysSpan > 0 ? (totalReturn / Math.max(daysSpan, 1)) * 365 : 0;
+        const calmar = stats.maxDrawdown > 0 ? annualizedReturn / stats.maxDrawdown : 0;
+
+        // Recovery Time: trades to recover from max drawdown
+        let peak = 0;
+        let maxDD = 0;
+        let ddStartIdx = 0;
+        let ddEndIdx = 0;
+        let cumulative = 0;
+        sorted.forEach((t, i) => {
+          cumulative += t.result;
+          if (cumulative > peak) {
+            peak = cumulative;
+          }
+          const dd = peak - cumulative;
+          if (dd > maxDD) {
+            maxDD = dd;
+            ddEndIdx = i;
+          }
+        });
+        // Find where peak was before this drawdown
+        cumulative = 0;
+        let peakVal = 0;
+        for (let i = 0; i <= ddEndIdx; i++) {
+          cumulative += sorted[i].result;
+          if (cumulative >= peakVal) {
+            peakVal = cumulative;
+            ddStartIdx = i;
+          }
+        }
+        // Find recovery: next time cumulative >= peakVal after ddEndIdx
+        let recoveryTrades = -1;
+        cumulative = 0;
+        for (let i = 0; i < sorted.length; i++) {
+          cumulative += sorted[i].result;
+          if (i > ddEndIdx && cumulative >= peakVal) {
+            recoveryTrades = i - ddEndIdx;
+            break;
+          }
+        }
+
+        // Monthly momentum
+        const now = new Date();
+        const monthMap: Record<string, number> = {};
+        sorted.forEach(t => {
+          const d = new Date(t.date);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+          monthMap[key] = (monthMap[key] || 0) + t.result;
+        });
+        const monthKeys = Object.keys(monthMap).sort();
+        const monthlyMomentum = monthKeys.slice(-6).map((key, i, arr) => {
+          const prev = i > 0 ? monthMap[arr[i - 1]] : null;
+          const cur = monthMap[key];
+          const change = prev !== null && prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : null;
+          const [y, m] = key.split("-");
+          const label = new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+          return { key, label, pnl: cur, change };
+        });
+
+        // Period-over-period comparison
+        const startOfWeek = (d: Date) => {
+          const day = d.getDay();
+          const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+          return new Date(d.getFullYear(), d.getMonth(), diff);
+        };
+        const thisWeekStart = startOfWeek(now);
+        const lastWeekStart = new Date(thisWeekStart);
+        lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+        const periodTrades = (start: Date, end: Date) => {
+          return sorted.filter(t => {
+            const d = new Date(t.date);
+            return d >= start && d <= end;
+          });
+        };
+
+        const thisWeekTrades = periodTrades(thisWeekStart, now);
+        const lastWeekTrades = periodTrades(lastWeekStart, new Date(thisWeekStart.getTime() - 1));
+        const thisMonthTrades = periodTrades(thisMonthStart, now);
+        const lastMonthTrades = periodTrades(lastMonthStart, lastMonthEnd);
+
+        const periodStats = (arr: typeof trades) => {
+          const pnl = arr.reduce((s, t) => s + t.result, 0);
+          const w = arr.filter(t => t.result > 0).length;
+          const wr = arr.length > 0 ? (w / arr.length) * 100 : 0;
+          return { pnl, trades: arr.length, winRate: wr };
+        };
+
+        const tw = periodStats(thisWeekTrades);
+        const lw = periodStats(lastWeekTrades);
+        const tm = periodStats(thisMonthTrades);
+        const lm = periodStats(lastMonthTrades);
+
+        const pnlChange = (cur: number, prev: number) => prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : cur !== 0 ? 100 : 0;
+
+        return (
+          <>
+            {/* Sortino, Calmar, Recovery Time */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="glass rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="w-4 h-4 text-violet-400" />
+                  <h4 className="text-[--text-secondary] text-sm">Sortino Ratio</h4>
+                </div>
+                <p className={`text-3xl font-bold mono ${sortino >= 1 ? "text-emerald-400" : sortino >= 0 ? "text-amber-400" : "text-rose-400"}`}>
+                  {sortino.toFixed(2)}
+                </p>
+                <p className="text-xs text-[--text-muted] mt-1">Rendement / risque baissier</p>
+                <div className="mt-2 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
+                  <div className="h-full bg-violet-500" style={{ width: `${Math.min(Math.abs(sortino) * 25, 100)}%` }} />
+                </div>
+              </div>
+              <div className="glass rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="w-4 h-4 text-cyan-400" />
+                  <h4 className="text-[--text-secondary] text-sm">Calmar Ratio</h4>
+                </div>
+                <p className={`text-3xl font-bold mono ${calmar >= 1 ? "text-emerald-400" : calmar >= 0 ? "text-amber-400" : "text-rose-400"}`}>
+                  {calmar.toFixed(2)}
+                </p>
+                <p className="text-xs text-[--text-muted] mt-1">Rendement annualisé / drawdown max</p>
+                <div className="mt-2 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
+                  <div className="h-full bg-cyan-500" style={{ width: `${Math.min(Math.abs(calmar) * 20, 100)}%` }} />
+                </div>
+              </div>
+              <div className="glass rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                  <h4 className="text-[--text-secondary] text-sm">Temps de Récupération</h4>
+                </div>
+                <p className={`text-3xl font-bold mono ${recoveryTrades < 0 ? "text-rose-400" : recoveryTrades <= 5 ? "text-emerald-400" : "text-amber-400"}`}>
+                  {recoveryTrades < 0 ? "N/R" : `${recoveryTrades} trades`}
+                </p>
+                <p className="text-xs text-[--text-muted] mt-1">
+                  {recoveryTrades < 0 ? "Drawdown non récupéré" : "Trades pour récupérer du drawdown max"}
+                </p>
+                <div className="mt-2 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
+                  <div className={`h-full ${recoveryTrades < 0 ? "bg-rose-500" : "bg-amber-500"}`} style={{ width: recoveryTrades < 0 ? "100%" : `${Math.min((recoveryTrades / 20) * 100, 100)}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Monthly Momentum */}
+            {monthlyMomentum.length > 0 && (
+              <div className="glass rounded-2xl p-6">
+                <h3 className="text-lg font-semibold mb-4">Momentum Mensuel</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {monthlyMomentum.map(m => (
+                    <div key={m.key} className="bg-[--bg-secondary]/50 rounded-xl p-4 text-center">
+                      <p className="text-xs text-[--text-muted] mb-1">{m.label}</p>
+                      <p className={`text-lg font-bold mono ${m.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {m.pnl >= 0 ? "+" : ""}€{m.pnl.toFixed(0)}
+                      </p>
+                      {m.change !== null ? (
+                        <div className={`flex items-center justify-center gap-1 mt-1 text-xs font-medium ${m.change >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {m.change >= 0 ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          <span className="mono">{m.change >= 0 ? "+" : ""}{m.change.toFixed(1)}%</span>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-[--text-muted] mt-1">-</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Period-over-Period Comparison */}
+            <div className="glass rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <GitCompare className="w-5 h-5 text-[--text-secondary]" />
+                <h3 className="text-lg font-semibold">Comparaison Période</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* This week vs last week */}
+                <div className="bg-[--bg-secondary]/30 rounded-xl p-5 space-y-4">
+                  <h4 className="text-sm font-medium text-[--text-secondary]">Cette semaine vs Semaine dernière</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-[--text-muted]">Cette semaine</p>
+                      <p className={`text-xl font-bold mono ${tw.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {tw.pnl >= 0 ? "+" : ""}€{tw.pnl.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-[--text-muted]">{tw.trades} trades | WR {tw.winRate.toFixed(0)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[--text-muted]">Semaine dernière</p>
+                      <p className={`text-xl font-bold mono ${lw.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {lw.pnl >= 0 ? "+" : ""}€{lw.pnl.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-[--text-muted]">{lw.trades} trades | WR {lw.winRate.toFixed(0)}%</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2 border-t border-[--border-subtle]">
+                    {pnlChange(tw.pnl, lw.pnl) >= 0 ? (
+                      <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <ArrowDownRight className="w-4 h-4 text-rose-400" />
+                    )}
+                    <span className={`text-sm font-medium mono ${pnlChange(tw.pnl, lw.pnl) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {pnlChange(tw.pnl, lw.pnl) >= 0 ? "+" : ""}{pnlChange(tw.pnl, lw.pnl).toFixed(1)}% P&L
+                    </span>
+                    <span className="text-xs text-[--text-muted]">vs semaine précédente</span>
+                  </div>
+                </div>
+
+                {/* This month vs last month */}
+                <div className="bg-[--bg-secondary]/30 rounded-xl p-5 space-y-4">
+                  <h4 className="text-sm font-medium text-[--text-secondary]">Ce mois vs Mois dernier</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-[--text-muted]">Ce mois</p>
+                      <p className={`text-xl font-bold mono ${tm.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {tm.pnl >= 0 ? "+" : ""}€{tm.pnl.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-[--text-muted]">{tm.trades} trades | WR {tm.winRate.toFixed(0)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[--text-muted]">Mois dernier</p>
+                      <p className={`text-xl font-bold mono ${lm.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {lm.pnl >= 0 ? "+" : ""}€{lm.pnl.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-[--text-muted]">{lm.trades} trades | WR {lm.winRate.toFixed(0)}%</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2 border-t border-[--border-subtle]">
+                    {pnlChange(tm.pnl, lm.pnl) >= 0 ? (
+                      <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <ArrowDownRight className="w-4 h-4 text-rose-400" />
+                    )}
+                    <span className={`text-sm font-medium mono ${pnlChange(tm.pnl, lm.pnl) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {pnlChange(tm.pnl, lm.pnl) >= 0 ? "+" : ""}{pnlChange(tm.pnl, lm.pnl).toFixed(1)}% P&L
+                    </span>
+                    <span className="text-xs text-[--text-muted]">vs mois précédent</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Streaks */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

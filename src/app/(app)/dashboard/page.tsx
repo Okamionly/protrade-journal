@@ -7,9 +7,10 @@ import { TradeForm } from "@/components/TradeForm";
 import { DashboardSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { ForexSessions } from "@/components/ForexSessions";
-import { calculateRR, formatDate } from "@/lib/utils";
+import { calculateRR, formatDate, computeStats } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent } from "lucide-react";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
@@ -85,7 +86,7 @@ export default function DashboardPage() {
 
   if (loading) return <DashboardSkeleton />;
 
-  const recentTrades = trades.slice(0, 5);
+  const recentTrades = trades.slice(0, 10);
 
   return (
     <>
@@ -209,6 +210,153 @@ export default function DashboardPage() {
         <ForexSessions />
       </div>
 
+      {/* Best/Worst Trade + Key Metrics */}
+      {(() => {
+        const stats = computeStats(trades);
+        const balance = user?.balance ?? 25000;
+        const sorted = [...trades].sort((a, b) => b.result - a.result);
+        const bestTrade = sorted.length > 0 ? sorted[0] : null;
+        const worstTrade = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+        const avgRisk = trades.length > 0
+          ? trades.reduce((s, t) => {
+              const risk = Math.abs(t.entry - t.sl) * t.lots;
+              return s + (balance > 0 ? (risk / balance) * 100 : 0);
+            }, 0) / trades.length
+          : 0;
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Best Trade */}
+            <div className="glass rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-emerald-400" />
+                </div>
+                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">Meilleur Trade</h4>
+              </div>
+              {bestTrade && bestTrade.result > 0 ? (
+                <>
+                  <div className="text-2xl font-bold mono text-emerald-400">+{bestTrade.result.toFixed(2)}€</div>
+                  <div className="text-xs text-[--text-muted] mt-1">{bestTrade.asset} — {formatDate(bestTrade.date)}</div>
+                </>
+              ) : (
+                <div className="text-sm text-[--text-muted]">Aucun trade gagnant</div>
+              )}
+            </div>
+
+            {/* Worst Trade */}
+            <div className="glass rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center">
+                  <Skull className="w-5 h-5 text-rose-400" />
+                </div>
+                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">Pire Trade</h4>
+              </div>
+              {worstTrade && worstTrade.result < 0 ? (
+                <>
+                  <div className="text-2xl font-bold mono text-rose-400">{worstTrade.result.toFixed(2)}€</div>
+                  <div className="text-xs text-[--text-muted] mt-1">{worstTrade.asset} — {formatDate(worstTrade.date)}</div>
+                </>
+              ) : (
+                <div className="text-sm text-[--text-muted]">Aucun trade perdant</div>
+              )}
+            </div>
+
+            {/* Sharpe Ratio & Profit Factor */}
+            <div className="glass rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                  <Activity className="w-5 h-5 text-cyan-400" />
+                </div>
+                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">Ratios Clés</h4>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-[--text-muted]">Sharpe Ratio</span>
+                  <span className={`text-lg font-bold mono ${stats.sharpeRatio >= 1 ? "text-emerald-400" : stats.sharpeRatio >= 0 ? "text-amber-400" : "text-rose-400"}`}>
+                    {stats.sharpeRatio.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-[--text-muted]">Profit Factor</span>
+                  <span className={`text-lg font-bold mono ${stats.profitFactor >= 1.5 ? "text-emerald-400" : stats.profitFactor >= 1 ? "text-amber-400" : "text-rose-400"}`}>
+                    {stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Risk per Trade */}
+            <div className="glass rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                  <Percent className="w-5 h-5 text-amber-400" />
+                </div>
+                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">Risque / Trade</h4>
+              </div>
+              <div className="text-2xl font-bold mono" style={{ color: avgRisk <= 1 ? "#34d399" : avgRisk <= 2 ? "#fbbf24" : "#f87171" }}>
+                {avgRisk.toFixed(2)}%
+              </div>
+              <div className="text-xs text-[--text-muted] mt-1">
+                {avgRisk <= 1 ? "Conservateur" : avgRisk <= 2 ? "Modéré" : "Agressif"} — moy. sur {trades.length} trades
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Asset Breakdown */}
+      {trades.length > 0 && (() => {
+        const assetMap: Record<string, { pnl: number; count: number; wins: number }> = {};
+        trades.forEach((t) => {
+          if (!assetMap[t.asset]) assetMap[t.asset] = { pnl: 0, count: 0, wins: 0 };
+          assetMap[t.asset].pnl += t.result;
+          assetMap[t.asset].count++;
+          if (t.result > 0) assetMap[t.asset].wins++;
+        });
+        const assetEntries = Object.entries(assetMap).sort((a, b) => b[1].pnl - a[1].pnl);
+        const maxPnl = Math.max(...assetEntries.map(([, v]) => Math.abs(v.pnl)), 1);
+
+        return (
+          <div className="glass rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <PieChart className="w-5 h-5 text-purple-400" />
+              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Répartition par Actif</h3>
+            </div>
+            <div className="space-y-3">
+              {assetEntries.map(([asset, data]) => {
+                const wr = data.count > 0 ? ((data.wins / data.count) * 100).toFixed(0) : "0";
+                const barWidth = (Math.abs(data.pnl) / maxPnl) * 100;
+                return (
+                  <div key={asset} className="rounded-xl p-3" style={{ background: "var(--bg-hover)" }}>
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{asset}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--bg-secondary)", color: "var(--text-muted)" }}>
+                          {data.count} trades
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[--text-muted]">WR {wr}%</span>
+                        <span className={`font-bold mono text-sm ${data.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(2)}€
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${data.pnl >= 0 ? "bg-emerald-500" : "bg-rose-500"}`}
+                        style={{ width: `${barWidth}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Weekly Comparison */}
       {(() => {
         const today = new Date();
@@ -282,10 +430,19 @@ export default function DashboardPage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-semibold">Trades Récents</h3>
-          <button onClick={() => setShowForm(true)} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center">
-            <Plus className="w-4 h-4 mr-2" />
-            Nouveau Trade
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/journal"
+              className="text-sm text-blue-400 hover:text-blue-300 transition flex items-center gap-1"
+            >
+              Voir tout
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+            <button onClick={() => setShowForm(true)} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center">
+              <Plus className="w-4 h-4 mr-2" />
+              Nouveau Trade
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
