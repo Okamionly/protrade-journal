@@ -55,6 +55,7 @@ export const config = {
     "/war-room/:path*",
     "/leaderboard/:path*",
     "/reports/:path*",
+    "/profile/:path*",
     "/api/trades/:path*",
     "/api/upload/:path*",
     "/api/user/:path*",

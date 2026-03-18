@@ -22,6 +22,8 @@ model User {
   monthlyGoals MonthlyGoal[]
   tradingRules TradingRule[]
   reactions    Reaction[]
+  resetToken       String?
+  resetTokenExpiry DateTime?
   createdAt    DateTime      @default(now())
 }
 

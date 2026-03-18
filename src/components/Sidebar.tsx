@@ -41,6 +41,7 @@ import {
   Zap,
   FileBarChart,
   Camera,
+  User,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -104,6 +105,9 @@ const navItems = [
   { href: "/recaps", label: "Recaps", icon: FileBarChart },
   { href: "/screenshots", label: "Screenshots", icon: Camera },
   { href: "/chat", label: "Chat", icon: MessageCircle },
+  // MON ESPACE
+  { divider: true, label: "MON ESPACE" },
+  { href: "/profile", label: "Profil", icon: User },
   // PREMIUM
   { divider: true, label: "PREMIUM" },
   { href: "/vip", label: "VIP", icon: Crown, isVip: true },
