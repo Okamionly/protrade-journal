@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { AdminDashboard } from "./AdminDashboard";
 
+// Stripe Webhook URL to configure in Stripe Dashboard:
+// https://marketphase.vercel.app/api/webhooks/stripe
+// Events to listen: checkout.session.completed, customer.subscription.deleted
+
 export default async function AdminPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");

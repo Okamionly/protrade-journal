@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Crown,
   Lock,
@@ -11,12 +12,26 @@ import {
   Shield,
   Star,
   Check,
+  CheckCircle,
   FileText,
   Calendar,
   ChevronRight,
   Loader2,
   X,
+  Code,
+  ArrowLeft,
 } from "lucide-react";
+
+interface VipPost {
+  id: string;
+  title: string;
+  type: string;
+  content?: string;
+  scriptCode?: string | null;
+  imageUrl?: string | null;
+  createdAt: string;
+  author?: { name: string | null; email: string };
+}
 
 const features = [
   "1 a 2 indicateurs exclusifs par mois (RSI avance, Volume Profile, Order Flow...)",
@@ -48,151 +63,15 @@ const testimonials = [
   },
 ];
 
-const pastPublications = [
-  {
-    month: "F\u00e9vrier 2026",
-    items: "Indicateur Volume Profile + Analyse Macro",
-  },
-  {
-    month: "Janvier 2026",
-    items: "Indicateur RSI Divergence + Analyse Options",
-  },
-  {
-    month: "D\u00e9cembre 2025",
-    items: "Indicateur Order Flow + Analyse Macro",
-  },
-];
-
-// --- SVG Indicator Components ---
-
-function SmartMoneyDetectorChart() {
-  return (
-    <svg viewBox="0 0 300 150" className="w-full h-36">
-      {/* Background grid */}
-      {[0, 30, 60, 90, 120].map((y) => (
-        <line key={y} x1="0" y1={y} x2="300" y2={y} stroke="rgba(255,255,255,0.04)" />
-      ))}
-      {/* Price line */}
-      <polyline
-        points="0,100 20,95 40,90 60,85 80,70 100,75 120,60 140,55 160,65 180,50 200,45 220,55 240,40 260,35 280,30 300,25"
-        fill="none"
-        stroke="rgba(59,130,246,0.6)"
-        strokeWidth="2"
-      />
-      {/* Smart money zones */}
-      <rect x="70" y="60" width="50" height="20" rx="3" fill="rgba(34,197,94,0.15)" stroke="rgba(34,197,94,0.4)" strokeWidth="1" />
-      <text x="78" y="74" fill="rgba(34,197,94,0.8)" fontSize="8" fontFamily="monospace">ACCUM</text>
-      <rect x="190" y="35" width="60" height="20" rx="3" fill="rgba(239,68,68,0.15)" stroke="rgba(239,68,68,0.4)" strokeWidth="1" />
-      <text x="200" y="49" fill="rgba(239,68,68,0.8)" fontSize="8" fontFamily="monospace">DISTRIB</text>
-      {/* Volume bars */}
-      {[20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280].map((x, i) => {
-        const h = [12, 8, 15, 25, 10, 20, 8, 14, 22, 18, 10, 16, 12, 9][i];
-        const isHighVol = h > 18;
-        return (
-          <rect
-            key={x}
-            x={x - 5}
-            y={140 - h}
-            width="10"
-            height={h}
-            rx="1"
-            fill={isHighVol ? "rgba(168,85,247,0.5)" : "rgba(168,85,247,0.2)"}
-          />
-        );
-      })}
-      <text x="4" y="148" fill="rgba(156,163,175,0.4)" fontSize="7" fontFamily="monospace">Smart Money Detector v2</text>
-    </svg>
-  );
-}
-
-function RSIChart() {
-  return (
-    <svg viewBox="0 0 300 150" className="w-full h-28">
-      <rect x="0" y="0" width="300" height="30" fill="rgba(239,68,68,0.1)" />
-      <line x1="0" y1="30" x2="300" y2="30" stroke="rgba(239,68,68,0.3)" strokeDasharray="4" />
-      <text x="4" y="22" fill="rgba(239,68,68,0.5)" fontSize="10" fontFamily="monospace">70</text>
-      <rect x="0" y="120" width="300" height="30" fill="rgba(34,197,94,0.1)" />
-      <line x1="0" y1="120" x2="300" y2="120" stroke="rgba(34,197,94,0.3)" strokeDasharray="4" />
-      <text x="4" y="138" fill="rgba(34,197,94,0.5)" fontSize="10" fontFamily="monospace">30</text>
-      <polyline
-        points="0,80 30,72 60,55 90,25 120,18 150,40 180,75 210,110 240,125 270,105 300,85"
-        fill="none"
-        stroke="rgb(168,85,247)"
-        strokeWidth="2.5"
-      />
-      <line x1="230" y1="125" x2="270" y2="105" stroke="rgb(250,204,21)" strokeWidth="2" />
-      <polygon points="270,105 262,108 265,115" fill="rgb(250,204,21)" />
-      <text x="240" y="98" fill="rgb(250,204,21)" fontSize="9" fontFamily="monospace">DIV</text>
-    </svg>
-  );
-}
-
-function VolumeProfileChart() {
-  const bars = [
-    { price: "1.1050", vol: 85 },
-    { price: "1.1040", vol: 65 },
-    { price: "1.1030", vol: 95 },
-    { price: "1.1020", vol: 40 },
-    { price: "1.1010", vol: 55 },
-    { price: "1.1000", vol: 100 },
-    { price: "1.0990", vol: 70 },
-    { price: "1.0980", vol: 30 },
-  ];
-  return (
-    <svg viewBox="0 0 300 160" className="w-full h-28">
-      {bars.map((b, i) => (
-        <g key={i}>
-          <text x="2" y={i * 19 + 16} fill="rgba(156,163,175,0.7)" fontSize="9" fontFamily="monospace">
-            {b.price}
-          </text>
-          <rect
-            x="60"
-            y={i * 19 + 4}
-            width={(b.vol / 100) * 220}
-            height="14"
-            rx="2"
-            fill={b.vol === 100 ? "rgba(59,130,246,0.6)" : "rgba(59,130,246,0.25)"}
-          />
-          {b.vol === 100 && (
-            <text x={60 + (b.vol / 100) * 220 + 4} y={i * 19 + 16} fill="rgba(59,130,246,0.8)" fontSize="8" fontFamily="monospace">
-              POC
-            </text>
-          )}
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-function OrderFlowChart() {
-  const data = [
-    { time: "09:30", buy: 75, sell: 45 },
-    { time: "10:00", buy: 50, sell: 80 },
-    { time: "10:30", buy: 90, sell: 30 },
-    { time: "11:00", buy: 60, sell: 65 },
-    { time: "11:30", buy: 85, sell: 40 },
-  ];
-  return (
-    <svg viewBox="0 0 300 140" className="w-full h-28">
-      {data.map((d, i) => {
-        const x = i * 60 + 15;
-        return (
-          <g key={i}>
-            <rect x={x} y={130 - d.buy} width="20" height={d.buy} rx="2" fill="rgba(34,197,94,0.5)" />
-            <rect x={x + 22} y={130 - d.sell} width="20" height={d.sell} rx="2" fill="rgba(239,68,68,0.5)" />
-            <text x={x + 10} y={138} fill="rgba(156,163,175,0.6)" fontSize="8" fontFamily="monospace" textAnchor="middle">
-              {d.time}
-            </text>
-          </g>
-        );
-      })}
-      <text x="4" y="10" fill="rgba(34,197,94,0.6)" fontSize="8">BUY</text>
-      <text x="40" y="10" fill="rgba(239,68,68,0.6)" fontSize="8">SELL</text>
-    </svg>
-  );
-}
-
-// --- Locked Overlay ---
+const typeLabel = (type: string) => {
+  switch (type) {
+    case "indicator": return "Indicateur";
+    case "macro": return "Analyse Macro";
+    case "options": return "Analyse Options";
+    case "futures": return "Analyse Futures";
+    default: return type;
+  }
+};
 
 function LockedOverlay() {
   return (
@@ -210,18 +89,121 @@ function LockedOverlay() {
         <Lock className="w-6 h-6" style={{ color: "rgba(255,255,255,0.6)" }} />
       </div>
       <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
-        R&eacute;serv&eacute; aux membres VIP
+        S&apos;abonner pour acc&eacute;der
       </span>
     </div>
   );
 }
 
-// --- Main Page ---
+function PostDetail({
+  post,
+  onClose,
+}: {
+  post: VipPost;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="glass rounded-2xl overflow-hidden"
+      style={{
+        border: "1px solid var(--border, rgba(255,255,255,0.08))",
+        background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+      }}
+    >
+      <div className="p-5 border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition hover:opacity-80"
+              style={{ background: "var(--bg-hover, rgba(255,255,255,0.05))" }}
+            >
+              <ArrowLeft className="w-4 h-4" style={{ color: "var(--text-muted, #9ca3af)" }} />
+            </button>
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+                {post.title}
+              </h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[10px] font-mono" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                  {new Date(post.createdAt).toLocaleDateString("fr-FR", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
+                <span className="text-[10px]" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                  &mdash; {typeLabel(post.type)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-5 space-y-4">
+        {/* Content as paragraphs */}
+        <div className="space-y-3">
+          {post.content?.split("\n").filter(Boolean).map((para, i) => (
+            <p key={i} className="text-sm leading-relaxed" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+              {para}
+            </p>
+          ))}
+        </div>
+
+        {/* Image */}
+        {post.imageUrl && (
+          <div className="rounded-xl overflow-hidden">
+            <img
+              src={post.imageUrl}
+              alt={post.title}
+              className="w-full object-cover rounded-xl"
+              style={{ maxHeight: 400 }}
+            />
+          </div>
+        )}
+
+        {/* Script Code */}
+        {post.scriptCode && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Code className="w-4 h-4" style={{ color: "rgb(168,85,247)" }} />
+              <span className="text-xs font-medium" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+                Code / Pine Script
+              </span>
+            </div>
+            <pre
+              className="rounded-xl p-4 text-xs font-mono overflow-x-auto"
+              style={{
+                background: "rgba(0,0,0,0.3)",
+                border: "1px solid var(--border, rgba(255,255,255,0.08))",
+                color: "rgb(168,85,247)",
+              }}
+            >
+              {post.scriptCode}
+            </pre>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function VipPage() {
   const [isVip, setIsVip] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [postsLoading, setPostsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [posts, setPosts] = useState<VipPost[]>([]);
+  const [detailPost, setDetailPost] = useState<VipPost | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("success") === "true") {
+      setShowSuccess(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetch("/api/user/role")
@@ -237,6 +219,31 @@ export default function VipPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    fetch("/api/vip/posts")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setPosts(data))
+      .catch(() => {})
+      .finally(() => setPostsLoading(false));
+  }, []);
+
+  async function handleViewPost(post: VipPost) {
+    if (!isVip) return;
+    if (post.content) {
+      setDetailPost(post);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/vip/posts/${post.id}`);
+      if (res.ok) {
+        const fullPost = await res.json();
+        setDetailPost(fullPost);
+      }
+    } catch {
+      // silently fail
+    }
+  }
+
   async function handleSubscribe() {
     setLoading(true);
     try {
@@ -250,8 +257,59 @@ export default function VipPage() {
     }
   }
 
+  // Organize posts by type
+  const indicatorPosts = posts.filter((p) => p.type === "indicator");
+  const macroPosts = posts.filter((p) => p.type === "macro");
+  const optionsFuturesPosts = posts.filter(
+    (p) => p.type === "options" || p.type === "futures"
+  );
+
+  // Featured indicator = most recent indicator post
+  const featuredIndicator = indicatorPosts[0] || null;
+
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+
+  // If viewing a detail post
+  if (detailPost) {
+    return (
+      <div className="min-h-screen pb-20 mx-4 mt-4 sm:mx-6 sm:mt-6">
+        <PostDetail post={detailPost} onClose={() => setDetailPost(null)} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-20">
+      {/* Success Banner after Stripe payment */}
+      {showSuccess && (
+        <div
+          className="mx-4 mt-4 sm:mx-6 p-4 rounded-xl flex items-center justify-between gap-3"
+          style={{
+            background: "rgba(34,197,94,0.15)",
+            border: "1px solid rgba(34,197,94,0.3)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: "rgb(34,197,94)" }} />
+            <span className="text-sm font-medium" style={{ color: "rgb(34,197,94)" }}>
+              Paiement r&eacute;ussi ! Bienvenue dans le club VIP
+            </span>
+          </div>
+          <button
+            onClick={() => setShowSuccess(false)}
+            className="flex-shrink-0 p-1 rounded-lg transition hover:opacity-70"
+            style={{ color: "rgb(34,197,94)" }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Hero Banner */}
       <div
         className="relative overflow-hidden rounded-2xl mx-4 mt-4 sm:mx-6 sm:mt-6 p-8 sm:p-12"
@@ -260,7 +318,6 @@ export default function VipPage() {
           border: "1px solid rgba(245,158,11,0.2)",
         }}
       >
-        {/* Decorative elements */}
         <div
           className="absolute top-0 right-0 w-64 h-64 rounded-full"
           style={{
@@ -349,7 +406,6 @@ export default function VipPage() {
               background: "var(--bg-secondary, rgba(255,255,255,0.03))",
             }}
           >
-            {/* Pricing header */}
             <div
               className="p-6 text-center"
               style={{
@@ -369,7 +425,6 @@ export default function VipPage() {
                 Sans engagement &mdash; Annulez &agrave; tout moment
               </p>
             </div>
-            {/* Features */}
             <div className="p-6 space-y-3">
               {features.map((f, i) => (
                 <div key={i} className="flex items-start gap-3">
@@ -385,7 +440,6 @@ export default function VipPage() {
                 </div>
               ))}
             </div>
-            {/* CTA */}
             <div className="px-6 pb-6">
               <button
                 onClick={handleSubscribe}
@@ -413,328 +467,302 @@ export default function VipPage() {
         </div>
       )}
 
-      {/* Section A: Indicateur du Mois */}
-      <div className="mx-4 mt-8 sm:mx-6 sm:mt-10">
-        <div className="flex items-center gap-3 mb-6">
-          <TrendingUp className="w-5 h-5" style={{ color: "rgb(168,85,247)" }} />
-          <h2 className="text-lg font-bold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-            Indicateur du Mois
-          </h2>
+      {/* Loading state for posts */}
+      {postsLoading && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--text-muted, #9ca3af)" }} />
         </div>
+      )}
 
-        <div
-          className="glass relative rounded-2xl overflow-hidden"
-          style={{
-            border: "1px solid var(--border, rgba(255,255,255,0.08))",
-            background: "var(--bg-secondary, rgba(255,255,255,0.03))",
-          }}
-        >
-          <div className="p-5 pb-3">
-            <div className="flex items-center gap-3 mb-1">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(168,85,247,0.15)" }}
-              >
-                <Shield className="w-5 h-5" style={{ color: "rgb(168,85,247)" }} />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-                  Indicateur de Mars 2026: Smart Money Detector v2
-                </h3>
-                <p className="text-[11px]" style={{ color: "var(--text-secondary, #9ca3af)" }}>
-                  D&eacute;tecte les zones d&apos;accumulation et de distribution institutionnelle en temps r&eacute;el.
-                  Combine l&apos;analyse du volume, du delta et des niveaux de prix cl&eacute;s pour identifier
-                  o&ugrave; les Smart Money positionnent leurs ordres.
-                </p>
-              </div>
-            </div>
+      {/* Featured Indicator of the Month */}
+      {!postsLoading && featuredIndicator && (
+        <div className="mx-4 mt-8 sm:mx-6 sm:mt-10">
+          <div className="flex items-center gap-3 mb-6">
+            <Shield className="w-5 h-5" style={{ color: "rgb(168,85,247)" }} />
+            <h2 className="text-lg font-bold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+              Indicateur du Mois
+            </h2>
           </div>
-          <div className="px-5 pb-2">
-            <SmartMoneyDetectorChart />
-          </div>
-          <div className="px-5 pb-4">
-            <span className="text-[10px] mono" style={{ color: "var(--text-secondary, #9ca3af)" }}>
-              Publi&eacute; le 01/03/2026
-            </span>
-          </div>
-          {!isVip && <LockedOverlay />}
-        </div>
-      </div>
 
-      {/* Section B: Analyse Macro Mensuelle */}
-      <div className="mx-4 mt-8 sm:mx-6 sm:mt-10">
-        <div className="flex items-center gap-3 mb-6">
-          <FileText className="w-5 h-5" style={{ color: "rgb(59,130,246)" }} />
-          <h2 className="text-lg font-bold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-            Analyse Macro Mensuelle
-          </h2>
-        </div>
-
-        <div
-          className="glass relative rounded-2xl overflow-hidden"
-          style={{
-            border: "1px solid var(--border, rgba(255,255,255,0.08))",
-            background: "var(--bg-secondary, rgba(255,255,255,0.03))",
-          }}
-        >
-          <div className="p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(59,130,246,0.15)" }}
-              >
-                <BarChart3 className="w-5 h-5" style={{ color: "rgb(59,130,246)" }} />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-                  Rapport Macro &mdash; Mars 2026
-                </h3>
-                <p className="text-[11px]" style={{ color: "var(--text-secondary, #9ca3af)" }}>
-                  Analyse compl&egrave;te de l&apos;environnement macro&eacute;conomique
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2.5">
-              {[
-                { label: "Fed Policy", desc: "Anticipations de taux & forward guidance" },
-                { label: "Inflation Outlook", desc: "CPI, PCE et tendances inflationnistes" },
-                { label: "Bond Yields", desc: "Courbe des taux et spreads de cr\u00e9dit" },
-                { label: "Dollar Index", desc: "DXY, flux de capitaux et corr\u00e9lations" },
-              ].map((item, i) => (
+          <div
+            className="glass relative rounded-2xl overflow-hidden cursor-pointer transition hover:border-purple-500/30"
+            style={{
+              border: "1px solid var(--border, rgba(255,255,255,0.08))",
+              background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+            }}
+            onClick={() => handleViewPost(featuredIndicator)}
+          >
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-3 mb-1">
                 <div
-                  key={i}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center"
+                  style={{ background: "rgba(168,85,247,0.15)" }}
                 >
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: "rgb(59,130,246)" }}
-                  />
-                  <div>
-                    <span className="text-xs font-medium" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-                      {item.label}
-                    </span>
-                    <span className="text-[10px] ml-2" style={{ color: "var(--text-secondary, #9ca3af)" }}>
-                      {item.desc}
-                    </span>
-                  </div>
+                  <Shield className="w-5 h-5" style={{ color: "rgb(168,85,247)" }} />
                 </div>
-              ))}
-            </div>
-          </div>
-          {!isVip && <LockedOverlay />}
-        </div>
-      </div>
-
-      {/* Section C: Analyse Options & Futures */}
-      <div className="mx-4 mt-8 sm:mx-6 sm:mt-10">
-        <div className="flex items-center gap-3 mb-6">
-          <Activity className="w-5 h-5" style={{ color: "rgb(234,88,12)" }} />
-          <h2 className="text-lg font-bold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-            Analyse Options &amp; Futures
-          </h2>
-        </div>
-
-        <div
-          className="glass relative rounded-2xl overflow-hidden"
-          style={{
-            border: "1px solid var(--border, rgba(255,255,255,0.08))",
-            background: "var(--bg-secondary, rgba(255,255,255,0.03))",
-          }}
-        >
-          <div className="p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(234,88,12,0.15)" }}
-              >
-                <Activity className="w-5 h-5" style={{ color: "rgb(234,88,12)" }} />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-                  Options Flow Report &mdash; Semaine 12
-                </h3>
-                <p className="text-[11px]" style={{ color: "var(--text-secondary, #9ca3af)" }}>
-                  Analyse des flux options et positionnement futures
-                </p>
+                <div>
+                  <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+                    {featuredIndicator.title}
+                  </h3>
+                  {isVip && featuredIndicator.content && (
+                    <p className="text-[11px] line-clamp-2" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                      {featuredIndicator.content.slice(0, 200)}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="space-y-2.5">
-              {[
-                { label: "Put/Call Ratio", desc: "Ratio et sentiment des march\u00e9s d\u00e9riv\u00e9s" },
-                { label: "Unusual Activity", desc: "Volumes anormaux et gros ordres d\u00e9tect\u00e9s" },
-                { label: "Institutional Positioning", desc: "COT report et positionnement net" },
-              ].map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
+            {/* Script code preview for VIP */}
+            {isVip && featuredIndicator.scriptCode && (
+              <div className="px-5 pb-2">
+                <pre
+                  className="rounded-lg p-3 text-[10px] font-mono overflow-hidden max-h-32"
+                  style={{
+                    background: "rgba(0,0,0,0.3)",
+                    border: "1px solid rgba(168,85,247,0.15)",
+                    color: "rgb(168,85,247)",
+                  }}
                 >
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: "rgb(234,88,12)" }}
-                  />
-                  <div>
-                    <span className="text-xs font-medium" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-                      {item.label}
-                    </span>
-                    <span className="text-[10px] ml-2" style={{ color: "var(--text-secondary, #9ca3af)" }}>
-                      {item.desc}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                  {featuredIndicator.scriptCode.slice(0, 300)}
+                  {(featuredIndicator.scriptCode?.length || 0) > 300 ? "\n..." : ""}
+                </pre>
+              </div>
+            )}
+            <div className="px-5 pb-4 flex items-center justify-between">
+              <span className="text-[10px] mono" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                Publi&eacute; le {formatDate(featuredIndicator.createdAt)}
+              </span>
+              {isVip && (
+                <ChevronRight className="w-4 h-4" style={{ color: "var(--text-secondary, #9ca3af)" }} />
+              )}
             </div>
+            {!isVip && <LockedOverlay />}
           </div>
-          {!isVip && <LockedOverlay />}
         </div>
-      </div>
+      )}
 
-      {/* Section D: Historique des Publications */}
-      <div className="mx-4 mt-8 sm:mx-6 sm:mt-10">
-        <div className="flex items-center gap-3 mb-6">
-          <Calendar className="w-5 h-5" style={{ color: "rgb(245,158,11)" }} />
-          <h2 className="text-lg font-bold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-            Historique des Publications
-          </h2>
-        </div>
+      {/* Indicateurs Section */}
+      {!postsLoading && (
+        <div className="mx-4 mt-8 sm:mx-6 sm:mt-10">
+          <div className="flex items-center gap-3 mb-6">
+            <TrendingUp className="w-5 h-5" style={{ color: "rgb(168,85,247)" }} />
+            <h2 className="text-lg font-bold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+              Indicateurs
+            </h2>
+          </div>
 
-        <div className="space-y-3">
-          {pastPublications.map((pub, i) => (
+          {indicatorPosts.length === 0 ? (
             <div
-              key={i}
-              className="glass relative rounded-2xl overflow-hidden"
+              className="glass rounded-2xl p-8 text-center"
               style={{
                 border: "1px solid var(--border, rgba(255,255,255,0.08))",
                 background: "var(--bg-secondary, rgba(255,255,255,0.03))",
               }}
             >
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: "rgba(245,158,11,0.15)" }}
-                  >
-                    <FileText className="w-5 h-5" style={{ color: "rgb(245,158,11)" }} />
+              <TrendingUp className="w-8 h-8 mx-auto mb-3" style={{ color: "rgba(168,85,247,0.3)" }} />
+              <p className="text-sm" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                Aucune publication
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {indicatorPosts.map((post) => (
+                <div
+                  key={post.id}
+                  className="glass relative rounded-2xl overflow-hidden transition hover:border-purple-500/20"
+                  style={{
+                    border: "1px solid var(--border, rgba(255,255,255,0.08))",
+                    background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+                    cursor: isVip ? "pointer" : "default",
+                  }}
+                  onClick={() => handleViewPost(post)}
+                >
+                  <div className="p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ background: "rgba(168,85,247,0.15)" }}
+                      >
+                        <TrendingUp className="w-4 h-4" style={{ color: "rgb(168,85,247)" }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-xs font-semibold truncate" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+                          {post.title}
+                        </h3>
+                        <span className="text-[10px] font-mono" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                          {formatDate(post.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Script preview for VIP */}
+                    {isVip && post.scriptCode && (
+                      <pre
+                        className="rounded-lg p-2 text-[9px] font-mono overflow-hidden max-h-20 mt-2"
+                        style={{
+                          background: "rgba(0,0,0,0.3)",
+                          border: "1px solid rgba(168,85,247,0.1)",
+                          color: "rgba(168,85,247,0.8)",
+                        }}
+                      >
+                        {post.scriptCode.slice(0, 150)}...
+                      </pre>
+                    )}
                   </div>
-                  <div>
-                    <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-                      {pub.month}
-                    </h3>
-                    <p className="text-[11px]" style={{ color: "var(--text-secondary, #9ca3af)" }}>
-                      {pub.items}
-                    </p>
-                  </div>
+                  {!isVip && <LockedOverlay />}
                 </div>
-                <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "var(--text-secondary, #9ca3af)" }} />
-              </div>
-              {!isVip && <LockedOverlay />}
+              ))}
             </div>
-          ))}
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Section E: Archive - Indicator Previews */}
-      <div className="mx-4 mt-8 sm:mx-6 sm:mt-10">
-        <div className="flex items-center gap-3 mb-6">
-          <Shield className="w-5 h-5" style={{ color: "rgb(168,85,247)" }} />
-          <h2 className="text-lg font-bold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-            Archive &mdash; Aper&ccedil;u des Indicateurs
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* RSI */}
-          <div
-            className="glass relative rounded-2xl overflow-hidden"
-            style={{
-              border: "1px solid var(--border, rgba(255,255,255,0.08))",
-              background: "var(--bg-secondary, rgba(255,255,255,0.03))",
-            }}
-          >
-            <div className="p-4 pb-2 flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: "rgba(168,85,247,0.15)" }}
-              >
-                <TrendingUp className="w-4 h-4" style={{ color: "rgb(168,85,247)" }} />
-              </div>
-              <div>
-                <h3 className="text-xs font-semibold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-                  RSI Avanc&eacute;
-                </h3>
-                <p className="text-[10px]" style={{ color: "var(--text-secondary, #9ca3af)" }}>
-                  Multi-timeframe + divergences
-                </p>
-              </div>
-            </div>
-            <div className="px-4 pb-3">
-              <RSIChart />
-            </div>
-            {!isVip && <LockedOverlay />}
+      {/* Analyses Macro Section */}
+      {!postsLoading && (
+        <div className="mx-4 mt-8 sm:mx-6 sm:mt-10">
+          <div className="flex items-center gap-3 mb-6">
+            <BarChart3 className="w-5 h-5" style={{ color: "rgb(59,130,246)" }} />
+            <h2 className="text-lg font-bold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+              Analyses Macro
+            </h2>
           </div>
 
-          {/* Volume Profile */}
-          <div
-            className="glass relative rounded-2xl overflow-hidden"
-            style={{
-              border: "1px solid var(--border, rgba(255,255,255,0.08))",
-              background: "var(--bg-secondary, rgba(255,255,255,0.03))",
-            }}
-          >
-            <div className="p-4 pb-2 flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: "rgba(168,85,247,0.15)" }}
-              >
-                <BarChart3 className="w-4 h-4" style={{ color: "rgb(168,85,247)" }} />
-              </div>
-              <div>
-                <h3 className="text-xs font-semibold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-                  Volume Profile
-                </h3>
-                <p className="text-[10px]" style={{ color: "var(--text-secondary, #9ca3af)" }}>
-                  Distribution par niveau de prix
-                </p>
-              </div>
+          {macroPosts.length === 0 ? (
+            <div
+              className="glass rounded-2xl p-8 text-center"
+              style={{
+                border: "1px solid var(--border, rgba(255,255,255,0.08))",
+                background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+              }}
+            >
+              <BarChart3 className="w-8 h-8 mx-auto mb-3" style={{ color: "rgba(59,130,246,0.3)" }} />
+              <p className="text-sm" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                Aucune publication
+              </p>
             </div>
-            <div className="px-4 pb-3">
-              <VolumeProfileChart />
+          ) : (
+            <div className="space-y-3">
+              {macroPosts.map((post) => (
+                <div
+                  key={post.id}
+                  className="glass relative rounded-2xl overflow-hidden transition hover:border-blue-500/20"
+                  style={{
+                    border: "1px solid var(--border, rgba(255,255,255,0.08))",
+                    background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+                    cursor: isVip ? "pointer" : "default",
+                  }}
+                  onClick={() => handleViewPost(post)}
+                >
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: "rgba(59,130,246,0.15)" }}
+                      >
+                        <BarChart3 className="w-5 h-5" style={{ color: "rgb(59,130,246)" }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold truncate" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+                          {post.title}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-mono" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                            {formatDate(post.createdAt)}
+                          </span>
+                          {isVip && post.content && (
+                            <span className="text-[11px] truncate" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                              &mdash; {post.content.slice(0, 80)}...
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {isVip && (
+                      <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "var(--text-secondary, #9ca3af)" }} />
+                    )}
+                  </div>
+                  {!isVip && <LockedOverlay />}
+                </div>
+              ))}
             </div>
-            {!isVip && <LockedOverlay />}
+          )}
+        </div>
+      )}
+
+      {/* Analyses Options & Futures Section */}
+      {!postsLoading && (
+        <div className="mx-4 mt-8 sm:mx-6 sm:mt-10">
+          <div className="flex items-center gap-3 mb-6">
+            <Activity className="w-5 h-5" style={{ color: "rgb(234,88,12)" }} />
+            <h2 className="text-lg font-bold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+              Analyses Options &amp; Futures
+            </h2>
           </div>
 
-          {/* Order Flow */}
-          <div
-            className="glass relative rounded-2xl overflow-hidden"
-            style={{
-              border: "1px solid var(--border, rgba(255,255,255,0.08))",
-              background: "var(--bg-secondary, rgba(255,255,255,0.03))",
-            }}
-          >
-            <div className="p-4 pb-2 flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: "rgba(168,85,247,0.15)" }}
-              >
-                <Activity className="w-4 h-4" style={{ color: "rgb(168,85,247)" }} />
-              </div>
-              <div>
-                <h3 className="text-xs font-semibold" style={{ color: "var(--text-primary, #e5e7eb)" }}>
-                  Order Flow
-                </h3>
-                <p className="text-[10px]" style={{ color: "var(--text-secondary, #9ca3af)" }}>
-                  Pression achat/vente
-                </p>
-              </div>
+          {optionsFuturesPosts.length === 0 ? (
+            <div
+              className="glass rounded-2xl p-8 text-center"
+              style={{
+                border: "1px solid var(--border, rgba(255,255,255,0.08))",
+                background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+              }}
+            >
+              <Activity className="w-8 h-8 mx-auto mb-3" style={{ color: "rgba(234,88,12,0.3)" }} />
+              <p className="text-sm" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                Aucune publication
+              </p>
             </div>
-            <div className="px-4 pb-3">
-              <OrderFlowChart />
+          ) : (
+            <div className="space-y-3">
+              {optionsFuturesPosts.map((post) => (
+                <div
+                  key={post.id}
+                  className="glass relative rounded-2xl overflow-hidden transition hover:border-orange-500/20"
+                  style={{
+                    border: "1px solid var(--border, rgba(255,255,255,0.08))",
+                    background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+                    cursor: isVip ? "pointer" : "default",
+                  }}
+                  onClick={() => handleViewPost(post)}
+                >
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: "rgba(234,88,12,0.15)" }}
+                      >
+                        <Activity className="w-5 h-5" style={{ color: "rgb(234,88,12)" }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold truncate" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+                          {post.title}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-mono" style={{ color: "var(--text-secondary, #9ca3af)" }}>
+                            {formatDate(post.createdAt)}
+                          </span>
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                            style={{
+                              background: "rgba(234,88,12,0.15)",
+                              color: "rgb(234,88,12)",
+                            }}
+                          >
+                            {typeLabel(post.type)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {isVip && (
+                      <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "var(--text-secondary, #9ca3af)" }} />
+                    )}
+                  </div>
+                  {!isVip && <LockedOverlay />}
+                </div>
+              ))}
             </div>
-            {!isVip && <LockedOverlay />}
-          </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Testimonials */}
       <div className="mx-4 mt-10 sm:mx-6 sm:mt-12">
