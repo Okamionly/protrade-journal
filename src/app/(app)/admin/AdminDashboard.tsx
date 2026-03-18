@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Users,
   BarChart3,
@@ -362,6 +363,32 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
 
         {expandedActions && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* VIP Content Management */}
+            <div className="rounded-xl p-4 border" style={{ borderColor: "var(--border)", background: "var(--bg-hover)" }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
+                    Contenu VIP
+                  </h3>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    G&eacute;rer les publications VIP
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/admin/vip-content"
+                className="block w-full py-2 rounded-lg text-sm font-medium text-white transition text-center"
+                style={{
+                  background: "linear-gradient(135deg, rgb(245,158,11), rgb(234,88,12))",
+                }}
+              >
+                G&eacute;rer le contenu VIP
+              </Link>
+            </div>
+
             {/* Seed Demo Data */}
             <div className="rounded-xl p-4 border" style={{ borderColor: "var(--border)", background: "var(--bg-hover)" }}>
               <div className="flex items-center gap-3 mb-3">
