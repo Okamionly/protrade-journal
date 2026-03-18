@@ -19,21 +19,26 @@ function bestWorst(map: Record<string, { wins: number; total: number }>) {
   return { best: sorted[0], worst: sorted[sorted.length - 1] };
 }
 
-function Bar({ value, max, label }: { value: number; max: number; label: string }) {
+function Bar({ value, max, label, compact }: { value: number; max: number; label: string; compact?: boolean }) {
   const pct = max > 0 ? Math.abs(value) / max : 0;
   const positive = value >= 0;
+  const showValue = value !== 0;
   return (
-    <div className="flex flex-col items-center gap-1 flex-1 min-w-[28px]">
-      <span className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>
-        {value >= 0 ? "+" : ""}{value.toFixed(0)}
-      </span>
-      <div className="w-full h-24 rounded relative overflow-hidden" style={{ background: "var(--bg-hover)" }}>
+    <div className={`flex flex-col items-center gap-0.5 flex-1 ${compact ? "min-w-[12px]" : "min-w-[28px]"}`}>
+      <div className={`w-full ${compact ? "h-16" : "h-20"} rounded relative overflow-hidden group`} style={{ background: "var(--bg-hover)" }}>
         <div
           className={`absolute bottom-0 w-full rounded transition-all duration-700 ${positive ? "bg-emerald-500/60" : "bg-rose-500/60"}`}
-          style={{ height: `${pct * 100}%` }}
+          style={{ height: `${Math.max(pct * 100, showValue ? 4 : 0)}%` }}
         />
+        {showValue && (
+          <div className="absolute inset-0 flex items-start justify-center pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[8px] mono font-bold px-0.5 rounded" style={{ color: positive ? "#10b981" : "#ef4444", background: "var(--bg-card-solid)" }}>
+              {value >= 0 ? "+" : ""}{Math.abs(value) >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toFixed(0)}
+            </span>
+          </div>
+        )}
       </div>
-      <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{label}</span>
+      {label && <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>{label}</span>}
     </div>
   );
 }
@@ -654,9 +659,9 @@ export default function AICoachPage() {
             <Clock className="text-cyan-400" size={18} />
             <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>P&L par Heure</h2>
           </div>
-          <div className="flex items-end gap-[2px]">
+          <div className="flex items-end gap-[1px]">
             {Array.from({ length: 24 }, (_, h) => (
-              <Bar key={h} value={analysis.hourPnl[h]} max={maxHourAbs} label={h % 3 === 0 ? `${h}h` : ""} />
+              <Bar key={h} value={analysis.hourPnl[h]} max={maxHourAbs} label={h % 4 === 0 ? `${h}h` : ""} compact />
             ))}
           </div>
         </div>
