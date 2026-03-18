@@ -226,7 +226,7 @@ export default async function Home() {
 
           {/* Section 1 \— Journal */}
           <div className="relative">
-            <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">1</span>
+            <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">1</span>
             <div className="relative">
               <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">JOURNAL AUTOMATISÉ</p>
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
@@ -258,7 +258,7 @@ export default async function Home() {
 
           {/* Section 2 \— Analytics */}
           <div className="relative">
-            <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">2</span>
+            <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">2</span>
             <div className="relative">
               <p className="text-purple-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">ANALYSE AVANCÉE</p>
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
@@ -290,7 +290,7 @@ export default async function Home() {
 
           {/* Section 3 \— AI Coach */}
           <div className="relative">
-            <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">3</span>
+            <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">3</span>
             <div className="relative">
               <p className="text-emerald-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">INTELLIGENCE ARTIFICIELLE</p>
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
@@ -322,7 +322,7 @@ export default async function Home() {
 
           {/* Section 4 \— War Room */}
           <div className="relative">
-            <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">4</span>
+            <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">4</span>
             <div className="relative">
               <p className="text-amber-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">CENTRE DE COMMANDE</p>
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
@@ -355,7 +355,7 @@ export default async function Home() {
 
           {/* Section 5 \— Backtesting */}
           <div className="relative">
-            <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">5</span>
+            <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">5</span>
             <div className="relative">
               <p className="text-rose-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">BACKTESTING & SIMULATION</p>
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
@@ -379,7 +379,7 @@ export default async function Home() {
 
           {/* Section 6 \— Gamification */}
           <div className="relative">
-            <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">6</span>
+            <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">6</span>
             <div className="relative">
               <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">COMMUNAUTÉ & GAMIFICATION</p>
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
