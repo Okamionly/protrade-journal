@@ -193,7 +193,7 @@ export default function SentimentPage() {
             <GaugeChart value={currentVal} />
             <div className="text-center mt-4">
               <span className={`px-4 py-2 rounded-full text-sm font-bold ${config.bg} ${config.color} border ${config.border}`}>
-                {CLASSIFICATION_FR[current?.value_classification] || current?.value_classification}
+                {(current?.value_classification && CLASSIFICATION_FR[current.value_classification]) || current?.value_classification || "N/A"}
               </span>
             </div>
           </div>
