@@ -206,9 +206,9 @@ export default async function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
             {[
               { value: "35+", label: "Outils Pro", sub: "Analyse, IA, Market Data" },
-              { value: "0\u20ac", label: "Pour Toujours", sub: "Aucun plan payant" },
-              { value: "1.2K+", label: "Traders Actifs", sub: "Communaut\u00e9 croissante" },
-              { value: "24/7", label: "Market Data", sub: "Cours en temps r\u00e9el" },
+              { value: "0\€", label: "Pour Toujours", sub: "Aucun plan payant" },
+              { value: "1.2K+", label: "Traders Actifs", sub: "Communauté croissante" },
+              { value: "24/7", label: "Market Data", sub: "Cours en temps réel" },
             ].map((s) => (
               <div key={s.label} className="p-4 sm:p-6 rounded-2xl bg-gray-50 border border-gray-100">
                 <span className="text-3xl sm:text-4xl lg:text-5xl font-black bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">{s.value}</span>
@@ -220,27 +220,27 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ==================== NUMBERED SECTIONS 1\u21926 ==================== */}
+      {/* ==================== NUMBERED SECTIONS 1\→6 ==================== */}
       <section id="preview" className="py-16 sm:py-24 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-24 sm:space-y-32">
 
-          {/* Section 1 \u2014 Journal */}
+          {/* Section 1 \— Journal */}
           <div className="relative">
             <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">1</span>
             <div className="relative">
-              <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">JOURNAL AUTOMATIS\u00c9</p>
+              <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">JOURNAL AUTOMATISÉ</p>
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
                 Un journal de trading<br className="hidden sm:block" />
-                <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">puissant et automatis\u00e9</span>
+                <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">puissant et automatisé</span>
               </h2>
               <p className="text-sm sm:text-base text-gray-500 max-w-2xl mb-8 sm:mb-12 leading-relaxed">
-                Enregistrez vos trades avec \u00e9motions, screenshots, tags et notes.
-                Analysez tout avec des statistiques avanc\u00e9es g\u00e9n\u00e9r\u00e9es automatiquement.
+                Enregistrez vos trades avec émotions, screenshots, tags et notes.
+                Analysez tout avec des statistiques avancées générées automatiquement.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 mb-8 sm:mb-12">
                 {[
-                  { icon: BookOpen, title: "Journal Complet", desc: "\u00c9motions, notes, screenshots, tags pour chaque trade", color: "blue" },
-                  { icon: BarChart3, title: "Stats Automatiques", desc: "Win rate, R:R, profit factor calcul\u00e9s en temps r\u00e9el", color: "blue" },
+                  { icon: BookOpen, title: "Journal Complet", desc: "Émotions, notes, screenshots, tags pour chaque trade", color: "blue" },
+                  { icon: BarChart3, title: "Stats Automatiques", desc: "Win rate, R:R, profit factor calculés en temps réel", color: "blue" },
                   { icon: CalendarDays, title: "Calendrier P&L", desc: "Visualisez vos gains et pertes jour par jour", color: "blue" },
                 ].map(c => (
                   <div key={c.title} className="p-4 sm:p-5 rounded-xl bg-blue-50 border border-blue-100">
@@ -256,24 +256,24 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Section 2 \u2014 Analytics */}
+          {/* Section 2 \— Analytics */}
           <div className="relative">
             <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">2</span>
             <div className="relative">
-              <p className="text-purple-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">ANALYSE AVANC\u00c9E</p>
+              <p className="text-purple-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">ANALYSE AVANCÉE</p>
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
                 Analysez vos<br className="hidden sm:block" />
                 <span className="bg-gradient-to-r from-purple-600 to-violet-500 bg-clip-text text-transparent">statistiques de trading</span>
               </h2>
               <p className="text-sm sm:text-base text-gray-500 max-w-2xl mb-8 sm:mb-12 leading-relaxed">
                 Comprenez vos erreurs, identifiez vos forces.
-                Sortino, Calmar, drawdown, corr\u00e9lation \u2014 tout est calcul\u00e9 pour vous.
+                Sortino, Calmar, drawdown, corrélation \— tout est calculé pour vous.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 mb-8 sm:mb-12">
                 {[
-                  { icon: Activity, title: "50+ M\u00e9triques", desc: "Sharpe, Sortino, Calmar, Profit Factor, drawdown..." },
-                  { icon: Layers, title: "Corr\u00e9lation", desc: "Matrice de Pearson entre vos actifs trad\u00e9s" },
-                  { icon: Target, title: "Score & Notation", desc: "Note globale A-F avec sous-scores d\u00e9taill\u00e9s" },
+                  { icon: Activity, title: "50+ Métriques", desc: "Sharpe, Sortino, Calmar, Profit Factor, drawdown..." },
+                  { icon: Layers, title: "Corrélation", desc: "Matrice de Pearson entre vos actifs tradés" },
+                  { icon: Target, title: "Score & Notation", desc: "Note globale A-F avec sous-scores détaillés" },
                 ].map(c => (
                   <div key={c.title} className="p-4 sm:p-5 rounded-xl bg-purple-50 border border-purple-100">
                     <c.icon className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 mb-3" />
@@ -288,7 +288,7 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Section 3 \u2014 AI Coach */}
+          {/* Section 3 \— AI Coach */}
           <div className="relative">
             <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">3</span>
             <div className="relative">
@@ -298,14 +298,14 @@ export default async function Home() {
                 <span className="bg-gradient-to-r from-emerald-600 to-cyan-500 bg-clip-text text-transparent">comprend votre trading</span>
               </h2>
               <p className="text-sm sm:text-base text-gray-500 max-w-2xl mb-8 sm:mb-12 leading-relaxed">
-                D\u00e9tection de patterns dans VOS donn\u00e9es. Score de discipline. Alertes overtrading.
-                Performance decay. Meilleure fen\u00eatre de trading. Tout est personnalis\u00e9.
+                Détection de patterns dans VOS données. Score de discipline. Alertes overtrading.
+                Performance decay. Meilleure fenêtre de trading. Tout est personnalisé.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 mb-8 sm:mb-12">
                 {[
-                  { icon: Brain, title: "D\u00e9tection de Patterns", desc: "L\u2019IA trouve des tendances invisibles dans vos trades" },
-                  { icon: Crosshair, title: "Score Discipline", desc: "Note sur 100 bas\u00e9e sur vos r\u00e8gles et habitudes" },
-                  { icon: Sparkles, title: "Insights Personnalis\u00e9s", desc: "Conseils uniques bas\u00e9s sur votre historique" },
+                  { icon: Brain, title: "Détection de Patterns", desc: "L\’IA trouve des tendances invisibles dans vos trades" },
+                  { icon: Crosshair, title: "Score Discipline", desc: "Note sur 100 basée sur vos règles et habitudes" },
+                  { icon: Sparkles, title: "Insights Personnalisés", desc: "Conseils uniques basés sur votre historique" },
                 ].map(c => (
                   <div key={c.title} className="p-4 sm:p-5 rounded-xl bg-emerald-50 border border-emerald-100">
                     <c.icon className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 mb-3" />
@@ -320,7 +320,7 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Section 4 \u2014 War Room */}
+          {/* Section 4 \— War Room */}
           <div className="relative">
             <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">4</span>
             <div className="relative">
@@ -328,10 +328,10 @@ export default async function Home() {
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
                 Votre{" "}
                 <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">War Room</span>
-                <br className="hidden sm:block" /> en temps r\u00e9el
+                <br className="hidden sm:block" /> en temps réel
               </h2>
               <p className="text-sm sm:text-base text-gray-500 max-w-2xl mb-8 sm:mb-12 leading-relaxed">
-                P&L live, sessions de march\u00e9 actives, checklist du jour, mood tracker,
+                P&L live, sessions de marché actives, checklist du jour, mood tracker,
                 gauges de performance. Comme un Bloomberg Terminal, mais pour vous.
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-12">
@@ -353,17 +353,17 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Section 5 \u2014 Backtesting */}
+          {/* Section 5 \— Backtesting */}
           <div className="relative">
             <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">5</span>
             <div className="relative">
               <p className="text-rose-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">BACKTESTING & SIMULATION</p>
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
                 Et si vous aviez{" "}
-                <span className="bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">trad\u00e9 diff\u00e9remment</span> ?
+                <span className="bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">tradé différemment</span> ?
               </h2>
               <p className="text-sm sm:text-base text-gray-500 max-w-2xl mb-8 sm:mb-12 leading-relaxed">
-                Modifiez votre SL, TP, taille, nombre de trades. Voyez l&apos;impact instantan\u00e9ment.
+                Modifiez votre SL, TP, taille, nombre de trades. Voyez l&apos;impact instantanément.
                 Comparez Actual vs Simulated avec une equity curve interactive.
               </p>
               <div className="flex flex-wrap gap-3 mb-8 sm:mb-12">
@@ -377,26 +377,26 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Section 6 \u2014 Gamification */}
+          {/* Section 6 \— Gamification */}
           <div className="relative">
             <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100 leading-none select-none pointer-events-none">6</span>
             <div className="relative">
-              <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">COMMUNAUT\u00c9 & GAMIFICATION</p>
+              <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">COMMUNAUTÉ & GAMIFICATION</p>
               <h2 className="text-2xl sm:text-3xl lg:text-5xl font-black mb-4 text-gray-900">
                 Restez{" "}
-                <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">motiv\u00e9 et disciplin\u00e9</span>
+                <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">motivé et discipliné</span>
                 <br className="hidden sm:block" /> chaque jour
               </h2>
               <p className="text-sm sm:text-base text-gray-500 max-w-2xl mb-8 sm:mb-12 leading-relaxed">
-                Challenges actifs, badges, syst\u00e8me XP, niveaux, leaderboard.
-                Parce que la discipline est la cl\u00e9 \u2014 et la gamification la rend fun.
+                Challenges actifs, badges, système XP, niveaux, leaderboard.
+                Parce que la discipline est la clé \— et la gamification la rend fun.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mb-8 sm:mb-12">
                 {[
-                  { icon: Swords, title: "Challenges Actifs", desc: "8 challenges avec progression temps r\u00e9el" },
-                  { icon: Trophy, title: "Leaderboard", desc: "Classement communautaire anonymis\u00e9" },
-                  { icon: Award, title: "Badges & XP", desc: "11 badges \u00e0 d\u00e9bloquer, syst\u00e8me de niveaux" },
-                  { icon: MessageSquare, title: "Chat Trading", desc: "\u00c9changez avec d\u2019autres traders en temps r\u00e9el" },
+                  { icon: Swords, title: "Challenges Actifs", desc: "8 challenges avec progression temps réel" },
+                  { icon: Trophy, title: "Leaderboard", desc: "Classement communautaire anonymisé" },
+                  { icon: Award, title: "Badges & XP", desc: "11 badges à débloquer, système de niveaux" },
+                  { icon: MessageSquare, title: "Chat Trading", desc: "Échangez avec d\’autres traders en temps réel" },
                 ].map(c => (
                   <div key={c.title} className="flex items-start gap-4 p-4 sm:p-5 rounded-xl bg-blue-50 border border-blue-100">
                     <c.icon className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 flex-shrink-0" />
@@ -419,25 +419,25 @@ export default async function Home() {
       <section id="features" className="py-16 sm:py-24 scroll-mt-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 sm:mb-16">
-            <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-wider uppercase mb-3">Fonctionnalit\u00e9s</p>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900">35+ outils. Z\u00e9ro compromis.</h2>
+            <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-wider uppercase mb-3">Fonctionnalités</p>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900">35+ outils. Zéro compromis.</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {[
-              { icon: BookOpen, title: "Journal", desc: "\u00c9motions, screenshots, tags, notes" },
+              { icon: BookOpen, title: "Journal", desc: "Émotions, screenshots, tags, notes" },
               { icon: BarChart3, title: "Analytics", desc: "Sharpe, Profit Factor, Drawdown, R-Multiple" },
-              { icon: Brain, title: "AI Coach", desc: "Patterns, discipline, insights personnalis\u00e9s" },
+              { icon: Brain, title: "AI Coach", desc: "Patterns, discipline, insights personnalisés" },
               { icon: Monitor, title: "War Room", desc: "P&L live, sessions, checklist, gauges" },
-              { icon: Play, title: "Trade Replay", desc: "Rejouez vos trades avec analyse \u00ab Et si \u00bb" },
-              { icon: LineChart, title: "Backtesting", desc: "Simulez SL, TP, taille, strat\u00e9gie" },
+              { icon: Play, title: "Trade Replay", desc: "Rejouez vos trades avec analyse \« Et si \»" },
+              { icon: LineChart, title: "Backtesting", desc: "Simulez SL, TP, taille, stratégie" },
               { icon: Swords, title: "Challenges", desc: "Badges, XP, niveaux, streaks" },
-              { icon: Layers, title: "Corr\u00e9lation", desc: "Matrice de Pearson, diversification" },
+              { icon: Layers, title: "Corrélation", desc: "Matrice de Pearson, diversification" },
               { icon: CalendarDays, title: "P&L Calendar", desc: "Calendrier visuel gains/pertes" },
               { icon: Activity, title: "Market Data", desc: "Cours live, scanner, watchlist" },
               { icon: Shield, title: "Risk Manager", desc: "Calculateur, alertes, limites" },
               { icon: Trophy, title: "Leaderboard", desc: "Classement, podium, records" },
               { icon: Target, title: "Score & Notation", desc: "Note A-F, sous-scores, tendances" },
-              { icon: Award, title: "Rapports PDF", desc: "G\u00e9n\u00e9ration automatique, impression" },
+              { icon: Award, title: "Rapports PDF", desc: "Génération automatique, impression" },
               { icon: LayoutDashboard, title: "Dashboard Custom", desc: "10 widgets, 3 presets, drag & drop" },
             ].map((f) => (
               <div key={f.title} className="group flex items-start gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all">
@@ -481,15 +481,15 @@ export default async function Home() {
               <tbody>
                 {[
                   { f: "Prix mensuel", mp: "Gratuit", tz: "49$/mois", tv: "49$/mois" },
-                  { f: "Nombre d\u2019outils", mp: "35+", tz: "~15", tv: "~10" },
+                  { f: "Nombre d\’outils", mp: "35+", tz: "~15", tv: "~10" },
                   { f: "AI Coach", mp: true, tz: false, tv: false },
                   { f: "War Room", mp: true, tz: false, tv: false },
                   { f: "Backtesting What-If", mp: true, tz: false, tv: false },
                   { f: "Gamification / XP", mp: true, tz: false, tv: false },
-                  { f: "Corr\u00e9lation Matrix", mp: true, tz: false, tv: false },
+                  { f: "Corrélation Matrix", mp: true, tz: false, tv: false },
                   { f: "Market Data Live", mp: true, tz: false, tv: false },
                   { f: "Trade Replay", mp: true, tz: true, tv: false },
-                  { f: "3 Th\u00e8mes", mp: true, tz: false, tv: false },
+                  { f: "3 Thèmes", mp: true, tz: false, tv: false },
                 ].map((r) => (
                   <tr key={r.f} className="border-b border-gray-50 last:border-0">
                     <td className="px-3 sm:px-6 py-2.5 sm:py-3.5 text-gray-600 font-medium text-xs sm:text-sm">{r.f}</td>
@@ -514,7 +514,7 @@ export default async function Home() {
       <section className="py-16 sm:py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 sm:mb-16">
-            <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-wider uppercase mb-3">T\u00e9moignages</p>
+            <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-wider uppercase mb-3">Témoignages</p>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900">
               Fait pour{" "}
               <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">chaque trader</span>
@@ -523,9 +523,9 @@ export default async function Home() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
             {[
-              { name: "Thomas K.", role: "Day Trader Forex", text: "J\u2019ai quitt\u00e9 TradeZella pour MarketPhase. Plus de fonctionnalit\u00e9s, gratuit, et l\u2019AI Coach m\u2019a fait gagner 15% de win rate en 2 mois.", avatar: "TK", color: "from-blue-500 to-cyan-500" },
-              { name: "Sarah M.", role: "Swing Trader Actions", text: "Le War Room est incroyable. P&L live, sessions, checklist. C\u2019est mon cockpit trading quotidien. Je ne reviendrai jamais en arri\u00e8re.", avatar: "SM", color: "from-purple-500 to-violet-500" },
-              { name: "Julien P.", role: "Scalper Indices", text: "Les challenges et badges me motivent \u00e0 rester disciplin\u00e9. Mon profit factor est pass\u00e9 de 1.2 \u00e0 2.1 en 3 mois. Merci MarketPhase.", avatar: "JP", color: "from-emerald-500 to-cyan-500" },
+              { name: "Thomas K.", role: "Day Trader Forex", text: "J\’ai quitté TradeZella pour MarketPhase. Plus de fonctionnalités, gratuit, et l\’AI Coach m\’a fait gagner 15% de win rate en 2 mois.", avatar: "TK", color: "from-blue-500 to-cyan-500" },
+              { name: "Sarah M.", role: "Swing Trader Actions", text: "Le War Room est incroyable. P&L live, sessions, checklist. C\’est mon cockpit trading quotidien. Je ne reviendrai jamais en arrière.", avatar: "SM", color: "from-purple-500 to-violet-500" },
+              { name: "Julien P.", role: "Scalper Indices", text: "Les challenges et badges me motivent à rester discipliné. Mon profit factor est passé de 1.2 à 2.1 en 3 mois. Merci MarketPhase.", avatar: "JP", color: "from-emerald-500 to-cyan-500" },
             ].map((t) => (
               <div key={t.name} className="p-5 sm:p-6 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition">
                 <div className="flex items-center gap-1 mb-4 sm:mb-5">
@@ -559,7 +559,7 @@ export default async function Home() {
                 <p className="text-gray-400 mb-6 sm:mb-8 text-sm sm:text-base">/ mois &mdash; pour toujours</p>
                 <div className="w-full h-px bg-gray-100 mb-6 sm:mb-8" />
                 <ul className="space-y-2.5 sm:space-y-3 text-left mb-8 sm:mb-10">
-                  {["35+ outils professionnels", "AI Trade Coach", "War Room temps r\u00e9el", "Backtesting & Replay", "Challenges & Gamification", "Market Data live", "Stockage illimit\u00e9", "Mises \u00e0 jour continues"].map((item) => (
+                  {["35+ outils professionnels", "AI Trade Coach", "War Room temps réel", "Backtesting & Replay", "Challenges & Gamification", "Market Data live", "Stockage illimité", "Mises à jour continues"].map((item) => (
                     <li key={item} className="flex items-center gap-2.5 sm:gap-3">
                       <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />
                       <span className="text-gray-600 text-xs sm:text-sm">{item}</span>
@@ -567,7 +567,7 @@ export default async function Home() {
                   ))}
                 </ul>
                 <Link href="/register" className="group w-full inline-flex items-center justify-center gap-2 text-sm sm:text-base font-bold text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-xl hover:shadow-blue-500/25 transition-all">
-                  Cr\u00e9er mon compte gratuit
+                  Créer mon compte gratuit
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
@@ -580,14 +580,14 @@ export default async function Home() {
       <section className="py-16 sm:py-24 bg-gradient-to-b from-white to-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4 sm:mb-6 text-gray-900">
-            Arr\u00eatez de payer.
+            Arrêtez de payer.
             <br />
             <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 bg-clip-text text-transparent">
-              Commencez \u00e0 performer.
+              Commencez à performer.
             </span>
           </h2>
           <p className="text-sm sm:text-lg text-gray-500 mb-8 sm:mb-10 max-w-xl mx-auto">
-            Le journal de trading le plus complet du march\u00e9 est gratuit. Il n&apos;y a aucune raison de ne pas essayer.
+            Le journal de trading le plus complet du marché est gratuit. Il n&apos;y a aucune raison de ne pas essayer.
           </p>
           <Link href="/register" className="group inline-flex items-center gap-2 text-base sm:text-lg font-bold text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all hover:-translate-y-1">
             Commencer Maintenant &mdash; C&apos;est Gratuit
@@ -615,7 +615,7 @@ export default async function Home() {
               <div>
                 <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Produit</h5>
                 <ul className="space-y-2">
-                  {[{l:"Fonctions",h:"#features"},{l:"Aper\u00e7u",h:"#preview"},{l:"Prix",h:"#pricing"},{l:"Comparatif",h:"#compare"}].map(i => (
+                  {[{l:"Fonctions",h:"#features"},{l:"Aperçu",h:"#preview"},{l:"Prix",h:"#pricing"},{l:"Comparatif",h:"#compare"}].map(i => (
                     <li key={i.l}><a href={i.h} className="text-xs text-gray-400 hover:text-gray-900 transition">{i.l}</a></li>
                   ))}
                 </ul>
@@ -623,7 +623,7 @@ export default async function Home() {
               <div>
                 <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Compte</h5>
                 <ul className="space-y-2">
-                  {[{l:"Connexion",h:"/login"},{l:"Inscription",h:"/register"},{l:"Compte D\u00e9mo",h:"/login"}].map(i => (
+                  {[{l:"Connexion",h:"/login"},{l:"Inscription",h:"/register"},{l:"Compte Démo",h:"/login"}].map(i => (
                     <li key={i.l}><Link href={i.h} className="text-xs text-gray-400 hover:text-gray-900 transition">{i.l}</Link></li>
                   ))}
                 </ul>
@@ -635,7 +635,7 @@ export default async function Home() {
                   <Globe className="w-4 h-4 text-gray-500" />
                 </a>
               </div>
-              <p className="text-xs text-gray-400">&copy; 2026 MarketPhase. Tous droits r\u00e9serv\u00e9s.</p>
+              <p className="text-xs text-gray-400">&copy; 2026 MarketPhase. Tous droits réservés.</p>
             </div>
           </div>
         </div>
