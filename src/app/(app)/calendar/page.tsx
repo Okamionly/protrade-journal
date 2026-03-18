@@ -2,7 +2,7 @@
 
 import { useTrades } from "@/hooks/useTrades";
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock, Target, ArrowRight } from "lucide-react";
 
 const MONTH_NAMES = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -131,12 +131,17 @@ export default function PnLCalendarPage() {
       </div>
 
       {/* Monthly Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         <div className="metric-card rounded-xl p-4 text-center">
           <p className="text-xs text-[--text-muted] mb-1">P&L Mois</p>
           <p className={`text-xl font-bold mono ${stats.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
             {stats.totalPnl >= 0 ? "+" : ""}{stats.totalPnl.toFixed(2)}€
           </p>
+        </div>
+        <div className="metric-card rounded-xl p-4 text-center">
+          <p className="text-xs text-[--text-muted] mb-1">Total Trades</p>
+          <p className="text-xl font-bold text-cyan-400">{monthTrades.length}</p>
+          <p className="text-[10px] text-[--text-muted]">{monthTrades.filter(t => t.result > 0).length}W / {monthTrades.filter(t => t.result <= 0).length}L</p>
         </div>
         <div className="metric-card rounded-xl p-4 text-center">
           <p className="text-xs text-[--text-muted] mb-1">Jours Gagnants</p>
@@ -220,7 +225,11 @@ export default function PnLCalendarPage() {
                         <p className={`text-xs font-bold mono ${dayPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                           {dayPnl >= 0 ? "+" : ""}{dayPnl.toFixed(0)}€
                         </p>
-                        <p className="text-[10px] text-[--text-muted]">{dayTrades.length} trade{dayTrades.length > 1 ? "s" : ""}</p>
+                        <p className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>
+                          <span className="text-emerald-400">{dayTrades.filter(t => t.result > 0).length}W</span>
+                          <span className="mx-0.5">/</span>
+                          <span className="text-rose-400">{dayTrades.filter(t => t.result <= 0).length}L</span>
+                        </p>
                       </div>
                     )}
                   </div>
@@ -381,58 +390,139 @@ export default function PnLCalendarPage() {
       )}
 
       {/* Day Detail Modal */}
-      {selectedDay && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedDay(null)}>
-          <div className="glass rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-[--text-primary]">
-                  {selectedDay.day} {MONTH_NAMES[month]} {year}
-                </h3>
-                {selectedDay.trades.length > 0 && (
-                  <p className={`text-sm font-medium mt-1 ${selectedDay.trades.reduce((s, t) => s + t.result, 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    Total : {selectedDay.trades.reduce((s, t) => s + t.result, 0) >= 0 ? "+" : ""}{selectedDay.trades.reduce((s, t) => s + t.result, 0).toFixed(2)}€
-                  </p>
-                )}
+      {selectedDay && (() => {
+        const dt = selectedDay.trades;
+        const sorted = [...dt].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const totalPnl = dt.reduce((s, t) => s + t.result, 0);
+        const wins = dt.filter(t => t.result > 0).length;
+        const wr = dt.length > 0 ? (wins / dt.length) * 100 : 0;
+        const avgRR = dt.length > 0 ? dt.reduce((s, t) => {
+          if (t.entry && t.sl && t.tp && t.sl !== t.entry) {
+            return s + Math.abs((t.tp - t.entry) / (t.entry - t.sl));
+          }
+          return s;
+        }, 0) / dt.length : 0;
+
+        return (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedDay(null)}>
+            <div className="glass rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex justify-between items-start mb-5">
+                <div>
+                  <h3 className="text-xl font-bold text-[--text-primary]">
+                    {new Date(year, month, selectedDay.day).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                  </h3>
+                  {dt.length > 0 && (
+                    <p className={`text-lg font-bold mono mt-1 ${totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {totalPnl >= 0 ? "+" : ""}{totalPnl.toFixed(2)}€
+                    </p>
+                  )}
+                </div>
+                <button onClick={() => setSelectedDay(null)} className="p-1 rounded-lg hover:bg-[var(--bg-hover)] text-[--text-secondary] hover:text-[--text-primary]">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button onClick={() => setSelectedDay(null)} className="text-[--text-secondary] hover:text-[--text-primary]">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              {selectedDay.trades.length === 0 ? (
+
+              {dt.length === 0 ? (
                 <p className="text-[--text-muted] text-center py-8">Aucun trade ce jour</p>
               ) : (
-                selectedDay.trades.map((trade) => {
-                  const isWin = trade.result > 0;
-                  return (
-                    <div key={trade.id} className={`p-4 rounded-xl border ${isWin ? "border-emerald-500/30 bg-emerald-500/10" : "border-rose-500/30 bg-rose-500/10"}`}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-bold text-[--text-primary]">
-                            {trade.asset}{" "}
-                            <span className={`text-xs px-2 py-1 rounded ${trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
-                              {trade.direction}
-                            </span>
-                          </p>
-                          <p className="text-sm text-[--text-secondary] mt-1">{trade.strategy}</p>
-                          {trade.emotion && <p className="text-xs text-[--text-muted] mt-1">{trade.emotion}</p>}
-                        </div>
-                        <div className="text-right">
-                          <p className={`text-xl font-bold mono ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
-                            {isWin ? "+" : ""}{trade.result.toFixed(2)}€
-                          </p>
-                          <p className="text-xs text-[--text-muted]">{trade.lots} lots</p>
-                        </div>
-                      </div>
+                <>
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-4 gap-3 mb-5">
+                    <div className="metric-card rounded-lg p-3 text-center">
+                      <p className="text-[10px] text-[--text-muted]">Trades</p>
+                      <p className="text-lg font-bold text-cyan-400 mono">{dt.length}</p>
                     </div>
-                  );
-                })
+                    <div className="metric-card rounded-lg p-3 text-center">
+                      <p className="text-[10px] text-[--text-muted]">Win Rate</p>
+                      <p className={`text-lg font-bold mono ${wr >= 50 ? "text-emerald-400" : "text-rose-400"}`}>{wr.toFixed(0)}%</p>
+                    </div>
+                    <div className="metric-card rounded-lg p-3 text-center">
+                      <p className="text-[10px] text-[--text-muted]">R:R Moyen</p>
+                      <p className="text-lg font-bold text-cyan-400 mono">{avgRR > 0 ? `1:${avgRR.toFixed(1)}` : "—"}</p>
+                    </div>
+                    <div className="metric-card rounded-lg p-3 text-center">
+                      <p className="text-[10px] text-[--text-muted]">Résultat</p>
+                      <p className="text-sm font-bold mono">
+                        <span className="text-emerald-400">{wins}W</span>
+                        <span className="text-[--text-muted] mx-1">/</span>
+                        <span className="text-rose-400">{dt.length - wins}L</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Trade List */}
+                  <div className="space-y-2.5">
+                    {sorted.map((trade) => {
+                      const isWin = trade.result > 0;
+                      const time = new Date(trade.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                      const rr = trade.entry && trade.sl && trade.tp && trade.sl !== trade.entry
+                        ? Math.abs((trade.tp - trade.entry) / (trade.entry - trade.sl))
+                        : null;
+                      return (
+                        <div key={trade.id} className={`p-4 rounded-xl border ${isWin ? "border-emerald-500/20 bg-emerald-500/[0.07]" : "border-rose-500/20 bg-rose-500/[0.07]"}`}>
+                          {/* Row 1: Asset, Direction, Time, Result */}
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs mono text-[--text-muted] w-12">{time}</span>
+                              <span className="font-bold text-[--text-primary]">{trade.asset}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
+                                {trade.direction}
+                              </span>
+                              {trade.strategy && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">{trade.strategy}</span>
+                              )}
+                            </div>
+                            <span className={`text-lg font-bold mono ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
+                              {isWin ? "+" : ""}{trade.result.toFixed(2)}€
+                            </span>
+                          </div>
+
+                          {/* Row 2: Entry → Exit, SL, TP, R:R, Lots */}
+                          <div className="flex items-center gap-4 mt-2 text-xs">
+                            {trade.entry && (
+                              <span className="flex items-center gap-1 text-[--text-secondary]">
+                                <span className="mono">{trade.entry}</span>
+                                <ArrowRight className="w-3 h-3 text-[--text-muted]" />
+                                <span className="mono">{trade.exit}</span>
+                              </span>
+                            )}
+                            {trade.sl && (
+                              <span className="text-rose-400/70 mono">SL {trade.sl}</span>
+                            )}
+                            {trade.tp && (
+                              <span className="text-emerald-400/70 mono">TP {trade.tp}</span>
+                            )}
+                            {rr !== null && (
+                              <span className="flex items-center gap-1 text-cyan-400">
+                                <Target className="w-3 h-3" />
+                                <span className="mono">1:{rr.toFixed(1)}</span>
+                              </span>
+                            )}
+                            <span className="text-[--text-muted] mono">{trade.lots} lots</span>
+                          </div>
+
+                          {/* Row 3: Emotion + Notes */}
+                          {(trade.emotion || trade.notes) && (
+                            <div className="mt-2 flex items-start gap-3 text-xs">
+                              {trade.emotion && (
+                                <span className="px-2 py-0.5 rounded-full bg-[--bg-hover] text-[--text-secondary]">{trade.emotion}</span>
+                              )}
+                              {trade.notes && (
+                                <p className="text-[--text-muted] italic flex-1 line-clamp-1">{trade.notes}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
