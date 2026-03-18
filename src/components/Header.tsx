@@ -2,12 +2,15 @@
 
 import { useTheme } from "next-themes";
 import { signOut } from "next-auth/react";
-import { Sun, Moon, Download, LogOut, Bell, Monitor } from "lucide-react";
+import { Sun, Moon, Download, LogOut, Monitor } from "lucide-react";
 import { useState, useEffect } from "react";
+import { NotificationCenter } from "./NotificationCenter";
+import { useTrades } from "@/hooks/useTrades";
 
 export function Header() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { trades } = useTrades();
 
   useEffect(() => setMounted(true), []);
 
@@ -47,12 +50,7 @@ export function Header() {
         </button>
 
         {/* Notifications */}
-        <button
-          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white relative"
-          title="Notifications"
-        >
-          <Bell className="w-[18px] h-[18px]" />
-        </button>
+        <NotificationCenter trades={trades} />
 
         {/* Export CSV */}
         <button
