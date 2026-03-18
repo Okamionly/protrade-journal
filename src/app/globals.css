@@ -330,6 +330,45 @@ html:not(.dark):not(.oled) .bg-violet-500\/10 {
   background-color: rgba(139, 92, 246, 0.1) !important;
 }
 
+/* ---- ROSE/EMERALD TEXT → darker in light mode ---- */
+html:not(.dark):not(.oled) .text-rose-400,
+html:not(.dark):not(.oled) .text-rose-500 {
+  color: #e11d48 !important;
+}
+html:not(.dark):not(.oled) .text-indigo-400 {
+  color: #4f46e5 !important;
+}
+html:not(.dark):not(.oled) .text-teal-400,
+html:not(.dark):not(.oled) .text-teal-500 {
+  color: #0d9488 !important;
+}
+
+/* ---- FORCE COLOR INHERITANCE ON ALL SEMANTIC-BG CONTAINERS ---- */
+html:not(.dark):not(.oled) [style*="--bg-card"],
+html:not(.dark):not(.oled) [style*="--bg-hover"],
+html:not(.dark):not(.oled) [style*="--glass-bg"] {
+  color: var(--text-primary);
+}
+
+/* ---- STRATEGIES COLOR PICKER BORDER ---- */
+html:not(.dark):not(.oled) [style*="border: 2px solid white"] {
+  border-color: var(--text-primary) !important;
+}
+
+/* ---- METRIC VALUES ENSURE VISIBLE ---- */
+html:not(.dark):not(.oled) .metric-card .mono,
+html:not(.dark):not(.oled) .glass .mono {
+  color: var(--text-primary);
+}
+
+/* ---- HOVER BG ON TABLE ROWS ---- */
+html:not(.dark):not(.oled) tr:hover {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+html:not(.dark):not(.oled) .hover\:bg-white\/5:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
 /* ---- SCROLLBAR ---- */
 html:not(.dark):not(.oled) ::-webkit-scrollbar-track {
   background: var(--bg-secondary);

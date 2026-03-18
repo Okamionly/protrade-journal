@@ -5,6 +5,7 @@ import { useTrades } from "@/hooks/useTrades";
 import {
   Brain, AlertTriangle, TrendingUp, TrendingDown, Clock,
   Calendar, Target, Shield, Zap, BarChart3, Award,
+  Activity, Gauge, Scale, ArrowDownRight, ArrowUpRight, Timer,
 } from "lucide-react";
 
 const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
@@ -33,6 +34,26 @@ function Bar({ value, max, label }: { value: number; max: number; label: string 
         />
       </div>
       <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{label}</span>
+    </div>
+  );
+}
+
+function ConfidenceGauge({ score }: { score: number }) {
+  const clamp = Math.max(0, Math.min(100, score));
+  const color = clamp >= 70 ? "bg-emerald-500" : clamp >= 40 ? "bg-amber-500" : "bg-rose-500";
+  const textColor = clamp >= 70 ? "text-emerald-400" : clamp >= 40 ? "text-amber-400" : "text-rose-400";
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className={`text-3xl font-bold mono ${textColor}`}>{clamp}</span>
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>/100</span>
+      </div>
+      <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-hover)" }}>
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${color}`}
+          style={{ width: `${clamp}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -85,6 +106,13 @@ export default function AICoachPage() {
       else break;
     }
 
+    // Trailing consecutive wins (current streak)
+    let trailingWins = 0;
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      if (sorted[i].result > 0) trailingWins++;
+      else break;
+    }
+
     // Discipline score
     const weekAgo = new Date(Date.now() - 7 * 86400000);
     const weekTrades = trades.filter(t => new Date(t.date) >= weekAgo);
@@ -107,13 +135,127 @@ export default function AICoachPage() {
       dayPnl[d.getDay()] += t.result;
     }
 
+    // --- Overtrading Detection ---
+    const tradesByDate: Record<string, { wins: number; total: number }> = {};
+    for (const t of trades) {
+      const dateKey = new Date(t.date).toDateString();
+      if (!tradesByDate[dateKey]) tradesByDate[dateKey] = { wins: 0, total: 0 };
+      tradesByDate[dateKey].total++;
+      if (t.result > 0) tradesByDate[dateKey].wins++;
+    }
+    const highVolDays = Object.values(tradesByDate).filter(d => d.total > 5);
+    const normalDays = Object.values(tradesByDate).filter(d => d.total <= 5);
+    const highVolWins = highVolDays.reduce((s, d) => s + d.wins, 0);
+    const highVolTotal = highVolDays.reduce((s, d) => s + d.total, 0);
+    const normalWins = normalDays.reduce((s, d) => s + d.wins, 0);
+    const normalTotal = normalDays.reduce((s, d) => s + d.total, 0);
+    const highVolWR = highVolTotal > 0 ? (highVolWins / highVolTotal) * 100 : 0;
+    const normalWR = normalTotal > 0 ? (normalWins / normalTotal) * 100 : 0;
+    const highVolDayCount = highVolDays.length;
+    const normalDayCount = normalDays.length;
+    // Check if recent overtrading (last 7 days)
+    const recentDates = weekTrades.map(t => new Date(t.date).toDateString());
+    const recentDateCounts: Record<string, number> = {};
+    for (const d of recentDates) { recentDateCounts[d] = (recentDateCounts[d] || 0) + 1; }
+    const recentOvertradingDays = Object.values(recentDateCounts).filter(c => c > 5).length;
+
+    // --- Performance Decay ---
+    const twoWeeksAgo = new Date(Date.now() - 14 * 86400000);
+    const fourWeeksAgo = new Date(Date.now() - 28 * 86400000);
+    const last2w = trades.filter(t => new Date(t.date) >= twoWeeksAgo);
+    const prev2w = trades.filter(t => { const d = new Date(t.date); return d >= fourWeeksAgo && d < twoWeeksAgo; });
+    const last2wWR = last2w.length > 0 ? (last2w.filter(t => t.result > 0).length / last2w.length) * 100 : 0;
+    const prev2wWR = prev2w.length > 0 ? (prev2w.filter(t => t.result > 0).length / prev2w.length) * 100 : 0;
+    const last2wPnl = last2w.reduce((s, t) => s + t.result, 0);
+    const prev2wPnl = prev2w.reduce((s, t) => s + t.result, 0);
+    const wrChange = last2wWR - prev2wWR;
+    const pnlChange = last2wPnl - prev2wPnl;
+    const performanceDecay = wrChange < -10;
+
+    // --- Best Trading Window ---
+    const hourWinData: Record<number, { wins: number; total: number; pnl: number }> = {};
+    for (let i = 0; i < 24; i++) hourWinData[i] = { wins: 0, total: 0, pnl: 0 };
+    for (const t of trades) {
+      const h = new Date(t.date).getHours();
+      hourWinData[h].total++;
+      hourWinData[h].pnl += t.result;
+      if (t.result > 0) hourWinData[h].wins++;
+    }
+    // Find best 2-3 hour consecutive window (only hours with trades)
+    let bestWindowStart = 0;
+    let bestWindowWR = 0;
+    let bestWindowPnl = 0;
+    let bestWindowLen = 2;
+    for (let len = 2; len <= 3; len++) {
+      for (let start = 0; start <= 23; start++) {
+        let wWins = 0, wTotal = 0, wPnl = 0;
+        for (let j = 0; j < len; j++) {
+          const h = (start + j) % 24;
+          wWins += hourWinData[h].wins;
+          wTotal += hourWinData[h].total;
+          wPnl += hourWinData[h].pnl;
+        }
+        if (wTotal >= 3) {
+          const wr = (wWins / wTotal) * 100;
+          if (wr > bestWindowWR || (wr === bestWindowWR && wPnl > bestWindowPnl)) {
+            bestWindowWR = wr;
+            bestWindowPnl = wPnl;
+            bestWindowStart = start;
+            bestWindowLen = len;
+          }
+        }
+      }
+    }
+    const bestWindowEnd = (bestWindowStart + bestWindowLen) % 24;
+
+    // --- Confidence Score ---
+    const now = new Date();
+    const currentHour = now.getHours().toString();
+    const currentDay = DAYS[now.getDay()];
+    const dayWR = dayMap[currentDay] ? (dayMap[currentDay].wins / dayMap[currentDay].total) * 100 : 50;
+    const hourWR = hourMap[currentHour] ? (hourMap[currentHour].wins / hourMap[currentHour].total) * 100 : 50;
+    // Streak factor: winning streak boosts, losing streak penalizes
+    const streakFactor = trailingWins > 0 ? Math.min(15, trailingWins * 5) : -(Math.min(30, trailingLosses * 10));
+    // Emotion factor
+    const lastEmotion = todayTrades.length > 0 ? todayTrades[todayTrades.length - 1].emotion : null;
+    const emotionPenalty = lastEmotion && negEmotions.includes(lastEmotion) ? -15 : 0;
+    const confidenceScore = Math.max(0, Math.min(100, Math.round(
+      dayWR * 0.3 + hourWR * 0.3 + 50 * 0.1 + streakFactor + emotionPenalty + 20
+    )));
+    const confidenceLabel = confidenceScore >= 70
+      ? "Conditions favorables"
+      : confidenceScore >= 40
+        ? "Conditions neutres"
+        : "Conditions defavorables";
+
+    // --- Position Sizing ---
+    let sizingAdvice: { label: string; detail: string; color: string };
+    if (trailingLosses >= 4) {
+      sizingAdvice = { label: "Pause recommandee", detail: `${trailingLosses} pertes consecutives. Arretez de trader.`, color: "text-rose-400" };
+    } else if (trailingLosses >= 2) {
+      sizingAdvice = { label: "Reduire le risque (0.5-1%)", detail: `${trailingLosses} pertes consecutives. Reduisez la taille.`, color: "text-amber-400" };
+    } else {
+      sizingAdvice = { label: "Risque normal (1-2%)", detail: trailingWins > 0 ? `Serie de ${trailingWins} gain(s). Restez discipline.` : "Aucune serie en cours.", color: "text-emerald-400" };
+    }
+
     return {
       dayBW: bestWorst(dayMap), hourBW: bestWorst(hourMap), assetBW: bestWorst(assetMap),
       stratBW: bestWorst(stratMap), emotionBW: bestWorst(emotionMap),
-      maxConsec, todayConsec, trailingLosses, discipline,
+      maxConsec, todayConsec, trailingLosses, trailingWins, discipline,
       hourPnl, dayPnl, dayMap, hourMap,
       totalTrades: trades.length, weekTrades: weekTrades.length,
-      lastEmotion: todayTrades.length > 0 ? todayTrades[todayTrades.length - 1].emotion : null,
+      lastEmotion,
+      // Overtrading
+      highVolDayCount, highVolWR, normalWR, highVolTotal, normalTotal, normalDayCount, recentOvertradingDays,
+      // Performance Decay
+      last2wWR, prev2wWR, wrChange, pnlChange, performanceDecay,
+      last2wCount: last2w.length, prev2wCount: prev2w.length,
+      // Best Window
+      bestWindowStart, bestWindowEnd, bestWindowWR, bestWindowPnl, bestWindowLen,
+      // Confidence
+      confidenceScore, confidenceLabel,
+      // Position Sizing
+      sizingAdvice,
     };
   }, [trades]);
 
@@ -150,6 +292,12 @@ export default function AICoachPage() {
       if (neg.includes(analysis.lastEmotion))
         a.push({ msg: `Emotion negative detectee : "${analysis.lastEmotion}". Verifie ton etat mental.`, level: "warn" });
     }
+    // Overtrading alert
+    if (analysis.recentOvertradingDays > 0)
+      a.push({ msg: `Overtrading detecte : ${analysis.recentOvertradingDays} jour(s) avec 5+ trades cette semaine.`, level: "warn" });
+    // Performance decay alert
+    if (analysis.performanceDecay && analysis.prev2wCount >= 3)
+      a.push({ msg: `Performance en baisse : WR ${analysis.wrChange > 0 ? "+" : ""}${analysis.wrChange.toFixed(0)}% vs les 2 semaines precedentes.`, level: "danger" });
     return a;
   }, [analysis]);
 
@@ -192,6 +340,223 @@ export default function AICoachPage() {
           ))}
         </div>
       )}
+
+      {/* Confidence Score + Position Sizing + Best Window */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Confidence Score Predictif */}
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Gauge className="text-cyan-400" size={18} />
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Confidence Score Predictif</h2>
+          </div>
+          <ConfidenceGauge score={analysis.confidenceScore} />
+          <div className="mt-3 text-center">
+            <span className={`text-sm font-medium ${
+              analysis.confidenceScore >= 70 ? "text-emerald-400" :
+              analysis.confidenceScore >= 40 ? "text-amber-400" : "text-rose-400"
+            }`}>
+              {analysis.confidenceLabel}
+            </span>
+          </div>
+          <div className="mt-3 space-y-1.5 text-xs">
+            {[
+              { label: "Jour actuel", val: analysis.dayMap[DAYS[new Date().getDay()]] ? `${((analysis.dayMap[DAYS[new Date().getDay()]].wins / analysis.dayMap[DAYS[new Date().getDay()]].total) * 100).toFixed(0)}% WR` : "N/A" },
+              { label: "Heure actuelle", val: analysis.hourMap[new Date().getHours().toString()] ? `${((analysis.hourMap[new Date().getHours().toString()].wins / analysis.hourMap[new Date().getHours().toString()].total) * 100).toFixed(0)}% WR` : "N/A" },
+              { label: "Serie", val: analysis.trailingWins > 0 ? `+${analysis.trailingWins} gains` : analysis.trailingLosses > 0 ? `-${analysis.trailingLosses} pertes` : "Neutre" },
+              { label: "Emotion", val: analysis.lastEmotion || "N/A" },
+            ].map(({ label, val }) => (
+              <div key={label} className="flex items-center justify-between">
+                <span style={{ color: "var(--text-muted)" }}>{label}</span>
+                <span className="mono" style={{ color: "var(--text-secondary)" }}>{val}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Position Sizing Recommande */}
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Scale className="text-cyan-400" size={18} />
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Position Sizing Recommande</h2>
+          </div>
+          <div className="flex flex-col items-center gap-3 mt-2">
+            <div className={`text-center p-4 rounded-lg w-full ${
+              analysis.trailingLosses >= 4 ? "bg-rose-500/10 border border-rose-500/30" :
+              analysis.trailingLosses >= 2 ? "bg-amber-500/10 border border-amber-500/30" :
+              "bg-emerald-500/10 border border-emerald-500/30"
+            }`}>
+              <div className={`text-lg font-bold ${analysis.sizingAdvice.color}`}>
+                {analysis.sizingAdvice.label}
+              </div>
+              <p className="text-xs mt-2" style={{ color: "var(--text-secondary)" }}>
+                {analysis.sizingAdvice.detail}
+              </p>
+            </div>
+            <div className="w-full space-y-2 text-xs mt-2">
+              <div className="flex items-center justify-between">
+                <span style={{ color: "var(--text-muted)" }}>Serie de gains</span>
+                <span className="mono text-emerald-400">{analysis.trailingWins}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span style={{ color: "var(--text-muted)" }}>Serie de pertes</span>
+                <span className="mono text-rose-400">{analysis.trailingLosses}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span style={{ color: "var(--text-muted)" }}>Max consecutives</span>
+                <span className="mono" style={{ color: "var(--text-secondary)" }}>{analysis.maxConsec}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Best Trading Window */}
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Timer className="text-cyan-400" size={18} />
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Meilleure Fenetre de Trading</h2>
+          </div>
+          <div className="flex flex-col items-center gap-3 mt-2">
+            <div className="text-center p-4 rounded-lg w-full bg-cyan-500/10 border border-cyan-500/30">
+              <div className="text-lg font-bold text-cyan-400 mono">
+                {analysis.bestWindowStart}h - {analysis.bestWindowEnd}h
+              </div>
+              <p className="text-xs mt-2" style={{ color: "var(--text-secondary)" }}>
+                {analysis.bestWindowWR.toFixed(0)}% WR | {analysis.bestWindowPnl >= 0 ? "+" : ""}&euro;{analysis.bestWindowPnl.toFixed(0)}
+              </p>
+            </div>
+            <div className="w-full space-y-2 text-xs mt-2">
+              {[
+                { h: analysis.bestWindowStart, data: analysis.hourMap[analysis.bestWindowStart.toString()] },
+                { h: (analysis.bestWindowStart + 1) % 24, data: analysis.hourMap[((analysis.bestWindowStart + 1) % 24).toString()] },
+                ...(analysis.bestWindowLen === 3 ? [{ h: (analysis.bestWindowStart + 2) % 24, data: analysis.hourMap[((analysis.bestWindowStart + 2) % 24).toString()] }] : []),
+              ].map(({ h, data }) => (
+                <div key={h} className="flex items-center justify-between">
+                  <span style={{ color: "var(--text-muted)" }}>{h}h00</span>
+                  <span className="mono" style={{ color: "var(--text-secondary)" }}>
+                    {data ? `${data.total} trades | ${data.total > 0 ? ((data.wins / data.total) * 100).toFixed(0) : 0}% WR` : "0 trades"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Overtrading Detection + Performance Decay */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Overtrading Detection */}
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="text-cyan-400" size={18} />
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Detection d&apos;Overtrading</h2>
+          </div>
+          {analysis.highVolDayCount > 0 ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="glass rounded-lg p-3 text-center">
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>Jours 5+ trades</div>
+                  <div className="text-xl font-bold mono text-amber-400 mt-1">{analysis.highVolDayCount}</div>
+                  <div className="text-xs mono mt-1" style={{ color: "var(--text-secondary)" }}>WR {analysis.highVolWR.toFixed(0)}%</div>
+                </div>
+                <div className="glass rounded-lg p-3 text-center">
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>Jours normaux</div>
+                  <div className="text-xl font-bold mono text-emerald-400 mt-1">{analysis.normalDayCount}</div>
+                  <div className="text-xs mono mt-1" style={{ color: "var(--text-secondary)" }}>WR {analysis.normalWR.toFixed(0)}%</div>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg text-xs" style={{ background: "var(--bg-hover)" }}>
+                <div className="flex items-center gap-2">
+                  {analysis.highVolWR < analysis.normalWR ? (
+                    <>
+                      <AlertTriangle size={14} className="text-amber-400 shrink-0" />
+                      <span style={{ color: "var(--text-secondary)" }}>
+                        Jours avec 5+ trades : WR {analysis.highVolWR.toFixed(0)}% | Jours normaux : WR {analysis.normalWR.toFixed(0)}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <TrendingUp size={14} className="text-emerald-400 shrink-0" />
+                      <span style={{ color: "var(--text-secondary)" }}>
+                        Pas de perte de performance sur les jours a volume eleve.
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
+              <TrendingUp size={24} className="opacity-40" />
+              <span className="text-sm">Aucun jour avec 5+ trades detecte.</span>
+            </div>
+          )}
+        </div>
+
+        {/* Performance Decay */}
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            {analysis.wrChange >= 0 ? (
+              <ArrowUpRight className="text-emerald-400" size={18} />
+            ) : (
+              <ArrowDownRight className="text-rose-400" size={18} />
+            )}
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Performance Decay</h2>
+          </div>
+          {analysis.prev2wCount >= 3 ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="glass rounded-lg p-3 text-center">
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>2 dernieres semaines</div>
+                  <div className={`text-xl font-bold mono mt-1 ${analysis.last2wWR >= analysis.prev2wWR ? "text-emerald-400" : "text-rose-400"}`}>
+                    {analysis.last2wWR.toFixed(0)}%
+                  </div>
+                  <div className="text-xs mono mt-1" style={{ color: "var(--text-secondary)" }}>
+                    {analysis.last2wCount} trades
+                  </div>
+                </div>
+                <div className="glass rounded-lg p-3 text-center">
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>2 semaines precedentes</div>
+                  <div className="text-xl font-bold mono mt-1" style={{ color: "var(--text-secondary)" }}>
+                    {analysis.prev2wWR.toFixed(0)}%
+                  </div>
+                  <div className="text-xs mono mt-1" style={{ color: "var(--text-secondary)" }}>
+                    {analysis.prev2wCount} trades
+                  </div>
+                </div>
+              </div>
+              <div className={`p-3 rounded-lg text-xs border ${
+                analysis.performanceDecay ? "border-rose-500/30 bg-rose-500/10" :
+                analysis.wrChange >= 0 ? "border-emerald-500/30 bg-emerald-500/10" :
+                "border-amber-500/30 bg-amber-500/10"
+              }`}>
+                <div className="flex items-center gap-2">
+                  {analysis.wrChange >= 0 ? (
+                    <TrendingUp size={14} className="text-emerald-400 shrink-0" />
+                  ) : (
+                    <TrendingDown size={14} className="text-rose-400 shrink-0" />
+                  )}
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    Win Rate : {analysis.wrChange >= 0 ? "+" : ""}{analysis.wrChange.toFixed(1)}% | P&L : {analysis.pnlChange >= 0 ? "+" : ""}&euro;{analysis.pnlChange.toFixed(0)}
+                  </span>
+                </div>
+              </div>
+              {analysis.performanceDecay && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-rose-500/10 text-xs">
+                  <AlertTriangle size={14} className="text-rose-400 shrink-0 mt-0.5" />
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    Alerte : ta performance est en baisse significative. Analyse tes recents trades et ajuste ta strategie.
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
+              <BarChart3 size={24} className="opacity-40" />
+              <span className="text-sm">Pas assez de donnees (min. 4 semaines).</span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Discipline Score + Pattern Detection */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

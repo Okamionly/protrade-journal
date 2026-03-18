@@ -130,7 +130,7 @@ export default function CalendarEcoPage() {
               <div className={`px-4 py-3 border-b border-[--border]/50 ${isToday(date) ? "bg-cyan-500/5" : ""}`}>
                 <h3 className="font-semibold text-sm flex items-center gap-2">
                   {isToday(date) && <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />}
-                  <span className={isToday(date) ? "text-cyan-400" : "text-gray-300"}>
+                  <span className={isToday(date) ? "text-cyan-400" : ""} style={{ color: isToday(date) ? undefined : "var(--text-primary)" }}>
                     {formatDayHeader(date)}
                   </span>
                   <span className="text-xs text-[--text-muted] font-normal ml-auto">{grouped[date].length} événements</span>
@@ -177,17 +177,17 @@ export default function CalendarEcoPage() {
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-1.5">
                               <span className="text-sm">{COUNTRY_FLAGS[e.country] || ""}</span>
-                              <span className="text-xs font-medium text-gray-300 bg-[--bg-secondary] px-1.5 py-0.5 rounded">{e.country}</span>
+                              <span className="text-xs font-medium bg-[--bg-secondary] px-1.5 py-0.5 rounded" style={{ color: "var(--text-secondary)" }}>{e.country}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-2.5 font-medium text-gray-200 flex items-center gap-1.5">
+                          <td className="px-4 py-2.5 font-medium flex items-center gap-1.5" style={{ color: "var(--text-primary)" }}>
                             {e.event}
                             <Info className="w-3.5 h-3.5 text-[--text-muted] hover:text-[--text-secondary] cursor-help flex-shrink-0" />
                           </td>
                           <td className={`px-4 py-2.5 text-right mono text-xs font-bold ${
                             actualVsForecast === "better" ? "text-emerald-400"
                               : actualVsForecast === "worse" ? "text-rose-400"
-                              : hasActual ? "text-white" : "text-[--text-muted]"
+                              : hasActual ? "" : "text-[--text-muted]"
                           }`}>
                             {e.actual}
                           </td>

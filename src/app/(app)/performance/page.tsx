@@ -35,7 +35,7 @@ function ScoreGauge({ score, label }: { score: number; label: string }) {
 function getBadge(score: number): { label: string; color: string; bg: string } {
   if (score >= 90) return { label: "Diamond", color: "text-cyan-300", bg: "bg-cyan-500/15 border-cyan-400/30" };
   if (score >= 75) return { label: "Gold", color: "text-yellow-400", bg: "bg-yellow-500/15 border-yellow-500/30" };
-  if (score >= 60) return { label: "Silver", color: "text-gray-300", bg: "bg-gray-500/15 border-gray-400/30" };
+  if (score >= 60) return { label: "Silver", color: "text-[--text-secondary]", bg: "bg-gray-500/15 border-gray-400/30" };
   if (score >= 40) return { label: "Bronze", color: "text-orange-400", bg: "bg-orange-500/15 border-orange-500/30" };
   return { label: "Débutant", color: "text-[--text-muted]", bg: "bg-gray-600/15 border-gray-600/30" };
 }
