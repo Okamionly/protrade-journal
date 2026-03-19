@@ -181,14 +181,24 @@ async function fetchMarketWatchRSS(): Promise<NewsArticle[]> {
 // --------------- Source 7: Reuters RSS ---------------
 
 async function fetchReutersRSS(): Promise<NewsArticle[]> {
-  const res = await fetch("https://www.reutersagency.com/feed/?taxonomy=best-sectors&post_type=best", {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; MarketPhase/1.0)" },
-    next: { revalidate: 300 },
-  });
-  if (!res.ok) throw new Error(`Reuters RSS error: ${res.status}`);
-  const xml = await res.text();
-  const items = parseRSS(xml);
-  return rssToArticles(items, "Reuters");
+  // Reuters retired their public RSS. Use Google News filtered for Reuters as fallback.
+  const urls = [
+    "https://feeds.reuters.com/reuters/businessNews",
+    "https://news.google.com/rss/search?q=site:reuters.com+finance&hl=en&gl=US&ceid=US:en",
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; MarketPhase/1.0)" },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) continue;
+      const xml = await res.text();
+      const items = parseRSS(xml);
+      if (items.length > 0) return rssToArticles(items, "Reuters");
+    } catch { continue; }
+  }
+  throw new Error("All Reuters RSS URLs failed");
 }
 
 // --------------- Source 8: Yahoo Finance RSS ---------------

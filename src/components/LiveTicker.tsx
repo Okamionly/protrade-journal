@@ -34,8 +34,8 @@ interface TickerEntry {
 function formatPrice(symbol: string, price: number): string {
   // JPY pairs: 2 decimals
   if (symbol.includes("JPY")) return price.toFixed(2);
-  // BTC: no decimals, with comma grouping
-  if (symbol.startsWith("BTC")) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  // Crypto: no decimals, with comma grouping
+  if (symbol.startsWith("BTC") || symbol.startsWith("ETH")) return price.toLocaleString("en-US", { maximumFractionDigits: 0 });
   // Gold: 1 decimal
   if (symbol.startsWith("XAU")) return price.toFixed(1);
   // S&P 500 / DXY indices

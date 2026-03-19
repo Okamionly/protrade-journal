@@ -86,22 +86,29 @@ async function fetchForex(): Promise<{
 // ---------------------------------------------------------------------------
 // Bitcoin  (CoinGecko free endpoint, no key)
 // ---------------------------------------------------------------------------
-async function fetchBitcoin(): Promise<PriceItem[]> {
+async function fetchCrypto(): Promise<PriceItem[]> {
   try {
     const res = await safeFetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true"
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true"
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const btc = data.bitcoin;
-    if (!btc) return [];
-    return [
-      {
+    const items: PriceItem[] = [];
+    if (data.bitcoin) {
+      items.push({
         symbol: "BTC/USD",
-        price: Math.round(btc.usd ?? 0),
-        change: parseFloat((btc.usd_24h_change ?? 0).toFixed(2)),
-      },
-    ];
+        price: Math.round(data.bitcoin.usd ?? 0),
+        change: parseFloat((data.bitcoin.usd_24h_change ?? 0).toFixed(2)),
+      });
+    }
+    if (data.ethereum) {
+      items.push({
+        symbol: "ETH/USD",
+        price: Math.round(data.ethereum.usd ?? 0),
+        change: parseFloat((data.ethereum.usd_24h_change ?? 0).toFixed(2)),
+      });
+    }
+    return items;
   } catch {
     return [];
   }
@@ -114,7 +121,27 @@ async function fetchBitcoin(): Promise<PriceItem[]> {
 async function fetchGold(
   forexRates: Record<string, number>
 ): Promise<PriceItem[]> {
-  // Attempt 1 : gold-api.com (free, no key)
+  // Attempt 1: metals.live API (free, no key, real-time spot)
+  try {
+    const res = await safeFetch("https://api.metals.live/v1/spot");
+    if (res.ok) {
+      const data = await res.json();
+      const gold = Array.isArray(data) ? data.find((m: { metal: string }) => m.metal === "gold") : null;
+      if (gold?.price) {
+        return [
+          {
+            symbol: "XAU/USD",
+            price: parseFloat((gold.price as number).toFixed(1)),
+            change: 0, // spot API doesn't return change
+          },
+        ];
+      }
+    }
+  } catch {
+    // continue
+  }
+
+  // Attempt 2: gold-api.com (free, no key)
   try {
     const res = await safeFetch("https://api.gold-api.com/price/XAU");
     if (res.ok) {
@@ -133,10 +160,29 @@ async function fetchGold(
     // continue
   }
 
-  // Attempt 2: derive from exchange-rate API if it returned XAU
+  // Attempt 3: derive from exchange-rate API if it returned XAU
   if (forexRates.XAU && forexRates.XAU > 0) {
     const price = parseFloat((1 / forexRates.XAU).toFixed(1));
     return [{ symbol: "XAU/USD", price, change: 0 }];
+  }
+
+  // Attempt 4: Yahoo Finance GLD ETF (tracks gold at ~1/10 oz price)
+  try {
+    const res = await safeFetch(
+      "https://query1.finance.yahoo.com/v8/finance/chart/GLD?interval=1d&range=1d"
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (meta?.regularMarketPrice) {
+        const gldPrice = meta.regularMarketPrice;
+        const prevClose = meta.chartPreviousClose ?? gldPrice;
+        const change = prevClose ? parseFloat((((gldPrice - prevClose) / prevClose) * 100).toFixed(2)) : 0;
+        return [{ symbol: "XAU/USD", price: parseFloat((gldPrice * 10).toFixed(1)), change }];
+      }
+    }
+  } catch {
+    // continue
   }
 
   return [];
@@ -229,7 +275,7 @@ export async function GET() {
   // Fire all fetches in parallel
   const [forexResult, crypto, sp500] = await Promise.all([
     fetchForex(),
-    fetchBitcoin(),
+    fetchCrypto(),
     fetchSP500(),
   ]);
 
