@@ -15,6 +15,8 @@ import {
   Minus,
   Timer,
 } from "lucide-react";
+import { LocaleProvider, useTranslation } from "@/i18n/context";
+import { LOCALE_LABELS, Locale } from "@/i18n/types";
 
 /* ─── Types ─── */
 interface LbmaEntry {
@@ -43,13 +45,13 @@ const PERIOD_DAYS: Record<Period, number> = { "1M": 30, "3M": 90, "6M": 180, "1Y
 
 /* ─── Fixing Schedule Data ─── */
 const FIXING_SCHEDULE = [
-  { metal: "Or", emoji: "\u{1F947}", session: "AM Fix", london: "10:30", ny: "05:30", paris: "11:30", color: "#f59e0b", londonH: 10, londonM: 30 },
-  { metal: "Or", emoji: "\u{1F947}", session: "PM Fix", london: "15:00", ny: "10:00", paris: "16:00", color: "#f59e0b", londonH: 15, londonM: 0 },
-  { metal: "Argent", emoji: "\u{1F948}", session: "Fix", london: "12:00", ny: "07:00", paris: "13:00", color: "#94a3b8", londonH: 12, londonM: 0 },
-  { metal: "Platine", emoji: "⚪", session: "AM Fix", london: "09:45", ny: "04:45", paris: "10:45", color: "#06b6d4", londonH: 9, londonM: 45 },
-  { metal: "Platine", emoji: "⚪", session: "PM Fix", london: "14:00", ny: "09:00", paris: "15:00", color: "#06b6d4", londonH: 14, londonM: 0 },
-  { metal: "Palladium", emoji: "\u{1F49C}", session: "AM Fix", london: "09:45", ny: "04:45", paris: "10:45", color: "#a855f7", londonH: 9, londonM: 45 },
-  { metal: "Palladium", emoji: "\u{1F49C}", session: "PM Fix", london: "14:00", ny: "09:00", paris: "15:00", color: "#a855f7", londonH: 14, londonM: 0 },
+  { metalKey: "gold" as const, emoji: "\u{1F947}", sessionKey: "amFix" as const, london: "10:30", ny: "05:30", paris: "11:30", color: "#f59e0b", londonH: 10, londonM: 30 },
+  { metalKey: "gold" as const, emoji: "\u{1F947}", sessionKey: "pmFix" as const, london: "15:00", ny: "10:00", paris: "16:00", color: "#f59e0b", londonH: 15, londonM: 0 },
+  { metalKey: "silver" as const, emoji: "\u{1F948}", sessionKey: "fix" as const, london: "12:00", ny: "07:00", paris: "13:00", color: "#94a3b8", londonH: 12, londonM: 0 },
+  { metalKey: "platinum" as const, emoji: "⚪", sessionKey: "amFix" as const, london: "09:45", ny: "04:45", paris: "10:45", color: "#06b6d4", londonH: 9, londonM: 45 },
+  { metalKey: "platinum" as const, emoji: "⚪", sessionKey: "pmFix" as const, london: "14:00", ny: "09:00", paris: "15:00", color: "#06b6d4", londonH: 14, londonM: 0 },
+  { metalKey: "palladium" as const, emoji: "\u{1F49C}", sessionKey: "amFix" as const, london: "09:45", ny: "04:45", paris: "10:45", color: "#a855f7", londonH: 9, londonM: 45 },
+  { metalKey: "palladium" as const, emoji: "\u{1F49C}", sessionKey: "pmFix" as const, london: "14:00", ny: "09:00", paris: "15:00", color: "#a855f7", londonH: 14, londonM: 0 },
 ];
 
 /* ─── Helpers ─── */
@@ -63,8 +65,8 @@ function pctChange(current: number, prev: number): number {
   return ((current - prev) / prev) * 100;
 }
 
-function formatDate(d: string): string {
-  return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+function formatDate(d: string, locale: string): string {
+  return new Date(d).toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 /** Get current London (Europe/London) time components */
@@ -78,7 +80,7 @@ function getLondonNow(): { h: number; m: number; s: number; dayOfWeek: number } 
   return { h: parseInt(hStr), m: parseInt(mStr), s: parseInt(sStr) || 0, dayOfWeek: londonDate.getDay() };
 }
 
-function getNextFixing(): { label: string; london: string; ny: string; secondsLeft: number; isNow: boolean } {
+function getNextFixing(): { metalKey: string; sessionKey: string; london: string; ny: string; secondsLeft: number; isNow: boolean } {
   const lon = getLondonNow();
   const nowMinutes = lon.h * 60 + lon.m;
   const nowSeconds = nowMinutes * 60 + lon.s;
@@ -91,7 +93,7 @@ function getNextFixing(): { label: string; london: string; ny: string; secondsLe
   for (const f of sorted) {
     const fMinutes = f.londonH * 60 + f.londonM;
     if (isWeekday && nowMinutes >= fMinutes && nowMinutes < fMinutes + 5) {
-      return { label: `${f.metal} ${f.session}`, london: f.london, ny: f.ny, secondsLeft: 0, isNow: true };
+      return { metalKey: f.metalKey, sessionKey: f.sessionKey, london: f.london, ny: f.ny, secondsLeft: 0, isNow: true };
     }
   }
 
@@ -100,7 +102,7 @@ function getNextFixing(): { label: string; london: string; ny: string; secondsLe
     for (const f of sorted) {
       const fSeconds = (f.londonH * 60 + f.londonM) * 60;
       if (fSeconds > nowSeconds) {
-        return { label: `${f.metal} ${f.session}`, london: f.london, ny: f.ny, secondsLeft: fSeconds - nowSeconds, isNow: false };
+        return { metalKey: f.metalKey, sessionKey: f.sessionKey, london: f.london, ny: f.ny, secondsLeft: fSeconds - nowSeconds, isNow: false };
       }
     }
   }
@@ -113,7 +115,7 @@ function getNextFixing(): { label: string; london: string; ny: string; secondsLe
   else if (lon.dayOfWeek === 6) daysUntil = 2; // Saturday -> Monday
   else if (lon.dayOfWeek === 0) daysUntil = 1; // Sunday -> Monday
   const secondsLeft = (daysUntil * 86400) - nowSeconds + firstSeconds;
-  return { label: `${first.metal} ${first.session}`, london: first.london, ny: first.ny, secondsLeft, isNow: false };
+  return { metalKey: first.metalKey, sessionKey: first.sessionKey, london: first.london, ny: first.ny, secondsLeft, isNow: false };
 }
 
 function formatCountdown(seconds: number): string {
@@ -153,42 +155,53 @@ function AreaChart({
   data,
   currency,
   height = 300,
+  dateFmt,
+  notEnoughDataLabel,
 }: {
   data: LbmaEntry[];
   currency: Currency;
   height?: number;
+  dateFmt: string;
+  notEnoughDataLabel: string;
 }) {
   const idx = CURRENCY_IDX[currency];
   const prices = data.map((e) => e.v[idx] ?? 0).filter((v) => v > 0);
-  if (prices.length < 2) return <div className="text-center py-8 text-sm" style={{ color: "var(--text-muted)" }}>Pas assez de données</div>;
+  if (prices.length < 2) return <div className="text-center py-8 text-sm" style={{ color: "var(--text-muted)" }}>{notEnoughDataLabel}</div>;
 
   const min = Math.min(...prices);
   const max = Math.max(...prices);
   const range = max - min || 1;
   const w = 900;
   const h = height;
-  const padY = 20;
+  const padY = 24;
+  const padX = 70;
+  const padRight = 10;
+  const padBottom = 28;
+  const chartW = w - padX - padRight;
+  const chartTop = padY;
+  const chartBottom = h - padBottom;
+  const chartH = chartBottom - chartTop;
 
   const points = prices.map((v, i) => {
-    const x = (i / (prices.length - 1)) * w;
-    const y = h - padY - ((v - min) / range) * (h - padY * 2);
+    const x = padX + (i / (prices.length - 1)) * chartW;
+    const y = chartBottom - ((v - min) / range) * chartH;
     return `${x},${y}`;
   }).join(" ");
 
   const isUp = prices[prices.length - 1] >= prices[0];
   const color = isUp ? "#10b981" : "#ef4444";
 
-  // Y-axis labels
+  // Y-axis labels (5 ticks)
   const yLabels = Array.from({ length: 5 }, (_, i) => {
     const val = min + (range * i) / 4;
-    const y = h - padY - (i / 4) * (h - padY * 2);
+    const y = chartBottom - (i / 4) * chartH;
     return { val, y };
   });
 
   // X-axis labels (5 evenly spaced)
   const xLabels = Array.from({ length: 5 }, (_, i) => {
     const dataIdx = Math.floor((i / 4) * (data.length - 1));
-    const x = (dataIdx / (data.length - 1)) * w;
+    const x = padX + (dataIdx / (data.length - 1)) * chartW;
     return { date: data[dataIdx]?.d, x };
   });
 
@@ -204,8 +217,10 @@ function AreaChart({
         preserveAspectRatio="none"
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
-          const x = ((e.clientX - rect.left) / rect.width) * prices.length;
-          setHoverIdx(Math.min(Math.max(Math.round(x), 0), prices.length - 1));
+          const relX = (e.clientX - rect.left) / rect.width;
+          const chartRelX = (relX * w - padX) / chartW;
+          const dataIdx = Math.round(chartRelX * (prices.length - 1));
+          setHoverIdx(Math.min(Math.max(dataIdx, 0), prices.length - 1));
         }}
         onMouseLeave={() => setHoverIdx(null)}
       >
@@ -215,28 +230,28 @@ function AreaChart({
             <stop offset="100%" stopColor={color} stopOpacity="0.02" />
           </linearGradient>
         </defs>
-        {/* Grid lines */}
+        {/* Grid lines — span the chart area only */}
         {yLabels.map(({ y }, i) => (
-          <line key={i} x1="0" y1={y} x2={w} y2={y} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="4,4" />
+          <line key={i} x1={padX} y1={y} x2={w - padRight} y2={y} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="4,4" />
         ))}
         {/* Area */}
-        <polygon points={`0,${h - padY} ${points} ${w},${h - padY}`} fill="url(#areaGrad)" />
+        <polygon points={`${padX},${chartBottom} ${points} ${padX + chartW},${chartBottom}`} fill="url(#areaGrad)" />
         <polyline points={points} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
-        {/* Hover line */}
+        {/* Hover crosshair */}
         {hoverIdx !== null && (
           <>
             <line
-              x1={(hoverIdx / (prices.length - 1)) * w}
-              y1={padY}
-              x2={(hoverIdx / (prices.length - 1)) * w}
-              y2={h - padY}
+              x1={padX + (hoverIdx / (prices.length - 1)) * chartW}
+              y1={chartTop}
+              x2={padX + (hoverIdx / (prices.length - 1)) * chartW}
+              y2={chartBottom}
               stroke="var(--text-muted)"
               strokeWidth="1"
               strokeDasharray="3,3"
             />
             <circle
-              cx={(hoverIdx / (prices.length - 1)) * w}
-              cy={h - padY - ((prices[hoverIdx] - min) / range) * (h - padY * 2)}
+              cx={padX + (hoverIdx / (prices.length - 1)) * chartW}
+              cy={chartBottom - ((prices[hoverIdx] - min) / range) * chartH}
               r="4"
               fill={color}
               stroke="white"
@@ -244,44 +259,55 @@ function AreaChart({
             />
           </>
         )}
-        {/* Y labels */}
+        {/* Y-axis labels — right-aligned before the chart area */}
         {yLabels.map(({ val, y }, i) => (
-          <text key={i} x="5" y={y - 5} fill="var(--text-muted)" fontSize="11" fontFamily="monospace">
+          <text key={i} x={padX - 8} y={y + 4} fill="var(--text-muted)" fontSize="11" fontFamily="monospace" textAnchor="end">
             {CURRENCY_SYMBOLS[currency]}{val.toLocaleString("en-US", { maximumFractionDigits: 0 })}
           </text>
         ))}
-        {/* X labels */}
-        {xLabels.map(({ date, x }, i) => (
-          <text key={i} x={x} y={h - 2} fill="var(--text-muted)" fontSize="10" textAnchor="middle" fontFamily="monospace">
-            {date ? new Date(date).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }) : ""}
-          </text>
-        ))}
+        {/* X-axis labels — anchor first/last to avoid overflow */}
+        {xLabels.map(({ date, x }, i) => {
+          const anchor = i === 0 ? "start" : i === xLabels.length - 1 ? "end" : "middle";
+          return (
+            <text key={i} x={x} y={h - 4} fill="var(--text-muted)" fontSize="10" textAnchor={anchor} fontFamily="monospace">
+              {date ? new Date(date).toLocaleDateString(dateFmt, { month: "short", year: "2-digit" }) : ""}
+            </text>
+          );
+        })}
       </svg>
-      {/* Hover tooltip */}
-      {hoverIdx !== null && data[hoverIdx] && (
-        <div
-          className="absolute top-2 right-2 glass rounded-lg px-3 py-2 text-xs pointer-events-none"
-          style={{ border: "1px solid var(--border)" }}
-        >
-          <div style={{ color: "var(--text-muted)" }}>{formatDate(data[hoverIdx].d)}</div>
-          <div className="font-bold mono" style={{ color }}>{formatPrice(prices[hoverIdx], currency)}</div>
-        </div>
-      )}
+      {/* Hover tooltip — flips side when cursor is near the right edge */}
+      {hoverIdx !== null && data[hoverIdx] && (() => {
+        const hoverRatio = hoverIdx / (prices.length - 1);
+        const isRight = hoverRatio > 0.65;
+        return (
+          <div
+            className="absolute top-2 glass rounded-lg px-3 py-2 text-xs pointer-events-none"
+            style={{
+              border: "1px solid var(--border)",
+              ...(isRight ? { left: "12px" } : { right: "12px" }),
+            }}
+          >
+            <div style={{ color: "var(--text-muted)" }}>{formatDate(data[hoverIdx].d, dateFmt)}</div>
+            <div className="font-bold mono" style={{ color }}>{formatPrice(prices[hoverIdx], currency)}</div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
 
 /* ─── Spread Bar Chart (last 5 days) ─── */
-function SpreadBars({ spreads, currency }: { spreads: { date: string; spread: number }[]; currency: Currency }) {
+function SpreadBars({ spreads, currency, dateFmt }: { spreads: { date: string; spread: number }[]; currency: Currency; dateFmt: string }) {
   if (spreads.length === 0) return null;
   const maxAbs = Math.max(...spreads.map((s) => Math.abs(s.spread)), 1);
-  const barH = 28;
+  const barH = 32;
   const totalH = spreads.length * barH;
-  const midX = 100;
+  const midX = 140;
   const maxBarW = 80;
+  const svgW = 320;
 
   return (
-    <svg viewBox={`0 0 200 ${totalH}`} className="w-full" style={{ height: totalH }}>
+    <svg viewBox={`0 0 ${svgW} ${totalH}`} className="w-full" style={{ minHeight: totalH }}>
       {/* Center line */}
       <line x1={midX} y1="0" x2={midX} y2={totalH} stroke="var(--border)" strokeWidth="1" strokeDasharray="2,2" />
       {spreads.map((s, i) => {
@@ -291,15 +317,15 @@ function SpreadBars({ spreads, currency }: { spreads: { date: string; spread: nu
         const y = i * barH;
         return (
           <g key={i}>
-            <rect x={x} y={y + 4} width={barW} height={barH - 8} rx="3" fill={color} opacity="0.7" />
-            <text x="4" y={y + barH / 2 + 4} fill="var(--text-muted)" fontSize="9" fontFamily="monospace">
-              {new Date(s.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+            <rect x={x} y={y + 6} width={barW} height={barH - 12} rx="3" fill={color} opacity="0.7" />
+            <text x="4" y={y + barH / 2 + 3} fill="var(--text-muted)" fontSize="10" fontFamily="monospace" textAnchor="start">
+              {new Date(s.date).toLocaleDateString(dateFmt, { day: "2-digit", month: "short" })}
             </text>
             <text
-              x={s.spread >= 0 ? midX + barW + 4 : midX - barW - 4}
-              y={y + barH / 2 + 4}
+              x={s.spread >= 0 ? midX + barW + 6 : midX - barW - 6}
+              y={y + barH / 2 + 3}
               fill={color}
-              fontSize="9"
+              fontSize="10"
               fontFamily="monospace"
               textAnchor={s.spread >= 0 ? "start" : "end"}
             >
@@ -314,6 +340,7 @@ function SpreadBars({ spreads, currency }: { spreads: { date: string; spread: nu
 
 /* ─── Countdown Component ─── */
 function FixingCountdown() {
+  const { t } = useTranslation();
   const [countdown, setCountdown] = useState(getNextFixing());
 
   useEffect(() => {
@@ -322,6 +349,11 @@ function FixingCountdown() {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tt = t as (key: string) => string;
+  const metalLabel = tt(countdown.metalKey);
+  const sessionLabel = tt(countdown.sessionKey);
 
   return (
     <div className="metric-card rounded-2xl p-4">
@@ -337,23 +369,25 @@ function FixingCountdown() {
           )}
           <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
             {countdown.isNow ? (
-              <>Fixing en cours : <span className="text-emerald-400 font-bold">{countdown.label}</span></>
+              <>{t("fixingInProgress")} : <span className="text-emerald-400 font-bold">{metalLabel} {sessionLabel}</span></>
             ) : (
-              <>Prochain fixing : <span className="text-amber-400 font-bold">{countdown.label}</span> dans <span className="mono font-bold text-amber-400">{formatCountdown(countdown.secondsLeft)}</span></>
+              <>{t("nextFixing")} : <span className="text-amber-400 font-bold">{metalLabel} {sessionLabel}</span> {t("inWord")} <span className="mono font-bold text-amber-400">{formatCountdown(countdown.secondsLeft)}</span></>
             )}
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs" style={{ color: "var(--text-muted)" }}>
-          <span>Londres {countdown.london} GMT</span>
-          <span className="font-bold" style={{ color: "var(--text-secondary)" }}>New York {countdown.ny} EST</span>
+          <span>{t("londonGmt")} {countdown.london} GMT</span>
+          <span className="font-bold" style={{ color: "var(--text-secondary)" }}>{t("nyEst")} {countdown.ny} EST</span>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── Main Page ─── */
-export default function LBMAPage() {
+/* ─── Inner Content Component ─── */
+function LBMAContent() {
+  const { t, locale, setLocale, dir, dateFmt } = useTranslation();
+
   const [data, setData] = useState<LbmaData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -366,15 +400,15 @@ export default function LBMAPage() {
     setError(null);
     try {
       const res = await fetch("/api/lbma?days=3650");
-      if (!res.ok) throw new Error("Erreur API");
+      if (!res.ok) throw new Error(t("apiError"));
       const json = await res.json();
       setData(json);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur inconnue");
+      setError(e instanceof Error ? e.message : t("unknownError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -492,7 +526,7 @@ export default function LBMAPage() {
   const periodAvg = allPrices.length ? allPrices.reduce((a, b) => a + b, 0) / allPrices.length : 0;
   const periodChange = allPrices.length >= 2 ? pctChange(allPrices[allPrices.length - 1], allPrices[0]) : 0;
 
-  const metalLabels: Record<Metal, string> = { gold: "Or (PM Fix)", silver: "Argent", platinum: "Platine (PM Fix)", palladium: "Palladium (PM Fix)" };
+  const metalLabels: Record<Metal, string> = { gold: t("goldPmFix"), silver: t("silverFix"), platinum: t("platPmFix"), palladium: t("pallPmFix") };
 
   // Price card helper
   function PriceCard({
@@ -536,7 +570,7 @@ export default function LBMAPage() {
           <SparkLine data={sparkline} color={sparkColor} height={40} />
         </div>
         <div className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-          {current?.d ? formatDate(current.d) : ""}
+          {current?.d ? formatDate(current.d, dateFmt) : ""}
         </div>
       </div>
     );
@@ -544,13 +578,13 @@ export default function LBMAPage() {
 
   // Spread interpretation
   function spreadInterpretation(spread: number): { text: string; color: string } {
-    if (spread > 0) return { text: "NY vend (PM < AM)", color: "#ef4444" };
-    if (spread < 0) return { text: "NY achète (PM > AM)", color: "#10b981" };
-    return { text: "Neutre", color: "var(--text-muted)" };
+    if (spread > 0) return { text: t("nySells"), color: "#ef4444" };
+    if (spread < 0) return { text: t("nyBuys"), color: "#10b981" };
+    return { text: t("neutral"), color: "var(--text-muted)" };
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
+    <div dir={dir} className="space-y-6 max-w-[1400px] mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -558,18 +592,31 @@ export default function LBMAPage() {
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
               <DollarSign className="w-5 h-5 text-amber-400" />
             </div>
-            LBMA Métaux Précieux
+            {t("title")}
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            Données officielles — London Bullion Market Association
+            {t("subtitle")}
             {data?.updated && (
               <span className="ml-2 opacity-60">
-                <Clock className="w-3 h-3 inline -mt-0.5" /> Mis à jour : {new Date(data.updated).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                <Clock className="w-3 h-3 inline -mt-0.5" /> {t("updatedAt")} : {new Date(data.updated).toLocaleTimeString(dateFmt, { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Language selector */}
+          <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            {(["fr", "en", "ar", "es", "de"] as Locale[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLocale(l)}
+                className={`px-2.5 py-1.5 text-xs font-medium transition ${locale === l ? "bg-cyan-500/20 text-cyan-400" : ""}`}
+                style={locale !== l ? { color: "var(--text-secondary)" } : {}}
+              >
+                {LOCALE_LABELS[l]}
+              </button>
+            ))}
+          </div>
           {/* Currency selector */}
           <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             {(["USD", "GBP", "EUR"] as Currency[]).map((c) => (
@@ -587,7 +634,7 @@ export default function LBMAPage() {
             <Download className="w-3.5 h-3.5" /> CSV
           </button>
           <button onClick={fetchData} disabled={loading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass text-sm hover:bg-[var(--bg-hover)] transition" style={{ color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Rafraîchir
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> {t("refresh")}
           </button>
         </div>
       </div>
@@ -622,7 +669,7 @@ export default function LBMAPage() {
           {/* Price Cards — Row 1: Gold AM, Gold PM, Silver, Ratio */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <PriceCard
-              label="Or — Fixing AM"
+              label={t("goldAmLabel")}
               timeLabel="10:30 LON"
               timeBadgeColor="#f59e0b"
               current={currentGoldAm}
@@ -631,7 +678,7 @@ export default function LBMAPage() {
               sparkColor="#f59e0b"
             />
             <PriceCard
-              label="Or — Fixing PM"
+              label={t("goldPmLabel")}
               timeLabel="15:00 LON"
               timeBadgeColor="#f59e0b"
               current={currentGoldPm}
@@ -640,7 +687,7 @@ export default function LBMAPage() {
               sparkColor="#f59e0b"
             />
             <PriceCard
-              label="Argent — Fixing"
+              label={t("silverLabel")}
               timeLabel="12:00 LON"
               timeBadgeColor="#94a3b8"
               current={currentSilver}
@@ -651,14 +698,14 @@ export default function LBMAPage() {
             {/* Gold/Silver Ratio */}
             <div className="metric-card rounded-2xl p-5">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Ratio Or/Argent</span>
+                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("ratioLabel")}</span>
                 <BarChart3 className="w-4 h-4 text-cyan-400" />
               </div>
               <div className="text-2xl font-bold mono" style={{ color: "var(--text-primary)" }}>
                 {gsRatio}
               </div>
               <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                {Number(gsRatio) > 80 ? "Argent sous-évalué" : Number(gsRatio) < 60 ? "Or sous-évalué" : "Zone neutre"}
+                {Number(gsRatio) > 80 ? t("silverUndervalued") : Number(gsRatio) < 60 ? t("goldUndervalued") : t("neutralZone")}
               </div>
               <div className="mt-3 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-hover)" }}>
                 <div
@@ -680,7 +727,7 @@ export default function LBMAPage() {
           {/* Price Cards — Row 2: Platinum AM, Platinum PM, Palladium AM, Palladium PM */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <PriceCard
-              label="Platine — Fixing AM"
+              label={t("platAmLabel")}
               timeLabel="09:45 LON"
               timeBadgeColor="#06b6d4"
               current={currentPlatAm}
@@ -689,7 +736,7 @@ export default function LBMAPage() {
               sparkColor="#06b6d4"
             />
             <PriceCard
-              label="Platine — Fixing PM"
+              label={t("platPmLabel")}
               timeLabel="14:00 LON"
               timeBadgeColor="#06b6d4"
               current={currentPlatPm}
@@ -698,7 +745,7 @@ export default function LBMAPage() {
               sparkColor="#06b6d4"
             />
             <PriceCard
-              label="Palladium — Fixing AM"
+              label={t("pallAmLabel")}
               timeLabel="09:45 LON"
               timeBadgeColor="#a855f7"
               current={currentPallAm}
@@ -707,7 +754,7 @@ export default function LBMAPage() {
               sparkColor="#a855f7"
             />
             <PriceCard
-              label="Palladium — Fixing PM"
+              label={t("pallPmLabel")}
               timeLabel="14:00 LON"
               timeBadgeColor="#a855f7"
               current={currentPallPm}
@@ -721,7 +768,7 @@ export default function LBMAPage() {
           <div className="glass rounded-2xl p-6">
             <h3 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
               <Activity className="w-4 h-4 inline -mt-0.5 mr-2 text-cyan-400" />
-              Spread AM / PM — Analyse
+              {t("spreadTitle")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Gold Spread */}
@@ -730,7 +777,7 @@ export default function LBMAPage() {
                 const interp = spreadInterpretation(lastGoldSpread);
                 return (
                   <div className="metric-card rounded-xl p-4">
-                    <div className="text-xs font-medium mb-2" style={{ color: "#f59e0b" }}>Or — Spread AM/PM</div>
+                    <div className="text-xs font-medium mb-2" style={{ color: "#f59e0b" }}>{t("spreadGold")}</div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>
                         {lastGoldSpread >= 0 ? "+" : ""}{formatPrice(lastGoldSpread, currency)}
@@ -739,7 +786,9 @@ export default function LBMAPage() {
                         {interp.text}
                       </span>
                     </div>
-                    <SpreadBars spreads={spreadData.gold} currency={currency} />
+                    <div style={{ minHeight: 160 }}>
+                      <SpreadBars spreads={spreadData.gold} currency={currency} dateFmt={dateFmt} />
+                    </div>
                   </div>
                 );
               })()}
@@ -749,7 +798,7 @@ export default function LBMAPage() {
                 const interp = spreadInterpretation(lastPlatSpread);
                 return (
                   <div className="metric-card rounded-xl p-4">
-                    <div className="text-xs font-medium mb-2" style={{ color: "#06b6d4" }}>Platine — Spread AM/PM</div>
+                    <div className="text-xs font-medium mb-2" style={{ color: "#06b6d4" }}>{t("spreadPlatinum")}</div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>
                         {lastPlatSpread >= 0 ? "+" : ""}{formatPrice(lastPlatSpread, currency)}
@@ -758,7 +807,9 @@ export default function LBMAPage() {
                         {interp.text}
                       </span>
                     </div>
-                    <SpreadBars spreads={spreadData.platinum} currency={currency} />
+                    <div style={{ minHeight: 160 }}>
+                      <SpreadBars spreads={spreadData.platinum} currency={currency} dateFmt={dateFmt} />
+                    </div>
                   </div>
                 );
               })()}
@@ -768,7 +819,7 @@ export default function LBMAPage() {
                 const interp = spreadInterpretation(lastPallSpread);
                 return (
                   <div className="metric-card rounded-xl p-4">
-                    <div className="text-xs font-medium mb-2" style={{ color: "#a855f7" }}>Palladium — Spread AM/PM</div>
+                    <div className="text-xs font-medium mb-2" style={{ color: "#a855f7" }}>{t("spreadPalladium")}</div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>
                         {lastPallSpread >= 0 ? "+" : ""}{formatPrice(lastPallSpread, currency)}
@@ -777,7 +828,9 @@ export default function LBMAPage() {
                         {interp.text}
                       </span>
                     </div>
-                    <SpreadBars spreads={spreadData.palladium} currency={currency} />
+                    <div style={{ minHeight: 160 }}>
+                      <SpreadBars spreads={spreadData.palladium} currency={currency} dateFmt={dateFmt} />
+                    </div>
                   </div>
                 );
               })()}
@@ -790,10 +843,10 @@ export default function LBMAPage() {
               <div className="flex items-center gap-3">
                 <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                   {([
-                    { key: "gold" as Metal, label: "Or", activeColor: "bg-amber-500/20 text-amber-400" },
-                    { key: "silver" as Metal, label: "Argent", activeColor: "bg-slate-400/20 text-slate-300" },
-                    { key: "platinum" as Metal, label: "Platine", activeColor: "bg-cyan-500/20 text-cyan-400" },
-                    { key: "palladium" as Metal, label: "Palladium", activeColor: "bg-purple-500/20 text-purple-400" },
+                    { key: "gold" as Metal, label: t("gold"), activeColor: "bg-amber-500/20 text-amber-400" },
+                    { key: "silver" as Metal, label: t("silver"), activeColor: "bg-slate-400/20 text-slate-300" },
+                    { key: "platinum" as Metal, label: t("platinum"), activeColor: "bg-cyan-500/20 text-cyan-400" },
+                    { key: "palladium" as Metal, label: t("palladium"), activeColor: "bg-purple-500/20 text-purple-400" },
                   ]).map((m) => (
                     <button
                       key={m.key}
@@ -806,7 +859,7 @@ export default function LBMAPage() {
                   ))}
                 </div>
                 <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Historique {metalLabels[metal]} — {currency}
+                  {t("history")} {metalLabels[metal]} — {currency}
                 </h3>
               </div>
               <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
@@ -823,24 +876,24 @@ export default function LBMAPage() {
               </div>
             </div>
 
-            <AreaChart data={chartData} currency={currency} height={300} />
+            <AreaChart data={chartData} currency={currency} height={300} dateFmt={dateFmt} notEnoughDataLabel={t("notEnoughData")} />
 
             {/* Period Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
               <div>
-                <div className="text-[10px] font-medium mb-0.5" style={{ color: "var(--text-muted)" }}>Plus haut</div>
+                <div className="text-[10px] font-medium mb-0.5" style={{ color: "var(--text-muted)" }}>{t("high")}</div>
                 <div className="text-sm font-bold mono text-emerald-400">{formatPrice(periodHigh, currency)}</div>
               </div>
               <div>
-                <div className="text-[10px] font-medium mb-0.5" style={{ color: "var(--text-muted)" }}>Plus bas</div>
+                <div className="text-[10px] font-medium mb-0.5" style={{ color: "var(--text-muted)" }}>{t("low")}</div>
                 <div className="text-sm font-bold mono text-rose-400">{formatPrice(periodLow, currency)}</div>
               </div>
               <div>
-                <div className="text-[10px] font-medium mb-0.5" style={{ color: "var(--text-muted)" }}>Moyenne</div>
+                <div className="text-[10px] font-medium mb-0.5" style={{ color: "var(--text-muted)" }}>{t("average")}</div>
                 <div className="text-sm font-bold mono" style={{ color: "var(--text-primary)" }}>{formatPrice(periodAvg, currency)}</div>
               </div>
               <div>
-                <div className="text-[10px] font-medium mb-0.5" style={{ color: "var(--text-muted)" }}>Variation</div>
+                <div className="text-[10px] font-medium mb-0.5" style={{ color: "var(--text-muted)" }}>{t("change")}</div>
                 <div className={`text-sm font-bold mono flex items-center gap-1 ${periodChange >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                   {periodChange >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                   {periodChange >= 0 ? "+" : ""}{periodChange.toFixed(2)}%
@@ -853,21 +906,21 @@ export default function LBMAPage() {
           <div className="glass rounded-2xl overflow-hidden">
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
               <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                Dernières cotations — {metalLabels[metal]}
+                {t("latestQuotes")} — {metalLabels[metal]}
               </h3>
               <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                {chartData.length} entrées affichées
+                {chartData.length} {t("entriesShown")}
               </span>
             </div>
             <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0" style={{ background: "var(--bg-card)" }}>
                   <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
-                    <th className="px-4 py-3 text-left">Date</th>
+                    <th className="px-4 py-3 text-left">{t("date")}</th>
                     <th className="px-4 py-3 text-right">USD ($)</th>
                     <th className="px-4 py-3 text-right">GBP (£)</th>
                     <th className="px-4 py-3 text-right">EUR (€)</th>
-                    <th className="px-4 py-3 text-right">Variation</th>
+                    <th className="px-4 py-3 text-right">{t("variation")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -881,7 +934,7 @@ export default function LBMAPage() {
                         style={{ borderBottom: "1px solid var(--border)" }}
                       >
                         <td className="px-4 py-2.5 font-medium" style={{ color: "var(--text-primary)" }}>
-                          {formatDate(entry.d)}
+                          {formatDate(entry.d, dateFmt)}
                         </td>
                         <td className="px-4 py-2.5 text-right mono" style={{ color: "var(--text-primary)" }}>
                           {entry.v[0] != null ? `$${entry.v[0].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
@@ -914,17 +967,17 @@ export default function LBMAPage() {
           <div className="glass rounded-2xl p-6">
             <h3 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
               <Clock className="w-4 h-4 inline -mt-0.5 mr-2 text-amber-400" />
-              Horaires des Fixings LBMA
+              {t("scheduleTitle")}
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
-                    <th className="px-4 py-3 text-left">Métal</th>
-                    <th className="px-4 py-3 text-left">Session</th>
-                    <th className="px-4 py-3 text-center">Londres (GMT)</th>
-                    <th className="px-4 py-3 text-center font-bold" style={{ color: "var(--text-primary)" }}>New York (EST)</th>
-                    <th className="px-4 py-3 text-center">Paris (CET)</th>
+                    <th className="px-4 py-3 text-left">{t("metal")}</th>
+                    <th className="px-4 py-3 text-left">{t("session")}</th>
+                    <th className="px-4 py-3 text-center">{t("london")} (GMT)</th>
+                    <th className="px-4 py-3 text-center font-bold" style={{ color: "var(--text-primary)" }}>{t("newYork")} (EST)</th>
+                    <th className="px-4 py-3 text-center">{t("paris")} (CET)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -935,10 +988,10 @@ export default function LBMAPage() {
                       style={{ borderBottom: "1px solid var(--border)" }}
                     >
                       <td className="px-4 py-3 font-medium" style={{ color: row.color }}>
-                        {row.emoji} {row.metal}
+                        {row.emoji} {t(row.metalKey)}
                       </td>
                       <td className="px-4 py-3" style={{ color: "var(--text-secondary)" }}>
-                        {row.session}
+                        {t(row.sessionKey)}
                       </td>
                       <td className="px-4 py-3 text-center mono" style={{ color: "var(--text-primary)" }}>
                         {row.london}
@@ -958,5 +1011,14 @@ export default function LBMAPage() {
         </>
       ) : null}
     </div>
+  );
+}
+
+/* ─── Main Page ─── */
+export default function LBMAPage() {
+  return (
+    <LocaleProvider>
+      <LBMAContent />
+    </LocaleProvider>
   );
 }

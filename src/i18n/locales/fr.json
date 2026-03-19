@@ -1,0 +1,70 @@
+{
+  "title": "LBMA Métaux Précieux",
+  "subtitle": "Données officielles — London Bullion Market Association",
+  "updatedAt": "Mis à jour",
+  "refresh": "Rafraîchir",
+  "csv": "CSV",
+  "fixingInProgress": "Fixing en cours",
+  "nextFixing": "Prochain fixing",
+  "inWord": "dans",
+
+  "gold": "Or",
+  "silver": "Argent",
+  "platinum": "Platine",
+  "palladium": "Palladium",
+
+  "amFix": "AM Fix",
+  "pmFix": "PM Fix",
+  "fix": "Fix",
+
+  "goldAmLabel": "Or — Fixing AM",
+  "goldPmLabel": "Or — Fixing PM",
+  "silverLabel": "Argent — Fixing",
+  "platAmLabel": "Platine — Fixing AM",
+  "platPmLabel": "Platine — Fixing PM",
+  "pallAmLabel": "Palladium — Fixing AM",
+  "pallPmLabel": "Palladium — Fixing PM",
+  "ratioLabel": "Ratio Or/Argent",
+
+  "silverUndervalued": "Argent sous-évalué",
+  "goldUndervalued": "Or sous-évalué",
+  "neutralZone": "Zone neutre",
+
+  "spreadTitle": "Spread AM / PM — Analyse",
+  "spreadGold": "Or — Spread AM/PM",
+  "spreadPlatinum": "Platine — Spread AM/PM",
+  "spreadPalladium": "Palladium — Spread AM/PM",
+  "nySells": "NY vend (PM < AM)",
+  "nyBuys": "NY achète (PM > AM)",
+  "neutral": "Neutre",
+
+  "history": "Historique",
+  "high": "Plus haut",
+  "low": "Plus bas",
+  "average": "Moyenne",
+  "change": "Variation",
+  "notEnoughData": "Pas assez de données",
+
+  "latestQuotes": "Dernières cotations",
+  "entriesShown": "entrées affichées",
+  "date": "Date",
+  "variation": "Variation",
+
+  "scheduleTitle": "Horaires des Fixings LBMA",
+  "metal": "Métal",
+  "session": "Session",
+  "london": "Londres",
+  "newYork": "New York",
+  "paris": "Paris",
+
+  "apiError": "Erreur API",
+  "unknownError": "Erreur inconnue",
+
+  "londonGmt": "Londres",
+  "nyEst": "New York",
+
+  "goldPmFix": "Or (PM Fix)",
+  "silverFix": "Argent",
+  "platPmFix": "Platine (PM Fix)",
+  "pallPmFix": "Palladium (PM Fix)"
+}

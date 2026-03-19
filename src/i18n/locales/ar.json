@@ -1,0 +1,70 @@
+{
+  "title": "LBMA المعادن الثمينة",
+  "subtitle": "بيانات رسمية — جمعية سوق السبائك في لندن",
+  "updatedAt": "آخر تحديث",
+  "refresh": "تحديث",
+  "csv": "CSV",
+  "fixingInProgress": "التثبيت جارٍ",
+  "nextFixing": "التثبيت القادم",
+  "inWord": "خلال",
+
+  "gold": "ذهب",
+  "silver": "فضة",
+  "platinum": "بلاتين",
+  "palladium": "بالاديوم",
+
+  "amFix": "تثبيت صباحي",
+  "pmFix": "تثبيت مسائي",
+  "fix": "تثبيت",
+
+  "goldAmLabel": "ذهب — تثبيت صباحي",
+  "goldPmLabel": "ذهب — تثبيت مسائي",
+  "silverLabel": "فضة — تثبيت",
+  "platAmLabel": "بلاتين — تثبيت صباحي",
+  "platPmLabel": "بلاتين — تثبيت مسائي",
+  "pallAmLabel": "بالاديوم — تثبيت صباحي",
+  "pallPmLabel": "بالاديوم — تثبيت مسائي",
+  "ratioLabel": "نسبة الذهب/الفضة",
+
+  "silverUndervalued": "الفضة مقيّمة بأقل من قيمتها",
+  "goldUndervalued": "الذهب مقيّم بأقل من قيمته",
+  "neutralZone": "منطقة محايدة",
+
+  "spreadTitle": "فارق صباحي / مسائي — تحليل",
+  "spreadGold": "ذهب — فارق صباحي/مسائي",
+  "spreadPlatinum": "بلاتين — فارق صباحي/مسائي",
+  "spreadPalladium": "بالاديوم — فارق صباحي/مسائي",
+  "nySells": "نيويورك تبيع (مسائي < صباحي)",
+  "nyBuys": "نيويورك تشتري (مسائي > صباحي)",
+  "neutral": "محايد",
+
+  "history": "السجل",
+  "high": "أعلى سعر",
+  "low": "أدنى سعر",
+  "average": "المتوسط",
+  "change": "التغيّر",
+  "notEnoughData": "لا توجد بيانات كافية",
+
+  "latestQuotes": "آخر الأسعار",
+  "entriesShown": "إدخالات معروضة",
+  "date": "التاريخ",
+  "variation": "التغيّر",
+
+  "scheduleTitle": "مواعيد تثبيت LBMA",
+  "metal": "المعدن",
+  "session": "الجلسة",
+  "london": "لندن",
+  "newYork": "نيويورك",
+  "paris": "باريس",
+
+  "apiError": "خطأ في الواجهة",
+  "unknownError": "خطأ غير معروف",
+
+  "londonGmt": "لندن",
+  "nyEst": "نيويورك",
+
+  "goldPmFix": "ذهب (تثبيت مسائي)",
+  "silverFix": "فضة",
+  "platPmFix": "بلاتين (تثبيت مسائي)",
+  "pallPmFix": "بالاديوم (تثبيت مسائي)"
+}
