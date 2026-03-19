@@ -65,6 +65,18 @@ const formatDate = (date: string) =>
 function renderMarkdown(md: string): string {
   let html = md;
 
+  // Remove "CAPTURE X" headers — replace with just section title if on next line
+  html = html.replace(/^#+\s*CAPTURE\s*\d+[^\n]*\n?/gim, "");
+
+  // Remove footer "Rapport généré automatiquement..." block
+  html = html.replace(/^>\s*📝\s*Rapport généré automatiquement[^\n]*$/gm, "");
+  html = html.replace(/^>\s*Données\s*:.*$/gm, "");
+  html = html.replace(/^>\s*Prochain rapport\s*:.*$/gm, "");
+  // Also catch any variant
+  html = html.replace(/📝\s*Rapport généré automatiquement[^\n]*/g, "");
+  html = html.replace(/Données\s*:\s*QuantData[^\n]*/g, "");
+  html = html.replace(/Prochain rapport\s*:[^\n]*/g, "");
+
   html = html
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
