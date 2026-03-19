@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   RefreshCw,
   TrendingUp,
@@ -13,6 +13,7 @@ import {
   Activity,
   BarChart3,
   Minus,
+  Timer,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -25,16 +26,31 @@ interface LbmaData {
   gold_am: LbmaEntry[];
   gold_pm: LbmaEntry[];
   silver: LbmaEntry[];
+  platinum_am: LbmaEntry[];
+  platinum_pm: LbmaEntry[];
+  palladium_am: LbmaEntry[];
+  palladium_pm: LbmaEntry[];
   updated: string;
 }
 
 type Currency = "USD" | "GBP" | "EUR";
 type Period = "1M" | "3M" | "6M" | "1Y" | "5Y" | "MAX";
-type Metal = "gold" | "silver";
+type Metal = "gold" | "silver" | "platinum" | "palladium";
 
 const CURRENCY_IDX: Record<Currency, number> = { USD: 0, GBP: 1, EUR: 2 };
 const CURRENCY_SYMBOLS: Record<Currency, string> = { USD: "$", GBP: "£", EUR: "€" };
 const PERIOD_DAYS: Record<Period, number> = { "1M": 30, "3M": 90, "6M": 180, "1Y": 365, "5Y": 1825, MAX: 99999 };
+
+/* ─── Fixing Schedule Data ─── */
+const FIXING_SCHEDULE = [
+  { metal: "Or", emoji: "\u{1F947}", session: "AM Fix", london: "10:30", ny: "05:30", paris: "11:30", color: "#f59e0b", londonH: 10, londonM: 30 },
+  { metal: "Or", emoji: "\u{1F947}", session: "PM Fix", london: "15:00", ny: "10:00", paris: "16:00", color: "#f59e0b", londonH: 15, londonM: 0 },
+  { metal: "Argent", emoji: "\u{1F948}", session: "Fix", london: "12:00", ny: "07:00", paris: "13:00", color: "#94a3b8", londonH: 12, londonM: 0 },
+  { metal: "Platine", emoji: "\u26AA", session: "AM Fix", london: "09:45", ny: "04:45", paris: "10:45", color: "#06b6d4", londonH: 9, londonM: 45 },
+  { metal: "Platine", emoji: "\u26AA", session: "PM Fix", london: "14:00", ny: "09:00", paris: "15:00", color: "#06b6d4", londonH: 14, londonM: 0 },
+  { metal: "Palladium", emoji: "\u{1F49C}", session: "AM Fix", london: "09:45", ny: "04:45", paris: "10:45", color: "#a855f7", londonH: 9, londonM: 45 },
+  { metal: "Palladium", emoji: "\u{1F49C}", session: "PM Fix", london: "14:00", ny: "09:00", paris: "15:00", color: "#a855f7", londonH: 14, londonM: 0 },
+];
 
 /* ─── Helpers ─── */
 function formatPrice(val: number | null, currency: Currency): string {
@@ -49,6 +65,62 @@ function pctChange(current: number, prev: number): number {
 
 function formatDate(d: string): string {
   return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+/** Get current London (Europe/London) time components */
+function getLondonNow(): { h: number; m: number; s: number; dayOfWeek: number } {
+  const now = new Date();
+  const londonStr = now.toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false });
+  // format: DD/MM/YYYY, HH:MM:SS
+  const timePart = londonStr.split(", ")[1] || "00:00:00";
+  const [hStr, mStr, sStr] = timePart.split(":");
+  const londonDate = new Date(now.toLocaleString("en-US", { timeZone: "Europe/London" }));
+  return { h: parseInt(hStr), m: parseInt(mStr), s: parseInt(sStr) || 0, dayOfWeek: londonDate.getDay() };
+}
+
+function getNextFixing(): { label: string; london: string; ny: string; secondsLeft: number; isNow: boolean } {
+  const lon = getLondonNow();
+  const nowMinutes = lon.h * 60 + lon.m;
+  const nowSeconds = nowMinutes * 60 + lon.s;
+  const isWeekday = lon.dayOfWeek >= 1 && lon.dayOfWeek <= 5;
+
+  // Sort schedule by London time
+  const sorted = [...FIXING_SCHEDULE].sort((a, b) => (a.londonH * 60 + a.londonM) - (b.londonH * 60 + b.londonM));
+
+  // Check if any fixing is happening right now (within 5 minutes)
+  for (const f of sorted) {
+    const fMinutes = f.londonH * 60 + f.londonM;
+    if (isWeekday && nowMinutes >= fMinutes && nowMinutes < fMinutes + 5) {
+      return { label: `${f.metal} ${f.session}`, london: f.london, ny: f.ny, secondsLeft: 0, isNow: true };
+    }
+  }
+
+  // Find next upcoming fixing
+  if (isWeekday) {
+    for (const f of sorted) {
+      const fSeconds = (f.londonH * 60 + f.londonM) * 60;
+      if (fSeconds > nowSeconds) {
+        return { label: `${f.metal} ${f.session}`, london: f.london, ny: f.ny, secondsLeft: fSeconds - nowSeconds, isNow: false };
+      }
+    }
+  }
+
+  // Next is tomorrow (or Monday if weekend)
+  const first = sorted[0];
+  const firstSeconds = (first.londonH * 60 + first.londonM) * 60;
+  let daysUntil = 1;
+  if (lon.dayOfWeek === 5) daysUntil = 3; // Friday -> Monday
+  else if (lon.dayOfWeek === 6) daysUntil = 2; // Saturday -> Monday
+  else if (lon.dayOfWeek === 0) daysUntil = 1; // Sunday -> Monday
+  const secondsLeft = (daysUntil * 86400) - nowSeconds + firstSeconds;
+  return { label: `${first.metal} ${first.session}`, london: first.london, ny: first.ny, secondsLeft, isNow: false };
+}
+
+function formatCountdown(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${h}h ${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`;
 }
 
 /* ─── Mini SVG Chart ─── */
@@ -199,6 +271,87 @@ function AreaChart({
   );
 }
 
+/* ─── Spread Bar Chart (last 5 days) ─── */
+function SpreadBars({ spreads, currency }: { spreads: { date: string; spread: number }[]; currency: Currency }) {
+  if (spreads.length === 0) return null;
+  const maxAbs = Math.max(...spreads.map((s) => Math.abs(s.spread)), 1);
+  const barH = 28;
+  const totalH = spreads.length * barH;
+  const midX = 100;
+  const maxBarW = 80;
+
+  return (
+    <svg viewBox={`0 0 200 ${totalH}`} className="w-full" style={{ height: totalH }}>
+      {/* Center line */}
+      <line x1={midX} y1="0" x2={midX} y2={totalH} stroke="var(--border)" strokeWidth="1" strokeDasharray="2,2" />
+      {spreads.map((s, i) => {
+        const barW = (Math.abs(s.spread) / maxAbs) * maxBarW;
+        const x = s.spread >= 0 ? midX : midX - barW;
+        const color = s.spread >= 0 ? "#10b981" : "#ef4444";
+        const y = i * barH;
+        return (
+          <g key={i}>
+            <rect x={x} y={y + 4} width={barW} height={barH - 8} rx="3" fill={color} opacity="0.7" />
+            <text x="4" y={y + barH / 2 + 4} fill="var(--text-muted)" fontSize="9" fontFamily="monospace">
+              {new Date(s.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+            </text>
+            <text
+              x={s.spread >= 0 ? midX + barW + 4 : midX - barW - 4}
+              y={y + barH / 2 + 4}
+              fill={color}
+              fontSize="9"
+              fontFamily="monospace"
+              textAnchor={s.spread >= 0 ? "start" : "end"}
+            >
+              {s.spread >= 0 ? "+" : ""}{formatPrice(s.spread, currency)}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ─── Countdown Component ─── */
+function FixingCountdown() {
+  const [countdown, setCountdown] = useState(getNextFixing());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCountdown(getNextFixing());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="metric-card rounded-2xl p-4">
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          {countdown.isNow ? (
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+            </span>
+          ) : (
+            <Timer className="w-4 h-4 text-amber-400" />
+          )}
+          <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+            {countdown.isNow ? (
+              <>Fixing en cours : <span className="text-emerald-400 font-bold">{countdown.label}</span></>
+            ) : (
+              <>Prochain fixing : <span className="text-amber-400 font-bold">{countdown.label}</span> dans <span className="mono font-bold text-amber-400">{formatCountdown(countdown.secondsLeft)}</span></>
+            )}
+          </span>
+        </div>
+        <div className="flex items-center gap-3 text-xs" style={{ color: "var(--text-muted)" }}>
+          <span>Londres {countdown.london} GMT</span>
+          <span className="font-bold" style={{ color: "var(--text-secondary)" }}>New York {countdown.ny} EST</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Page ─── */
 export default function LBMAPage() {
   const [data, setData] = useState<LbmaData | null>(null);
@@ -229,23 +382,39 @@ export default function LBMAPage() {
 
   // Filter data by period
   const filteredData = useMemo(() => {
-    if (!data) return { gold_am: [], gold_pm: [], silver: [] };
+    if (!data) return { gold_am: [], gold_pm: [], silver: [], platinum_am: [], platinum_pm: [], palladium_am: [], palladium_pm: [] };
     const maxDays = PERIOD_DAYS[period];
     const filterByPeriod = (arr: LbmaEntry[]) => arr.slice(-maxDays);
     return {
       gold_am: filterByPeriod(data.gold_am),
       gold_pm: filterByPeriod(data.gold_pm),
       silver: filterByPeriod(data.silver),
+      platinum_am: filterByPeriod(data.platinum_am),
+      platinum_pm: filterByPeriod(data.platinum_pm),
+      palladium_am: filterByPeriod(data.palladium_am),
+      palladium_pm: filterByPeriod(data.palladium_pm),
     };
   }, [data, period]);
 
-  // Current prices
-  const currentGoldAm = data?.gold_am?.length ? data.gold_am[data.gold_am.length - 1] : null;
-  const currentGoldPm = data?.gold_pm?.length ? data.gold_pm[data.gold_pm.length - 1] : null;
-  const currentSilver = data?.silver?.length ? data.silver[data.silver.length - 1] : null;
-  const prevGoldAm = data?.gold_am?.length && data.gold_am.length >= 2 ? data.gold_am[data.gold_am.length - 2] : null;
-  const prevGoldPm = data?.gold_pm?.length && data.gold_pm.length >= 2 ? data.gold_pm[data.gold_pm.length - 2] : null;
-  const prevSilver = data?.silver?.length && data.silver.length >= 2 ? data.silver[data.silver.length - 2] : null;
+  // Current prices helpers
+  const latest = (arr: LbmaEntry[] | undefined) => arr?.length ? arr[arr.length - 1] : null;
+  const prev = (arr: LbmaEntry[] | undefined) => arr?.length && arr.length >= 2 ? arr[arr.length - 2] : null;
+
+  const currentGoldAm = latest(data?.gold_am);
+  const currentGoldPm = latest(data?.gold_pm);
+  const currentSilver = latest(data?.silver);
+  const currentPlatAm = latest(data?.platinum_am);
+  const currentPlatPm = latest(data?.platinum_pm);
+  const currentPallAm = latest(data?.palladium_am);
+  const currentPallPm = latest(data?.palladium_pm);
+
+  const prevGoldAm = prev(data?.gold_am);
+  const prevGoldPm = prev(data?.gold_pm);
+  const prevSilver = prev(data?.silver);
+  const prevPlatAm = prev(data?.platinum_am);
+  const prevPlatPm = prev(data?.platinum_pm);
+  const prevPallAm = prev(data?.palladium_am);
+  const prevPallPm = prev(data?.palladium_pm);
 
   // Gold/Silver ratio
   const gsRatio = currentGoldPm?.v[idx] && currentSilver?.v[idx]
@@ -261,11 +430,43 @@ export default function LBMAPage() {
     () => (data?.silver || []).slice(-30).map((e) => e.v[idx] ?? 0).filter((v) => v > 0),
     [data, idx]
   );
+  const platSparkline = useMemo(
+    () => (data?.platinum_pm || []).slice(-30).map((e) => e.v[idx] ?? 0).filter((v) => v > 0),
+    [data, idx]
+  );
+  const pallSparkline = useMemo(
+    () => (data?.palladium_pm || []).slice(-30).map((e) => e.v[idx] ?? 0).filter((v) => v > 0),
+    [data, idx]
+  );
+
+  // AM/PM Spread analysis
+  const spreadData = useMemo(() => {
+    if (!data) return { gold: [], platinum: [], palladium: [] };
+    const calcSpreads = (am: LbmaEntry[], pm: LbmaEntry[]) => {
+      const pmMap = new Map(pm.map((e) => [e.d, e.v[idx]]));
+      return am.slice(-5).map((e) => {
+        const amVal = e.v[idx];
+        const pmVal = pmMap.get(e.d);
+        return { date: e.d, spread: amVal != null && pmVal != null ? amVal - pmVal : 0 };
+      }).filter((s) => s.spread !== 0);
+    };
+    return {
+      gold: calcSpreads(data.gold_am, data.gold_pm),
+      platinum: calcSpreads(data.platinum_am, data.platinum_pm),
+      palladium: calcSpreads(data.palladium_am, data.palladium_pm),
+    };
+  }, [data, idx]);
 
   // Export CSV
   const handleExport = () => {
     if (!data) return;
-    const source = metal === "gold" ? data.gold_pm : data.silver;
+    const sourceMap: Record<Metal, LbmaEntry[]> = {
+      gold: data.gold_pm,
+      silver: data.silver,
+      platinum: data.platinum_pm,
+      palladium: data.palladium_pm,
+    };
+    const source = sourceMap[metal];
     const rows = source.slice(-365).map((e) => `${e.d},${e.v[0] ?? ""},${e.v[1] ?? ""},${e.v[2] ?? ""}`);
     const csv = `\uFEFFDate,USD,GBP,EUR\n${rows.join("\n")}`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -275,13 +476,78 @@ export default function LBMAPage() {
     a.click();
   };
 
+  // Chart data for selected metal
+  const chartDataMap: Record<Metal, LbmaEntry[]> = {
+    gold: filteredData.gold_pm,
+    silver: filteredData.silver,
+    platinum: filteredData.platinum_pm,
+    palladium: filteredData.palladium_pm,
+  };
+  const chartData = chartDataMap[metal];
+
   // Stats
-  const chartData = metal === "gold" ? filteredData.gold_pm : filteredData.silver;
   const allPrices = chartData.map((e) => e.v[idx] ?? 0).filter((v) => v > 0);
   const periodHigh = allPrices.length ? Math.max(...allPrices) : 0;
   const periodLow = allPrices.length ? Math.min(...allPrices) : 0;
   const periodAvg = allPrices.length ? allPrices.reduce((a, b) => a + b, 0) / allPrices.length : 0;
   const periodChange = allPrices.length >= 2 ? pctChange(allPrices[allPrices.length - 1], allPrices[0]) : 0;
+
+  const metalLabels: Record<Metal, string> = { gold: "Or (PM Fix)", silver: "Argent", platinum: "Platine (PM Fix)", palladium: "Palladium (PM Fix)" };
+
+  // Price card helper
+  function PriceCard({
+    label,
+    timeLabel,
+    timeBadgeColor,
+    current,
+    previous,
+    sparkline,
+    sparkColor,
+  }: {
+    label: string;
+    timeLabel: string;
+    timeBadgeColor: string;
+    current: LbmaEntry | null;
+    previous: LbmaEntry | null;
+    sparkline: number[];
+    sparkColor: string;
+  }) {
+    const curVal = current?.v[idx] ?? null;
+    const prevVal = previous?.v[idx] ?? null;
+    const change = curVal != null && prevVal != null ? pctChange(curVal, prevVal) : null;
+    return (
+      <div className="metric-card rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{label}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: `${timeBadgeColor}20`, color: timeBadgeColor }}>
+            {timeLabel}
+          </span>
+        </div>
+        <div className="text-2xl font-bold mono" style={{ color: "var(--text-primary)" }}>
+          {formatPrice(curVal, currency)}
+        </div>
+        {change != null && (
+          <div className={`flex items-center gap-1 text-xs mt-1 ${change >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+            {change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            {change.toFixed(2)}%
+          </div>
+        )}
+        <div className="mt-2">
+          <SparkLine data={sparkline} color={sparkColor} height={40} />
+        </div>
+        <div className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
+          {current?.d ? formatDate(current.d) : ""}
+        </div>
+      </div>
+    );
+  }
+
+  // Spread interpretation
+  function spreadInterpretation(spread: number): { text: string; color: string } {
+    if (spread > 0) return { text: "NY vend (PM < AM)", color: "#ef4444" };
+    if (spread < 0) return { text: "NY ach\u00e8te (PM > AM)", color: "#10b981" };
+    return { text: "Neutre", color: "var(--text-muted)" };
+  }
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -292,13 +558,13 @@ export default function LBMAPage() {
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
               <DollarSign className="w-5 h-5 text-amber-400" />
             </div>
-            LBMA Métaux Précieux
+            LBMA M\u00e9taux Pr\u00e9cieux
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            Données officielles — London Bullion Market Association
+            Donn\u00e9es officielles — London Bullion Market Association
             {data?.updated && (
               <span className="ml-2 opacity-60">
-                <Clock className="w-3 h-3 inline -mt-0.5" /> Mis à jour : {new Date(data.updated).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                <Clock className="w-3 h-3 inline -mt-0.5" /> Mis \u00e0 jour : {new Date(data.updated).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </p>
@@ -321,7 +587,7 @@ export default function LBMAPage() {
             <Download className="w-3.5 h-3.5" /> CSV
           </button>
           <button onClick={fetchData} disabled={loading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass text-sm hover:bg-[var(--bg-hover)] transition" style={{ color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Rafraîchir
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Rafra\u00eechir
           </button>
         </div>
       </div>
@@ -332,11 +598,14 @@ export default function LBMAPage() {
         </div>
       )}
 
+      {/* Countdown to next fixing */}
+      <FixingCountdown />
+
       {/* Skeleton Loader */}
       {loading ? (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div key={i} className="metric-card rounded-2xl p-5 animate-pulse">
                 <div className="h-4 rounded w-20 mb-3" style={{ background: "var(--bg-hover)" }} />
                 <div className="h-8 rounded w-28 mb-2" style={{ background: "var(--bg-hover)" }} />
@@ -350,77 +619,35 @@ export default function LBMAPage() {
         </div>
       ) : data ? (
         <>
-          {/* Price Cards */}
+          {/* Price Cards — Row 1: Gold AM, Gold PM, Silver, Ratio */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Gold AM */}
-            <div className="metric-card rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Or — Fixing AM</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">10:30 LON</span>
-              </div>
-              <div className="text-2xl font-bold mono" style={{ color: "var(--text-primary)" }}>
-                {formatPrice(currentGoldAm?.v[idx] ?? null, currency)}
-              </div>
-              {prevGoldAm && currentGoldAm && (
-                <div className={`flex items-center gap-1 text-xs mt-1 ${pctChange(currentGoldAm.v[idx]!, prevGoldAm.v[idx]!) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  {pctChange(currentGoldAm.v[idx]!, prevGoldAm.v[idx]!) >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                  {pctChange(currentGoldAm.v[idx]!, prevGoldAm.v[idx]!).toFixed(2)}%
-                </div>
-              )}
-              <div className="mt-2">
-                <SparkLine data={goldSparkline} color="#f59e0b" height={40} />
-              </div>
-              <div className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-                {currentGoldAm?.d ? formatDate(currentGoldAm.d) : ""}
-              </div>
-            </div>
-
-            {/* Gold PM */}
-            <div className="metric-card rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Or — Fixing PM</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">15:00 LON</span>
-              </div>
-              <div className="text-2xl font-bold mono" style={{ color: "var(--text-primary)" }}>
-                {formatPrice(currentGoldPm?.v[idx] ?? null, currency)}
-              </div>
-              {prevGoldPm && currentGoldPm && (
-                <div className={`flex items-center gap-1 text-xs mt-1 ${pctChange(currentGoldPm.v[idx]!, prevGoldPm.v[idx]!) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  {pctChange(currentGoldPm.v[idx]!, prevGoldPm.v[idx]!) >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                  {pctChange(currentGoldPm.v[idx]!, prevGoldPm.v[idx]!).toFixed(2)}%
-                </div>
-              )}
-              <div className="mt-2">
-                <SparkLine data={goldSparkline} color="#f59e0b" height={40} />
-              </div>
-              <div className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-                {currentGoldPm?.d ? formatDate(currentGoldPm.d) : ""}
-              </div>
-            </div>
-
-            {/* Silver */}
-            <div className="metric-card rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Argent — Fixing</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-400/15 text-slate-400 font-medium">12:00 LON</span>
-              </div>
-              <div className="text-2xl font-bold mono" style={{ color: "var(--text-primary)" }}>
-                {formatPrice(currentSilver?.v[idx] ?? null, currency)}
-              </div>
-              {prevSilver && currentSilver && (
-                <div className={`flex items-center gap-1 text-xs mt-1 ${pctChange(currentSilver.v[idx]!, prevSilver.v[idx]!) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  {pctChange(currentSilver.v[idx]!, prevSilver.v[idx]!) >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                  {pctChange(currentSilver.v[idx]!, prevSilver.v[idx]!).toFixed(2)}%
-                </div>
-              )}
-              <div className="mt-2">
-                <SparkLine data={silverSparkline} color="#94a3b8" height={40} />
-              </div>
-              <div className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-                {currentSilver?.d ? formatDate(currentSilver.d) : ""}
-              </div>
-            </div>
-
+            <PriceCard
+              label="Or — Fixing AM"
+              timeLabel="10:30 LON"
+              timeBadgeColor="#f59e0b"
+              current={currentGoldAm}
+              previous={prevGoldAm}
+              sparkline={goldSparkline}
+              sparkColor="#f59e0b"
+            />
+            <PriceCard
+              label="Or — Fixing PM"
+              timeLabel="15:00 LON"
+              timeBadgeColor="#f59e0b"
+              current={currentGoldPm}
+              previous={prevGoldPm}
+              sparkline={goldSparkline}
+              sparkColor="#f59e0b"
+            />
+            <PriceCard
+              label="Argent — Fixing"
+              timeLabel="12:00 LON"
+              timeBadgeColor="#94a3b8"
+              current={currentSilver}
+              previous={prevSilver}
+              sparkline={silverSparkline}
+              sparkColor="#94a3b8"
+            />
             {/* Gold/Silver Ratio */}
             <div className="metric-card rounded-2xl p-5">
               <div className="flex items-center justify-between mb-2">
@@ -431,7 +658,7 @@ export default function LBMAPage() {
                 {gsRatio}
               </div>
               <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                {Number(gsRatio) > 80 ? "Argent sous-évalué" : Number(gsRatio) < 60 ? "Or sous-évalué" : "Zone neutre"}
+                {Number(gsRatio) > 80 ? "Argent sous-\u00e9valu\u00e9" : Number(gsRatio) < 60 ? "Or sous-\u00e9valu\u00e9" : "Zone neutre"}
               </div>
               <div className="mt-3 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-hover)" }}>
                 <div
@@ -450,28 +677,136 @@ export default function LBMAPage() {
             </div>
           </div>
 
+          {/* Price Cards — Row 2: Platinum AM, Platinum PM, Palladium AM, Palladium PM */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <PriceCard
+              label="Platine — Fixing AM"
+              timeLabel="09:45 LON"
+              timeBadgeColor="#06b6d4"
+              current={currentPlatAm}
+              previous={prevPlatAm}
+              sparkline={platSparkline}
+              sparkColor="#06b6d4"
+            />
+            <PriceCard
+              label="Platine — Fixing PM"
+              timeLabel="14:00 LON"
+              timeBadgeColor="#06b6d4"
+              current={currentPlatPm}
+              previous={prevPlatPm}
+              sparkline={platSparkline}
+              sparkColor="#06b6d4"
+            />
+            <PriceCard
+              label="Palladium — Fixing AM"
+              timeLabel="09:45 LON"
+              timeBadgeColor="#a855f7"
+              current={currentPallAm}
+              previous={prevPallAm}
+              sparkline={pallSparkline}
+              sparkColor="#a855f7"
+            />
+            <PriceCard
+              label="Palladium — Fixing PM"
+              timeLabel="14:00 LON"
+              timeBadgeColor="#a855f7"
+              current={currentPallPm}
+              previous={prevPallPm}
+              sparkline={pallSparkline}
+              sparkColor="#a855f7"
+            />
+          </div>
+
+          {/* AM/PM Spread Analysis */}
+          <div className="glass rounded-2xl p-6">
+            <h3 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
+              <Activity className="w-4 h-4 inline -mt-0.5 mr-2 text-cyan-400" />
+              Spread AM / PM — Analyse
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Gold Spread */}
+              {(() => {
+                const lastGoldSpread = spreadData.gold.length ? spreadData.gold[spreadData.gold.length - 1].spread : 0;
+                const interp = spreadInterpretation(lastGoldSpread);
+                return (
+                  <div className="metric-card rounded-xl p-4">
+                    <div className="text-xs font-medium mb-2" style={{ color: "#f59e0b" }}>Or — Spread AM/PM</div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>
+                        {lastGoldSpread >= 0 ? "+" : ""}{formatPrice(lastGoldSpread, currency)}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ color: interp.color, background: `${interp.color}15` }}>
+                        {interp.text}
+                      </span>
+                    </div>
+                    <SpreadBars spreads={spreadData.gold} currency={currency} />
+                  </div>
+                );
+              })()}
+              {/* Platinum Spread */}
+              {(() => {
+                const lastPlatSpread = spreadData.platinum.length ? spreadData.platinum[spreadData.platinum.length - 1].spread : 0;
+                const interp = spreadInterpretation(lastPlatSpread);
+                return (
+                  <div className="metric-card rounded-xl p-4">
+                    <div className="text-xs font-medium mb-2" style={{ color: "#06b6d4" }}>Platine — Spread AM/PM</div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>
+                        {lastPlatSpread >= 0 ? "+" : ""}{formatPrice(lastPlatSpread, currency)}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ color: interp.color, background: `${interp.color}15` }}>
+                        {interp.text}
+                      </span>
+                    </div>
+                    <SpreadBars spreads={spreadData.platinum} currency={currency} />
+                  </div>
+                );
+              })()}
+              {/* Palladium Spread */}
+              {(() => {
+                const lastPallSpread = spreadData.palladium.length ? spreadData.palladium[spreadData.palladium.length - 1].spread : 0;
+                const interp = spreadInterpretation(lastPallSpread);
+                return (
+                  <div className="metric-card rounded-xl p-4">
+                    <div className="text-xs font-medium mb-2" style={{ color: "#a855f7" }}>Palladium — Spread AM/PM</div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>
+                        {lastPallSpread >= 0 ? "+" : ""}{formatPrice(lastPallSpread, currency)}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ color: interp.color, background: `${interp.color}15` }}>
+                        {interp.text}
+                      </span>
+                    </div>
+                    <SpreadBars spreads={spreadData.palladium} currency={currency} />
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
           {/* Chart Section */}
           <div className="glass rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
               <div className="flex items-center gap-3">
                 <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-                  <button
-                    onClick={() => setMetal("gold")}
-                    className={`px-4 py-2 text-sm font-medium transition ${metal === "gold" ? "bg-amber-500/20 text-amber-400" : ""}`}
-                    style={metal !== "gold" ? { color: "var(--text-secondary)" } : {}}
-                  >
-                    🥇 Or
-                  </button>
-                  <button
-                    onClick={() => setMetal("silver")}
-                    className={`px-4 py-2 text-sm font-medium transition ${metal === "silver" ? "bg-slate-400/20 text-slate-300" : ""}`}
-                    style={metal !== "silver" ? { color: "var(--text-secondary)" } : {}}
-                  >
-                    🥈 Argent
-                  </button>
+                  {([
+                    { key: "gold" as Metal, label: "Or", activeColor: "bg-amber-500/20 text-amber-400" },
+                    { key: "silver" as Metal, label: "Argent", activeColor: "bg-slate-400/20 text-slate-300" },
+                    { key: "platinum" as Metal, label: "Platine", activeColor: "bg-cyan-500/20 text-cyan-400" },
+                    { key: "palladium" as Metal, label: "Palladium", activeColor: "bg-purple-500/20 text-purple-400" },
+                  ]).map((m) => (
+                    <button
+                      key={m.key}
+                      onClick={() => setMetal(m.key)}
+                      className={`px-4 py-2 text-sm font-medium transition ${metal === m.key ? m.activeColor : ""}`}
+                      style={metal !== m.key ? { color: "var(--text-secondary)" } : {}}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
                 </div>
                 <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Historique {metal === "gold" ? "Or (PM Fix)" : "Argent"} — {currency}
+                  Historique {metalLabels[metal]} — {currency}
                 </h3>
               </div>
               <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
@@ -518,10 +853,10 @@ export default function LBMAPage() {
           <div className="glass rounded-2xl overflow-hidden">
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
               <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                Dernières cotations — {metal === "gold" ? "Or" : "Argent"}
+                Derni\u00e8res cotations — {metalLabels[metal]}
               </h3>
               <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                {chartData.length} entrées affichées
+                {chartData.length} entr\u00e9es affich\u00e9es
               </span>
             </div>
             <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
@@ -530,8 +865,8 @@ export default function LBMAPage() {
                   <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
                     <th className="px-4 py-3 text-left">Date</th>
                     <th className="px-4 py-3 text-right">USD ($)</th>
-                    <th className="px-4 py-3 text-right">GBP (£)</th>
-                    <th className="px-4 py-3 text-right">EUR (€)</th>
+                    <th className="px-4 py-3 text-right">GBP (\u00a3)</th>
+                    <th className="px-4 py-3 text-right">EUR (\u20ac)</th>
                     <th className="px-4 py-3 text-right">Variation</th>
                   </tr>
                 </thead>
@@ -549,13 +884,13 @@ export default function LBMAPage() {
                           {formatDate(entry.d)}
                         </td>
                         <td className="px-4 py-2.5 text-right mono" style={{ color: "var(--text-primary)" }}>
-                          {entry.v[0] != null ? `$${entry.v[0].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
+                          {entry.v[0] != null ? `$${entry.v[0].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "\u2014"}
                         </td>
                         <td className="px-4 py-2.5 text-right mono" style={{ color: "var(--text-secondary)" }}>
-                          {entry.v[1] != null ? `£${entry.v[1].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
+                          {entry.v[1] != null ? `\u00a3${entry.v[1].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "\u2014"}
                         </td>
                         <td className="px-4 py-2.5 text-right mono" style={{ color: "var(--text-secondary)" }}>
-                          {entry.v[2] != null ? `€${entry.v[2].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
+                          {entry.v[2] != null ? `\u20ac${entry.v[2].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "\u2014"}
                         </td>
                         <td className="px-4 py-2.5 text-right">
                           {change !== 0 ? (
@@ -575,34 +910,49 @@ export default function LBMAPage() {
             </div>
           </div>
 
-          {/* Fixing Schedule Info */}
+          {/* Fixing Schedule Table */}
           <div className="glass rounded-2xl p-6">
             <h3 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
               <Clock className="w-4 h-4 inline -mt-0.5 mr-2 text-amber-400" />
               Horaires des Fixings LBMA
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="metric-card rounded-xl p-4">
-                <div className="text-xs font-medium text-amber-400 mb-1">🥇 Or — AM Fix</div>
-                <div className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>10:30</div>
-                <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                  Londres (UTC+0/+1) → 5:30 AM New York
-                </div>
-              </div>
-              <div className="metric-card rounded-xl p-4">
-                <div className="text-xs font-medium text-amber-400 mb-1">🥇 Or — PM Fix</div>
-                <div className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>15:00</div>
-                <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                  Londres (UTC+0/+1) → 10:00 AM New York
-                </div>
-              </div>
-              <div className="metric-card rounded-xl p-4">
-                <div className="text-xs font-medium text-slate-400 mb-1">🥈 Argent — Fix</div>
-                <div className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>12:00</div>
-                <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                  Londres (UTC+0/+1) → 7:00 AM New York
-                </div>
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
+                    <th className="px-4 py-3 text-left">M\u00e9tal</th>
+                    <th className="px-4 py-3 text-left">Session</th>
+                    <th className="px-4 py-3 text-center">Londres (GMT)</th>
+                    <th className="px-4 py-3 text-center font-bold" style={{ color: "var(--text-primary)" }}>New York (EST)</th>
+                    <th className="px-4 py-3 text-center">Paris (CET)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {FIXING_SCHEDULE.map((row, i) => (
+                    <tr
+                      key={i}
+                      className="hover:bg-[var(--bg-hover)] transition"
+                      style={{ borderBottom: "1px solid var(--border)" }}
+                    >
+                      <td className="px-4 py-3 font-medium" style={{ color: row.color }}>
+                        {row.emoji} {row.metal}
+                      </td>
+                      <td className="px-4 py-3" style={{ color: "var(--text-secondary)" }}>
+                        {row.session}
+                      </td>
+                      <td className="px-4 py-3 text-center mono" style={{ color: "var(--text-primary)" }}>
+                        {row.london}
+                      </td>
+                      <td className="px-4 py-3 text-center mono font-bold" style={{ color: "var(--text-primary)" }}>
+                        {row.ny}
+                      </td>
+                      <td className="px-4 py-3 text-center mono" style={{ color: "var(--text-secondary)" }}>
+                        {row.paris}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </>
