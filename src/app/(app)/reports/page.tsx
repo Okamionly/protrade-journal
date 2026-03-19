@@ -256,7 +256,7 @@ export default function ReportsPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Rapports & Export</h1>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>Generez des rapports professionnels</p>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>Générez des rapports professionnels</p>
             </div>
           </div>
 
@@ -295,7 +295,7 @@ export default function ReportsPage() {
             <div className="flex items-end">
               <button onClick={handleGenerate} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                Generer le rapport
+                Générer le rapport
               </button>
             </div>
           </div>
@@ -348,7 +348,7 @@ export default function ReportsPage() {
                     {formatDateShort(rangeStart)} &mdash; {formatDateShort(rangeEnd)}
                   </p>
                   <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                    Genere le {new Date().toLocaleDateString("fr-FR")}
+                    Généré le {new Date().toLocaleDateString("fr-FR")}
                   </p>
                 </div>
               </div>

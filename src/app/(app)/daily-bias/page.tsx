@@ -309,7 +309,7 @@ export default function DailyBiasPage() {
             <Crosshair className="w-6 h-6 text-cyan-400" />
             Daily Bias
           </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>Plan de trading et analyse pre-marche</p>
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>Plan de trading et analyse pré-marché</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => changeDate(-1)} className="p-2 rounded-lg transition" style={{ color: "var(--text-muted)" }}>
@@ -395,7 +395,7 @@ export default function DailyBiasPage() {
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
                     <BarChart3 className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>Qualite d&apos;execution</span>
+                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>Qualité d&apos;exécution</span>
                   </div>
                   <span className={`text-xs font-bold mono ${executionQuality === 100 ? "text-emerald-400" : executionQuality >= 70 ? "text-amber-400" : "text-rose-400"}`}>
                     {executionQuality}%
@@ -433,7 +433,7 @@ export default function DailyBiasPage() {
           </div>
 
           <div className="metric-card rounded-2xl p-6">
-            <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Paires a surveiller</h3>
+            <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Paires à surveiller</h3>
             <input value={plan.pairs} onChange={(e) => setPlan({ ...plan, pairs: e.target.value })} placeholder="EUR/USD, GBP/USD, XAU/USD..."
               className="input-field" />
           </div>
@@ -445,7 +445,7 @@ export default function DailyBiasPage() {
           </div>
 
           <div className="metric-card rounded-2xl p-6">
-            <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Notes pre-marche</h3>
+            <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Notes pré-marché</h3>
             <textarea value={plan.notes} onChange={(e) => setPlan({ ...plan, notes: e.target.value })} placeholder="Contexte macro, catalyseurs, plan d'action..." rows={4}
               className="input-field resize-none" />
           </div>
@@ -478,7 +478,7 @@ export default function DailyBiasPage() {
           </div>
 
           <div className="metric-card rounded-2xl p-6">
-            <h3 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Note de la journee</h3>
+            <h3 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Note de la journée</h3>
             <div className="flex gap-2">
               {GRADE_OPTIONS.map((g) => (
                 <button key={g} onClick={() => setPlan({ ...plan, grade: g })}

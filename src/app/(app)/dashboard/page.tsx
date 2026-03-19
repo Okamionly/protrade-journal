@@ -580,7 +580,7 @@ export default function DashboardPage() {
           <div className="glass rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <PieChart className="w-5 h-5 text-purple-400" />
-              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Repartition par Actif</h3>
+              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Répartition par Actif</h3>
             </div>
             <div className="space-y-3">
               {assetEntries.map(([asset, data]) => {

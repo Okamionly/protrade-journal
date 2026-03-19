@@ -969,7 +969,7 @@ export default function AICoachPage() {
         <div className="metric-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Crosshair className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Qualite de Gestion des Trades</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Qualité de Gestion des Trades</h2>
           </div>
           {analysis.managedTradesCount > 0 ? (
             <div className="space-y-4">
