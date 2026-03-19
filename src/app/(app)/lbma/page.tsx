@@ -46,8 +46,8 @@ const FIXING_SCHEDULE = [
   { metal: "Or", emoji: "\u{1F947}", session: "AM Fix", london: "10:30", ny: "05:30", paris: "11:30", color: "#f59e0b", londonH: 10, londonM: 30 },
   { metal: "Or", emoji: "\u{1F947}", session: "PM Fix", london: "15:00", ny: "10:00", paris: "16:00", color: "#f59e0b", londonH: 15, londonM: 0 },
   { metal: "Argent", emoji: "\u{1F948}", session: "Fix", london: "12:00", ny: "07:00", paris: "13:00", color: "#94a3b8", londonH: 12, londonM: 0 },
-  { metal: "Platine", emoji: "\u26AA", session: "AM Fix", london: "09:45", ny: "04:45", paris: "10:45", color: "#06b6d4", londonH: 9, londonM: 45 },
-  { metal: "Platine", emoji: "\u26AA", session: "PM Fix", london: "14:00", ny: "09:00", paris: "15:00", color: "#06b6d4", londonH: 14, londonM: 0 },
+  { metal: "Platine", emoji: "⚪", session: "AM Fix", london: "09:45", ny: "04:45", paris: "10:45", color: "#06b6d4", londonH: 9, londonM: 45 },
+  { metal: "Platine", emoji: "⚪", session: "PM Fix", london: "14:00", ny: "09:00", paris: "15:00", color: "#06b6d4", londonH: 14, londonM: 0 },
   { metal: "Palladium", emoji: "\u{1F49C}", session: "AM Fix", london: "09:45", ny: "04:45", paris: "10:45", color: "#a855f7", londonH: 9, londonM: 45 },
   { metal: "Palladium", emoji: "\u{1F49C}", session: "PM Fix", london: "14:00", ny: "09:00", paris: "15:00", color: "#a855f7", londonH: 14, londonM: 0 },
 ];
@@ -545,7 +545,7 @@ export default function LBMAPage() {
   // Spread interpretation
   function spreadInterpretation(spread: number): { text: string; color: string } {
     if (spread > 0) return { text: "NY vend (PM < AM)", color: "#ef4444" };
-    if (spread < 0) return { text: "NY ach\u00e8te (PM > AM)", color: "#10b981" };
+    if (spread < 0) return { text: "NY achète (PM > AM)", color: "#10b981" };
     return { text: "Neutre", color: "var(--text-muted)" };
   }
 
@@ -558,13 +558,13 @@ export default function LBMAPage() {
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
               <DollarSign className="w-5 h-5 text-amber-400" />
             </div>
-            LBMA M\u00e9taux Pr\u00e9cieux
+            LBMA Métaux Précieux
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            Donn\u00e9es officielles — London Bullion Market Association
+            Données officielles — London Bullion Market Association
             {data?.updated && (
               <span className="ml-2 opacity-60">
-                <Clock className="w-3 h-3 inline -mt-0.5" /> Mis \u00e0 jour : {new Date(data.updated).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                <Clock className="w-3 h-3 inline -mt-0.5" /> Mis à jour : {new Date(data.updated).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </p>
@@ -587,7 +587,7 @@ export default function LBMAPage() {
             <Download className="w-3.5 h-3.5" /> CSV
           </button>
           <button onClick={fetchData} disabled={loading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass text-sm hover:bg-[var(--bg-hover)] transition" style={{ color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Rafra\u00eechir
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Rafraîchir
           </button>
         </div>
       </div>
@@ -658,7 +658,7 @@ export default function LBMAPage() {
                 {gsRatio}
               </div>
               <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                {Number(gsRatio) > 80 ? "Argent sous-\u00e9valu\u00e9" : Number(gsRatio) < 60 ? "Or sous-\u00e9valu\u00e9" : "Zone neutre"}
+                {Number(gsRatio) > 80 ? "Argent sous-évalué" : Number(gsRatio) < 60 ? "Or sous-évalué" : "Zone neutre"}
               </div>
               <div className="mt-3 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-hover)" }}>
                 <div
@@ -853,10 +853,10 @@ export default function LBMAPage() {
           <div className="glass rounded-2xl overflow-hidden">
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
               <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                Derni\u00e8res cotations — {metalLabels[metal]}
+                Dernières cotations — {metalLabels[metal]}
               </h3>
               <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                {chartData.length} entr\u00e9es affich\u00e9es
+                {chartData.length} entrées affichées
               </span>
             </div>
             <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
@@ -865,8 +865,8 @@ export default function LBMAPage() {
                   <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
                     <th className="px-4 py-3 text-left">Date</th>
                     <th className="px-4 py-3 text-right">USD ($)</th>
-                    <th className="px-4 py-3 text-right">GBP (\u00a3)</th>
-                    <th className="px-4 py-3 text-right">EUR (\u20ac)</th>
+                    <th className="px-4 py-3 text-right">GBP (£)</th>
+                    <th className="px-4 py-3 text-right">EUR (€)</th>
                     <th className="px-4 py-3 text-right">Variation</th>
                   </tr>
                 </thead>
@@ -884,13 +884,13 @@ export default function LBMAPage() {
                           {formatDate(entry.d)}
                         </td>
                         <td className="px-4 py-2.5 text-right mono" style={{ color: "var(--text-primary)" }}>
-                          {entry.v[0] != null ? `$${entry.v[0].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "\u2014"}
+                          {entry.v[0] != null ? `$${entry.v[0].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
                         </td>
                         <td className="px-4 py-2.5 text-right mono" style={{ color: "var(--text-secondary)" }}>
-                          {entry.v[1] != null ? `\u00a3${entry.v[1].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "\u2014"}
+                          {entry.v[1] != null ? `£${entry.v[1].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
                         </td>
                         <td className="px-4 py-2.5 text-right mono" style={{ color: "var(--text-secondary)" }}>
-                          {entry.v[2] != null ? `\u20ac${entry.v[2].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "\u2014"}
+                          {entry.v[2] != null ? `€${entry.v[2].toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
                         </td>
                         <td className="px-4 py-2.5 text-right">
                           {change !== 0 ? (
@@ -920,7 +920,7 @@ export default function LBMAPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
-                    <th className="px-4 py-3 text-left">M\u00e9tal</th>
+                    <th className="px-4 py-3 text-left">Métal</th>
                     <th className="px-4 py-3 text-left">Session</th>
                     <th className="px-4 py-3 text-center">Londres (GMT)</th>
                     <th className="px-4 py-3 text-center font-bold" style={{ color: "var(--text-primary)" }}>New York (EST)</th>
