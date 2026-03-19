@@ -44,11 +44,11 @@ const formatDate = (date: string) =>
 const features = [
   {
     icon: Code,
-    text: "1 \u00e0 2 indicateurs exclusifs par mois (Pine Script, copier-coller)",
+    text: "1 à 2 indicateurs exclusifs par mois (Pine Script, copier-coller)",
   },
   {
     icon: BarChart3,
-    text: "Analyses macro compl\u00e8tes (FOMC, DXY, US10Y, G\u00e9opolitique)",
+    text: "Analyses macro complètes (FOMC, DXY, US10Y, Géopolitique)",
   },
   {
     icon: TrendingUp,
@@ -56,15 +56,15 @@ const features = [
   },
   {
     icon: Calendar,
-    text: "Calendrier \u00e9conomique d\u00e9taill\u00e9 avec impact",
+    text: "Calendrier économique détaillé avec impact",
   },
   {
     icon: FileText,
-    text: "Tableaux de niveaux GPS (supports/r\u00e9sistances)",
+    text: "Tableaux de niveaux GPS (supports/résistances)",
   },
   {
     icon: Zap,
-    text: "Sc\u00e9narios de trading avec probabilit\u00e9s",
+    text: "Scénarios de trading avec probabilités",
   },
 ];
 

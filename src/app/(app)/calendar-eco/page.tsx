@@ -56,7 +56,7 @@ const COUNTRY_FLAGS: Record<string, string> = {
 };
 
 const IMPACT_CONFIG = {
-  high:   { label: "\u00c9lev\u00e9",  dot: "\u{1F534}", color: "text-rose-400",   bg: "bg-rose-500/10",  border: "border-rose-500/30",  dotClass: "bg-rose-500"   },
+  high:   { label: "Élevé",  dot: "\u{1F534}", color: "text-rose-400",   bg: "bg-rose-500/10",  border: "border-rose-500/30",  dotClass: "bg-rose-500"   },
   medium: { label: "Moyen",  dot: "\u{1F7E1}", color: "text-amber-400",  bg: "bg-amber-500/10", border: "border-amber-500/30", dotClass: "bg-amber-500"  },
   low:    { label: "Faible", dot: "\u{1F7E2}", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", dotClass: "bg-emerald-500" },
 };
@@ -76,21 +76,21 @@ function generateStaticFallback(): EcoEvent[] {
   }
 
   return [
-    { date: dateStr(0), time: "09:00", country: "EU", currency: "EUR", event: "R\u00e9union Eurogroupe", impact: "medium" },
+    { date: dateStr(0), time: "09:00", country: "EU", currency: "EUR", event: "Réunion Eurogroupe", impact: "medium" },
     { date: dateStr(0), time: "14:30", country: "US", currency: "USD", event: "Indice Empire State Manufacturing", impact: "medium", previous: "-5.7", forecast: "-2.0" },
     { date: dateStr(0), time: "03:00", country: "CN", currency: "CNY", event: "Production Industrielle (YoY)", impact: "medium", previous: "6.2%", forecast: "5.8%" },
-    { date: dateStr(1), time: "10:00", country: "DE", currency: "EUR", event: "Indice ZEW - Sentiment \u00c9conomique", impact: "medium", previous: "10.3", forecast: "12.5" },
-    { date: dateStr(1), time: "14:30", country: "US", currency: "USD", event: "Ventes au D\u00e9tail (MoM)", impact: "high", previous: "-0.9%", forecast: "0.6%" },
+    { date: dateStr(1), time: "10:00", country: "DE", currency: "EUR", event: "Indice ZEW - Sentiment Économique", impact: "medium", previous: "10.3", forecast: "12.5" },
+    { date: dateStr(1), time: "14:30", country: "US", currency: "USD", event: "Ventes au Détail (MoM)", impact: "high", previous: "-0.9%", forecast: "0.6%" },
     { date: dateStr(1), time: "15:15", country: "US", currency: "USD", event: "Production Industrielle (MoM)", impact: "medium", previous: "0.5%", forecast: "0.3%" },
     { date: dateStr(2), time: "10:30", country: "GB", currency: "GBP", event: "IPC (YoY)", impact: "high", previous: "3.0%", forecast: "2.9%" },
     { date: dateStr(2), time: "14:30", country: "US", currency: "USD", event: "Permis de Construire", impact: "medium", previous: "1.473M", forecast: "1.450M" },
     { date: dateStr(2), time: "14:30", country: "CA", currency: "CAD", event: "IPC (YoY)", impact: "high", previous: "1.9%", forecast: "2.1%" },
-    { date: dateStr(3), time: "13:30", country: "CH", currency: "CHF", event: "D\u00e9cision Taux BNS", impact: "high", previous: "0.50%", forecast: "0.25%" },
-    { date: dateStr(3), time: "14:30", country: "US", currency: "USD", event: "Inscriptions Hebdo. au Ch\u00f4mage", impact: "medium", previous: "220K", forecast: "215K" },
-    { date: dateStr(3), time: "20:00", country: "US", currency: "USD", event: "D\u00e9cision Taux Fed (FOMC)", impact: "high", previous: "4.50%", forecast: "4.50%" },
-    { date: dateStr(3), time: "20:30", country: "US", currency: "USD", event: "Conf\u00e9rence de Presse FOMC - Powell", impact: "high" },
-    { date: dateStr(4), time: "01:00", country: "JP", currency: "JPY", event: "D\u00e9cision Taux BOJ", impact: "high", previous: "0.50%", forecast: "0.50%" },
-    { date: dateStr(4), time: "13:00", country: "GB", currency: "GBP", event: "D\u00e9cision Taux BOE", impact: "high", previous: "4.50%", forecast: "4.50%" },
+    { date: dateStr(3), time: "13:30", country: "CH", currency: "CHF", event: "Décision Taux BNS", impact: "high", previous: "0.50%", forecast: "0.25%" },
+    { date: dateStr(3), time: "14:30", country: "US", currency: "USD", event: "Inscriptions Hebdo. au Chômage", impact: "medium", previous: "220K", forecast: "215K" },
+    { date: dateStr(3), time: "20:00", country: "US", currency: "USD", event: "Décision Taux Fed (FOMC)", impact: "high", previous: "4.50%", forecast: "4.50%" },
+    { date: dateStr(3), time: "20:30", country: "US", currency: "USD", event: "Conférence de Presse FOMC - Powell", impact: "high" },
+    { date: dateStr(4), time: "01:00", country: "JP", currency: "JPY", event: "Décision Taux BOJ", impact: "high", previous: "0.50%", forecast: "0.50%" },
+    { date: dateStr(4), time: "13:00", country: "GB", currency: "GBP", event: "Décision Taux BOE", impact: "high", previous: "4.50%", forecast: "4.50%" },
     { date: dateStr(4), time: "09:00", country: "DE", currency: "EUR", event: "IPP (MoM)", impact: "low", previous: "0.2%", forecast: "0.1%" },
     { date: dateStr(7), time: "09:30", country: "DE", currency: "EUR", event: "PMI Manufacturier Flash", impact: "high", previous: "46.5", forecast: "47.0" },
     { date: dateStr(7), time: "10:00", country: "EU", currency: "EUR", event: "PMI Composite Flash Zone Euro", impact: "high", previous: "50.2", forecast: "50.5" },
@@ -98,7 +98,7 @@ function generateStaticFallback(): EcoEvent[] {
     { date: dateStr(8), time: "10:00", country: "DE", currency: "EUR", event: "Indice IFO du Climat des Affaires", impact: "high", previous: "85.2", forecast: "86.0" },
     { date: dateStr(8), time: "15:00", country: "US", currency: "USD", event: "Confiance des Consommateurs CB", impact: "high", previous: "98.3", forecast: "95.0" },
     { date: dateStr(9), time: "14:30", country: "US", currency: "USD", event: "Commandes de Biens Durables (MoM)", impact: "high", previous: "3.2%", forecast: "-1.0%" },
-    { date: dateStr(10), time: "14:30", country: "US", currency: "USD", event: "PIB (QoQ) - 3\u00e8me estimation Q4", impact: "high", previous: "2.3%", forecast: "2.3%" },
+    { date: dateStr(10), time: "14:30", country: "US", currency: "USD", event: "PIB (QoQ) - 3ème estimation Q4", impact: "high", previous: "2.3%", forecast: "2.3%" },
     { date: dateStr(11), time: "14:30", country: "US", currency: "USD", event: "Indice des Prix PCE Core (MoM)", impact: "high", previous: "0.3%", forecast: "0.3%" },
     { date: dateStr(11), time: "14:30", country: "US", currency: "USD", event: "Indice des Prix PCE Core (YoY)", impact: "high", previous: "2.6%", forecast: "2.7%" },
     { date: dateStr(11), time: "16:00", country: "US", currency: "USD", event: "Sentiment Michigan - Final", impact: "medium", previous: "57.9", forecast: "57.5" },
@@ -109,7 +109,7 @@ function generateStaticFallback(): EcoEvent[] {
 
 const DAYS_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const DAYS_SHORT = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
-const MONTHS_FR = ["janvier", "f\u00e9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\u00fbt", "septembre", "octobre", "novembre", "d\u00e9cembre"];
+const MONTHS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -415,7 +415,7 @@ export default function CalendarEcoPage() {
           <button
             onClick={fetchCalendar}
             className="p-2 rounded-lg hover:bg-white/5 transition"
-            title="Rafra\u00eechir"
+            title="Rafraîchir"
           >
             <RefreshCw className={`w-4 h-4 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
           </button>
@@ -499,7 +499,7 @@ export default function CalendarEcoPage() {
         <div className="flex gap-1">
           {([
             { key: "all" as ImpactFilter, label: "Tous" },
-            { key: "high" as ImpactFilter, label: "\u{1F534} \u00c9lev\u00e9" },
+            { key: "high" as ImpactFilter, label: "\u{1F534} Élevé" },
             { key: "medium+" as ImpactFilter, label: "\u{1F7E1} Moyen+" },
           ]).map(({ key, label }) => (
             <button

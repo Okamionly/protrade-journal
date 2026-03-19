@@ -32,7 +32,7 @@ interface NewsItem {
 
 const CATEGORY_TABS = [
   { key: "all", label: "Tous" },
-  { key: "marchés", label: "March\u00e9s" },
+  { key: "marchés", label: "Marchés" },
   { key: "crypto", label: "Crypto" },
   { key: "forex", label: "Forex" },
   { key: "actions", label: "Actions" },
@@ -64,7 +64,7 @@ function getSourceColor(source: string) {
 
 function timeAgo(timestamp: number): string {
   const seconds = Math.floor(Date.now() / 1000 - timestamp);
-  if (seconds < 60) return "\u00e0 l\u2019instant";
+  if (seconds < 60) return "à l\u2019instant";
   if (seconds < 3600) return `il y a ${Math.floor(seconds / 60)}min`;
   if (seconds < 86400) return `il y a ${Math.floor(seconds / 3600)}h`;
   return `il y a ${Math.floor(seconds / 86400)}j`;
@@ -74,7 +74,7 @@ function formatLastUpdated(date: Date | null): string {
   if (!date) return "";
   const diffMs = Date.now() - date.getTime();
   const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "\u00e0 l\u2019instant";
+  if (diffMin < 1) return "à l\u2019instant";
   if (diffMin < 60) return `il y a ${diffMin} min`;
   return `il y a ${Math.floor(diffMin / 60)}h`;
 }
@@ -293,15 +293,15 @@ export default function NewsPage() {
           setNews(data);
           setLastUpdated(new Date());
         } else if (Array.isArray(data) && data.length === 0) {
-          setError("Aucune actualit\u00e9 disponible.");
+          setError("Aucune actualité disponible.");
         } else {
-          setError("Format de r\u00e9ponse inattendu de l\u2019API.");
+          setError("Format de réponse inattendu de l\u2019API.");
         }
       } else {
-        setError("Impossible de charger les actualit\u00e9s. R\u00e9essayez.");
+        setError("Impossible de charger les actualités. Réessayez.");
       }
     } catch {
-      setError("Impossible de charger les actualit\u00e9s. V\u00e9rifiez votre connexion.");
+      setError("Impossible de charger les actualités. Vérifiez votre connexion.");
     } finally {
       setLoading(false);
     }
@@ -400,7 +400,7 @@ export default function NewsPage() {
           <button
             onClick={load}
             className="p-2 rounded-lg hover:bg-white/5 transition"
-            title="Rafra\u00eechir"
+            title="Rafraîchir"
           >
             <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
           </button>
@@ -437,7 +437,7 @@ export default function NewsPage() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Rechercher par mot-cl\u00e9 (titre, r\u00e9sum\u00e9, source)..."
+          placeholder="Rechercher par mot-clé (titre, résumé, source)..."
           className="input-field pl-10 w-full"
         />
         {searchQuery && (

@@ -422,7 +422,7 @@ export default function VipContentPage() {
                 />
               </button>
               <span className="text-sm" style={{ color: "var(--text-primary)" }}>
-                {published ? "Publi\u00e9" : "Brouillon"}
+                {published ? "Publié" : "Brouillon"}
               </span>
             </div>
 
@@ -452,7 +452,7 @@ export default function VipContentPage() {
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                {editingPost ? "Mettre \u00e0 jour" : "Enregistrer"}
+                {editingPost ? "Mettre à jour" : "Enregistrer"}
               </button>
             </div>
           </div>
@@ -523,7 +523,7 @@ export default function VipContentPage() {
                               : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
                           }`}
                         >
-                          {post.published ? "Publi\u00e9" : "Brouillon"}
+                          {post.published ? "Publié" : "Brouillon"}
                         </span>
                       </div>
                       <p
@@ -559,7 +559,7 @@ export default function VipContentPage() {
                       onClick={() => handleTogglePublished(post)}
                       className="w-8 h-8 rounded-lg flex items-center justify-center transition hover:opacity-80"
                       style={{ background: "var(--bg-hover)" }}
-                      title={post.published ? "D\u00e9publier" : "Publier"}
+                      title={post.published ? "Dépublier" : "Publier"}
                     >
                       {post.published ? (
                         <EyeOff className="w-4 h-4" style={{ color: "var(--text-muted)" }} />

@@ -636,7 +636,7 @@ export default function WatchlistPage() {
                               </span>
                             )}
                             {correlations.length > 0 && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 flex items-center gap-1" title={`Corr\u00e9l\u00e9 avec ${correlations.map(c => c.symbol).join(", ")}`}>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 flex items-center gap-1" title={`Corrélé avec ${correlations.map(c => c.symbol).join(", ")}`}>
                                 <Link2 className="w-2.5 h-2.5" />
                                 Corr&eacute;l&eacute; ({correlations[0].coefficient.toFixed(2)})
                               </span>

@@ -134,7 +134,7 @@ function getSessionTimeRemaining(hour: number, minute: number, session: SessionI
   const endMinutes = session.end * 60;
   const currentMinutes = hour * 60 + minute;
   const remaining = endMinutes - currentMinutes;
-  if (remaining <= 0) return "Termin\u00e9e";
+  if (remaining <= 0) return "Terminée";
   const h = Math.floor(remaining / 60);
   const m = remaining % 60;
   return `${h}h ${m.toString().padStart(2, "0")}m`;
@@ -155,10 +155,10 @@ function getTradeSession(trade: Trade, sessions: SessionInfo[]): string {
 // ─── Checklist Storage ──────────────────────────────────────────────────────
 
 const CHECKLIST_ITEMS = [
-  "Plan v\u00e9rifi\u00e9",
+  "Plan vérifié",
   "Risque < 2%",
   "Pas de revenge trading",
-  "Stop apr\u00e8s 3 pertes",
+  "Stop après 3 pertes",
 ];
 
 function getChecklistKey(): string {
@@ -438,19 +438,19 @@ export default function WarRoomPage() {
     }
     const losses = todayTrades.filter((t) => t.result < 0).length;
     if (losses >= alertSettings.maxLosses) {
-      list.push({ icon: Shield, text: `${alertSettings.maxLosses} pertes - arr\u00eatez de trader`, level: "danger" });
+      list.push({ icon: Shield, text: `${alertSettings.maxLosses} pertes - arrêtez de trader`, level: "danger" });
     }
     if (todayPnl < -(alertSettings.dailyProfitTarget * 0.5)) {
-      list.push({ icon: AlertTriangle, text: `Perte journali\u00e8re: ${formatPnl(todayPnl)}$`, level: "danger" });
+      list.push({ icon: AlertTriangle, text: `Perte journalière: ${formatPnl(todayPnl)}$`, level: "danger" });
     }
     if (todayPnl >= alertSettings.dailyProfitTarget) {
       list.push({ icon: Target, text: `Objectif journalier atteint: ${formatPnl(todayPnl)}$ / ${alertSettings.dailyProfitTarget}$`, level: "info" });
     }
     if (activeSessions.length === 0) {
-      list.push({ icon: Moon, text: "Hors session - march\u00e9 peu liquide", level: "info" });
+      list.push({ icon: Moon, text: "Hors session - marché peu liquide", level: "info" });
     }
     if (activeSessions.length >= 2) {
-      list.push({ icon: Zap, text: "Overlap de sessions - haute volatilit\u00e9", level: "info" });
+      list.push({ icon: Zap, text: "Overlap de sessions - haute volatilité", level: "info" });
     }
     return list;
   }, [todayTrades, todayPnl, activeSessions, alertSettings]);
@@ -526,7 +526,7 @@ export default function WarRoomPage() {
   // ─── Render ───────────────────────────────────────────────────────────
 
   const moods = [
-    { emoji: "\ud83d\ude24", label: "Frustr\u00e9" },
+    { emoji: "\ud83d\ude24", label: "Frustré" },
     { emoji: "\ud83d\ude30", label: "Anxieux" },
     { emoji: "\ud83d\ude10", label: "Neutre" },
     { emoji: "\ud83d\ude42", label: "Confiant" },
@@ -563,7 +563,7 @@ export default function WarRoomPage() {
             onClick={openSettingsModal}
             className="p-2 rounded-lg hover:bg-[--bg-secondary] transition"
             style={{ color: "var(--text-muted)" }}
-            title="Param\u00e8tres des alertes"
+            title="Paramètres des alertes"
           >
             <Settings size={16} />
           </button>
