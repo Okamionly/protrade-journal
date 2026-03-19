@@ -6,7 +6,7 @@ import {
   Activity, TrendingUp, TrendingDown, Clock, Shield, Target,
   AlertTriangle, CheckSquare, Square, Smile, Frown, Meh,
   Zap, BarChart3, ArrowUpRight, ArrowDownRight, Bell, Timer,
-  Flame, Globe, Sun, Moon, Crosshair, ChevronRight,
+  Flame, Globe, Sun, Moon, Crosshair, ChevronRight, Settings, X,
 } from "lucide-react";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -53,24 +53,75 @@ function formatTime(dateStr: string): string {
   }
 }
 
-// ─── Session Detection ──────────────────────────────────────────────────────
+// ─── DST-Aware Session Detection ────────────────────────────────────────────
 
 interface SessionInfo {
   name: string;
   emoji: string;
-  start: number;
-  end: number;
+  start: number; // UTC hour
+  end: number;   // UTC hour
   color: string;
 }
 
-const SESSIONS: SessionInfo[] = [
-  { name: "Tokyo", emoji: "🌏", start: 0, end: 9, color: "#f59e0b" },
-  { name: "London", emoji: "🌍", start: 8, end: 17, color: "#3b82f6" },
-  { name: "New York", emoji: "🌎", start: 13, end: 22, color: "#10b981" },
-];
+/**
+ * Check if US DST is active (second Sunday of March to first Sunday of November)
+ */
+function isUsDst(date: Date): boolean {
+  const year = date.getFullYear();
+  // Second Sunday of March
+  const marchFirst = new Date(year, 2, 1);
+  const marchFirstDay = marchFirst.getDay();
+  const secondSunday = marchFirstDay === 0 ? 8 : 8 + (7 - marchFirstDay);
+  const dstStart = new Date(year, 2, secondSunday, 2, 0, 0);
+  // First Sunday of November
+  const novFirst = new Date(year, 10, 1);
+  const novFirstDay = novFirst.getDay();
+  const firstSundayNov = novFirstDay === 0 ? 1 : 1 + (7 - novFirstDay);
+  const dstEnd = new Date(year, 10, firstSundayNov, 2, 0, 0);
+  return date >= dstStart && date < dstEnd;
+}
 
-function getActiveSessions(hour: number): SessionInfo[] {
-  return SESSIONS.filter((s) => hour >= s.start && hour < s.end);
+/**
+ * Check if EU DST is active (last Sunday of March to last Sunday of October)
+ */
+function isEuDst(date: Date): boolean {
+  const year = date.getFullYear();
+  // Last Sunday of March
+  const marchLast = new Date(year, 2, 31);
+  const daysBack = marchLast.getDay();
+  const lastSundayMarch = new Date(year, 2, 31 - daysBack, 1, 0, 0);
+  // Last Sunday of October
+  const octLast = new Date(year, 9, 31);
+  const daysBackOct = octLast.getDay();
+  const lastSundayOct = new Date(year, 9, 31 - daysBackOct, 1, 0, 0);
+  return date >= lastSundayMarch && date < lastSundayOct;
+}
+
+function getSessions(date: Date): SessionInfo[] {
+  const usDst = isUsDst(date);
+  const euDst = isEuDst(date);
+
+  // Tokyo: standard 00:00-09:00 UTC (Japan doesn't observe DST)
+  const tokyoStart = 0;
+  const tokyoEnd = 9;
+
+  // London: standard 08:00-17:00 UTC; during EU DST: 07:00-16:00 UTC
+  const londonStart = euDst ? 7 : 8;
+  const londonEnd = euDst ? 16 : 17;
+
+  // New York: standard 13:00-22:00 UTC; during US DST: 12:00-21:00 UTC
+  const nyStart = usDst ? 12 : 13;
+  const nyEnd = usDst ? 21 : 22;
+
+  return [
+    { name: "Tokyo", emoji: "\ud83c\udf0f", start: tokyoStart, end: tokyoEnd, color: "#f59e0b" },
+    { name: "London", emoji: "\ud83c\udf0d", start: londonStart, end: londonEnd, color: "#3b82f6" },
+    { name: "New York", emoji: "\ud83c\udf0e", start: nyStart, end: nyEnd, color: "#10b981" },
+  ];
+}
+
+function getActiveSessions(hour: number, sessions: SessionInfo[]): SessionInfo[] {
+  return sessions.filter((s) => hour >= s.start && hour < s.end);
 }
 
 function getSessionProgress(hour: number, minute: number, session: SessionInfo): number {
@@ -83,19 +134,31 @@ function getSessionTimeRemaining(hour: number, minute: number, session: SessionI
   const endMinutes = session.end * 60;
   const currentMinutes = hour * 60 + minute;
   const remaining = endMinutes - currentMinutes;
-  if (remaining <= 0) return "Terminée";
+  if (remaining <= 0) return "Termin\u00e9e";
   const h = Math.floor(remaining / 60);
   const m = remaining % 60;
   return `${h}h ${m.toString().padStart(2, "0")}m`;
 }
 
+/**
+ * Determine which session a trade falls into based on its date/time (UTC hour)
+ */
+function getTradeSession(trade: Trade, sessions: SessionInfo[]): string {
+  const d = new Date(trade.date);
+  const h = d.getUTCHours();
+  for (const s of sessions) {
+    if (h >= s.start && h < s.end) return s.name;
+  }
+  return "Hors session";
+}
+
 // ─── Checklist Storage ──────────────────────────────────────────────────────
 
 const CHECKLIST_ITEMS = [
-  "Plan vérifié",
+  "Plan v\u00e9rifi\u00e9",
   "Risque < 2%",
   "Pas de revenge trading",
-  "Stop après 3 pertes",
+  "Stop apr\u00e8s 3 pertes",
 ];
 
 function getChecklistKey(): string {
@@ -109,6 +172,36 @@ function loadChecklist(): boolean[] {
     if (saved) return JSON.parse(saved);
   } catch { /* ignore */ }
   return CHECKLIST_ITEMS.map(() => false);
+}
+
+// ─── Alert Settings Storage ─────────────────────────────────────────────────
+
+interface AlertSettings {
+  maxTrades: number;
+  maxLosses: number;
+  dailyProfitTarget: number;
+}
+
+const DEFAULT_ALERT_SETTINGS: AlertSettings = {
+  maxTrades: 3,
+  maxLosses: 3,
+  dailyProfitTarget: 200,
+};
+
+function loadAlertSettings(): AlertSettings {
+  if (typeof window === "undefined") return DEFAULT_ALERT_SETTINGS;
+  try {
+    const saved = localStorage.getItem("warroom-alert-settings");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...DEFAULT_ALERT_SETTINGS, ...parsed };
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_ALERT_SETTINGS;
+}
+
+function saveAlertSettings(settings: AlertSettings): void {
+  localStorage.setItem("warroom-alert-settings", JSON.stringify(settings));
 }
 
 // ─── Circular Gauge Component ───────────────────────────────────────────────
@@ -207,6 +300,9 @@ export default function WarRoomPage() {
   const [checklist, setChecklist] = useState<boolean[]>(CHECKLIST_ITEMS.map(() => false));
   const [currentMood, setCurrentMood] = useState<string | null>(null);
   const [moodTimeline, setMoodTimeline] = useState<{ time: string; mood: string }[]>([]);
+  const [alertSettings, setAlertSettings] = useState<AlertSettings>(DEFAULT_ALERT_SETTINGS);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [tempSettings, setTempSettings] = useState<AlertSettings>(DEFAULT_ALERT_SETTINGS);
 
   // Real-time clock
   useEffect(() => {
@@ -214,7 +310,7 @@ export default function WarRoomPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Load checklist from localStorage
+  // Load checklist, moods, and alert settings from localStorage
   useEffect(() => {
     setChecklist(loadChecklist());
     const savedMoods = localStorage.getItem(`warroom-moods-${today()}`);
@@ -225,6 +321,9 @@ export default function WarRoomPage() {
         if (parsed.length > 0) setCurrentMood(parsed[parsed.length - 1].mood);
       } catch { /* ignore */ }
     }
+    const settings = loadAlertSettings();
+    setAlertSettings(settings);
+    setTempSettings(settings);
   }, []);
 
   const toggleChecklist = useCallback((index: number) => {
@@ -245,6 +344,20 @@ export default function WarRoomPage() {
       return next;
     });
   }, []);
+
+  const openSettingsModal = useCallback(() => {
+    setTempSettings({ ...alertSettings });
+    setShowSettingsModal(true);
+  }, [alertSettings]);
+
+  const saveSettings = useCallback(() => {
+    setAlertSettings(tempSettings);
+    saveAlertSettings(tempSettings);
+    setShowSettingsModal(false);
+  }, [tempSettings]);
+
+  // ─── DST-aware sessions ───────────────────────────────────────────────
+  const sessions = useMemo(() => getSessions(currentTime), [currentTime]);
 
   // ─── Computed Stats ─────────────────────────────────────────────────────
 
@@ -303,42 +416,94 @@ export default function WarRoomPage() {
     return Math.max(0, Math.min(100, 100 - cv * 20));
   }, [trades]);
 
+  // ─── Fix: sort by `date` instead of `createdAt` ──────────────────────
   const last10 = useMemo(() => [...trades].sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    new Date(b.date).getTime() - new Date(a.date).getTime()
   ).slice(0, 10), [trades]);
 
   const sortedTrades = useMemo(() => [...trades].sort((a, b) =>
     new Date(a.date).getTime() - new Date(b.date).getTime()
   ), [trades]);
 
-  // Session info
+  // Session info (DST-aware)
   const hour = currentTime.getUTCHours();
   const minute = currentTime.getUTCMinutes();
-  const activeSessions = getActiveSessions(hour);
+  const activeSessions = getActiveSessions(hour, sessions);
 
-  // Alerts
+  // ─── Alerts with customizable thresholds ──────────────────────────────
   const alerts = useMemo(() => {
     const list: { icon: typeof Bell; text: string; level: "warn" | "info" | "danger" }[] = [];
-    if (todayTrades.length >= 3) {
-      list.push({ icon: AlertTriangle, text: "Limite de 3 trades atteinte", level: "warn" });
+    if (todayTrades.length >= alertSettings.maxTrades) {
+      list.push({ icon: AlertTriangle, text: `Limite de ${alertSettings.maxTrades} trades atteinte`, level: "warn" });
     }
     const losses = todayTrades.filter((t) => t.result < 0).length;
-    if (losses >= 3) {
-      list.push({ icon: Shield, text: "3 pertes consécutives - arrêtez de trader", level: "danger" });
+    if (losses >= alertSettings.maxLosses) {
+      list.push({ icon: Shield, text: `${alertSettings.maxLosses} pertes - arr\u00eatez de trader`, level: "danger" });
     }
-    if (todayPnl < -100) {
-      list.push({ icon: AlertTriangle, text: `Perte journalière: ${formatPnl(todayPnl)}$`, level: "danger" });
+    if (todayPnl < -(alertSettings.dailyProfitTarget * 0.5)) {
+      list.push({ icon: AlertTriangle, text: `Perte journali\u00e8re: ${formatPnl(todayPnl)}$`, level: "danger" });
+    }
+    if (todayPnl >= alertSettings.dailyProfitTarget) {
+      list.push({ icon: Target, text: `Objectif journalier atteint: ${formatPnl(todayPnl)}$ / ${alertSettings.dailyProfitTarget}$`, level: "info" });
     }
     if (activeSessions.length === 0) {
-      list.push({ icon: Moon, text: "Hors session - marché peu liquide", level: "info" });
+      list.push({ icon: Moon, text: "Hors session - march\u00e9 peu liquide", level: "info" });
     }
     if (activeSessions.length >= 2) {
-      list.push({ icon: Zap, text: "Overlap de sessions - haute volatilité", level: "info" });
+      list.push({ icon: Zap, text: "Overlap de sessions - haute volatilit\u00e9", level: "info" });
     }
     return list;
-  }, [todayTrades, todayPnl, activeSessions]);
+  }, [todayTrades, todayPnl, activeSessions, alertSettings]);
 
   const checklistProgress = checklist.filter(Boolean).length / CHECKLIST_ITEMS.length;
+
+  // ─── Performance par Session ──────────────────────────────────────────
+  const sessionPerformance = useMemo(() => {
+    const perf: Record<string, { pnl: number; trades: number; wins: number }> = {
+      "Tokyo": { pnl: 0, trades: 0, wins: 0 },
+      "London": { pnl: 0, trades: 0, wins: 0 },
+      "New York": { pnl: 0, trades: 0, wins: 0 },
+      "Hors session": { pnl: 0, trades: 0, wins: 0 },
+    };
+    for (const t of trades) {
+      const sessionName = getTradeSession(t, sessions);
+      if (!perf[sessionName]) perf[sessionName] = { pnl: 0, trades: 0, wins: 0 };
+      perf[sessionName].pnl += t.result;
+      perf[sessionName].trades += 1;
+      if (t.result > 0) perf[sessionName].wins += 1;
+    }
+    return perf;
+  }, [trades, sessions]);
+
+  // ─── Emotion-Performance Correlation ──────────────────────────────────
+  const emotionStats = useMemo(() => {
+    const emotionPnl: Record<string, { total: number; count: number }> = {};
+    for (const t of trades) {
+      if (t.emotion) {
+        if (!emotionPnl[t.emotion]) emotionPnl[t.emotion] = { total: 0, count: 0 };
+        emotionPnl[t.emotion].total += t.result;
+        emotionPnl[t.emotion].count += 1;
+      }
+    }
+
+    const entries = Object.entries(emotionPnl).map(([emotion, data]) => ({
+      emotion,
+      avg: data.count > 0 ? data.total / data.count : 0,
+      count: data.count,
+    }));
+
+    if (entries.length === 0) return null;
+
+    entries.sort((a, b) => b.avg - a.avg);
+    const best = entries[0];
+    const worst = entries[entries.length - 1];
+
+    const total = entries.reduce((s, e) => s + e.count, 0);
+    const bestPct = total > 0 ? Math.round((best.count / total) * 100) : 0;
+    const worstPct = total > 0 ? Math.round((worst.count / total) * 100) : 0;
+
+    return { best, worst, bestPct, worstPct };
+  }, [trades]);
 
   // ─── Loading State ────────────────────────────────────────────────────
 
@@ -361,12 +526,19 @@ export default function WarRoomPage() {
   // ─── Render ───────────────────────────────────────────────────────────
 
   const moods = [
-    { emoji: "😤", label: "Frustré" },
-    { emoji: "😰", label: "Anxieux" },
-    { emoji: "😐", label: "Neutre" },
-    { emoji: "🙂", label: "Confiant" },
-    { emoji: "🔥", label: "En zone" },
+    { emoji: "\ud83d\ude24", label: "Frustr\u00e9" },
+    { emoji: "\ud83d\ude30", label: "Anxieux" },
+    { emoji: "\ud83d\ude10", label: "Neutre" },
+    { emoji: "\ud83d\ude42", label: "Confiant" },
+    { emoji: "\ud83d\udd25", label: "En zone" },
   ];
+
+  const sessionColors: Record<string, string> = {
+    "Tokyo": "#f59e0b",
+    "London": "#3b82f6",
+    "New York": "#10b981",
+    "Hors session": "#6b7280",
+  };
 
   return (
     <div className="p-4 space-y-3" style={{ color: "var(--text-primary)" }}>
@@ -379,10 +551,26 @@ export default function WarRoomPage() {
             style={{ background: "var(--border)", color: "var(--text-muted)" }}>
             LIVE
           </span>
+          {/* DST indicator */}
+          {(isUsDst(currentTime) || isEuDst(currentTime)) && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
+              DST {isUsDst(currentTime) && "US"}{isUsDst(currentTime) && isEuDst(currentTime) && "/"}{isEuDst(currentTime) && "EU"}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-2 mono text-sm" style={{ color: "var(--text-muted)" }}>
-          <Clock size={14} />
-          {currentTime.toLocaleTimeString("fr-FR")}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={openSettingsModal}
+            className="p-2 rounded-lg hover:bg-[--bg-secondary] transition"
+            style={{ color: "var(--text-muted)" }}
+            title="Param\u00e8tres des alertes"
+          >
+            <Settings size={16} />
+          </button>
+          <div className="flex items-center gap-2 mono text-sm" style={{ color: "var(--text-muted)" }}>
+            <Clock size={14} />
+            {currentTime.toLocaleTimeString("fr-FR")}
+          </div>
         </div>
       </div>
 
@@ -405,7 +593,10 @@ export default function WarRoomPage() {
             <div className="h-12 w-px" style={{ background: "var(--border)" }} />
             <div className="text-center">
               <div className="text-xs" style={{ color: "var(--text-muted)" }}>Trades</div>
-              <div className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>{todayTrades.length}</div>
+              <div className="text-lg font-bold mono" style={{ color: "var(--text-primary)" }}>
+                {todayTrades.length}
+                <span className="text-xs font-normal" style={{ color: "var(--text-muted)" }}>/{alertSettings.maxTrades}</span>
+              </div>
             </div>
             <div className="text-center">
               <div className="text-xs" style={{ color: "var(--text-muted)" }}>Win Rate</div>
@@ -500,7 +691,7 @@ export default function WarRoomPage() {
           </div>
         </div>
 
-        {/* ═══ 4. Trade Log ═══ */}
+        {/* ═══ 4. Trade Log (sorted by date) ═══ */}
         <div className="glass rounded-xl p-4 lg:col-span-2" style={{ border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-2">
             <Activity size={14} style={{ color: "var(--text-secondary)" }} />
@@ -512,10 +703,10 @@ export default function WarRoomPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--border)" }}>
-                  <th className="text-left py-1 px-2">Heure</th>
+                  <th className="text-left py-1 px-2">Date</th>
                   <th className="text-left py-1 px-2">Actif</th>
                   <th className="text-left py-1 px-2">Dir.</th>
-                  <th className="text-right py-1 px-2">Résultat</th>
+                  <th className="text-right py-1 px-2">R&eacute;sultat</th>
                   <th className="text-right py-1 px-2">R:R</th>
                 </tr>
               </thead>
@@ -523,14 +714,14 @@ export default function WarRoomPage() {
                 {last10.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="text-center py-4" style={{ color: "var(--text-muted)" }}>
-                      Aucun trade enregistré
+                      Aucun trade enregistr&eacute;
                     </td>
                   </tr>
                 ) : (
                   last10.map((t) => (
                     <tr key={t.id} style={{ borderBottom: "1px solid var(--border)" }}>
                       <td className="py-1.5 px-2 mono" style={{ color: "var(--text-muted)" }}>
-                        {formatTime(t.createdAt)}
+                        {formatTime(t.date)}
                       </td>
                       <td className="py-1.5 px-2 font-medium" style={{ color: "var(--text-primary)" }}>
                         {t.asset}
@@ -561,7 +752,7 @@ export default function WarRoomPage() {
           </div>
         </div>
 
-        {/* ═══ 6. Session Timer ═══ */}
+        {/* ═══ 6. Session Timer (DST-aware) ═══ */}
         <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-3">
             <Timer size={14} style={{ color: "var(--text-secondary)" }} />
@@ -582,6 +773,9 @@ export default function WarRoomPage() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>
                         {session.emoji} {session.name}
+                        <span className="ml-1 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                          ({session.start.toString().padStart(2, "0")}h-{session.end.toString().padStart(2, "0")}h UTC)
+                        </span>
                       </span>
                       <span className="text-xs mono" style={{ color: "var(--text-muted)" }}>{remaining}</span>
                     </div>
@@ -670,11 +864,18 @@ export default function WarRoomPage() {
           )}
         </div>
 
-        {/* ═══ 9. Market Sessions Timeline ═══ */}
+        {/* ═══ 9. Market Sessions Timeline (DST-aware) ═══ */}
         <div className="glass rounded-xl p-4 lg:col-span-2" style={{ border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-3">
             <Globe size={14} style={{ color: "var(--text-secondary)" }} />
-            <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Timeline Sessions (UTC)</span>
+            <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
+              Timeline Sessions (UTC)
+              {(isUsDst(currentTime) || isEuDst(currentTime)) && (
+                <span className="ml-2 text-[10px] text-amber-400 font-normal">
+                  DST actif: {isUsDst(currentTime) && "US"}{isUsDst(currentTime) && isEuDst(currentTime) && " + "}{isEuDst(currentTime) && "EU"}
+                </span>
+              )}
+            </span>
           </div>
           <div className="relative" style={{ height: "80px" }}>
             {/* Hour markers */}
@@ -684,7 +885,7 @@ export default function WarRoomPage() {
               ))}
             </div>
             {/* Session bars */}
-            {SESSIONS.map((session, idx) => {
+            {sessions.map((session, idx) => {
               const left = (session.start / 24) * 100;
               const width = ((session.end - session.start) / 24) * 100;
               return (
@@ -724,15 +925,25 @@ export default function WarRoomPage() {
 
         {/* ═══ 10. Alerts & Reminders ═══ */}
         <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-3">
-            <Bell size={14} style={{ color: "var(--text-secondary)" }} />
-            <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Alertes</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bell size={14} style={{ color: "var(--text-secondary)" }} />
+              <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Alertes</span>
+            </div>
+            <button
+              onClick={openSettingsModal}
+              className="p-1 rounded hover:bg-[--bg-secondary] transition"
+              style={{ color: "var(--text-muted)" }}
+              title="Configurer les seuils"
+            >
+              <Settings size={12} />
+            </button>
           </div>
           <div className="space-y-2">
             {alerts.length === 0 ? (
               <div className="flex items-center gap-2 py-2" style={{ color: "var(--text-muted)" }}>
                 <CheckSquare size={14} />
-                <span className="text-xs">Aucune alerte - tout est sous contrôle</span>
+                <span className="text-xs">Aucune alerte - tout est sous contr&ocirc;le</span>
               </div>
             ) : (
               alerts.map((alert, i) => {
@@ -753,7 +964,161 @@ export default function WarRoomPage() {
             )}
           </div>
         </div>
+
+        {/* ═══ 11. Performance par Session ═══ */}
+        <div className="glass rounded-xl p-4 lg:col-span-2" style={{ border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Globe size={14} style={{ color: "var(--text-secondary)" }} />
+            <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Performance par Session</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {Object.entries(sessionPerformance).map(([name, data]) => {
+              const winRate = data.trades > 0 ? (data.wins / data.trades) * 100 : 0;
+              const color = sessionColors[name] || "#6b7280";
+              return (
+                <div key={name} className="rounded-lg p-3" style={{ background: `${color}10`, border: `1px solid ${color}30` }}>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="w-2 h-2 rounded-full" style={{ background: color }} />
+                    <span className="text-xs font-medium" style={{ color }}>{name}</span>
+                  </div>
+                  <div className="text-lg font-bold mono" style={{ color: data.pnl >= 0 ? "#22c55e" : "#ef4444" }}>
+                    {formatPnl(data.pnl)}$
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{data.trades} trades</span>
+                    <span className="text-[10px] mono" style={{ color: winRate >= 50 ? "#22c55e" : "#ef4444" }}>
+                      {winRate.toFixed(0)}% WR
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ═══ 12. Emotion-Performance Correlation ═══ */}
+        <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Smile size={14} style={{ color: "var(--text-secondary)" }} />
+            <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
+              Corr&eacute;lation &Eacute;motion-Performance
+            </span>
+          </div>
+          {emotionStats ? (
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg" style={{ background: "#22c55e10", border: "1px solid #22c55e30" }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <ArrowUpRight size={12} style={{ color: "#22c55e" }} />
+                  <span className="text-xs font-medium" style={{ color: "#22c55e" }}>Vos meilleurs trades</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                    {emotionStats.best.emotion}
+                  </span>
+                  <span className="text-xs mono" style={{ color: "#22c55e" }}>
+                    {emotionStats.bestPct}% ({emotionStats.best.count} trades, moy. {formatPnl(emotionStats.best.avg)}$)
+                  </span>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg" style={{ background: "#ef444410", border: "1px solid #ef444430" }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <ArrowDownRight size={12} style={{ color: "#ef4444" }} />
+                  <span className="text-xs font-medium" style={{ color: "#ef4444" }}>Vos pires trades</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                    {emotionStats.worst.emotion}
+                  </span>
+                  <span className="text-xs mono" style={{ color: "#ef4444" }}>
+                    {emotionStats.worstPct}% ({emotionStats.worst.count} trades, moy. {formatPnl(emotionStats.worst.avg)}$)
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 py-3" style={{ color: "var(--text-muted)" }}>
+              <Meh size={16} />
+              <span className="text-sm">Ajoutez des \u00e9motions \u00e0 vos trades pour voir la corr\u00e9lation</span>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* ═══ Settings Modal ═══ */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowSettingsModal(false)}>
+          <div className="glass rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()} style={{ border: "1px solid var(--border)" }}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>
+                <Settings size={16} className="inline mr-2" style={{ color: "var(--text-secondary)" }} />
+                Param\u00e8tres des alertes
+              </h3>
+              <button onClick={() => setShowSettingsModal(false)} className="p-1 rounded-lg hover:bg-[--bg-secondary] transition" style={{ color: "var(--text-muted)" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-medium mb-1 block" style={{ color: "var(--text-secondary)" }}>
+                  Max trades par jour
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={tempSettings.maxTrades}
+                  onChange={(e) => setTempSettings({ ...tempSettings, maxTrades: Math.max(1, parseInt(e.target.value) || 1) })}
+                  className="w-full px-3 py-2 rounded-lg text-sm mono"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block" style={{ color: "var(--text-secondary)" }}>
+                  Max pertes par jour
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={tempSettings.maxLosses}
+                  onChange={(e) => setTempSettings({ ...tempSettings, maxLosses: Math.max(1, parseInt(e.target.value) || 1) })}
+                  className="w-full px-3 py-2 rounded-lg text-sm mono"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block" style={{ color: "var(--text-secondary)" }}>
+                  Objectif profit journalier ($)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={tempSettings.dailyProfitTarget}
+                  onChange={(e) => setTempSettings({ ...tempSettings, dailyProfitTarget: Math.max(1, parseInt(e.target.value) || 1) })}
+                  className="w-full px-3 py-2 rounded-lg text-sm mono"
+                  style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={saveSettings}
+                  className="flex-1 py-2 rounded-xl text-sm font-medium"
+                  style={{ background: "#22c55e20", color: "#22c55e", border: "1px solid #22c55e40" }}
+                >
+                  Sauvegarder
+                </button>
+                <button
+                  onClick={() => setShowSettingsModal(false)}
+                  className="px-4 py-2 rounded-xl text-sm"
+                  style={{ background: "var(--bg-secondary)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CSS Animation */}
       <style jsx>{`

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, AlertTriangle, X, Clock, Flame, BellRing, History } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, AlertTriangle, X, Clock, Flame, BellRing, History, Newspaper, Link2 } from "lucide-react";
 
 interface WatchItem {
   symbol: string;
@@ -22,6 +22,7 @@ interface Quote {
   high52: number;
   low52: number;
   updated: number;
+  previousClose?: number;
 }
 
 interface AlertHistoryEntry {
@@ -31,6 +32,28 @@ interface AlertHistoryEntry {
   direction: "above" | "below";
   timestamp: number;
 }
+
+interface NewsItem {
+  title: string;
+  url: string;
+  source: string;
+  publishedAt: string;
+  symbols?: string[];
+}
+
+// ─── Correlation pairs definition ───────────────────────────────────────────
+const CORRELATED_GROUPS: { symbols: string[]; coefficient: number }[] = [
+  { symbols: ["EUR/USD", "GBP/USD", "EURUSD", "GBPUSD"], coefficient: 0.85 },
+  { symbols: ["USD/JPY", "USD/CHF", "USDJPY", "USDCHF"], coefficient: 0.78 },
+  { symbols: ["AAPL", "MSFT", "GOOGL"], coefficient: 0.72 },
+  { symbols: ["NVDA", "AMD"], coefficient: 0.82 },
+  { symbols: ["SPY", "QQQ"], coefficient: 0.91 },
+  { symbols: ["GLD", "SLV"], coefficient: 0.88 },
+  { symbols: ["AMZN", "GOOGL", "META"], coefficient: 0.68 },
+  { symbols: ["XOM", "CVX"], coefficient: 0.89 },
+  { symbols: ["JPM", "BAC", "GS"], coefficient: 0.80 },
+  { symbols: ["BTC-USD", "ETH-USD"], coefficient: 0.87 },
+];
 
 const DEFAULT_WATCHLIST: WatchItem[] = [
   { symbol: "AAPL", name: "Apple" },
@@ -69,8 +92,14 @@ export default function WatchlistPage() {
   const [alertSymbol, setAlertSymbol] = useState<string | null>(null);
   const [alertPrice, setAlertPrice] = useState("");
   const [alertDir, setAlertDir] = useState<"above" | "below">("above");
+  const [alertError, setAlertError] = useState<string | null>(null);
   const [alertHistory, setAlertHistory] = useState<AlertHistoryEntry[]>([]);
   const [showAlertHistory, setShowAlertHistory] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
 
   // Load items and alert history from localStorage
   useEffect(() => {
@@ -110,8 +139,9 @@ export default function WatchlistPage() {
     localStorage.setItem("watchlist-alert-history", JSON.stringify(history.slice(0, 50)));
   };
 
-  const fetchQuotes = useCallback(async () => {
-    if (items.length === 0) return;
+  // ─── Fetch with auto-retry (3 attempts, 5s delay) ────────────────────────
+  const fetchQuotesWithRetry = useCallback(async (attempt = 0): Promise<boolean> => {
+    if (items.length === 0) return true;
     setLoading(true);
     try {
       const symbols = items.map((i) => i.symbol).join(",");
@@ -132,26 +162,89 @@ export default function WatchlistPage() {
               high52: data["52weekHigh"]?.[idx] || 0,
               low52: data["52weekLow"]?.[idx] || 0,
               updated: data.updated?.[idx] || 0,
+              previousClose: data.prevClose?.[idx] || (data.last?.[idx] || 0) - (data.change?.[idx] || 0),
             };
           });
           setQuotes(newQuotes);
           setLastUpdated(new Date());
           setError(null);
+          setRetrying(false);
+          setRetryCount(0);
+          setLoading(false);
+          return true;
         }
-      } else {
-        setError("Impossible de charger les cotations. Réessayez.");
       }
+      throw new Error("API error");
     } catch {
-      setError("Impossible de charger les cotations. Vérifiez votre connexion.");
+      if (attempt < 2) {
+        // Retry up to 3 times total (0, 1, 2)
+        setRetrying(true);
+        setRetryCount(attempt + 1);
+        setError(null);
+        setLoading(false);
+        return new Promise((resolve) => {
+          retryTimerRef.current = setTimeout(async () => {
+            const result = await fetchQuotesWithRetry(attempt + 1);
+            resolve(result);
+          }, 5000);
+        });
+      } else {
+        setError("Impossible de charger les cotations. Vérifiez votre connexion.");
+        setRetrying(false);
+        setRetryCount(0);
+        setLoading(false);
+        return false;
+      }
     }
-    setLoading(false);
   }, [items]);
+
+  const fetchQuotes = useCallback(() => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    setRetrying(false);
+    setRetryCount(0);
+    return fetchQuotesWithRetry(0);
+  }, [fetchQuotesWithRetry]);
 
   useEffect(() => {
     fetchQuotes();
-    const interval = setInterval(fetchQuotes, 60000);
+    const interval = setInterval(() => fetchQuotesWithRetry(0), 60000);
+    return () => {
+      clearInterval(interval);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  }, [fetchQuotes, fetchQuotesWithRetry]);
+
+  // ─── Fetch News ───────────────────────────────────────────────────────────
+  const fetchNews = useCallback(async () => {
+    if (items.length === 0) return;
+    setNewsLoading(true);
+    try {
+      const symbolsParam = items.map((i) => i.symbol).join(",");
+      const res = await fetch(`/api/news?symbols=${symbolsParam}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setNews(data.slice(0, 3));
+        } else if (data.articles) {
+          setNews(data.articles.slice(0, 3));
+        } else if (data.news) {
+          setNews(data.news.slice(0, 3));
+        }
+      }
+    } catch {
+      // News is non-critical, silently fail
+    }
+    setNewsLoading(false);
+  }, [items]);
+
+  useEffect(() => {
+    fetchNews();
+    const interval = setInterval(fetchNews, 300000); // refresh every 5 min
     return () => clearInterval(interval);
-  }, [fetchQuotes]);
+  }, [fetchNews]);
 
   const addItem = () => {
     if (!addSymbol.trim()) return;
@@ -167,9 +260,18 @@ export default function WatchlistPage() {
     saveItems(items.filter((i) => i.symbol !== symbol));
   };
 
+  // ─── Alert validation: prevent negative/zero prices ───────────────────────
   const setAlert = (symbol: string) => {
     const price = parseFloat(alertPrice);
-    if (isNaN(price)) return;
+    if (isNaN(price)) {
+      setAlertError("Veuillez entrer un prix valide.");
+      return;
+    }
+    if (price <= 0) {
+      setAlertError("Le prix doit etre strictement positif.");
+      return;
+    }
+    setAlertError(null);
     saveItems(items.map((i) => i.symbol === symbol ? { ...i, alertPrice: price, alertDirection: alertDir } : i));
     setAlertSymbol(null);
     setAlertPrice("");
@@ -205,7 +307,7 @@ export default function WatchlistPage() {
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
               const msg = item.alertDirection === "above"
                 ? `${item.symbol} a atteint $${q.last.toFixed(2)} (alerte: au-dessus de $${item.alertPrice})`
-                : `${item.symbol} est tombé à $${q.last.toFixed(2)} (alerte: en-dessous de $${item.alertPrice})`;
+                : `${item.symbol} est tombe a $${q.last.toFixed(2)} (alerte: en-dessous de $${item.alertPrice})`;
               new Notification(`Alerte Prix: ${item.symbol}`, { body: msg });
             }
           }
@@ -217,6 +319,22 @@ export default function WatchlistPage() {
     }
   }, [quotes, items]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Correlation detection ────────────────────────────────────────────────
+  const getCorrelations = useCallback((symbol: string): { symbol: string; coefficient: number }[] => {
+    const watchedSymbols = items.map((i) => i.symbol);
+    const correlations: { symbol: string; coefficient: number }[] = [];
+    for (const group of CORRELATED_GROUPS) {
+      if (group.symbols.includes(symbol)) {
+        for (const other of group.symbols) {
+          if (other !== symbol && watchedSymbols.includes(other)) {
+            correlations.push({ symbol: other, coefficient: group.coefficient });
+          }
+        }
+      }
+    }
+    return correlations;
+  }, [items]);
+
   const filtered = search ? items.filter((i) => i.symbol.includes(search.toUpperCase()) || i.name.toLowerCase().includes(search.toLowerCase())) : items;
 
   const formatVolume = (v: number) => {
@@ -226,12 +344,52 @@ export default function WatchlistPage() {
     return v.toString();
   };
 
-  const Sparkline = ({ change }: { change: number }) => {
-    const isUp = change >= 0;
-    const points = isUp ? "0,20 5,18 10,15 15,12 20,14 25,10 30,8 35,5 40,3" : "0,3 5,5 10,8 15,10 20,14 25,12 30,15 35,18 40,20";
+  // ─── Mini Chart sparkline (5-day direction) ───────────────────────────────
+  const MiniChartSparkline = ({ quote }: { quote: Quote }) => {
+    // Simulate a 5-day trend using current change direction and magnitude
+    const changePct = quote.changepct;
+    const prevClose = quote.previousClose || (quote.last - quote.change);
+    // Generate 5 synthetic data points showing trend direction
+    const base = prevClose;
+    const delta = quote.last - prevClose;
+    const points: number[] = [];
+    // Day 1-4: interpolate with some variation, Day 5: actual price
+    for (let i = 0; i < 5; i++) {
+      const progress = i / 4;
+      const noise = (Math.sin(i * 2.5 + changePct) * 0.3) * Math.abs(delta);
+      points.push(base + delta * progress + noise);
+    }
+    points[4] = quote.last; // ensure last point is actual
+
+    const minVal = Math.min(...points);
+    const maxVal = Math.max(...points);
+    const range = maxVal - minVal || 1;
+    const isUp = delta >= 0;
+
+    const svgPoints = points.map((p, i) => {
+      const x = (i / 4) * 48;
+      const y = 18 - ((p - minVal) / range) * 16;
+      return `${x},${y}`;
+    }).join(" ");
+
+    const areaPoints = `${svgPoints} 48,18 0,18`;
+
     return (
-      <svg width="40" height="20" viewBox="0 0 40 20" className="inline-block">
-        <polyline points={points} fill="none" stroke={isUp ? "#10b981" : "#ef4444"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width="48" height="20" viewBox="0 0 48 20" className="inline-block">
+        <defs>
+          <linearGradient id={`mcg-${quote.symbol}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={isUp ? "#10b981" : "#ef4444"} stopOpacity={0.3} />
+            <stop offset="100%" stopColor={isUp ? "#10b981" : "#ef4444"} stopOpacity={0.05} />
+          </linearGradient>
+        </defs>
+        <polygon points={areaPoints} fill={`url(#mcg-${quote.symbol})`} />
+        <polyline points={svgPoints} fill="none" stroke={isUp ? "#10b981" : "#ef4444"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <circle
+          cx={48}
+          cy={18 - ((points[4] - minVal) / range) * 16}
+          r="2"
+          fill={isUp ? "#10b981" : "#ef4444"}
+        />
       </svg>
     );
   };
@@ -246,28 +404,43 @@ export default function WatchlistPage() {
 
   return (
     <div className="space-y-6">
+      {/* Retry Banner */}
+      {retrying && (
+        <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin flex-shrink-0" />
+            <span className="text-sm font-medium">
+              Reconnexion... (tentative {retryCount + 1}/3)
+            </span>
+          </div>
+          <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-medium transition">
+            Annuler et r&eacute;essayer
+          </button>
+        </div>
+      )}
+
       {/* Error Banner */}
-      {error && (
+      {error && !retrying && (
         <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 flex-shrink-0" />
             <span className="text-sm font-medium">{error}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Réessayer</button>
+            <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">R&eacute;essayer</button>
             <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
           </div>
         </div>
       )}
 
       {/* Stale Data Warning */}
-      {isStale && !error && (
+      {isStale && !error && !retrying && (
         <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm">Données obsolètes — dernière mise à jour il y a plus de 2 minutes</span>
+            <span className="text-sm">Donn&eacute;es obsoletes — derniere mise a jour il y a plus de 2 minutes</span>
           </div>
-          <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-medium transition">Rafraîchir</button>
+          <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-medium transition">Rafra&icirc;chir</button>
         </div>
       )}
 
@@ -276,11 +449,11 @@ export default function WatchlistPage() {
         <div>
           <h1 className="text-2xl font-bold text-[--text-primary]">Watchlist</h1>
           <p className="text-sm text-[--text-secondary]">
-            Suivez vos instruments en temps réel
+            Suivez vos instruments en temps r&eacute;el
             {lastUpdated && (
               <span className="ml-2 text-[--text-muted]">
                 <Clock className="w-3 h-3 inline mr-1" />
-                Dernière mise à jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                Derni&egrave;re mise &agrave; jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </p>
@@ -297,7 +470,7 @@ export default function WatchlistPage() {
             )}
           </button>
           <button onClick={fetchQuotes} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] hover:text-[--text-primary] text-sm">
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Rafraîchir
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Rafra&icirc;chir
           </button>
           <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-sm font-medium">
             <Plus className="w-4 h-4" /> Ajouter
@@ -323,7 +496,7 @@ export default function WatchlistPage() {
             )}
           </div>
           {alertHistory.length === 0 ? (
-            <p className="text-sm text-[--text-muted]">Aucune alerte déclenchée</p>
+            <p className="text-sm text-[--text-muted]">Aucune alerte d&eacute;clench&eacute;e</p>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {alertHistory.slice(0, 20).map((h, i) => (
@@ -434,7 +607,7 @@ export default function WatchlistPage() {
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Prix</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Change</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden md:table-cell">%</th>
-                <th className="text-center text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">Tendance</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">Mini Chart</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">Volume</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">Bid/Ask</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">52W Range</th>
@@ -445,6 +618,7 @@ export default function WatchlistPage() {
               {filtered.map((item) => {
                 const q = quotes[item.symbol];
                 const isUp = q ? q.change >= 0 : true;
+                const correlations = getCorrelations(item.symbol);
                 return (
                   <tr key={item.symbol} className="border-b border-[--border-subtle] hover:bg-[--bg-hover] transition-colors">
                     <td className="p-4">
@@ -453,12 +627,18 @@ export default function WatchlistPage() {
                           {item.symbol.slice(0, 2)}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-semibold text-sm text-[--text-primary]">{item.symbol}</p>
                             {item.alertPrice && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 flex items-center gap-1">
                                 <Bell className="w-2.5 h-2.5" />
                                 ${item.alertPrice}
+                              </span>
+                            )}
+                            {correlations.length > 0 && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 flex items-center gap-1" title={`Corr\u00e9l\u00e9 avec ${correlations.map(c => c.symbol).join(", ")}`}>
+                                <Link2 className="w-2.5 h-2.5" />
+                                Corr&eacute;l&eacute; ({correlations[0].coefficient.toFixed(2)})
                               </span>
                             )}
                           </div>
@@ -467,34 +647,34 @@ export default function WatchlistPage() {
                       </div>
                     </td>
                     <td className="p-4 text-right">
-                      <span className="text-sm font-bold mono text-[--text-primary]">{q ? `$${q.last.toFixed(2)}` : "—"}</span>
+                      <span className="text-sm font-bold mono text-[--text-primary]">{q ? `$${q.last.toFixed(2)}` : "\u2014"}</span>
                     </td>
                     <td className="p-4 text-right">
                       <span className={`text-sm font-medium mono ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
-                        {q ? `${isUp ? "+" : ""}${q.change.toFixed(2)}` : "—"}
+                        {q ? `${isUp ? "+" : ""}${q.change.toFixed(2)}` : "\u2014"}
                       </span>
                     </td>
                     <td className="p-4 text-right hidden md:table-cell">
                       <span className={`text-xs px-2 py-1 rounded-lg font-medium ${isUp ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
-                        {q ? `${isUp ? "+" : ""}${q.changepct.toFixed(2)}%` : "—"}
+                        {q ? `${isUp ? "+" : ""}${q.changepct.toFixed(2)}%` : "\u2014"}
                       </span>
                     </td>
                     <td className="p-4 text-center hidden lg:table-cell">
-                      {q ? <Sparkline change={q.change} /> : "—"}
+                      {q ? <MiniChartSparkline quote={q} /> : "\u2014"}
                     </td>
                     <td className="p-4 text-right hidden lg:table-cell">
-                      <span className="text-xs text-[--text-secondary] mono">{q ? formatVolume(q.volume) : "—"}</span>
+                      <span className="text-xs text-[--text-secondary] mono">{q ? formatVolume(q.volume) : "\u2014"}</span>
                     </td>
                     <td className="p-4 text-right hidden xl:table-cell">
-                      <span className="text-xs text-[--text-secondary] mono">{q ? `${q.bid.toFixed(2)} / ${q.ask.toFixed(2)}` : "—"}</span>
+                      <span className="text-xs text-[--text-secondary] mono">{q ? `${q.bid.toFixed(2)} / ${q.ask.toFixed(2)}` : "\u2014"}</span>
                     </td>
                     <td className="p-4 text-right hidden xl:table-cell">
-                      <span className="text-xs text-[--text-secondary] mono">{q ? `${q.low52.toFixed(0)} — ${q.high52.toFixed(0)}` : "—"}</span>
+                      <span className="text-xs text-[--text-secondary] mono">{q ? `${q.low52.toFixed(0)} \u2014 ${q.high52.toFixed(0)}` : "\u2014"}</span>
                     </td>
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
-                          onClick={() => { setAlertSymbol(item.symbol); setAlertPrice(q ? q.last.toFixed(2) : ""); }}
+                          onClick={() => { setAlertSymbol(item.symbol); setAlertPrice(q ? q.last.toFixed(2) : ""); setAlertError(null); }}
                           className={`p-1.5 rounded-lg hover:bg-[--bg-secondary] ${item.alertPrice ? "text-amber-400" : "text-[--text-muted]"}`}
                           title="Alerte prix"
                         >
@@ -529,9 +709,69 @@ export default function WatchlistPage() {
         </div>
       )}
 
+      {/* ═══ Dernieres News ═══ */}
+      <div className="glass rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-[--text-primary] flex items-center gap-2">
+            <Newspaper className="w-4 h-4 text-cyan-400" />
+            Derni&egrave;res News
+          </h3>
+          <button onClick={fetchNews} disabled={newsLoading} className="text-xs text-[--text-muted] hover:text-[--text-primary] transition">
+            <RefreshCw className={`w-3 h-3 inline mr-1 ${newsLoading ? "animate-spin" : ""}`} />
+            Actualiser
+          </button>
+        </div>
+        {newsLoading && news.length === 0 ? (
+          <div className="space-y-3 animate-pulse">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-12 rounded-lg bg-[--bg-secondary]/30" />
+            ))}
+          </div>
+        ) : news.length > 0 ? (
+          <div className="space-y-3">
+            {news.map((item, i) => (
+              <a
+                key={i}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 p-3 rounded-xl bg-[--bg-hover] hover:bg-[--bg-secondary] transition-colors group"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-[--text-primary] group-hover:text-cyan-400 transition-colors line-clamp-2">
+                    {item.title}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {item.source && <span className="text-[10px] text-[--text-muted]">{item.source}</span>}
+                    {item.publishedAt && (
+                      <span className="text-[10px] text-[--text-muted]">
+                        {new Date(item.publishedAt).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    )}
+                    {item.symbols && item.symbols.length > 0 && (
+                      <div className="flex gap-1">
+                        {item.symbols.slice(0, 3).map((s) => (
+                          <span key={s} className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-400">{s}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <TrendingUp className="w-4 h-4 text-[--text-muted] group-hover:text-cyan-400 mt-1 flex-shrink-0" />
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-[--text-muted]">
+            <Newspaper className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">Aucune news disponible pour vos symboles</p>
+          </div>
+        )}
+      </div>
+
       {/* Alert Modal */}
       {alertSymbol && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setAlertSymbol(null)}>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setAlertSymbol(null); setAlertError(null); }}>
           <div className="glass rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-[--text-primary] mb-4">Alerte pour {alertSymbol}</h3>
             <div className="space-y-3">
@@ -540,11 +780,26 @@ export default function WatchlistPage() {
                   <option value="above">Au-dessus de</option>
                   <option value="below">En-dessous de</option>
                 </select>
-                <input type="number" value={alertPrice} onChange={(e) => setAlertPrice(e.target.value)} placeholder="Prix" className="input-field flex-1" step="0.01" />
+                <input
+                  type="number"
+                  value={alertPrice}
+                  onChange={(e) => { setAlertPrice(e.target.value); setAlertError(null); }}
+                  placeholder="Prix"
+                  className={`input-field flex-1 ${alertError ? "border-rose-500/50" : ""}`}
+                  step="0.01"
+                  min="0.01"
+                />
               </div>
+              {/* Alert validation error message */}
+              {alertError && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-rose-500/10 text-rose-400">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-xs font-medium">{alertError}</span>
+                </div>
+              )}
               <div className="flex gap-2">
-                <button onClick={() => setAlert(alertSymbol)} className="flex-1 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-medium text-sm">Définir l&apos;alerte</button>
-                <button onClick={() => setAlertSymbol(null)} className="px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm">Annuler</button>
+                <button onClick={() => setAlert(alertSymbol)} className="flex-1 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-medium text-sm">D&eacute;finir l&apos;alerte</button>
+                <button onClick={() => { setAlertSymbol(null); setAlertError(null); }} className="px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm">Annuler</button>
               </div>
             </div>
           </div>

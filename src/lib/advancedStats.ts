@@ -373,21 +373,57 @@ export function detectMistakes(trades: Trade[]): MistakePattern[] {
 }
 
 // ---- POSITION SIZING CALCULATOR ----
+export type AssetType = "forex" | "crypto" | "indices" | "stocks";
+
+export interface PositionSizeResult {
+  lots: number;
+  riskAmount: number;
+  pipsAtRisk: number;
+  unit: string;
+}
+
 export function calculatePositionSize(
   balance: number,
   riskPercent: number,
   entry: number,
   sl: number,
-  pipValue: number = 10
-): { lots: number; riskAmount: number; pipsAtRisk: number } {
+  pipValue: number = 10,
+  assetType: AssetType = "forex"
+): PositionSizeResult {
   const riskAmount = balance * (riskPercent / 100);
-  const pipsAtRisk = Math.abs(entry - sl) * 10000; // For forex pairs
-  const lots = pipsAtRisk > 0 ? riskAmount / (pipsAtRisk * pipValue) : 0;
+
+  if (assetType === "forex") {
+    const pipsAtRisk = Math.abs(entry - sl) * 10000;
+    const lots = pipsAtRisk > 0 ? riskAmount / (pipsAtRisk * pipValue) : 0;
+    return {
+      lots: parseFloat(lots.toFixed(2)),
+      riskAmount: parseFloat(riskAmount.toFixed(2)),
+      pipsAtRisk: parseFloat(pipsAtRisk.toFixed(1)),
+      unit: "lots",
+    };
+  }
+
+  // Crypto, indices, stocks: lot size = 1, risk per unit = price difference
+  const priceRiskPerUnit = Math.abs(entry - sl);
+  const units = priceRiskPerUnit > 0 ? riskAmount / priceRiskPerUnit : 0;
+  const unitLabels: Record<string, string> = { crypto: "coins", indices: "contrats", stocks: "actions" };
   return {
-    lots: parseFloat(lots.toFixed(2)),
+    lots: parseFloat(units.toFixed(4)),
     riskAmount: parseFloat(riskAmount.toFixed(2)),
-    pipsAtRisk: parseFloat(pipsAtRisk.toFixed(1)),
+    pipsAtRisk: parseFloat(priceRiskPerUnit.toFixed(2)),
+    unit: unitLabels[assetType] || "units",
   };
+}
+
+// ---- KELLY RAW (can be negative) ----
+export function computeKellyRaw(trades: Trade[]): number {
+  const wins = trades.filter((t) => t.result > 0);
+  const losses = trades.filter((t) => t.result < 0);
+  const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.result, 0) / wins.length : 0;
+  const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.result, 0) / losses.length) : 1;
+  const winRate = trades.length > 0 ? wins.length / trades.length : 0;
+  const payoffRatio = avgLoss > 0 ? avgWin / avgLoss : 0;
+  return payoffRatio > 0 ? (winRate * payoffRatio - (1 - winRate)) / payoffRatio : 0;
 }
 
 // ---- EMOTION-PERFORMANCE HEATMAP ----
