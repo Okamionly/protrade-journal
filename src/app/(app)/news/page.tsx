@@ -1,7 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { RefreshCw, ExternalLink, Clock, AlertTriangle, X, Search, Newspaper } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import {
+  RefreshCw,
+  ExternalLink,
+  Clock,
+  AlertTriangle,
+  X,
+  Search,
+  Newspaper,
+  TrendingUp,
+  Filter,
+  Zap,
+} from "lucide-react";
+
+// --------------- Types ---------------
 
 interface NewsItem {
   id: number;
@@ -15,9 +28,40 @@ interface NewsItem {
   url: string;
 }
 
+// --------------- Constants ---------------
+
+const CATEGORY_TABS = [
+  { key: "all", label: "Tous" },
+  { key: "marchés", label: "March\u00e9s" },
+  { key: "crypto", label: "Crypto" },
+  { key: "forex", label: "Forex" },
+  { key: "actions", label: "Actions" },
+  { key: "macro", label: "Macro" },
+  { key: "commodities", label: "Commodities" },
+] as const;
+
+const SOURCE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  "yahoo finance": { bg: "rgba(115, 59, 214, 0.15)", text: "#a78bfa", border: "rgba(115, 59, 214, 0.3)" },
+  "google news": { bg: "rgba(59, 130, 246, 0.15)", text: "#60a5fa", border: "rgba(59, 130, 246, 0.3)" },
+  finviz: { bg: "rgba(16, 185, 129, 0.15)", text: "#34d399", border: "rgba(16, 185, 129, 0.3)" },
+  bloomberg: { bg: "rgba(251, 146, 60, 0.15)", text: "#fb923c", border: "rgba(251, 146, 60, 0.3)" },
+  reuters: { bg: "rgba(251, 113, 133, 0.15)", text: "#fb7185", border: "rgba(251, 113, 133, 0.3)" },
+  cnbc: { bg: "rgba(56, 189, 248, 0.15)", text: "#38bdf8", border: "rgba(56, 189, 248, 0.3)" },
+  finnhub: { bg: "rgba(6, 182, 212, 0.15)", text: "#22d3ee", border: "rgba(6, 182, 212, 0.3)" },
+  marketphase: { bg: "rgba(6, 182, 212, 0.15)", text: "#22d3ee", border: "rgba(6, 182, 212, 0.3)" },
+};
+
+const DEFAULT_SOURCE_COLOR = { bg: "rgba(148, 163, 184, 0.15)", text: "#94a3b8", border: "rgba(148, 163, 184, 0.3)" };
+
+function getSourceColor(source: string) {
+  return SOURCE_COLORS[source.toLowerCase()] || DEFAULT_SOURCE_COLOR;
+}
+
+// --------------- Helpers ---------------
+
 function timeAgo(timestamp: number): string {
   const seconds = Math.floor(Date.now() / 1000 - timestamp);
-  if (seconds < 60) return "à l'instant";
+  if (seconds < 60) return "\u00e0 l\u2019instant";
   if (seconds < 3600) return `il y a ${Math.floor(seconds / 60)}min`;
   if (seconds < 86400) return `il y a ${Math.floor(seconds / 3600)}h`;
   return `il y a ${Math.floor(seconds / 86400)}j`;
@@ -27,20 +71,132 @@ function formatLastUpdated(date: Date | null): string {
   if (!date) return "";
   const diffMs = Date.now() - date.getTime();
   const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "à l'instant";
+  if (diffMin < 1) return "\u00e0 l\u2019instant";
   if (diffMin < 60) return `il y a ${diffMin} min`;
   return `il y a ${Math.floor(diffMin / 60)}h`;
 }
+
+/** Extract top trending keywords from headlines */
+function extractTrendingTopics(articles: NewsItem[], count = 5): string[] {
+  const stopWords = new Set([
+    "le", "la", "les", "de", "du", "des", "un", "une", "et", "en", "au", "aux",
+    "pour", "par", "sur", "dans", "avec", "est", "sont", "a", "ont", "que", "qui",
+    "ce", "sa", "son", "ses", "se", "ne", "pas", "plus", "the", "of", "and", "to",
+    "in", "for", "is", "on", "at", "by", "an", "it", "as", "its", "be", "has",
+    "was", "are", "from", "or", "but", "not", "this", "that", "with", "will",
+    "face", "new", "says", "after", "over", "how", "why", "what", "amid",
+  ]);
+  const wordCounts = new Map<string, number>();
+
+  for (const article of articles) {
+    const words = article.headline
+      .toLowerCase()
+      .replace(/[^a-zà-ÿ0-9\s]/g, "")
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !stopWords.has(w));
+    const seen = new Set<string>();
+    for (const word of words) {
+      if (!seen.has(word)) {
+        seen.add(word);
+        wordCounts.set(word, (wordCounts.get(word) || 0) + 1);
+      }
+    }
+  }
+
+  return Array.from(wordCounts.entries())
+    .filter(([, c]) => c >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, count)
+    .map(([w]) => w);
+}
+
+// --------------- Components ---------------
+
+function SkeletonCard() {
+  return (
+    <div className="glass rounded-2xl p-5 animate-pulse">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="h-5 w-20 bg-[--bg-secondary]/40 rounded-full" />
+        <div className="h-4 w-12 bg-[--bg-secondary]/30 rounded" />
+        <div className="ml-auto h-4 w-16 bg-[--bg-secondary]/30 rounded" />
+      </div>
+      <div className="h-5 bg-[--bg-secondary]/40 rounded w-full mb-2" />
+      <div className="h-5 bg-[--bg-secondary]/30 rounded w-3/4 mb-3" />
+      <div className="h-4 bg-[--bg-secondary]/20 rounded w-full mb-1" />
+      <div className="h-4 bg-[--bg-secondary]/20 rounded w-2/3" />
+    </div>
+  );
+}
+
+function NewsCard({ item }: { item: NewsItem }) {
+  const colors = getSourceColor(item.source);
+
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="glass rounded-2xl p-5 hover:border-cyan-500/30 transition-all group block"
+      style={{ cursor: item.url === "#" ? "default" : "pointer" }}
+    >
+      {/* Top row: source badge + category + time */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <span
+          className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide"
+          style={{
+            background: colors.bg,
+            color: colors.text,
+            border: `1px solid ${colors.border}`,
+          }}
+        >
+          {item.source}
+        </span>
+        {item.category && (
+          <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase text-[--text-muted] bg-[--bg-secondary]/40 border border-[--border]">
+            {item.category}
+          </span>
+        )}
+        <span className="text-[11px] text-[--text-muted] ml-auto flex items-center gap-1 whitespace-nowrap">
+          <Clock className="w-3 h-3" />
+          {timeAgo(item.datetime)}
+        </span>
+      </div>
+
+      {/* Title */}
+      <h3 className="font-semibold text-sm leading-snug mb-2 line-clamp-2 group-hover:text-cyan-400 transition-colors">
+        {item.headline}
+      </h3>
+
+      {/* Summary */}
+      {item.summary && (
+        <p className="text-xs text-[--text-secondary] line-clamp-2 mb-3">{item.summary}</p>
+      )}
+
+      {/* Read link */}
+      {item.url !== "#" && (
+        <div className="flex items-center gap-1 text-xs text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ExternalLink className="w-3 h-3" />
+          Lire l&apos;article
+        </div>
+      )}
+    </a>
+  );
+}
+
+// --------------- Main Page ---------------
 
 export default function NewsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [lastUpdatedText, setLastUpdatedText] = useState("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // --------------- Fetch ---------------
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,24 +206,24 @@ export default function NewsPage() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          setNews(data.slice(0, 50));
+          setNews(data);
           setLastUpdated(new Date());
         } else if (Array.isArray(data) && data.length === 0) {
-          setError("Aucune actualité disponible. L'API n'a retourné aucun résultat.");
+          setError("Aucune actualit\u00e9 disponible.");
         } else {
-          setError("Format de réponse inattendu de l'API.");
+          setError("Format de r\u00e9ponse inattendu de l\u2019API.");
         }
       } else {
-        setError("Impossible de charger les actualités. Réessayez.");
+        setError("Impossible de charger les actualit\u00e9s. R\u00e9essayez.");
       }
     } catch {
-      setError("Impossible de charger les actualités. Vérifiez votre connexion.");
+      setError("Impossible de charger les actualit\u00e9s. V\u00e9rifiez votre connexion.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Initial load + auto-refresh every 5 minutes
+  // Auto-refresh every 5 minutes
   useEffect(() => {
     load();
     intervalRef.current = setInterval(load, 5 * 60 * 1000);
@@ -76,7 +232,7 @@ export default function NewsPage() {
     };
   }, [load]);
 
-  // Update the "last updated" text every 30 seconds
+  // Update "last updated" text every 30s
   useEffect(() => {
     const tick = () => setLastUpdatedText(formatLastUpdated(lastUpdated));
     tick();
@@ -84,20 +240,35 @@ export default function NewsPage() {
     return () => clearInterval(id);
   }, [lastUpdated]);
 
-  const categories = [...new Set(news.map((n) => n.category))].filter(Boolean).sort();
+  // --------------- Derived data ---------------
 
-  const filtered = news.filter((item) => {
-    const matchesFilter = filter === "all" || item.category === filter;
-    const matchesSearch =
-      !searchQuery ||
-      item.headline.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.source.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const sources = useMemo(() => {
+    const s = [...new Set(news.map((n) => n.source))].filter(Boolean).sort();
+    return s;
+  }, [news]);
+
+  const trendingTopics = useMemo(() => extractTrendingTopics(news), [news]);
+
+  const filtered = useMemo(() => {
+    return news.filter((item) => {
+      if (categoryFilter !== "all" && item.category !== categoryFilter) return false;
+      if (sourceFilter !== "all" && item.source.toLowerCase() !== sourceFilter.toLowerCase()) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return (
+          item.headline.toLowerCase().includes(q) ||
+          item.summary.toLowerCase().includes(q) ||
+          item.source.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [news, categoryFilter, sourceFilter, searchQuery]);
+
+  // --------------- Render ---------------
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Error Banner */}
       {error && (
         <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
@@ -106,31 +277,74 @@ export default function NewsPage() {
             <span className="text-sm font-medium">{error}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={load} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Réessayer</button>
-            <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
+            <button
+              onClick={load}
+              className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition"
+            >
+              R\u00e9essayer
+            </button>
+            <button
+              onClick={() => setError(null)}
+              className="p-1 rounded-lg hover:bg-rose-500/20 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
 
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">News Feed</h1>
-          <p className="text-sm text-[--text-secondary] dark:text-[--text-secondary] mt-1">
-            Actualités financières en temps réel
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Newspaper className="w-6 h-6 text-cyan-400" />
+            Fil d&apos;Actualit\u00e9s
+          </h1>
+          <p className="text-sm text-[--text-secondary] mt-1">
+            Actualit\u00e9s financi\u00e8res multi-sources en temps r\u00e9el
             {lastUpdatedText && (
               <span className="ml-2 text-[--text-muted]">
-                — Dernière mise à jour: {lastUpdatedText}
+                &mdash; Derni\u00e8re mise \u00e0 jour: {lastUpdatedText}
               </span>
             )}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[--text-muted] hidden sm:inline">Auto-refresh 5min</span>
-          <button onClick={load} className="p-2 rounded-lg hover:bg-white/5 transition" title="Rafraichir">
+          <span className="text-xs text-[--text-muted] hidden sm:inline flex items-center gap-1">
+            <Zap className="w-3 h-3 inline" /> Auto-refresh 5min
+          </span>
+          <button
+            onClick={load}
+            className="p-2 rounded-lg hover:bg-white/5 transition"
+            title="Rafra\u00eechir"
+          >
             <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
       </div>
+
+      {/* Trending Topics */}
+      {trendingTopics.length > 0 && (
+        <div className="glass rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4 text-cyan-400" />
+            <span className="text-xs font-semibold text-[--text-secondary] uppercase tracking-wide">
+              Tendances
+            </span>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {trendingTopics.map((topic) => (
+              <button
+                key={topic}
+                onClick={() => setSearchQuery(topic)}
+                className="px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 hover:border-cyan-500/40 transition cursor-pointer"
+              >
+                #{topic}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search bar */}
       <div className="relative">
@@ -139,102 +353,120 @@ export default function NewsPage() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Rechercher par mot-clé (titre, résumé, source)..."
+          placeholder="Rechercher par mot-cl\u00e9 (titre, r\u00e9sum\u00e9, source)..."
           className="input-field pl-10 w-full"
         />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 transition"
+          >
+            <X className="w-3.5 h-3.5 text-[--text-muted]" />
+          </button>
+        )}
       </div>
 
-      {/* Category filters */}
+      {/* Category tabs */}
       <div className="flex gap-1.5 flex-wrap">
+        {CATEGORY_TABS.map((tab) => {
+          const count = tab.key === "all" ? news.length : news.filter((n) => n.category === tab.key).length;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setCategoryFilter(tab.key)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition ${
+                categoryFilter === tab.key
+                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
+                  : "text-[--text-secondary] hover:text-[--text-primary] border border-[--border] hover:border-[--text-muted]"
+              }`}
+            >
+              {tab.label} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Source filter pills */}
+      <div className="flex gap-1.5 flex-wrap items-center">
+        <Filter className="w-3.5 h-3.5 text-[--text-muted]" />
         <button
-          onClick={() => setFilter("all")}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition ${
-            filter === "all"
+          onClick={() => setSourceFilter("all")}
+          className={`px-3 py-1 rounded-full text-[11px] font-medium transition ${
+            sourceFilter === "all"
               ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
               : "text-[--text-secondary] hover:text-[--text-primary] border border-[--border] hover:border-[--text-muted]"
           }`}
         >
-          Tous ({news.length})
+          Toutes
         </button>
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setFilter(cat)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition ${
-              filter === cat
-                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
-                : "text-[--text-secondary] hover:text-[--text-primary] border border-[--border] hover:border-[--text-muted]"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+        {sources.map((src) => {
+          const colors = getSourceColor(src);
+          const isActive = sourceFilter.toLowerCase() === src.toLowerCase();
+          return (
+            <button
+              key={src}
+              onClick={() => setSourceFilter(isActive ? "all" : src)}
+              className="px-3 py-1 rounded-full text-[11px] font-medium transition border"
+              style={{
+                background: isActive ? colors.bg : "transparent",
+                color: isActive ? colors.text : "var(--text-secondary)",
+                borderColor: isActive ? colors.border : "var(--border)",
+              }}
+            >
+              {src}
+            </button>
+          );
+        })}
       </div>
 
+      {/* Content */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="glass rounded-2xl p-4 animate-pulse">
-              <div className="h-40 bg-[--bg-secondary]/30 rounded-xl mb-3" />
-              <div className="h-4 bg-[--bg-secondary]/30 rounded w-3/4 mb-2" />
-              <div className="h-3 bg-[--bg-secondary]/30 rounded w-full mb-1" />
-              <div className="h-3 bg-[--bg-secondary]/30 rounded w-2/3" />
-            </div>
+          {Array.from({ length: 12 }).map((_, i) => (
+            <SkeletonCard key={i} />
           ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="glass rounded-2xl p-8 text-center text-[--text-muted]">
           <Newspaper className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">Aucune actualité trouvée</p>
+          <p className="font-medium">Aucune actualit\u00e9 trouv\u00e9e</p>
           {searchQuery && (
-            <p className="text-sm mt-1">Essayez un autre mot-clé ou supprimez le filtre de recherche.</p>
+            <p className="text-sm mt-1">
+              Essayez un autre mot-cl\u00e9 ou supprimez le filtre de recherche.
+            </p>
           )}
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setCategoryFilter("all");
+              setSourceFilter("all");
+            }}
+            className="mt-3 px-4 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 text-xs font-medium hover:bg-cyan-500/30 transition"
+          >
+            R\u00e9initialiser les filtres
+          </button>
         </div>
       ) : (
         <>
-          <p className="text-xs text-[--text-muted]">{filtered.length} article{filtered.length > 1 ? "s" : ""} affiché{filtered.length > 1 ? "s" : ""}</p>
+          <p className="text-xs text-[--text-muted]">
+            {filtered.length} article{filtered.length > 1 ? "s" : ""} affich\u00e9
+            {filtered.length > 1 ? "s" : ""}
+            {(categoryFilter !== "all" || sourceFilter !== "all" || searchQuery) && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setCategoryFilter("all");
+                  setSourceFilter("all");
+                }}
+                className="ml-2 text-cyan-400 hover:underline"
+              >
+                Effacer les filtres
+              </button>
+            )}
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filtered.map((item) => (
-              <a
-                key={item.id}
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="glass rounded-2xl overflow-hidden hover:border-cyan-500/30 transition-all group"
-              >
-                {item.image && (
-                  <div className="h-40 overflow-hidden">
-                    <img
-                      src={item.image}
-                      alt=""
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                    />
-                  </div>
-                )}
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                      {item.source}
-                    </span>
-                    {item.category && (
-                      <span className="text-[10px] text-[--text-muted] uppercase">{item.category}</span>
-                    )}
-                    <span className="text-[10px] text-[--text-muted] ml-auto flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {timeAgo(item.datetime)}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-cyan-400 transition">
-                    {item.headline}
-                  </h3>
-                  <p className="text-xs text-[--text-secondary] line-clamp-2">{item.summary}</p>
-                  <div className="mt-3 flex items-center gap-1 text-xs text-cyan-400 opacity-0 group-hover:opacity-100 transition">
-                    <ExternalLink className="w-3 h-3" />
-                    Lire l&apos;article
-                  </div>
-                </div>
-              </a>
+              <NewsCard key={item.id} item={item} />
             ))}
           </div>
         </>
