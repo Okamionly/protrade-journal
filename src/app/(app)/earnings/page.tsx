@@ -209,46 +209,50 @@ export default function EarningsCalendarPage() {
               </div>
             </div>
 
-            {/* Week Grid */}
-            <div className="grid grid-cols-5 gap-3">
+            {/* Week Grid — Vertical layout */}
+            <div className="space-y-4">
               {weekDays.map((day) => {
                 const dateStr = day.toISOString().split("T")[0];
                 const dayEarnings = earningsByDate[dateStr] || [];
                 const isToday = day.toDateString() === today.toDateString();
 
                 return (
-                  <div key={dateStr} className={`rounded-xl border p-4 min-h-[200px] ${isToday ? "ring-2 ring-cyan-400/50 border-cyan-500/30" : "border-[--border-subtle]"}`}>
-                    <p className={`text-sm font-semibold mb-3 ${isToday ? "text-cyan-400" : "text-[--text-primary]"}`}>
-                      {day.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}
-                    </p>
-                    <div className="space-y-2">
-                      {dayEarnings.map((e, idx) => {
-                        const isTraded = tradedSymbols.has(e.symbol);
-                        return (
-                          <div key={`${e.symbol}-${e.hour}-${idx}`} className={`p-2.5 rounded-lg text-xs ${isTraded ? "bg-amber-500/15 border border-amber-500/30" : "bg-[--bg-secondary]/50"}`}>
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-[--text-primary]">{e.symbol}</span>
-                              {TIME_LABELS[e.hour] && (
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] ${TIME_LABELS[e.hour].color}`}>
-                                  {e.hour.toUpperCase()}
-                                </span>
+                  <div key={dateStr} className={`rounded-xl border p-4 ${isToday ? "ring-2 ring-cyan-400/50 border-cyan-500/30" : "border-[--border-subtle]"}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className={`text-sm font-semibold ${isToday ? "text-cyan-400" : "text-[--text-primary]"}`}>
+                        {day.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}
+                      </p>
+                      <span className="text-xs text-[--text-muted]">{dayEarnings.length} résultat{dayEarnings.length !== 1 ? "s" : ""}</span>
+                    </div>
+                    {dayEarnings.length === 0 ? (
+                      <p className="text-xs text-[--text-muted] py-2">Aucun earnings ce jour</p>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                        {dayEarnings.map((e, idx) => {
+                          const isTraded = tradedSymbols.has(e.symbol);
+                          return (
+                            <div key={`${e.symbol}-${e.hour}-${idx}`} className={`p-3 rounded-lg text-xs ${isTraded ? "bg-amber-500/15 border border-amber-500/30" : "bg-[--bg-secondary]/50"}`}>
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span className="font-bold text-[--text-primary]">{e.symbol}</span>
+                                {TIME_LABELS[e.hour] && (
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 ${TIME_LABELS[e.hour].color}`}>
+                                    {e.hour.toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              {e.epsEstimate != null && (
+                                <p className="text-[--text-secondary]">EPS: ${e.epsEstimate}</p>
+                              )}
+                              {e.epsActual != null && (
+                                <p className={`${e.epsActual >= (e.epsEstimate ?? 0) ? "text-emerald-400" : "text-rose-400"}`}>
+                                  Actual: ${e.epsActual}
+                                </p>
                               )}
                             </div>
-                            {e.epsEstimate != null && (
-                              <p className="text-[--text-secondary] mt-1">EPS: ${e.epsEstimate}</p>
-                            )}
-                            {e.epsActual != null && (
-                              <p className={`mt-0.5 ${e.epsActual >= (e.epsEstimate ?? 0) ? "text-emerald-400" : "text-rose-400"}`}>
-                                Actual: ${e.epsActual}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {dayEarnings.length === 0 && (
-                        <p className="text-xs text-[--text-muted] text-center py-4">Aucun</p>
-                      )}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}

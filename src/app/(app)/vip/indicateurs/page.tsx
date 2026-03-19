@@ -37,6 +37,119 @@ const formatDate = (date: string) =>
     year: "numeric",
   });
 
+/* ─── Markdown-to-HTML renderer ─── */
+function renderMarkdown(md: string): string {
+  let html = md;
+
+  // Escape HTML
+  html = html
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Code blocks
+  html = html.replace(
+    /```[\w]*\n([\s\S]*?)```/g,
+    '<pre class="vip-code-block"><code>$1</code></pre>'
+  );
+
+  // Tables
+  html = html.replace(
+    /((?:^|\n)\|.+\|(?:\n\|.+\|)+)/g,
+    (_match, tableBlock: string) => {
+      const lines = tableBlock.trim().split("\n");
+      if (lines.length < 2) return tableBlock;
+      let tableHtml = '<div class="vip-table-wrapper"><table class="vip-table">';
+      let isHeader = true;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (/^\|[\s\-:|]+\|$/.test(line)) { isHeader = false; continue; }
+        const cells = line.split("|").filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map((c) => c.trim());
+        if (isHeader) {
+          tableHtml += "<thead><tr>";
+          cells.forEach((cell) => { tableHtml += `<th>${cell}</th>`; });
+          tableHtml += "</tr></thead><tbody>";
+          isHeader = false;
+        } else {
+          tableHtml += "<tr>";
+          cells.forEach((cell) => { tableHtml += `<td>${cell}</td>`; });
+          tableHtml += "</tr>";
+        }
+      }
+      tableHtml += "</tbody></table></div>";
+      return tableHtml;
+    }
+  );
+
+  // Horizontal rules
+  html = html.replace(/^---+$/gm, '<hr class="vip-hr" />');
+
+  // Headings
+  html = html.replace(/^### (.+)$/gm, '<h3 class="vip-h3">$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 class="vip-h2">$1</h2>');
+
+  // Bold and italic
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+
+  // Unordered lists
+  html = html.replace(
+    /((?:^|\n)- .+(?:\n- .+)*)/g,
+    (_match, listBlock: string) => {
+      const items = listBlock.trim().split("\n").map((l) => l.replace(/^- /, "").trim()).filter(Boolean);
+      return '<ul class="vip-ul">' + items.map((item) => `<li>${item}</li>`).join("") + "</ul>";
+    }
+  );
+
+  // Ordered lists
+  html = html.replace(
+    /((?:^|\n)\d+\. .+(?:\n\d+\. .+)*)/g,
+    (_match, listBlock: string) => {
+      const items = listBlock.trim().split("\n").map((l) => l.replace(/^\d+\. /, "").trim()).filter(Boolean);
+      return '<ol class="vip-ol">' + items.map((item) => `<li>${item}</li>`).join("") + "</ol>";
+    }
+  );
+
+  // Paragraphs
+  html = html.split("\n").map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return "";
+    if (
+      trimmed.startsWith("<h") || trimmed.startsWith("<ul") || trimmed.startsWith("<ol") ||
+      trimmed.startsWith("<li") || trimmed.startsWith("<pre") || trimmed.startsWith("<div") ||
+      trimmed.startsWith("<table") || trimmed.startsWith("<thead") || trimmed.startsWith("<tbody") ||
+      trimmed.startsWith("<tr") || trimmed.startsWith("<th") || trimmed.startsWith("<td") ||
+      trimmed.startsWith("</") || trimmed.startsWith("<hr")
+    ) return trimmed;
+    return `<p class="vip-p">${trimmed}</p>`;
+  }).join("\n");
+
+  return html;
+}
+
+/* ─── Markdown content styles ─── */
+const markdownStyles = `
+.vip-md .vip-h2 { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 1.5rem 0 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+.vip-md .vip-h3 { font-size: 1.05rem; font-weight: 600; color: rgb(168,85,247); margin: 1.25rem 0 0.5rem; }
+.vip-md .vip-p { font-size: 0.875rem; line-height: 1.7; color: var(--text-primary); margin: 0.35rem 0; }
+.vip-md strong { color: var(--text-primary); font-weight: 700; }
+.vip-md em { color: var(--text-secondary); font-style: italic; }
+.vip-md .vip-ul, .vip-md .vip-ol { margin: 0.75rem 0; padding-left: 1.5rem; }
+.vip-md .vip-ul li, .vip-md .vip-ol li { font-size: 0.875rem; line-height: 1.7; color: var(--text-primary); margin: 0.25rem 0; }
+.vip-md .vip-ul { list-style: disc; }
+.vip-md .vip-ol { list-style: decimal; }
+.vip-md .vip-hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+.vip-md .vip-code-block { background: #1e1e2e; border: 1px solid var(--border); border-radius: 0.75rem; padding: 1rem; overflow-x: auto; max-height: 400px; margin: 0.75rem 0; }
+.vip-md .vip-code-block code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.75rem; color: #a6e3a1; white-space: pre; }
+.vip-md .vip-table-wrapper { overflow-x: auto; margin: 1rem 0; border-radius: 0.75rem; border: 1px solid var(--border); }
+.vip-md .vip-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.vip-md .vip-table thead { position: sticky; top: 0; z-index: 2; }
+.vip-md .vip-table th { background: var(--bg-hover); color: var(--text-primary); font-weight: 600; text-align: left; padding: 0.625rem 0.75rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.vip-md .vip-table td { padding: 0.5rem 0.75rem; color: var(--text-primary); border-bottom: 1px solid var(--border); }
+.vip-md .vip-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+.vip-md .vip-table tbody tr:hover { background: var(--bg-hover); }
+`;
+
 /* ─── Locked overlay ─── */
 function LockedOverlay() {
   return (
@@ -57,7 +170,7 @@ function LockedOverlay() {
         className="text-xs font-medium"
         style={{ color: "rgba(255,255,255,0.6)" }}
       >
-        S&apos;abonner pour acc&eacute;der
+        S'abonner pour accéder
       </span>
     </div>
   );
@@ -72,6 +185,7 @@ function IndicatorCard({
   isVip: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [contentExpanded, setContentExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async (code: string) => {
@@ -226,22 +340,46 @@ function IndicatorCard({
           </span>
         </div>
 
-        {/* Description (visible to all, code locked for non-VIP) */}
+        {/* Description — rendered as rich markdown */}
         {post.content && (
           <div className="mb-4">
-            {post.content
-              .split("\n")
-              .filter(Boolean)
-              .slice(0, isVip ? undefined : 2)
-              .map((para, i) => (
-                <p
-                  key={i}
-                  className="text-sm leading-relaxed mb-1"
-                  style={{ color: "var(--text-primary, #e5e7eb)" }}
-                >
-                  {para}
-                </p>
-              ))}
+            {isVip ? (
+              <div
+                className="vip-md"
+                dangerouslySetInnerHTML={{
+                  __html: renderMarkdown(
+                    contentExpanded
+                      ? post.content
+                      : post.content.split("\n").slice(0, 20).join("\n")
+                  ),
+                }}
+              />
+            ) : (
+              <div
+                className="vip-md"
+                style={{ maxHeight: 80, overflow: "hidden" }}
+                dangerouslySetInnerHTML={{
+                  __html: renderMarkdown(post.content.split("\n").slice(0, 6).join("\n")),
+                }}
+              />
+            )}
+            {isVip && post.content.split("\n").length > 20 && (
+              <button
+                onClick={() => setContentExpanded(!contentExpanded)}
+                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition hover:opacity-80"
+                style={{
+                  background: "rgba(168,85,247,0.08)",
+                  color: "rgb(168,85,247)",
+                  border: "1px solid rgba(168,85,247,0.15)",
+                }}
+              >
+                {contentExpanded ? (
+                  <><ChevronUp className="w-3.5 h-3.5" /> Réduire la description</>
+                ) : (
+                  <><ChevronDown className="w-3.5 h-3.5" /> Voir la description complète</>
+                )}
+              </button>
+            )}
           </div>
         )}
 
@@ -294,7 +432,7 @@ function IndicatorCard({
               className="text-[11px] font-medium"
               style={{ color: "var(--text-secondary, #9ca3af)" }}
             >
-              Dashboard int&eacute;gr&eacute;
+              Dashboard intégré
             </span>
           </div>
         </div>
@@ -341,7 +479,7 @@ function IndicatorCard({
               {copied ? (
                 <>
                   <Check className="w-4 h-4" />
-                  Copi&eacute; dans le presse-papier !
+                  Copié dans le presse-papier !
                 </>
               ) : (
                 <>
@@ -407,7 +545,7 @@ function IndicatorCard({
               className="text-xs font-medium"
               style={{ color: "rgba(255,255,255,0.6)" }}
             >
-              Abonnez-vous pour acc&eacute;der au code
+              Abonnez-vous pour accéder au code
             </span>
             <Link
               href="/vip"
@@ -480,6 +618,7 @@ function IndicateursPage() {
 
   return (
     <div className="min-h-screen pb-20">
+      <style dangerouslySetInnerHTML={{ __html: markdownStyles }} />
       {/* ═══ Hero Banner ═══ */}
       <div
         className="relative overflow-hidden rounded-2xl mx-4 mt-4 sm:mx-6 sm:mt-6 p-8 sm:p-12"
@@ -538,7 +677,7 @@ function IndicateursPage() {
                 className="text-sm mt-1"
                 style={{ color: "var(--text-secondary, #9ca3af)" }}
               >
-                Pine Script v6 &mdash; Copier-coller dans TradingView
+                Pine Script v6 — Copier-coller dans TradingView
               </p>
             </div>
           </div>
@@ -600,7 +739,7 @@ function IndicateursPage() {
                 className="text-sm"
                 style={{ color: "var(--text-secondary, #9ca3af)" }}
               >
-                Aucun indicateur pour le moment. Revenez bient&ocirc;t !
+                Aucun indicateur pour le moment. Revenez bientôt !
               </p>
             </div>
           ) : (

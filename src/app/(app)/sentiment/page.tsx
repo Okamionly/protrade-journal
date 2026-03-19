@@ -72,7 +72,7 @@ function GaugeChart({ value }: { value: number }) {
   return (
     <div className="relative w-64 h-36 mx-auto">
       <svg viewBox="0 0 200 110" className="w-full h-full">
-        <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="16" strokeLinecap="round" />
+        <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="var(--border)" strokeWidth="16" strokeLinecap="round" />
         <path
           d="M 10 100 A 90 90 0 0 1 190 100"
           fill="none"
@@ -86,10 +86,10 @@ function GaugeChart({ value }: { value: number }) {
           x1="100" y1="100"
           x2={100 + 70 * Math.cos((angle * Math.PI) / 180)}
           y2={100 + 70 * Math.sin((angle * Math.PI) / 180)}
-          stroke="white" strokeWidth="2" strokeLinecap="round"
+          stroke="var(--text-primary)" strokeWidth="2" strokeLinecap="round"
           className="transition-all duration-1000"
         />
-        <circle cx="100" cy="100" r="4" fill="white" />
+        <circle cx="100" cy="100" r="4" fill="var(--text-primary)" />
         <text x="15" y="108" fill="#ef4444" fontSize="8" fontWeight="bold">0</text>
         <text x="93" y="15" fill="#6b7280" fontSize="8" fontWeight="bold">50</text>
         <text x="178" y="108" fill="#34d399" fontSize="8" fontWeight="bold">100</text>
@@ -782,10 +782,10 @@ export default function SentimentPage() {
                   const val = parseInt(entry.value);
                   const safeVal = isNaN(val) ? 50 : val;
                   return (
-                    <div key={i} className="flex-1 flex flex-col items-center group relative">
+                    <div key={i} className="flex-1 flex flex-col justify-end items-center group relative h-full">
                       <div
                         className="w-full rounded-t transition-all hover:opacity-80 cursor-default"
-                        style={{ height: `${safeVal}%`, background: getBarColor(safeVal) }}
+                        style={{ height: `${(safeVal / 100) * 160}px`, background: getBarColor(safeVal) }}
                         title={`${safeVal} - ${classifyScore(safeVal).label}`}
                       />
                     </div>

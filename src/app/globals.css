@@ -85,6 +85,21 @@ html:not(.dark):not(.oled) .mono {
   color: var(--text-primary);
 }
 
+/* ---- INPUT & SELECT FIX ---- */
+html:not(.dark):not(.oled) input,
+html:not(.dark):not(.oled) select,
+html:not(.dark):not(.oled) textarea {
+  color: var(--text-primary) !important;
+}
+html:not(.dark):not(.oled) input::placeholder,
+html:not(.dark):not(.oled) textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+html:not(.dark):not(.oled) select option {
+  background: var(--bg-card-solid);
+  color: var(--text-primary);
+}
+
 /* ---- TABLE FIX ---- */
 html:not(.dark):not(.oled) table th {
   color: var(--text-secondary) !important;

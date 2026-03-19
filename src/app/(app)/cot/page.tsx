@@ -300,7 +300,7 @@ export default function CotPage() {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--text-muted]" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher des symboles, des noms ou des secteurs..."
-            className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg pl-10 pr-4 py-2 text-sm focus:border-cyan-500/50 focus:outline-none transition" />
+            className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg pl-10 pr-4 py-2 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:border-cyan-500/50 focus:outline-none transition" />
         </div>
       </div>
 

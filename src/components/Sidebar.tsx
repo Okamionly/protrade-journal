@@ -58,72 +58,182 @@ const LOCALE_STORAGE_KEY = "lbma-locale";
 // Admin nav item (shown only for ADMIN users)
 const adminItem = {
   href: "/admin",
-  label: "Admin Panel",
+  labelKey: "adminPanel" as const,
   icon: Shield,
   isAdmin: true,
 };
 
+// ─── Sidebar translations ───
+type SidebarKey =
+  | "adminPanel" | "secTrading" | "dashboard" | "journal" | "analytics" | "distribution"
+  | "riskManager" | "errors" | "strategies" | "playbook" | "checklist" | "importCsv"
+  | "secPerformance" | "score" | "grading" | "plCalendar" | "heatmap" | "dailyBias"
+  | "challenges" | "leaderboard"
+  | "secMarket" | "cotReport" | "macro" | "ecoCalendar" | "sentiment" | "currencyStrength"
+  | "news" | "marketData" | "lbmaMetals" | "scanner" | "watchlist" | "sectorHeatmap"
+  | "volatility" | "earnings" | "optionsFlow"
+  | "secAdvanced" | "aiCoach" | "warRoom" | "backtesting" | "calculator" | "replay"
+  | "correlation" | "comparison"
+  | "secTools" | "myDashboard" | "pdfReports" | "recaps" | "screenshots" | "chat"
+  | "secMySpace" | "profile"
+  | "secPremium" | "vip" | "indicators" | "macroAnalyses"
+  | "collapse";
+
+const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
+  fr: {
+    adminPanel: "Admin Panel", secTrading: "TRADING", dashboard: "Dashboard", journal: "Journal", analytics: "Analytics",
+    distribution: "Distribution", riskManager: "Risk Manager", errors: "Erreurs", strategies: "Stratégies",
+    playbook: "Playbook", checklist: "Checklist", importCsv: "Import CSV",
+    secPerformance: "PERFORMANCE", score: "Score", grading: "Notation", plCalendar: "P&L Calendrier",
+    heatmap: "Heatmap", dailyBias: "Daily Bias", challenges: "Challenges", leaderboard: "Leaderboard",
+    secMarket: "MARCHÉ", cotReport: "Rapport COT", macro: "Macro", ecoCalendar: "Calendrier Éco",
+    sentiment: "Sentiment", currencyStrength: "Force Devises", news: "News", marketData: "Market Data",
+    lbmaMetals: "LBMA Métaux", scanner: "Scanner", watchlist: "Watchlist", sectorHeatmap: "Heatmap Secteurs",
+    volatility: "Volatilité", earnings: "Earnings", optionsFlow: "Options Flow",
+    secAdvanced: "AVANCÉ", aiCoach: "AI Coach", warRoom: "War Room", backtesting: "Backtesting",
+    calculator: "Calculateur", replay: "Replay", correlation: "Corrélation", comparison: "Comparaison",
+    secTools: "OUTILS", myDashboard: "Mon Dashboard", pdfReports: "Rapports PDF", recaps: "Recaps",
+    screenshots: "Screenshots", chat: "Chat",
+    secMySpace: "MON ESPACE", profile: "Profil",
+    secPremium: "PREMIUM", vip: "VIP", indicators: "Indicateurs", macroAnalyses: "Analyses Macro",
+    collapse: "Réduire",
+  },
+  en: {
+    adminPanel: "Admin Panel", secTrading: "TRADING", dashboard: "Dashboard", journal: "Journal", analytics: "Analytics",
+    distribution: "Distribution", riskManager: "Risk Manager", errors: "Mistakes", strategies: "Strategies",
+    playbook: "Playbook", checklist: "Checklist", importCsv: "Import CSV",
+    secPerformance: "PERFORMANCE", score: "Score", grading: "Grading", plCalendar: "P&L Calendar",
+    heatmap: "Heatmap", dailyBias: "Daily Bias", challenges: "Challenges", leaderboard: "Leaderboard",
+    secMarket: "MARKET", cotReport: "COT Report", macro: "Macro", ecoCalendar: "Eco Calendar",
+    sentiment: "Sentiment", currencyStrength: "Currency Strength", news: "News", marketData: "Market Data",
+    lbmaMetals: "LBMA Metals", scanner: "Scanner", watchlist: "Watchlist", sectorHeatmap: "Sector Heatmap",
+    volatility: "Volatility", earnings: "Earnings", optionsFlow: "Options Flow",
+    secAdvanced: "ADVANCED", aiCoach: "AI Coach", warRoom: "War Room", backtesting: "Backtesting",
+    calculator: "Calculator", replay: "Replay", correlation: "Correlation", comparison: "Comparison",
+    secTools: "TOOLS", myDashboard: "My Dashboard", pdfReports: "PDF Reports", recaps: "Recaps",
+    screenshots: "Screenshots", chat: "Chat",
+    secMySpace: "MY SPACE", profile: "Profile",
+    secPremium: "PREMIUM", vip: "VIP", indicators: "Indicators", macroAnalyses: "Macro Analyses",
+    collapse: "Collapse",
+  },
+  ar: {
+    adminPanel: "لوحة الإدارة", secTrading: "التداول", dashboard: "لوحة القيادة", journal: "اليومية", analytics: "التحليلات",
+    distribution: "التوزيع", riskManager: "إدارة المخاطر", errors: "الأخطاء", strategies: "الاستراتيجيات",
+    playbook: "دليل التداول", checklist: "قائمة المراجعة", importCsv: "استيراد CSV",
+    secPerformance: "الأداء", score: "النتيجة", grading: "التقييم", plCalendar: "تقويم الأرباح",
+    heatmap: "خريطة حرارية", dailyBias: "الانحياز اليومي", challenges: "التحديات", leaderboard: "المتصدرين",
+    secMarket: "السوق", cotReport: "تقرير COT", macro: "ماكرو", ecoCalendar: "التقويم الاقتصادي",
+    sentiment: "المعنويات", currencyStrength: "قوة العملات", news: "الأخبار", marketData: "بيانات السوق",
+    lbmaMetals: "معادن LBMA", scanner: "الماسح", watchlist: "قائمة المراقبة", sectorHeatmap: "خريطة القطاعات",
+    volatility: "التقلبات", earnings: "الأرباح", optionsFlow: "تدفق الخيارات",
+    secAdvanced: "متقدم", aiCoach: "مدرب AI", warRoom: "غرفة العمليات", backtesting: "الاختبار الخلفي",
+    calculator: "الآلة الحاسبة", replay: "إعادة", correlation: "الارتباط", comparison: "المقارنة",
+    secTools: "أدوات", myDashboard: "لوحتي", pdfReports: "تقارير PDF", recaps: "ملخصات",
+    screenshots: "لقطات الشاشة", chat: "الدردشة",
+    secMySpace: "مساحتي", profile: "الملف الشخصي",
+    secPremium: "بريميوم", vip: "VIP", indicators: "المؤشرات", macroAnalyses: "تحليلات ماكرو",
+    collapse: "طي",
+  },
+  es: {
+    adminPanel: "Panel Admin", secTrading: "TRADING", dashboard: "Dashboard", journal: "Diario", analytics: "Análisis",
+    distribution: "Distribución", riskManager: "Gestión de Riesgo", errors: "Errores", strategies: "Estrategias",
+    playbook: "Playbook", checklist: "Checklist", importCsv: "Importar CSV",
+    secPerformance: "RENDIMIENTO", score: "Puntuación", grading: "Calificación", plCalendar: "Calendario P&L",
+    heatmap: "Mapa de Calor", dailyBias: "Sesgo Diario", challenges: "Desafíos", leaderboard: "Clasificación",
+    secMarket: "MERCADO", cotReport: "Informe COT", macro: "Macro", ecoCalendar: "Calendario Eco",
+    sentiment: "Sentimiento", currencyStrength: "Fuerza Divisas", news: "Noticias", marketData: "Datos de Mercado",
+    lbmaMetals: "Metales LBMA", scanner: "Escáner", watchlist: "Watchlist", sectorHeatmap: "Mapa Sectores",
+    volatility: "Volatilidad", earnings: "Resultados", optionsFlow: "Flujo Opciones",
+    secAdvanced: "AVANZADO", aiCoach: "Coach IA", warRoom: "Sala de Guerra", backtesting: "Backtesting",
+    calculator: "Calculadora", replay: "Replay", correlation: "Correlación", comparison: "Comparación",
+    secTools: "HERRAMIENTAS", myDashboard: "Mi Dashboard", pdfReports: "Informes PDF", recaps: "Resúmenes",
+    screenshots: "Capturas", chat: "Chat",
+    secMySpace: "MI ESPACIO", profile: "Perfil",
+    secPremium: "PREMIUM", vip: "VIP", indicators: "Indicadores", macroAnalyses: "Análisis Macro",
+    collapse: "Reducir",
+  },
+  de: {
+    adminPanel: "Admin-Panel", secTrading: "HANDEL", dashboard: "Dashboard", journal: "Journal", analytics: "Analyse",
+    distribution: "Verteilung", riskManager: "Risikomanager", errors: "Fehler", strategies: "Strategien",
+    playbook: "Playbook", checklist: "Checkliste", importCsv: "CSV Import",
+    secPerformance: "LEISTUNG", score: "Punktzahl", grading: "Bewertung", plCalendar: "P&L Kalender",
+    heatmap: "Heatmap", dailyBias: "Tagesbias", challenges: "Challenges", leaderboard: "Rangliste",
+    secMarket: "MARKT", cotReport: "COT-Bericht", macro: "Makro", ecoCalendar: "Wirtschaftskalender",
+    sentiment: "Stimmung", currencyStrength: "Währungsstärke", news: "Nachrichten", marketData: "Marktdaten",
+    lbmaMetals: "LBMA Metalle", scanner: "Scanner", watchlist: "Watchlist", sectorHeatmap: "Sektor-Heatmap",
+    volatility: "Volatilität", earnings: "Earnings", optionsFlow: "Optionsfluss",
+    secAdvanced: "ERWEITERT", aiCoach: "KI-Coach", warRoom: "War Room", backtesting: "Backtesting",
+    calculator: "Rechner", replay: "Replay", correlation: "Korrelation", comparison: "Vergleich",
+    secTools: "WERKZEUGE", myDashboard: "Mein Dashboard", pdfReports: "PDF-Berichte", recaps: "Zusammenfassungen",
+    screenshots: "Screenshots", chat: "Chat",
+    secMySpace: "MEIN BEREICH", profile: "Profil",
+    secPremium: "PREMIUM", vip: "VIP", indicators: "Indikatoren", macroAnalyses: "Makroanalysen",
+    collapse: "Einklappen",
+  },
+};
+
+// Nav items use labelKey instead of label
 const navItems = [
   // TRADING
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/journal", label: "Journal", icon: BookOpen },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/analytics/distribution", label: "Distribution", icon: Clock },
-  { href: "/risk", label: "Risk Manager", icon: Shield },
-  { href: "/mistakes", label: "Erreurs", icon: AlertOctagon },
-  { href: "/strategies", label: "Stratégies", icon: Crosshair },
-  { href: "/playbook", label: "Playbook", icon: BookMarked },
-  { href: "/checklist", label: "Checklist", icon: CheckSquare },
-  { href: "/import", label: "Import CSV", icon: Upload },
+  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
+  { href: "/journal", labelKey: "journal", icon: BookOpen },
+  { href: "/analytics", labelKey: "analytics", icon: BarChart3 },
+  { href: "/analytics/distribution", labelKey: "distribution", icon: Clock },
+  { href: "/risk", labelKey: "riskManager", icon: Shield },
+  { href: "/mistakes", labelKey: "errors", icon: AlertOctagon },
+  { href: "/strategies", labelKey: "strategies", icon: Crosshair },
+  { href: "/playbook", labelKey: "playbook", icon: BookMarked },
+  { href: "/checklist", labelKey: "checklist", icon: CheckSquare },
+  { href: "/import", labelKey: "importCsv", icon: Upload },
   // PERFORMANCE
-  { divider: true, label: "PERFORMANCE" },
-  { href: "/performance", label: "Score", icon: Trophy },
-  { href: "/performance/grading", label: "Notation", icon: Award },
-  { href: "/calendar", label: "P&L Calendar", icon: CalendarDays },
-  { href: "/heatmap", label: "Heatmap", icon: Grid3x3 },
-  { href: "/daily-bias", label: "Daily Bias", icon: Target },
-  { href: "/challenges", label: "Challenges", icon: Swords },
-  { href: "/leaderboard", label: "Leaderboard", icon: Medal },
+  { divider: true, labelKey: "secPerformance" },
+  { href: "/performance", labelKey: "score", icon: Trophy },
+  { href: "/performance/grading", labelKey: "grading", icon: Award },
+  { href: "/calendar", labelKey: "plCalendar", icon: CalendarDays },
+  { href: "/heatmap", labelKey: "heatmap", icon: Grid3x3 },
+  { href: "/daily-bias", labelKey: "dailyBias", icon: Target },
+  { href: "/challenges", labelKey: "challenges", icon: Swords },
+  { href: "/leaderboard", labelKey: "leaderboard", icon: Medal },
   // MARCHÉ
-  { divider: true, label: "MARCHÉ" },
-  { href: "/cot", label: "Rapport COT", icon: TrendingUp },
-  { href: "/macro", label: "Macro", icon: Globe },
-  { href: "/calendar-eco", label: "Calendrier Éco", icon: CalendarDays },
-  { href: "/sentiment", label: "Sentiment", icon: Gauge },
-  { href: "/currency-strength", label: "Force Devises", icon: Zap },
-  { href: "/news", label: "News", icon: Newspaper },
-  { href: "/market", label: "Market Data", icon: Activity },
-  { href: "/lbma", label: "LBMA Métaux", icon: Award },
-  { href: "/scanner", label: "Scanner", icon: Crosshair },
-  { href: "/watchlist", label: "Watchlist", icon: Eye },
-  { href: "/sector-heatmap", label: "Heatmap Secteurs", icon: Grid3x3 },
-  { href: "/volatility", label: "Volatilité", icon: Gauge },
-  { href: "/earnings", label: "Earnings", icon: CalendarDays },
-  { href: "/flow", label: "Options Flow", icon: Zap },
+  { divider: true, labelKey: "secMarket" },
+  { href: "/cot", labelKey: "cotReport", icon: TrendingUp },
+  { href: "/macro", labelKey: "macro", icon: Globe },
+  { href: "/calendar-eco", labelKey: "ecoCalendar", icon: CalendarDays },
+  { href: "/sentiment", labelKey: "sentiment", icon: Gauge },
+  { href: "/currency-strength", labelKey: "currencyStrength", icon: Zap },
+  { href: "/news", labelKey: "news", icon: Newspaper },
+  { href: "/market", labelKey: "marketData", icon: Activity },
+  { href: "/lbma", labelKey: "lbmaMetals", icon: Award },
+  { href: "/scanner", labelKey: "scanner", icon: Crosshair },
+  { href: "/watchlist", labelKey: "watchlist", icon: Eye },
+  { href: "/sector-heatmap", labelKey: "sectorHeatmap", icon: Grid3x3 },
+  { href: "/volatility", labelKey: "volatility", icon: Gauge },
+  { href: "/earnings", labelKey: "earnings", icon: CalendarDays },
+  { href: "/flow", labelKey: "optionsFlow", icon: Zap },
   // AVANCÉ
-  { divider: true, label: "AVANCÉ" },
-  { href: "/ai-coach", label: "AI Coach", icon: Brain },
-  { href: "/war-room", label: "War Room", icon: Monitor },
-  { href: "/backtest", label: "Backtesting", icon: FlaskConical },
-  { href: "/calculator", label: "Calculateur", icon: Calculator },
-  { href: "/replay", label: "Replay", icon: Play },
-  { href: "/correlation", label: "Corrélation", icon: Layers },
-  { href: "/compare", label: "Comparaison", icon: GitCompare },
+  { divider: true, labelKey: "secAdvanced" },
+  { href: "/ai-coach", labelKey: "aiCoach", icon: Brain },
+  { href: "/war-room", labelKey: "warRoom", icon: Monitor },
+  { href: "/backtest", labelKey: "backtesting", icon: FlaskConical },
+  { href: "/calculator", labelKey: "calculator", icon: Calculator },
+  { href: "/replay", labelKey: "replay", icon: Play },
+  { href: "/correlation", labelKey: "correlation", icon: Layers },
+  { href: "/compare", labelKey: "comparison", icon: GitCompare },
   // OUTILS
-  { divider: true, label: "OUTILS" },
-  { href: "/custom-dashboard", label: "Mon Dashboard", icon: Layers },
-  { href: "/reports", label: "Rapports PDF", icon: FileText },
-  { href: "/recaps", label: "Recaps", icon: FileBarChart },
-  { href: "/screenshots", label: "Screenshots", icon: Camera },
-  { href: "/chat", label: "Chat", icon: MessageCircle },
+  { divider: true, labelKey: "secTools" },
+  { href: "/custom-dashboard", labelKey: "myDashboard", icon: Layers },
+  { href: "/reports", labelKey: "pdfReports", icon: FileText },
+  { href: "/recaps", labelKey: "recaps", icon: FileBarChart },
+  { href: "/screenshots", labelKey: "screenshots", icon: Camera },
+  { href: "/chat", labelKey: "chat", icon: MessageCircle },
   // MON ESPACE
-  { divider: true, label: "MON ESPACE" },
-  { href: "/profile", label: "Profil", icon: User },
+  { divider: true, labelKey: "secMySpace" },
+  { href: "/profile", labelKey: "profile", icon: User },
   // PREMIUM
-  { divider: true, label: "PREMIUM" },
-  { href: "/vip", label: "VIP", icon: Crown, isVip: true },
-  { href: "/vip/indicateurs", label: "Indicateurs", icon: Crosshair, isVip: true },
-  { href: "/vip/analyses", label: "Analyses Macro", icon: Globe, isVip: true },
+  { divider: true, labelKey: "secPremium" },
+  { href: "/vip", labelKey: "vip", icon: Crown, isVip: true },
+  { href: "/vip/indicateurs", labelKey: "indicators", icon: Crosshair, isVip: true },
+  { href: "/vip/analyses", labelKey: "macroAnalyses", icon: Globe, isVip: true },
 ] as const;
 
 export function Sidebar() {
@@ -217,7 +327,7 @@ export function Sidebar() {
                     ? "bg-rose-500/15 text-rose-400"
                     : "text-rose-500/80 dark:text-rose-400/80 hover:text-rose-400 hover:bg-rose-500/10"
                 }`}
-                title={collapsed ? adminItem.label : undefined}
+                title={collapsed ? SIDEBAR_I18N[locale][adminItem.labelKey] : undefined}
               >
                 {isActive && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-rose-400" />
@@ -225,11 +335,11 @@ export function Sidebar() {
                 <AdminIcon className={`w-[18px] h-[18px] flex-shrink-0 ${
                   isActive ? "text-rose-400" : "text-rose-500/70 dark:text-rose-400/70 group-hover:text-rose-400"
                 }`} />
-                {!collapsed && <span className="truncate">{adminItem.label}</span>}
+                {!collapsed && <span className="truncate">{SIDEBAR_I18N[locale][adminItem.labelKey]}</span>}
               </Link>
               <div className="pt-1 pb-1">
                 {!collapsed && (
-                  <span className="px-3 text-[10px] font-bold tracking-widest text-gray-400 dark:text-gray-600 uppercase">TRADING</span>
+                  <span className="px-3 text-[10px] font-bold tracking-widest text-gray-400 dark:text-gray-600 uppercase">{SIDEBAR_I18N[locale].secTrading}</span>
                 )}
                 {collapsed && <div className="border-t border-gray-200 dark:border-gray-800 mx-2" />}
               </div>
@@ -240,8 +350,8 @@ export function Sidebar() {
           if ("divider" in item && item.divider) {
             return (
               <div key={`div-${i}`} className="pt-3 pb-1">
-                {!collapsed && "label" in item && item.label && (
-                  <span className="px-3 text-[10px] font-bold tracking-widest text-gray-400 dark:text-gray-600 uppercase">{item.label}</span>
+                {!collapsed && (
+                  <span className="px-3 text-[10px] font-bold tracking-widest text-gray-400 dark:text-gray-600 uppercase">{SIDEBAR_I18N[locale][item.labelKey]}</span>
                 )}
                 {collapsed && <div className="border-t border-gray-200 dark:border-gray-800 mx-2" />}
               </div>
@@ -266,7 +376,7 @@ export function Sidebar() {
                     ? "bg-cyan-500/15 text-cyan-400"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)]"
               }`}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? SIDEBAR_I18N[locale][item.labelKey] : undefined}
             >
               {isActive && (
                 <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full ${isVipItem ? "bg-amber-400" : "bg-cyan-400"}`} />
@@ -276,7 +386,7 @@ export function Sidebar() {
                   ? isActive ? "text-amber-400" : "text-amber-500/70 dark:text-amber-400/70 group-hover:text-amber-400"
                   : isActive ? "text-cyan-400" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300"
               }`} />
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              {!collapsed && <span className="truncate">{SIDEBAR_I18N[locale][item.labelKey]}</span>}
             </Link>
           );
         })}
@@ -324,7 +434,7 @@ export function Sidebar() {
           onClick={toggleCollapsed}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition text-xs"
         >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /><span>Réduire</span></>}
+          {collapsed ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /><span>{SIDEBAR_I18N[locale].collapse}</span></>}
         </button>
       </div>
     </aside>

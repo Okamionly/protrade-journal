@@ -202,32 +202,32 @@ export default function JournalPage() {
               placeholder="Rechercher..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg pl-10 pr-4 py-2 text-sm"
+              className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg pl-10 pr-4 py-2 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:border-cyan-500/50 focus:outline-none transition"
             />
           </div>
-          <select value={assetFilter} onChange={(e) => setAssetFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm">
+          <select value={assetFilter} onChange={(e) => setAssetFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
             <option value="all">Tous les actifs</option>
             {assets.map((a) => (<option key={a} value={a}>{a}</option>))}
           </select>
-          <select value={directionFilter} onChange={(e) => setDirectionFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm">
+          <select value={directionFilter} onChange={(e) => setDirectionFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
             <option value="all">Toutes directions</option>
             <option value="LONG">LONG</option>
             <option value="SHORT">SHORT</option>
           </select>
-          <select value={resultFilter} onChange={(e) => setResultFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm">
+          <select value={resultFilter} onChange={(e) => setResultFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
             <option value="all">Tous résultats</option>
             <option value="win">Gagnants</option>
             <option value="loss">Perdants</option>
             <option value="be">Break-even</option>
           </select>
-          <select value={emotionFilter} onChange={(e) => setEmotionFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm">
+          <select value={emotionFilter} onChange={(e) => setEmotionFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
             <option value="all">Toutes émotions</option>
             {[...new Set(trades.map(t => t.emotion).filter((e): e is string => !!e))].map(e => <option key={e} value={e}>{e}</option>)}
           </select>
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-2 py-2 text-sm" />
         </div>
         <div className="flex items-center gap-3 mb-4">
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm" />
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]" />
           {hasFilters && (
             <button onClick={resetFilters} className="flex items-center gap-1 text-sm text-[--text-secondary] hover:text-[--text-primary] transition">
               <FilterX className="w-4 h-4" />

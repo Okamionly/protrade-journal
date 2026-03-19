@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Crown,
@@ -19,6 +19,25 @@ import {
   ArrowLeft,
   Loader2,
   ImageIcon,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  Table,
+  Minus,
+  Link2,
+  Quote,
+  Type,
+  Palette,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 interface VipPost {
@@ -71,6 +90,347 @@ const typeColor = (type: string) => {
       return { bg: "rgba(156,163,175,0.15)", border: "rgba(156,163,175,0.3)", text: "rgb(156,163,175)" };
   }
 };
+
+/* ─── Color Picker Dropdown ─── */
+const TEXT_COLORS = [
+  { label: "Rouge", value: "red", css: "#ef4444" },
+  { label: "Orange", value: "orange", css: "#f97316" },
+  { label: "Jaune", value: "yellow", css: "#eab308" },
+  { label: "Vert", value: "green", css: "#22c55e" },
+  { label: "Bleu", value: "blue", css: "#3b82f6" },
+  { label: "Violet", value: "purple", css: "#a855f7" },
+  { label: "Rose", value: "pink", css: "#ec4899" },
+  { label: "Cyan", value: "cyan", css: "#06b6d4" },
+];
+
+const EMOJI_ICONS = [
+  "📊", "📋", "📌", "📚", "📐", "📅",
+  "🟢", "🔴", "🟡", "⚪", "🔵", "🟩",
+  "🧱", "🧲", "🎯", "🪤", "⚡", "🔻",
+  "✅", "❌", "⚠️", "🔥", "💡", "🛡️",
+  "🔎", "🧠", "📝", "💰", "📈", "📉",
+  "⭐", "🅰️", "🅱️", "🔑", "🌍", "₿",
+];
+
+/* ─── Markdown Editor with Toolbar ─── */
+function MarkdownEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [showColors, setShowColors] = useState(false);
+  const [showEmojis, setShowEmojis] = useState(false);
+  const colorRef = useRef<HTMLDivElement>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (colorRef.current && !colorRef.current.contains(e.target as Node)) setShowColors(false);
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) setShowEmojis(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const insertAtCursor = useCallback(
+    (before: string, after: string = "", placeholder: string = "") => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const selected = value.slice(start, end);
+      const text = selected || placeholder;
+      const newValue = value.slice(0, start) + before + text + after + value.slice(end);
+      onChange(newValue);
+      setTimeout(() => {
+        ta.focus();
+        const cursorPos = start + before.length + text.length + after.length;
+        ta.setSelectionRange(
+          selected ? cursorPos : start + before.length,
+          selected ? cursorPos : start + before.length + text.length
+        );
+      }, 0);
+    },
+    [value, onChange]
+  );
+
+  const insertAtLineStart = useCallback(
+    (prefix: string) => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      const start = ta.selectionStart;
+      const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+      const newValue = value.slice(0, lineStart) + prefix + value.slice(lineStart);
+      onChange(newValue);
+      setTimeout(() => {
+        ta.focus();
+        ta.setSelectionRange(start + prefix.length, start + prefix.length);
+      }, 0);
+    },
+    [value, onChange]
+  );
+
+  const insertTable = useCallback(() => {
+    const table = "\n| Colonne 1 | Colonne 2 | Colonne 3 |\n|-----------|-----------|----------|\n| Valeur | Valeur | Valeur |\n| Valeur | Valeur | Valeur |\n";
+    insertAtCursor(table);
+  }, [insertAtCursor]);
+
+  const wrapWithColor = useCallback(
+    (color: string) => {
+      // Use HTML span for color (rendered by the markdown renderer)
+      insertAtCursor(`<span style="color:${color}">`, "</span>", "texte");
+      setShowColors(false);
+    },
+    [insertAtCursor]
+  );
+
+  const insertEmoji = useCallback(
+    (emoji: string) => {
+      insertAtCursor(emoji);
+      setShowEmojis(false);
+    },
+    [insertAtCursor]
+  );
+
+  // Simple markdown preview
+  const renderPreview = (md: string) => {
+    let html = md;
+    html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    html = html.replace(/((?:^|\n)\|.+\|(?:\n\|.+\|)+)/g, (_m, tb: string) => {
+      const lines = tb.trim().split("\n");
+      let t = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin:8px 0">';
+      let isH = true;
+      for (const line of lines) {
+        if (/^\|[\s\-:|]+\|$/.test(line.trim())) { isH = false; continue; }
+        const cells = line.split("|").filter((_, i, a) => i > 0 && i < a.length - 1).map(c => c.trim());
+        if (isH) {
+          t += "<thead><tr>" + cells.map(c => `<th style="background:var(--bg-hover);padding:6px 8px;border:1px solid var(--border);font-weight:600;text-align:left">${c}</th>`).join("") + "</tr></thead><tbody>";
+          isH = false;
+        } else {
+          t += "<tr>" + cells.map(c => `<td style="padding:5px 8px;border:1px solid var(--border)">${c}</td>`).join("") + "</tr>";
+        }
+      }
+      return t + "</tbody></table>";
+    });
+    html = html.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0"/>');
+    html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:1rem;font-weight:600;color:rgb(168,85,247);margin:12px 0 4px">$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:1.2rem;font-weight:700;margin:16px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)">$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:1.4rem;font-weight:800;margin:20px 0 8px">$1</h1>');
+    html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+    html = html.replace(/__(.+?)__/g, "<u>$1</u>");
+    html = html.replace(/~~(.+?)~~/g, "<s>$1</s>");
+    html = html.replace(/&lt;span style=&quot;color:(.+?)&quot;&gt;(.+?)&lt;\/span&gt;/g, '<span style="color:$1">$2</span>');
+    html = html.replace(/&lt;center&gt;(.+?)&lt;\/center&gt;/g, '<div style="text-align:center">$1</div>');
+    html = html.replace(/((?:^|\n)- .+(?:\n- .+)*)/g, (_m, lb: string) => {
+      const items = lb.trim().split("\n").map(l => l.replace(/^- /, "").trim()).filter(Boolean);
+      return '<ul style="margin:6px 0;padding-left:20px;list-style:disc">' + items.map(i => `<li style="margin:2px 0;font-size:14px">${i}</li>`).join("") + "</ul>";
+    });
+    html = html.replace(/((?:^|\n)\d+\. .+(?:\n\d+\. .+)*)/g, (_m, lb: string) => {
+      const items = lb.trim().split("\n").map(l => l.replace(/^\d+\. /, "").trim()).filter(Boolean);
+      return '<ol style="margin:6px 0;padding-left:20px;list-style:decimal">' + items.map(i => `<li style="margin:2px 0;font-size:14px">${i}</li>`).join("") + "</ol>";
+    });
+    html = html.split("\n").map(l => {
+      const t = l.trim();
+      if (!t) return "<br/>";
+      if (t.startsWith("<")) return t;
+      return `<p style="margin:3px 0;font-size:14px;line-height:1.6">${t}</p>`;
+    }).join("\n");
+    return html;
+  };
+
+  const ToolBtn = ({ icon: Icon, title, onClick, active }: { icon: React.ComponentType<{className?: string; style?: React.CSSProperties}>; title: string; onClick: () => void; active?: boolean }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="w-8 h-8 rounded-lg flex items-center justify-center transition hover:bg-[var(--bg-hover)]"
+      style={{
+        color: active ? "rgb(245,158,11)" : "var(--text-muted)",
+        background: active ? "rgba(245,158,11,0.1)" : undefined,
+      }}
+    >
+      <Icon className="w-4 h-4" />
+    </button>
+  );
+
+  const Separator = () => (
+    <div className="w-px h-6 mx-0.5" style={{ background: "var(--border)" }} />
+  );
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+          Contenu (Markdown)
+        </label>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPreview(!showPreview)}
+            className="text-[11px] font-medium px-2.5 py-1 rounded-lg transition"
+            style={{
+              background: showPreview ? "rgba(59,130,246,0.15)" : "var(--bg-hover)",
+              color: showPreview ? "rgb(59,130,246)" : "var(--text-muted)",
+              border: showPreview ? "1px solid rgba(59,130,246,0.3)" : "1px solid var(--border)",
+            }}
+          >
+            {showPreview ? "Éditer" : "Aperçu"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition hover:bg-[var(--bg-hover)]"
+            style={{ color: "var(--text-muted)" }}
+            title={expanded ? "Réduire" : "Agrandir"}
+          >
+            {expanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      {!showPreview && (
+        <div
+          className="flex items-center gap-0.5 px-2 py-1.5 rounded-t-xl flex-wrap"
+          style={{
+            background: "var(--bg-hover)",
+            border: "1px solid var(--border)",
+            borderBottom: "none",
+          }}
+        >
+          {/* Text formatting */}
+          <ToolBtn icon={Bold} title="Gras (**texte**)" onClick={() => insertAtCursor("**", "**", "texte")} />
+          <ToolBtn icon={Italic} title="Italique (*texte*)" onClick={() => insertAtCursor("*", "*", "texte")} />
+          <ToolBtn icon={Underline} title="Souligné (__texte__)" onClick={() => insertAtCursor("__", "__", "texte")} />
+          <ToolBtn icon={Strikethrough} title="Barré (~~texte~~)" onClick={() => insertAtCursor("~~", "~~", "texte")} />
+
+          <Separator />
+
+          {/* Headings */}
+          <ToolBtn icon={Heading1} title="Titre H1" onClick={() => insertAtLineStart("# ")} />
+          <ToolBtn icon={Heading2} title="Titre H2" onClick={() => insertAtLineStart("## ")} />
+          <ToolBtn icon={Heading3} title="Titre H3" onClick={() => insertAtLineStart("### ")} />
+
+          <Separator />
+
+          {/* Lists */}
+          <ToolBtn icon={List} title="Liste à puces" onClick={() => insertAtLineStart("- ")} />
+          <ToolBtn icon={ListOrdered} title="Liste numérotée" onClick={() => insertAtLineStart("1. ")} />
+          <ToolBtn icon={Quote} title="Citation" onClick={() => insertAtLineStart("> ")} />
+
+          <Separator />
+
+          {/* Blocks */}
+          <ToolBtn icon={Table} title="Insérer tableau" onClick={insertTable} />
+          <ToolBtn icon={Minus} title="Séparateur ---" onClick={() => insertAtCursor("\n---\n")} />
+          <ToolBtn icon={Code} title="Bloc de code" onClick={() => insertAtCursor("\n```\n", "\n```\n", "code ici")} />
+          <ToolBtn icon={Link2} title="Lien" onClick={() => insertAtCursor("[", "](url)", "texte du lien")} />
+
+          <Separator />
+
+          {/* Alignment */}
+          <ToolBtn icon={AlignLeft} title="Aligner à gauche" onClick={() => insertAtCursor("")} />
+          <ToolBtn icon={AlignCenter} title="Centrer" onClick={() => insertAtCursor("<center>", "</center>", "texte centré")} />
+
+          <Separator />
+
+          {/* Colors */}
+          <div className="relative" ref={colorRef}>
+            <ToolBtn icon={Palette} title="Couleur du texte" onClick={() => { setShowColors(!showColors); setShowEmojis(false); }} active={showColors} />
+            {showColors && (
+              <div
+                className="absolute top-full left-0 mt-1 p-2 rounded-xl shadow-xl z-50 grid grid-cols-4 gap-1"
+                style={{ background: "var(--bg-card)", border: "1px solid var(--border)", minWidth: 160 }}
+              >
+                {TEXT_COLORS.map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={() => wrapWithColor(c.css)}
+                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition hover:bg-[var(--bg-hover)]"
+                    title={c.label}
+                  >
+                    <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: c.css }} />
+                    <span style={{ color: "var(--text-primary)" }}>{c.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Emojis */}
+          <div className="relative" ref={emojiRef}>
+            <ToolBtn icon={Type} title="Emojis / Icônes" onClick={() => { setShowEmojis(!showEmojis); setShowColors(false); }} active={showEmojis} />
+            {showEmojis && (
+              <div
+                className="absolute top-full left-0 mt-1 p-2 rounded-xl shadow-xl z-50 grid grid-cols-6 gap-1"
+                style={{ background: "var(--bg-card)", border: "1px solid var(--border)", minWidth: 220 }}
+              >
+                {EMOJI_ICONS.map((e) => (
+                  <button
+                    key={e}
+                    onClick={() => insertEmoji(e)}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-lg transition hover:bg-[var(--bg-hover)]"
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Editor / Preview */}
+      {showPreview ? (
+        <div
+          className="rounded-xl p-5 overflow-y-auto"
+          style={{
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            color: "var(--text-primary)",
+            minHeight: expanded ? 600 : 400,
+            maxHeight: expanded ? "80vh" : 500,
+          }}
+          dangerouslySetInnerHTML={{ __html: renderPreview(value) }}
+        />
+      ) : (
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Contenu markdown...\n\n# Titre\n## Sous-titre\n**Gras** *Italique*\n- Liste\n| Col1 | Col2 |\n|------|------|\n| val  | val  |"
+          className="w-full px-4 py-3 rounded-b-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 resize-y font-mono"
+          style={{
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            borderTop: "none",
+            color: "var(--text-primary)",
+            minHeight: expanded ? 600 : 400,
+            maxHeight: expanded ? "80vh" : undefined,
+            lineHeight: 1.6,
+          }}
+        />
+      )}
+
+      {/* Char count */}
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+          Markdown : **gras** | *italique* | __souligné__ | # H1 | ## H2 | ### H3 | - liste | | tableau |
+        </span>
+        <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
+          {value.length.toLocaleString()} caractères
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function VipContentPage() {
   const router = useRouter();
@@ -265,7 +625,7 @@ export default function VipContentPage() {
               Contenu VIP
             </h1>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              G&eacute;rer les publications VIP
+              Gérer les publications VIP
             </p>
           </div>
         </div>
@@ -344,24 +704,8 @@ export default function VipContentPage() {
               </select>
             </div>
 
-            {/* Content */}
-            <div>
-              <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>
-                Contenu
-              </label>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Contenu de la publication (supporte le markdown basique)..."
-                rows={8}
-                className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 resize-y"
-                style={{
-                  background: "var(--bg-secondary)",
-                  border: "1px solid var(--border)",
-                  color: "var(--text-primary)",
-                }}
-              />
-            </div>
+            {/* Content — Rich Markdown Editor */}
+            <MarkdownEditor value={content} onChange={setContent} />
 
             {/* Script Code */}
             <div>
@@ -373,7 +717,7 @@ export default function VipContentPage() {
                 value={scriptCode}
                 onChange={(e) => setScriptCode(e.target.value)}
                 placeholder="// Pine Script ou code indicateur..."
-                rows={6}
+                rows={12}
                 className="w-full px-4 py-2.5 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50 resize-y"
                 style={{
                   background: "var(--bg-secondary)",
@@ -477,7 +821,7 @@ export default function VipContentPage() {
               background: "linear-gradient(135deg, rgb(245,158,11), rgb(234,88,12))",
             }}
           >
-            Cr&eacute;er la premi&egrave;re publication
+            Créer la première publication
           </button>
         </div>
       ) : (
