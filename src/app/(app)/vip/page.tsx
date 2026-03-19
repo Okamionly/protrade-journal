@@ -405,6 +405,7 @@ function VipPage() {
   const [posts, setPosts] = useState<VipPost[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [indicatorExpanded, setIndicatorExpanded] = useState(false);
   const [expandedArchive, setExpandedArchive] = useState<string | null>(null);
   const [archiveLoading, setArchiveLoading] = useState<string | null>(null);
   const searchParams = useSearchParams();
@@ -706,157 +707,137 @@ function VipPage() {
               }}
             >
               {isVip ? (
-                <div className="p-5 sm:p-6">
-                  {/* Title + date */}
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div>
-                      <h3
-                        className="text-base font-bold"
-                        style={{ color: "var(--text-primary, #e5e7eb)" }}
-                      >
+                <div>
+                  {/* ── Illustration Card (always visible) ── */}
+                  <div
+                    className="relative cursor-pointer overflow-hidden"
+                    onClick={() => setIndicatorExpanded(!indicatorExpanded)}
+                    style={{ minHeight: 220 }}
+                  >
+                    {/* SVG Illustration Background */}
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0f0a1e 0%, #1a0e2e 40%, #0d1117 100%)" }}>
+                      {/* Grid lines */}
+                      <svg className="absolute inset-0 w-full h-full opacity-10">
+                        {[...Array(20)].map((_, i) => <line key={`h${i}`} x1="0" y1={`${i * 5}%`} x2="100%" y2={`${i * 5}%`} stroke="#8b5cf6" strokeWidth="0.5" />)}
+                        {[...Array(30)].map((_, i) => <line key={`v${i}`} x1={`${i * 3.3}%`} y1="0" x2={`${i * 3.3}%`} y2="100%" stroke="#8b5cf6" strokeWidth="0.5" />)}
+                      </svg>
+                      {/* Oscillator visualization */}
+                      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 800 220" preserveAspectRatio="none">
+                        {/* Zero line */}
+                        <line x1="0" y1="110" x2="800" y2="110" stroke="#4b5563" strokeWidth="1" strokeDasharray="4 4" />
+                        {/* Histogram bars */}
+                        {[20,35,50,45,30,15,-10,-25,-40,-55,-45,-30,-15,10,25,45,60,70,65,50,35,20,5,-15,-30,-20,-5,15,30,50,65,55,40,25,10,-5,-20,-35,-50,-40,-25,-10,10,25,40,55,45,30].map((v, i) => (
+                          <rect key={i} x={i * 17} y={v > 0 ? 110 - v * 1.2 : 110} width="12" height={Math.abs(v) * 1.2} rx="2" fill={v > 0 ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"} />
+                        ))}
+                        {/* Consensus line */}
+                        <polyline
+                          points="10,95 27,75 44,55 61,60 78,75 95,90 112,115 129,130 146,145 163,160 180,150 197,135 214,120 231,100 248,85 265,60 282,45 299,35 316,40 333,55 350,70 367,85 384,95 401,115 418,130 435,125 452,110 469,95 486,80 503,55 520,50 537,60 554,75 571,90 588,105 605,110 622,125 639,140 656,155 673,145 690,130 707,115 724,100 741,85 758,60 775,70 792,80"
+                          fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                        />
+                        {/* Signal line */}
+                        <polyline
+                          points="10,100 27,85 44,68 61,65 78,78 95,92 112,110 129,125 146,138 163,150 180,148 197,135 214,122 231,105 248,90 265,68 282,55 299,45 316,48 333,62 350,75 367,88 384,95 401,110 418,125 435,122 452,112 469,98 486,85 503,62 520,55 537,65 554,78 571,92 588,105 605,108 622,120 639,135 656,148 673,142 690,128 707,112 724,98 741,85 758,65 775,72 792,82"
+                          fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5 3" strokeLinecap="round"
+                        />
+                        {/* Buy signals */}
+                        <polygon points="231,170 225,182 237,182" fill="#22c55e" />
+                        <polygon points="503,170 497,182 509,182" fill="#22c55e" />
+                        {/* Gold buy signal */}
+                        <polygon points="299,165 291,180 307,180" fill="#f59e0b" stroke="#f59e0b" />
+                        <text x="299" y="195" fill="#f59e0b" fontSize="10" textAnchor="middle" fontWeight="bold">&#9733;</text>
+                        {/* Sell signals */}
+                        <polygon points="163,45 157,33 169,33" fill="#ef4444" />
+                        <polygon points="656,42 650,30 662,30" fill="#ef4444" />
+                      </svg>
+                      {/* Glow effects */}
+                      <div className="absolute top-1/4 left-1/4 w-48 h-48 rounded-full" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)" }} />
+                      <div className="absolute bottom-1/4 right-1/4 w-36 h-36 rounded-full" style={{ background: "radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%)" }} />
+                    </div>
+
+                    {/* Title overlay */}
+                    <div className="relative z-10 flex flex-col items-center justify-center h-full py-10 sm:py-14 px-6 text-center">
+                      <span className="px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase mb-4" style={{ background: "rgba(168,85,247,0.2)", color: "rgb(168,85,247)", border: "1px solid rgba(168,85,247,0.3)" }}>
+                        Indicateur du Mois
+                      </span>
+                      <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2" style={{ textShadow: "0 2px 20px rgba(139,92,246,0.5)" }}>
                         {latestIndicator.title}
                       </h3>
-                      <span
-                        className="text-[11px] font-mono"
-                        style={{ color: "var(--text-secondary, #9ca3af)" }}
-                      >
+                      <p className="text-xs text-gray-400 font-mono mb-4">
                         Publi&eacute; le {formatDate(latestIndicator.createdAt)}
-                      </span>
+                      </p>
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium" style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                        {indicatorExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        {indicatorExpanded ? "Masquer" : "Voir le descriptif et le code"}
+                      </div>
                     </div>
-                    <span
-                      className="px-2.5 py-1 rounded-lg text-[10px] font-bold flex-shrink-0"
-                      style={{
-                        background: "rgba(168,85,247,0.15)",
-                        color: "rgb(168,85,247)",
-                      }}
-                    >
-                      Indicateur
-                    </span>
                   </div>
 
-                  {/* Description */}
-                  {latestIndicator.content && (
-                    <div className="mb-5">
-                      {latestIndicator.content
-                        .split("\n")
-                        .filter(Boolean)
-                        .map((para, i) => (
-                          <p
-                            key={i}
-                            className="text-sm leading-relaxed mb-2"
-                            style={{
-                              color: "var(--text-primary, #e5e7eb)",
-                            }}
-                          >
-                            {para}
-                          </p>
-                        ))}
-                    </div>
-                  )}
-
-                  {/* Pine Script code block */}
-                  {latestIndicator.scriptCode && (
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Code
-                            className="w-4 h-4"
-                            style={{ color: "rgb(168,85,247)" }}
-                          />
-                          <span
-                            className="text-xs font-medium"
-                            style={{
-                              color: "var(--text-primary, #e5e7eb)",
-                            }}
-                          >
-                            Pine Script
-                          </span>
+                  {/* ── Expanded content (description + code) ── */}
+                  {indicatorExpanded && (
+                    <div className="p-5 sm:p-6" style={{ borderTop: "1px solid var(--border, rgba(255,255,255,0.08))" }}>
+                      {/* Description */}
+                      {latestIndicator.content && (
+                        <div className="mb-5">
+                          {latestIndicator.content
+                            .split("\n")
+                            .filter(Boolean)
+                            .map((para, i) => (
+                              <p key={i} className="text-sm leading-relaxed mb-2" style={{ color: "var(--text-primary, #e5e7eb)" }}>
+                                {para}
+                              </p>
+                            ))}
                         </div>
-                        <button
-                          onClick={() =>
-                            handleCopyScript(latestIndicator.scriptCode!)
-                          }
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition hover:opacity-80"
-                          style={{
-                            background: copied
-                              ? "rgba(34,197,94,0.15)"
-                              : "rgba(168,85,247,0.15)",
-                            color: copied
-                              ? "rgb(34,197,94)"
-                              : "rgb(168,85,247)",
-                            border: `1px solid ${
-                              copied
-                                ? "rgba(34,197,94,0.3)"
-                                : "rgba(168,85,247,0.3)"
-                            }`,
-                          }}
-                        >
-                          {copied ? (
-                            <>
-                              <Check className="w-3.5 h-3.5" />
-                              Copi&eacute; !
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5" />
-                              Copier le Script
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <pre
-                        className="rounded-xl p-4 text-xs overflow-x-auto"
-                        style={{
-                          background: "#1e1e2e",
-                          border:
-                            "1px solid rgba(168,85,247,0.15)",
-                          maxHeight: 500,
-                          fontFamily:
-                            "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
-                        }}
-                      >
-                        <code
-                          style={{
-                            color: "#a6e3a1",
-                            whiteSpace: "pre",
-                            display: "block",
-                          }}
-                        >
-                          {latestIndicator.scriptCode}
-                        </code>
-                      </pre>
-                    </div>
-                  )}
+                      )}
 
-                  {/* Image */}
-                  {latestIndicator.imageUrl && (
-                    <div className="rounded-xl overflow-hidden mt-4">
-                      <img
-                        src={latestIndicator.imageUrl}
-                        alt={latestIndicator.title}
-                        className="w-full object-cover rounded-xl"
-                        style={{ maxHeight: 400 }}
-                      />
+                      {/* Pine Script code block */}
+                      {latestIndicator.scriptCode && (
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Code className="w-4 h-4" style={{ color: "rgb(168,85,247)" }} />
+                              <span className="text-xs font-medium" style={{ color: "var(--text-primary, #e5e7eb)" }}>Pine Script — Copier et coller dans TradingView</span>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleCopyScript(latestIndicator.scriptCode!); }}
+                              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition hover:opacity-80"
+                              style={{
+                                background: copied ? "rgba(34,197,94,0.15)" : "rgba(168,85,247,0.15)",
+                                color: copied ? "rgb(34,197,94)" : "rgb(168,85,247)",
+                                border: `1px solid ${copied ? "rgba(34,197,94,0.3)" : "rgba(168,85,247,0.3)"}`,
+                              }}
+                            >
+                              {copied ? (<><Check className="w-3.5 h-3.5" />Copi&eacute; !</>) : (<><Copy className="w-3.5 h-3.5" />Copier le Script</>)}
+                            </button>
+                          </div>
+                          <pre className="rounded-xl p-4 text-xs overflow-x-auto" style={{ background: "#1e1e2e", border: "1px solid rgba(168,85,247,0.15)", maxHeight: 500, fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace" }}>
+                            <code style={{ color: "#a6e3a1", whiteSpace: "pre", display: "block" }}>
+                              {latestIndicator.scriptCode}
+                            </code>
+                          </pre>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="p-5 sm:p-6 min-h-[200px]">
-                  <h3
-                    className="text-base font-bold mb-1"
-                    style={{ color: "var(--text-primary, #e5e7eb)" }}
-                  >
-                    {latestIndicator.title}
-                  </h3>
-                  <span
-                    className="text-[11px] font-mono"
-                    style={{ color: "var(--text-secondary, #9ca3af)" }}
-                  >
-                    {formatDate(latestIndicator.createdAt)}
-                  </span>
+                <div className="relative" style={{ minHeight: 220 }}>
+                  {/* Blurred illustration for non-VIP */}
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0f0a1e 0%, #1a0e2e 40%, #0d1117 100%)" }}>
+                    <svg className="absolute inset-0 w-full h-full opacity-10">
+                      {[...Array(20)].map((_, i) => <line key={`h${i}`} x1="0" y1={`${i * 5}%`} x2="100%" y2={`${i * 5}%`} stroke="#8b5cf6" strokeWidth="0.5" />)}
+                    </svg>
+                  </div>
+                  <div className="relative z-10 flex flex-col items-center justify-center h-full py-12 px-6 text-center">
+                    <h3 className="text-xl sm:text-2xl font-black text-white/50 tracking-tight mb-2">
+                      {latestIndicator.title}
+                    </h3>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {formatDate(latestIndicator.createdAt)}
+                    </span>
+                  </div>
+                  <LockedOverlay />
                 </div>
               )}
-              {!isVip && <LockedOverlay />}
             </div>
           )}
         </div>
