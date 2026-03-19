@@ -128,19 +128,63 @@ function SkeletonCard() {
   );
 }
 
+function isRealImage(url: string): boolean {
+  if (!url) return false;
+  if (url.includes("logo")) return false;
+  if (url.includes("finnhub.io/file/finnhub")) return false;
+  if (url.length < 40) return false;
+  return true;
+}
+
+const SOURCE_GRADIENTS: Record<string, string> = {
+  reuters: "from-orange-600 to-orange-800",
+  cnbc: "from-blue-600 to-blue-800",
+  "bbc business": "from-red-700 to-red-900",
+  "google news": "from-emerald-600 to-emerald-800",
+  "investing.com": "from-green-600 to-green-800",
+  default: "from-gray-600 to-gray-800",
+};
+
 function NewsCard({ item }: { item: NewsItem }) {
   const colors = getSourceColor(item.source);
+  const hasImage = isRealImage(item.image);
+  const gradient = SOURCE_GRADIENTS[item.source.toLowerCase()] || SOURCE_GRADIENTS.default;
 
   return (
     <a
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="glass rounded-2xl p-5 hover:border-cyan-500/30 transition-all group block"
+      className="glass rounded-2xl overflow-hidden hover:border-cyan-500/30 transition-all group block"
       style={{ cursor: item.url === "#" ? "default" : "pointer" }}
     >
-      {/* Top row: source badge + category + time */}
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
+      {/* Image or gradient header */}
+      <div className="relative h-40 overflow-hidden">
+        {hasImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.image}
+            alt=""
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+            <span className="text-white/20 font-black text-4xl uppercase tracking-widest">
+              {item.source}
+            </span>
+          </div>
+        )}
+        {/* Time badge overlay */}
+        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-[10px] text-white flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          {timeAgo(item.datetime)}
+        </div>
+      </div>
+
+      <div className="p-4">
+      {/* Top row: source badge + category */}
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
         <span
           className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide"
           style={{
@@ -156,10 +200,6 @@ function NewsCard({ item }: { item: NewsItem }) {
             {item.category}
           </span>
         )}
-        <span className="text-[11px] text-[--text-muted] ml-auto flex items-center gap-1 whitespace-nowrap">
-          <Clock className="w-3 h-3" />
-          {timeAgo(item.datetime)}
-        </span>
       </div>
 
       {/* Title */}
@@ -179,6 +219,7 @@ function NewsCard({ item }: { item: NewsItem }) {
           Lire l&apos;article
         </div>
       )}
+      </div>
     </a>
   );
 }
