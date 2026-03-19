@@ -32,8 +32,8 @@ function parseRSS(xml: string): Array<{ title: string; link: string; pubDate: st
     const pubDate = content.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] || "";
     const source = content.match(/<source.*?>([\s\S]*?)<\/source>/)?.[1] || "";
     items.push({
-      title: title.replace(/<!\[CDATA\[(.*?)\]\]>/s, "$1").trim(),
-      link: link.replace(/<!\[CDATA\[(.*?)\]\]>/s, "$1").trim(),
+      title: title.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").trim(),
+      link: link.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").trim(),
       pubDate,
       source,
     });
