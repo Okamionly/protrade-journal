@@ -131,7 +131,7 @@ export default function RiskPage() {
             value: kellyDisplay ? "N/A" : `${risk.kellyPercent}%`,
             color: kellyDisplay ? "#ef4444" : "#0ea5e9",
             icon: Calculator,
-            subtitle: kellyDisplay ? "Strategie non profitable" : undefined,
+            subtitle: kellyDisplay ? "Stratégie non profitable" : undefined,
           },
           { label: "Recovery Factor", value: risk.recoveryFactor.toFixed(2), color: risk.recoveryFactor >= 2 ? "#10b981" : "#f59e0b", icon: Shield },
         ].map((m) => (
@@ -330,7 +330,7 @@ export default function RiskPage() {
                 {recoveryCalc.tradesToRecover === Infinity ? "\u221E" : recoveryCalc.tradesToRecover}
               </div>
               {recoveryCalc.tradesToRecover === Infinity && (
-                <div className="text-[10px] mt-1" style={{ color: "#ef4444" }}>Expectancy negative — recovery impossible sans ameliorer la strategie</div>
+                <div className="text-[10px] mt-1" style={{ color: "#ef4444" }}>Expectancy négative — recovery impossible sans améliorer la stratégie</div>
               )}
             </div>
           </div>

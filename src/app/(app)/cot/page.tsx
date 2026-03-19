@@ -184,7 +184,7 @@ export default function CotPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => setView("overview")} className="p-2 rounded-lg hover:bg-white/10 transition">
+          <button onClick={() => setView("overview")} className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition">
             <ArrowLeft className="w-5 h-5 text-[--text-secondary]" />
           </button>
           <div>

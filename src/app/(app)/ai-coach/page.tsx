@@ -358,14 +358,14 @@ export default function AICoachPage() {
     if (dayBW.best && dayBW.worst && dayBW.best.key !== dayBW.worst.key)
       msgs.push(`Tu gagnes ${dayBW.best.wr.toFixed(0)}% de tes trades le ${dayBW.best.key}, mais seulement ${dayBW.worst.wr.toFixed(0)}% le ${dayBW.worst.key}.`);
     if (stratBW.best && stratBW.best.total >= 2)
-      msgs.push(`Ta meilleure strategie est ${stratBW.best.key} avec ${stratBW.best.wr.toFixed(0)}% de win rate.`);
+      msgs.push(`Ta meilleure stratégie est ${stratBW.best.key} avec ${stratBW.best.wr.toFixed(0)}% de win rate.`);
     if (emotionBW.worst && emotionBW.worst.wr < 40 && emotionBW.worst.total >= 2)
-      msgs.push(`Attention : tu as tendance a perdre quand tu es "${emotionBW.worst.key}" (${emotionBW.worst.wr.toFixed(0)}% WR).`);
+      msgs.push(`Attention : tu as tendance à perdre quand tu es "${emotionBW.worst.key}" (${emotionBW.worst.wr.toFixed(0)}% WR).`);
     if (trailingLosses >= 3)
-      msgs.push(`Tu es en serie de ${trailingLosses} pertes consecutives, considere une pause.`);
+      msgs.push(`Tu es en série de ${trailingLosses} pertes consécutives, considère une pause.`);
     if (assetBW.best && assetBW.best.total >= 2)
       msgs.push(`Ton meilleur actif est ${assetBW.best.key} avec ${assetBW.best.wr.toFixed(0)}% de win rate.`);
-    if (msgs.length === 0) msgs.push("Continue a ajouter des trades pour obtenir des insights personnalises.");
+    if (msgs.length === 0) msgs.push("Continue à ajouter des trades pour obtenir des insights personnalisés.");
     return msgs;
   }, [analysis]);
 
@@ -635,7 +635,7 @@ export default function AICoachPage() {
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-rose-500/10 text-xs">
                   <AlertTriangle size={14} className="text-rose-400 shrink-0 mt-0.5" />
                   <span style={{ color: "var(--text-secondary)" }}>
-                    Alerte : ta performance est en baisse significative. Analyse tes recents trades et ajuste ta strategie.
+                    Alerte : ta performance est en baisse significative. Analyse tes récents trades et ajuste ta stratégie.
                   </span>
                 </div>
               )}
@@ -687,9 +687,9 @@ export default function AICoachPage() {
               { icon: Calendar, label: "Meilleur jour", best: analysis.dayBW.best, worst: analysis.dayBW.worst },
               { icon: Clock, label: "Meilleure heure", best: analysis.hourBW.best ? { ...analysis.hourBW.best, key: `${analysis.hourBW.best.key}h` } : null, worst: analysis.hourBW.worst ? { ...analysis.hourBW.worst, key: `${analysis.hourBW.worst.key}h` } : null },
               { icon: BarChart3, label: "Meilleur actif", best: analysis.assetBW.best, worst: analysis.assetBW.worst },
-              { icon: Zap, label: "Strategie", best: analysis.stratBW.best, worst: analysis.stratBW.worst },
+              { icon: Zap, label: "Stratégie", best: analysis.stratBW.best, worst: analysis.stratBW.worst },
               { icon: Award, label: "Emotion", best: analysis.emotionBW.best, worst: analysis.emotionBW.worst },
-              { icon: TrendingDown, label: "Pertes consecutives", best: null, worst: null, custom: `Max: ${analysis.maxConsec} | En cours: ${analysis.trailingLosses}` },
+              { icon: TrendingDown, label: "Pertes consécutives", best: null, worst: null, custom: `Max: ${analysis.maxConsec} | En cours: ${analysis.trailingLosses}` },
             ].map(({ icon: Icon, label, best, worst, custom }) => (
               <div key={label} className="glass rounded-lg p-3 space-y-1.5">
                 <div className="flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>

@@ -654,7 +654,7 @@ export default function CorrelationPage() {
         <div className="glass rounded-2xl p-6 border border-cyan-500/30 relative">
           <button
             onClick={() => setSelectedPair(null)}
-            className="absolute top-4 right-4 p-1 rounded-lg hover:bg-white/10 transition-colors"
+            className="absolute top-4 right-4 p-1 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
             style={{ color: "var(--text-muted)" }}
           >
             <X className="w-4 h-4" />

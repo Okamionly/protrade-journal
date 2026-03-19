@@ -162,11 +162,11 @@ export default function ReportsPage() {
 
   const insights = useMemo(() => {
     const msgs: string[] = [];
-    if (filteredTrades.length === 0) return ["Aucun trade sur cette periode."];
-    if (stats.winRate >= 60) msgs.push(`Win rate solide a ${stats.winRate.toFixed(0)}% - bonne discipline.`);
-    else if (stats.winRate < 40) msgs.push(`Win rate faible (${stats.winRate.toFixed(0)}%) - revoir les criteres d'entree.`);
+    if (filteredTrades.length === 0) return ["Aucun trade sur cette période."];
+    if (stats.winRate >= 60) msgs.push(`Win rate solide à ${stats.winRate.toFixed(0)}% - bonne discipline.`);
+    else if (stats.winRate < 40) msgs.push(`Win rate faible (${stats.winRate.toFixed(0)}%) - revoir les critères d'entrée.`);
     if (stats.profitFactor > 1.5) msgs.push(`Profit factor de ${stats.profitFactor.toFixed(2)} - performance rentable.`);
-    else if (stats.profitFactor < 1) msgs.push(`Profit factor < 1 - les pertes depassent les gains.`);
+    else if (stats.profitFactor < 1) msgs.push(`Profit factor < 1 - les pertes dépassent les gains.`);
     const bestDay = Object.entries(dayPerformance).sort(([, a], [, b]) => b.pnl - a.pnl)[0];
     if (bestDay && bestDay[1].pnl > 0) msgs.push(`Meilleur jour: ${DAY_NAMES[parseInt(bestDay[0])]} (${formatCurrency(bestDay[1].pnl)}).`);
     if (stats.maxDrawdown > 0) msgs.push(`Drawdown max de ${formatCurrency(-stats.maxDrawdown)} - gérer le risque.`);
@@ -194,7 +194,7 @@ export default function ReportsPage() {
   const handleCopy = useCallback(() => {
     const text = [
       `MarketPhase - Rapport ${TYPE_LABELS[reportType]}`,
-      `Periode: ${formatDateShort(rangeStart)} - ${formatDateShort(rangeEnd)}`,
+      `Période: ${formatDateShort(rangeStart)} - ${formatDateShort(rangeEnd)}`,
       `P&L: ${formatCurrency(stats.netProfit)}`,
       `Win Rate: ${stats.winRate.toFixed(1)}%`,
       `Profit Factor: ${stats.profitFactor.toFixed(2)}`,
@@ -263,7 +263,7 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Period selector */}
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>Periode</label>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>Période</label>
               <select
                 value={period}
                 onChange={(e) => { setPeriod(e.target.value as PeriodKey); setGenerated(false); }}
@@ -462,13 +462,13 @@ export default function ReportsPage() {
               {strategyPerformance.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
-                    {reportType === "detailed" || reportType === "prop_audit" ? "5" : "4"}. Performance par Strategie
+                    {reportType === "detailed" || reportType === "prop_audit" ? "5" : "4"}. Performance par Stratégie
                   </h3>
                   <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                     <table className="w-full text-sm">
                       <thead>
                         <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                          <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Strategie</th>
+                          <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Stratégie</th>
                           <th className="text-right px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Trades</th>
                           <th className="text-right px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Win Rate</th>
                           <th className="text-right px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>P&L</th>

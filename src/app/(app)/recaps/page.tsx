@@ -177,7 +177,7 @@ export default function RecapsPage() {
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Recaps</h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            Resume de vos performances par periode.
+            Résumé de vos performances par période.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -246,7 +246,7 @@ export default function RecapsPage() {
           <BarChart3 className="w-5 h-5 text-cyan-400" /> P&L Journalier
         </h3>
         {dailyPnl.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette periode</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette période</p>
         ) : (
           <div className="w-full overflow-x-auto">
             <svg viewBox={`0 0 ${Math.max(dailyPnl.length * 60, 200)} 180`} className="w-full" style={{ minWidth: `${dailyPnl.length * 60}px`, maxHeight: "200px" }}>
@@ -305,7 +305,7 @@ export default function RecapsPage() {
           <Calendar className="w-5 h-5 text-purple-400" /> Analyse par jour de la semaine
         </h3>
         {periodTrades.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette periode</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette période</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -346,7 +346,7 @@ export default function RecapsPage() {
           <PieChart className="w-5 h-5 text-amber-400" /> Distribution des trades
         </h3>
         {periodTrades.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette periode</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette période</p>
         ) : (
           <div className="w-full">
             <svg viewBox="0 0 420 160" className="w-full" style={{ maxHeight: "180px" }}>
@@ -403,7 +403,7 @@ export default function RecapsPage() {
         <div className="metric-card rounded-2xl p-5">
           <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Top 3 trades</h3>
           {stats.top3.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette periode</p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette période</p>
           ) : (
             <div className="space-y-2">
               {stats.top3.map((t, i) => (
@@ -424,7 +424,7 @@ export default function RecapsPage() {
         <div className="metric-card rounded-2xl p-5">
           <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Pires 3 trades</h3>
           {stats.worst3.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette periode</p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette période</p>
           ) : (
             <div className="space-y-2">
               {stats.worst3.map((t, i) => (

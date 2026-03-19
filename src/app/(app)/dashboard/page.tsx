@@ -677,18 +677,18 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Courbe d&apos;Equite</h3>
+          <h3 className="text-lg font-semibold mb-4">Courbe d&apos;Équité</h3>
           <EquityChart trades={trades} startingBalance={user?.balance ?? 25000} />
         </div>
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Repartition par Strategie</h3>
+          <h3 className="text-lg font-semibold mb-4">Répartition par Stratégie</h3>
           <StrategyChart trades={trades} />
         </div>
       </div>
 
       <div className="glass rounded-2xl p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold">Trades Recents</h3>
+          <h3 className="text-lg font-semibold">Trades Récents</h3>
           <div className="flex items-center gap-3">
             <Link
               href="/journal"
@@ -714,7 +714,7 @@ export default function DashboardPage() {
               Commencez votre journal de trading
             </h4>
             <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: "var(--text-muted)" }}>
-              Enregistrez votre premier trade pour commencer a suivre vos performances et ameliorer votre discipline.
+              Enregistrez votre premier trade pour commencer à suivre vos performances et améliorer votre discipline.
             </p>
             <button
               onClick={() => setShowForm(true)}

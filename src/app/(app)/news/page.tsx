@@ -503,7 +503,7 @@ export default function NewsPage() {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-white/10 transition"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-[var(--bg-hover)] transition"
             >
               <X className="w-3 h-3 text-[--text-muted]" />
             </button>

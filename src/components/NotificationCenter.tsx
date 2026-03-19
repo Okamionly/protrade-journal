@@ -365,7 +365,7 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
                       e.stopPropagation();
                       dismiss(n.id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-[var(--bg-hover)] transition shrink-0"
                     style={{ color: "var(--text-muted)" }}
                     aria-label="Supprimer"
                   >

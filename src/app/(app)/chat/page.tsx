@@ -223,14 +223,14 @@ function MessageBubble({
       <div className="absolute right-3 -top-3 hidden group-hover:flex items-center gap-0.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-1 py-0.5 z-10">
         <button
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[--text-muted] hover:text-amber-400 transition"
+          className="p-1.5 rounded hover:bg-[var(--bg-hover)] text-[--text-muted] hover:text-amber-400 transition"
           title="Réagir"
         >
           <Smile className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => onReply(msg)}
-          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[--text-muted] hover:text-cyan-400 transition"
+          className="p-1.5 rounded hover:bg-[var(--bg-hover)] text-[--text-muted] hover:text-cyan-400 transition"
           title="Répondre"
         >
           <Reply className="w-3.5 h-3.5" />
@@ -239,14 +239,14 @@ function MessageBubble({
           <>
             <button
               onClick={() => onPin(msg.id)}
-              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[--text-muted] hover:text-amber-400 transition"
+              className="p-1.5 rounded hover:bg-[var(--bg-hover)] text-[--text-muted] hover:text-amber-400 transition"
               title={msg.isPinned ? "Désépingler" : "Épingler"}
             >
               <Pin className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onDelete(msg.id)}
-              className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[--text-muted] hover:text-rose-400 transition"
+              className="p-1.5 rounded hover:bg-[var(--bg-hover)] text-[--text-muted] hover:text-rose-400 transition"
               title="Supprimer"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -262,7 +262,7 @@ function MessageBubble({
             <button
               key={emoji}
               onClick={() => { onReaction(msg.id, emoji); setShowEmojiPicker(false); }}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-base transition"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--bg-hover)] text-base transition"
             >
               {emoji}
             </button>
@@ -311,7 +311,7 @@ function SearchOverlay({ messages, onClose, onJump }: { messages: ChatMessage[];
             style={{ color: "var(--text-primary)" }}
             autoFocus
           />
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-[--text-muted]">
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-[var(--bg-hover)] text-[--text-muted]">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -368,7 +368,7 @@ function RightPanel({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
         <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Détails</span>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-[--text-muted]">
+        <button onClick={onClose} className="p-1 rounded-lg hover:bg-[var(--bg-hover)] text-[--text-muted]">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -981,7 +981,7 @@ export default function ChatPage() {
                 </span>
                 <p className="text-[11px] text-[--text-muted] truncate">{replyTo.content || "Image"}</p>
               </div>
-              <button onClick={() => setReplyTo(null)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[--text-muted]">
+              <button onClick={() => setReplyTo(null)} className="p-1 rounded hover:bg-[var(--bg-hover)] text-[--text-muted]">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -1080,7 +1080,7 @@ export default function ChatPage() {
       {/* Lightbox */}
       {lightboxUrl && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setLightboxUrl(null)}>
-          <button className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition">
+          <button className="absolute top-4 right-4 p-2 rounded-full bg-[var(--bg-hover)] hover:bg-white/20 text-white transition">
             <X className="w-5 h-5" />
           </button>
           <img src={lightboxUrl} alt="Capture" className="max-w-full max-h-full rounded-xl shadow-2xl" />

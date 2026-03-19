@@ -455,7 +455,7 @@ export default function DailyBiasPage() {
         <div className="space-y-4">
           <div className="metric-card rounded-2xl p-6">
             <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Review post-session</h3>
-            <textarea value={plan.review} onChange={(e) => setPlan({ ...plan, review: e.target.value })} placeholder="Comment s'est passee la journee ? Qu'as-tu bien fait ? Que peux-tu ameliorer ?" rows={6}
+            <textarea value={plan.review} onChange={(e) => setPlan({ ...plan, review: e.target.value })} placeholder="Comment s'est passée la journée ? Qu'as-tu bien fait ? Que peux-tu améliorer ?" rows={6}
               className="input-field resize-none" />
           </div>
 
@@ -468,12 +468,12 @@ export default function DailyBiasPage() {
             <textarea
               value={commentDuJour}
               onChange={(e) => setCommentDuJour(e.target.value)}
-              placeholder="Journal de fin de journee : emotions, lecons, observations personnelles..."
+              placeholder="Journal de fin de journée : émotions, leçons, observations personnelles..."
               rows={4}
               className="input-field resize-none"
             />
             <p className="text-[10px] mt-2" style={{ color: "var(--text-muted)" }}>
-              Note personnelle (non sauvegardee en base)
+              Note personnelle (non sauvegardée en base)
             </p>
           </div>
 

@@ -368,7 +368,7 @@ export default function ProfilePage() {
                     setEditingName(false);
                     setName(profile?.name || "");
                   }}
-                  className="p-2 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 transition"
+                  className="p-2 rounded-xl bg-white/5 text-gray-400 hover:bg-[var(--bg-hover)] transition"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -582,7 +582,7 @@ export default function ProfilePage() {
             <div className="text-sm text-gray-500 dark:text-gray-400">
               <p>Date d'expiration : <span className="text-gray-300">--/--/----</span></p>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-white/10 transition">
+            <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-[var(--bg-hover)] transition">
               Gérer mon abonnement
             </button>
           </div>
@@ -616,7 +616,7 @@ export default function ProfilePage() {
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
                       theme === t.value
                         ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                        : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-gray-300"
+                        : "bg-white/5 text-gray-400 border border-white/10 hover:bg-[var(--bg-hover)] hover:text-gray-300"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -681,7 +681,7 @@ export default function ProfilePage() {
             </div>
             <button
               onClick={handleExportData}
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-white/10 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-[var(--bg-hover)] transition"
             >
               <Download className="w-4 h-4" />
               Exporter
@@ -750,7 +750,7 @@ export default function ProfilePage() {
                   setShowDeleteModal(false);
                   setDeleteConfirmText("");
                 }}
-                className="px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-white/10 transition"
+                className="px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-[var(--bg-hover)] transition"
               >
                 Annuler
               </button>
