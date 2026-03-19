@@ -1038,7 +1038,7 @@ export default function WarRoomPage() {
           ) : (
             <div className="flex items-center gap-2 py-3" style={{ color: "var(--text-muted)" }}>
               <Meh size={16} />
-              <span className="text-sm">Ajoutez des \u00e9motions \u00e0 vos trades pour voir la corr\u00e9lation</span>
+              <span className="text-sm">Ajoutez des émotions à vos trades pour voir la corrélation</span>
             </div>
           )}
         </div>
@@ -1051,7 +1051,7 @@ export default function WarRoomPage() {
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>
                 <Settings size={16} className="inline mr-2" style={{ color: "var(--text-secondary)" }} />
-                Param\u00e8tres des alertes
+                Paramètres des alertes
               </h3>
               <button onClick={() => setShowSettingsModal(false)} className="p-1 rounded-lg hover:bg-[--bg-secondary] transition" style={{ color: "var(--text-muted)" }}>
                 <X size={18} />

@@ -365,7 +365,7 @@ export default function NewsPage() {
               onClick={load}
               className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition"
             >
-              R\u00e9essayer
+              Réessayer
             </button>
             <button
               onClick={() => setError(null)}
@@ -382,13 +382,13 @@ export default function NewsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Newspaper className="w-6 h-6 text-cyan-400" />
-            Fil d&apos;Actualit\u00e9s
+            Fil d&apos;Actualités
           </h1>
           <p className="text-sm text-[--text-secondary] mt-1">
-            Actualit\u00e9s financi\u00e8res multi-sources en temps r\u00e9el
+            Actualités financières multi-sources en temps réel
             {lastUpdatedText && (
               <span className="ml-2 text-[--text-muted]">
-                &mdash; Derni\u00e8re mise \u00e0 jour: {lastUpdatedText}
+                &mdash; Dernière mise à jour: {lastUpdatedText}
               </span>
             )}
           </p>
@@ -513,10 +513,10 @@ export default function NewsPage() {
       ) : filtered.length === 0 ? (
         <div className="glass rounded-2xl p-8 text-center text-[--text-muted]">
           <Newspaper className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">Aucune actualit\u00e9 trouv\u00e9e</p>
+          <p className="font-medium">Aucune actualité trouvée</p>
           {searchQuery && (
             <p className="text-sm mt-1">
-              Essayez un autre mot-cl\u00e9 ou supprimez le filtre de recherche.
+              Essayez un autre mot-clé ou supprimez le filtre de recherche.
             </p>
           )}
           <button
@@ -527,13 +527,13 @@ export default function NewsPage() {
             }}
             className="mt-3 px-4 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 text-xs font-medium hover:bg-cyan-500/30 transition"
           >
-            R\u00e9initialiser les filtres
+            Réinitialiser les filtres
           </button>
         </div>
       ) : (
         <>
           <p className="text-xs text-[--text-muted]">
-            {filtered.length} article{filtered.length > 1 ? "s" : ""} affich\u00e9
+            {filtered.length} article{filtered.length > 1 ? "s" : ""} affiché
             {filtered.length > 1 ? "s" : ""}
             {(categoryFilter !== "all" || sourceFilter !== "all" || searchQuery) && (
               <button

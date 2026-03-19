@@ -396,14 +396,14 @@ export default function CalendarEcoPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Calendar className="w-6 h-6 text-cyan-400" />
-            Calendrier \u00c9conomique
+            Calendrier Économique
           </h1>
           <p className="text-sm text-[--text-secondary] mt-1 flex items-center gap-2">
-            \u00c9v\u00e9nements macro-\u00e9conomiques et publications \u00e0 venir
+            Événements macro-économiques et publications à venir
             {dataSource && !loading && (
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-[--bg-secondary]/50 border border-[--border]">
                 {dataSource === "static" ? (
-                  <><WifiOff className="w-3 h-3 text-amber-400" /> Donn\u00e9es statiques</>
+                  <><WifiOff className="w-3 h-3 text-amber-400" /> Données statiques</>
                 ) : (
                   <><Wifi className="w-3 h-3 text-emerald-400" /> {dataSource === "forexfactory" ? "Forex Factory" : dataSource === "finnhub" ? "Finnhub" : dataSource}</>
                 )}
@@ -457,7 +457,7 @@ export default function CalendarEcoPage() {
         <div className="glass rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <Timer className="w-4 h-4 text-amber-400" />
-            <h2 className="text-sm font-semibold text-[--text-primary]">Prochains \u00e9v\u00e9nements</h2>
+            <h2 className="text-sm font-semibold text-[--text-primary]">Prochains événements</h2>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-1">
             {upcomingEvents.map((e, i) => {
@@ -534,7 +534,7 @@ export default function CalendarEcoPage() {
                   onClick={() => setCountryFilter([])}
                   className="w-full text-left px-2 py-1 text-[10px] text-cyan-400 hover:bg-white/5 rounded mb-1"
                 >
-                  R\u00e9initialiser
+                  Réinitialiser
                 </button>
               )}
               {ALL_COUNTRIES.map((c) => (
@@ -571,7 +571,7 @@ export default function CalendarEcoPage() {
                   onClick={() => setCurrencyFilter([])}
                   className="w-full text-left px-2 py-1 text-[10px] text-cyan-400 hover:bg-white/5 rounded mb-1"
                 >
-                  R\u00e9initialiser
+                  Réinitialiser
                 </button>
               )}
               {ALL_CURRENCIES.map((c) => (
@@ -593,7 +593,7 @@ export default function CalendarEcoPage() {
         </div>
 
         <span className="text-xs text-[--text-muted] ml-auto">
-          {filteredEvents.length} \u00e9v\u00e9nements
+          {filteredEvents.length} événements
         </span>
       </div>
 
@@ -677,7 +677,7 @@ export default function CalendarEcoPage() {
                     <div className="flex-1 overflow-y-auto max-h-[420px] divide-y divide-[--border-subtle]/20">
                       {evts.length === 0 ? (
                         <div className="p-3 text-center text-[10px] text-[--text-muted]">
-                          Aucun \u00e9v\u00e9nement
+                          Aucun événement
                         </div>
                       ) : (
                         evts.map((e, i) => {
@@ -719,7 +719,7 @@ export default function CalendarEcoPage() {
                                     <span className="text-[--text-muted]">P: {e.forecast}</span>
                                   )}
                                   {e.previous && (
-                                    <span className="text-[--text-muted]">Pr\u00e9c: {e.previous}</span>
+                                    <span className="text-[--text-muted]">Préc: {e.previous}</span>
                                   )}
                                 </div>
                               )}
@@ -776,7 +776,7 @@ export default function CalendarEcoPage() {
             <div className="glass rounded-2xl overflow-hidden">
               {dayEvents.length === 0 ? (
                 <div className="p-8 text-center text-[--text-muted]">
-                  Aucun \u00e9v\u00e9nement pour cette journ\u00e9e
+                  Aucun événement pour cette journée
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -787,10 +787,10 @@ export default function CalendarEcoPage() {
                         <th className="px-4 py-3 w-16">Impact</th>
                         <th className="px-4 py-3 w-20">Pays</th>
                         <th className="px-4 py-3 w-16">Devise</th>
-                        <th className="px-4 py-3">\u00c9v\u00e9nement</th>
+                        <th className="px-4 py-3">Événement</th>
                         <th className="px-4 py-3 text-right w-24">Actuel</th>
-                        <th className="px-4 py-3 text-right w-24">Pr\u00e9vision</th>
-                        <th className="px-4 py-3 text-right w-24">Pr\u00e9c\u00e9dent</th>
+                        <th className="px-4 py-3 text-right w-24">Prévision</th>
+                        <th className="px-4 py-3 text-right w-24">Précédent</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -853,7 +853,7 @@ export default function CalendarEcoPage() {
                               </span>
                               {e.impact === "high" && (
                                 <p className="text-[10px] text-[--text-muted] mt-0.5">
-                                  Forte volatilit\u00e9 attendue
+                                  Forte volatilité attendue
                                 </p>
                               )}
                             </td>
@@ -891,13 +891,13 @@ export default function CalendarEcoPage() {
             <div className="glass rounded-2xl p-4">
               <h3 className="text-sm font-semibold text-[--text-primary] mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-cyan-400" />
-                R\u00e9sum\u00e9 du jour
+                Résumé du jour
               </h3>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
                   <p className="text-2xl font-bold text-[--text-primary]">{dayEvents.length}</p>
                   <p className="text-[10px] text-[--text-muted] uppercase tracking-wider">
-                    \u00c9v\u00e9nements
+                    Événements
                   </p>
                 </div>
                 <div className="text-center">
@@ -905,7 +905,7 @@ export default function CalendarEcoPage() {
                     {dayEvents.filter((e) => e.impact === "high").length}
                   </p>
                   <p className="text-[10px] text-[--text-muted] uppercase tracking-wider">
-                    Impact \u00e9lev\u00e9
+                    Impact élevé
                   </p>
                 </div>
                 <div className="text-center">
