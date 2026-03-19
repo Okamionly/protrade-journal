@@ -278,7 +278,7 @@ export default function CotPage() {
           <h1 className="text-2xl font-bold">Rapport COT</h1>
           <p className="text-sm text-[--text-secondary] mt-1">Analyse des positions des traders engagés</p>
         </div>
-        <button onClick={loadOverview} className="p-2 rounded-lg hover:bg-white/5 transition" title="Rafraichir">
+        <button onClick={loadOverview} className="p-2 rounded-lg hover:bg-white/5 transition" title="Rafraîchir">
           <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>

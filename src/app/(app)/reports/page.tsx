@@ -169,8 +169,8 @@ export default function ReportsPage() {
     else if (stats.profitFactor < 1) msgs.push(`Profit factor < 1 - les pertes depassent les gains.`);
     const bestDay = Object.entries(dayPerformance).sort(([, a], [, b]) => b.pnl - a.pnl)[0];
     if (bestDay && bestDay[1].pnl > 0) msgs.push(`Meilleur jour: ${DAY_NAMES[parseInt(bestDay[0])]} (${formatCurrency(bestDay[1].pnl)}).`);
-    if (stats.maxDrawdown > 0) msgs.push(`Drawdown max de ${formatCurrency(-stats.maxDrawdown)} - gerer le risque.`);
-    if (msgs.length === 0) msgs.push("Periode analysee avec succes.");
+    if (stats.maxDrawdown > 0) msgs.push(`Drawdown max de ${formatCurrency(-stats.maxDrawdown)} - gérer le risque.`);
+    if (msgs.length === 0) msgs.push("Période analysée avec succès.");
     return msgs;
   }, [filteredTrades, stats, dayPerformance]);
 

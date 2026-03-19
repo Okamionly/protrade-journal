@@ -643,7 +643,7 @@ export default function AICoachPage() {
           ) : (
             <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
               <BarChart3 size={24} className="opacity-40" />
-              <span className="text-sm">Pas assez de donnees (min. 4 semaines).</span>
+              <span className="text-sm">Pas assez de données (min. 4 semaines).</span>
             </div>
           )}
         </div>

@@ -444,9 +444,9 @@ export default function RecapsPage() {
 
       {/* By Strategy */}
       <div className="metric-card rounded-2xl p-5">
-        <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Performance par strategie</h3>
+        <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Performance par stratégie</h3>
         {Object.keys(stats.byStrategy).length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucune donnee</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucune donnée</p>
         ) : (
           <div className="space-y-2">
             {Object.entries(stats.byStrategy)

@@ -522,7 +522,7 @@ export default function CurrencyStrengthPage() {
           <button
             onClick={load}
             className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] transition border border-[var(--border-subtle)]"
-            title="Rafraichir"
+            title="Rafraîchir"
           >
             <RefreshCw
               className={`w-5 h-5 text-[var(--text-secondary)] ${loading ? "animate-spin" : ""}`}

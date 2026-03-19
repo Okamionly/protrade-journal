@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const handleUpdateTrade = async (trade: Record<string, unknown>) => {
     if (!editingTrade) return false;
     const ok = await updateTrade(editingTrade.id, trade);
-    if (ok) toast("Trade modifie avec succes", "success");
+    if (ok) toast("Trade modifié avec succès", "success");
     else toast("Erreur lors de la modification", "error");
     return ok;
   };
