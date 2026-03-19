@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Star, Search, AlertTriangle, X } from "lucide-react";
+import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, AlertTriangle, X, Clock, Flame, BellRing, History } from "lucide-react";
 
 interface WatchItem {
   symbol: string;
@@ -24,6 +24,27 @@ interface Quote {
   updated: number;
 }
 
+interface AlertHistoryEntry {
+  symbol: string;
+  price: number;
+  alertPrice: number;
+  direction: "above" | "below";
+  timestamp: number;
+}
+
+const DEFAULT_WATCHLIST: WatchItem[] = [
+  { symbol: "AAPL", name: "Apple" },
+  { symbol: "MSFT", name: "Microsoft" },
+  { symbol: "NVDA", name: "NVIDIA" },
+  { symbol: "TSLA", name: "Tesla" },
+  { symbol: "GOOGL", name: "Alphabet" },
+  { symbol: "AMZN", name: "Amazon" },
+  { symbol: "META", name: "Meta" },
+  { symbol: "SPY", name: "S&P 500 ETF" },
+  { symbol: "QQQ", name: "Nasdaq 100 ETF" },
+  { symbol: "AMD", name: "AMD" },
+];
+
 const POPULAR_SYMBOLS = [
   { symbol: "AAPL", name: "Apple" }, { symbol: "MSFT", name: "Microsoft" },
   { symbol: "GOOGL", name: "Alphabet" }, { symbol: "AMZN", name: "Amazon" },
@@ -31,6 +52,8 @@ const POPULAR_SYMBOLS = [
   { symbol: "TSLA", name: "Tesla" }, { symbol: "AMD", name: "AMD" },
   { symbol: "SPY", name: "S&P 500 ETF" }, { symbol: "QQQ", name: "Nasdaq 100 ETF" },
   { symbol: "IWM", name: "Russell 2000" }, { symbol: "GLD", name: "Gold ETF" },
+  { symbol: "PLTR", name: "Palantir" }, { symbol: "COIN", name: "Coinbase" },
+  { symbol: "SOFI", name: "SoFi" }, { symbol: "NFLX", name: "Netflix" },
 ];
 
 export default function WatchlistPage() {
@@ -46,16 +69,45 @@ export default function WatchlistPage() {
   const [alertSymbol, setAlertSymbol] = useState<string | null>(null);
   const [alertPrice, setAlertPrice] = useState("");
   const [alertDir, setAlertDir] = useState<"above" | "below">("above");
+  const [alertHistory, setAlertHistory] = useState<AlertHistoryEntry[]>([]);
+  const [showAlertHistory, setShowAlertHistory] = useState(false);
 
+  // Load items and alert history from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("watchlist-items");
-    if (saved) setItems(JSON.parse(saved));
-    else setItems(POPULAR_SYMBOLS.slice(0, 6));
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setItems(parsed);
+        } else {
+          setItems(DEFAULT_WATCHLIST);
+        }
+      } catch {
+        setItems(DEFAULT_WATCHLIST);
+      }
+    } else {
+      setItems(DEFAULT_WATCHLIST);
+    }
+
+    const savedHistory = localStorage.getItem("watchlist-alert-history");
+    if (savedHistory) {
+      try {
+        setAlertHistory(JSON.parse(savedHistory));
+      } catch {
+        // ignore
+      }
+    }
   }, []);
 
   const saveItems = (newItems: WatchItem[]) => {
     setItems(newItems);
     localStorage.setItem("watchlist-items", JSON.stringify(newItems));
+  };
+
+  const saveAlertHistory = (history: AlertHistoryEntry[]) => {
+    setAlertHistory(history);
+    localStorage.setItem("watchlist-alert-history", JSON.stringify(history.slice(0, 50)));
   };
 
   const fetchQuotes = useCallback(async () => {
@@ -86,9 +138,11 @@ export default function WatchlistPage() {
           setLastUpdated(new Date());
           setError(null);
         }
+      } else {
+        setError("Impossible de charger les cotations. Réessayez.");
       }
     } catch {
-      setError("Impossible de charger les cotations. Réessayez.");
+      setError("Impossible de charger les cotations. Vérifiez votre connexion.");
     }
     setLoading(false);
   }, [items]);
@@ -121,24 +175,47 @@ export default function WatchlistPage() {
     setAlertPrice("");
   };
 
-  // Check alerts
+  const removeAlert = (symbol: string) => {
+    saveItems(items.map((i) => i.symbol === symbol ? { ...i, alertPrice: undefined, alertDirection: undefined } : i));
+  };
+
+  // Check alerts and record history
   useEffect(() => {
+    const newHistory: AlertHistoryEntry[] = [];
     items.forEach((item) => {
-      if (item.alertPrice && quotes[item.symbol]) {
+      if (item.alertPrice && item.alertDirection && quotes[item.symbol]) {
         const q = quotes[item.symbol];
-        if (item.alertDirection === "above" && q.last >= item.alertPrice) {
-          if (Notification.permission === "granted") {
-            new Notification(`${item.symbol} a atteint ${q.last}$`, { body: `Alerte: prix au-dessus de ${item.alertPrice}$` });
-          }
-        }
-        if (item.alertDirection === "below" && q.last <= item.alertPrice) {
-          if (Notification.permission === "granted") {
-            new Notification(`${item.symbol} est tombé à ${q.last}$`, { body: `Alerte: prix en-dessous de ${item.alertPrice}$` });
+        const triggered =
+          (item.alertDirection === "above" && q.last >= item.alertPrice) ||
+          (item.alertDirection === "below" && q.last <= item.alertPrice);
+
+        if (triggered) {
+          // Check if we already notified recently (within 5 min)
+          const recentlyNotified = alertHistory.some(
+            (h) => h.symbol === item.symbol && Date.now() - h.timestamp < 300000
+          );
+          if (!recentlyNotified) {
+            newHistory.push({
+              symbol: item.symbol,
+              price: q.last,
+              alertPrice: item.alertPrice,
+              direction: item.alertDirection,
+              timestamp: Date.now(),
+            });
+            if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+              const msg = item.alertDirection === "above"
+                ? `${item.symbol} a atteint $${q.last.toFixed(2)} (alerte: au-dessus de $${item.alertPrice})`
+                : `${item.symbol} est tombé à $${q.last.toFixed(2)} (alerte: en-dessous de $${item.alertPrice})`;
+              new Notification(`Alerte Prix: ${item.symbol}`, { body: msg });
+            }
           }
         }
       }
     });
-  }, [quotes, items]);
+    if (newHistory.length > 0) {
+      saveAlertHistory([...newHistory, ...alertHistory]);
+    }
+  }, [quotes, items]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = search ? items.filter((i) => i.symbol.includes(search.toUpperCase()) || i.name.toLowerCase().includes(search.toLowerCase())) : items;
 
@@ -149,7 +226,6 @@ export default function WatchlistPage() {
     return v.toString();
   };
 
-  // Mini sparkline SVG
   const Sparkline = ({ change }: { change: number }) => {
     const isUp = change >= 0;
     const points = isUp ? "0,20 5,18 10,15 15,12 20,14 25,10 30,8 35,5 40,3" : "0,3 5,5 10,8 15,10 20,14 25,12 30,15 35,18 40,20";
@@ -160,7 +236,13 @@ export default function WatchlistPage() {
     );
   };
 
-  const isStale = lastUpdated && (Date.now() - lastUpdated.getTime()) > 120000; // 2 minutes
+  const isStale = lastUpdated && (Date.now() - lastUpdated.getTime()) > 120000;
+
+  // Compute trending (biggest movers)
+  const trending = Object.values(quotes)
+    .filter((q) => q.last > 0)
+    .sort((a, b) => Math.abs(b.changepct) - Math.abs(a.changepct))
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -193,9 +275,27 @@ export default function WatchlistPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[--text-primary]">Watchlist</h1>
-          <p className="text-sm text-[--text-secondary]">Suivez vos instruments en temps réel</p>
+          <p className="text-sm text-[--text-secondary]">
+            Suivez vos instruments en temps réel
+            {lastUpdated && (
+              <span className="ml-2 text-[--text-muted]">
+                <Clock className="w-3 h-3 inline mr-1" />
+                Dernière mise à jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowAlertHistory(!showAlertHistory)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl glass text-sm ${alertHistory.length > 0 ? "text-amber-400" : "text-[--text-secondary]"}`}
+          >
+            <History className="w-4 h-4" />
+            <span className="hidden sm:inline">Historique</span>
+            {alertHistory.length > 0 && (
+              <span className="text-xs bg-amber-500/20 px-1.5 py-0.5 rounded-full">{alertHistory.length}</span>
+            )}
+          </button>
           <button onClick={fetchQuotes} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] hover:text-[--text-primary] text-sm">
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Rafraîchir
           </button>
@@ -204,6 +304,77 @@ export default function WatchlistPage() {
           </button>
         </div>
       </div>
+
+      {/* Alert History Panel */}
+      {showAlertHistory && (
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-[--text-primary] flex items-center gap-2">
+              <BellRing className="w-4 h-4 text-amber-400" />
+              Historique des alertes
+            </h3>
+            {alertHistory.length > 0 && (
+              <button
+                onClick={() => saveAlertHistory([])}
+                className="text-xs text-[--text-muted] hover:text-rose-400 transition"
+              >
+                Effacer tout
+              </button>
+            )}
+          </div>
+          {alertHistory.length === 0 ? (
+            <p className="text-sm text-[--text-muted]">Aucune alerte déclenchée</p>
+          ) : (
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {alertHistory.slice(0, 20).map((h, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-[--bg-hover]">
+                  <div className="flex items-center gap-3">
+                    <Bell className={`w-4 h-4 ${h.direction === "above" ? "text-emerald-400" : "text-rose-400"}`} />
+                    <div>
+                      <p className="text-sm font-medium text-[--text-primary]">
+                        {h.symbol} — ${h.price.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-[--text-muted]">
+                        {h.direction === "above" ? "Au-dessus de" : "En-dessous de"} ${h.alertPrice.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-[--text-muted]">
+                    {new Date(h.timestamp).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Trending Section */}
+      {trending.length > 0 && (
+        <div className="glass rounded-2xl p-5">
+          <h3 className="font-semibold text-[--text-primary] flex items-center gap-2 mb-4">
+            <Flame className="w-4 h-4 text-orange-400" />
+            Tendances — Plus grands mouvements
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {trending.map((q) => {
+              const isUp = q.changepct >= 0;
+              return (
+                <div key={q.symbol} className="metric-card rounded-xl p-3 text-center">
+                  <p className="text-sm font-bold text-[--text-primary]">{q.symbol}</p>
+                  <p className="text-lg font-bold mono text-[--text-primary]">${q.last.toFixed(2)}</p>
+                  <div className="flex items-center justify-center gap-1 mt-1">
+                    {isUp ? <TrendingUp className="w-3 h-3 text-emerald-400" /> : <TrendingDown className="w-3 h-3 text-rose-400" />}
+                    <span className={`text-sm font-bold mono ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
+                      {isUp ? "+" : ""}{q.changepct.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -240,91 +411,123 @@ export default function WatchlistPage() {
         </div>
       )}
 
-      {/* Watchlist Table */}
-      <div className="glass rounded-2xl overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[--border-subtle]">
-              <th className="text-left text-xs font-semibold text-[--text-muted] p-4">Symbole</th>
-              <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Prix</th>
-              <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Change</th>
-              <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden md:table-cell">%</th>
-              <th className="text-center text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">Tendance</th>
-              <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">Volume</th>
-              <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">Bid/Ask</th>
-              <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">52W Range</th>
-              <th className="text-center text-xs font-semibold text-[--text-muted] p-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((item) => {
-              const q = quotes[item.symbol];
-              const isUp = q ? q.change >= 0 : true;
-              return (
-                <tr key={item.symbol} className="border-b border-[--border-subtle] hover:bg-[--bg-hover] transition-colors">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${isUp ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
-                        {item.symbol.slice(0, 2)}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm text-[--text-primary]">{item.symbol}</p>
-                        <p className="text-xs text-[--text-muted]">{item.name}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-right">
-                    <span className="text-sm font-bold mono text-[--text-primary]">{q ? `$${q.last.toFixed(2)}` : "—"}</span>
-                  </td>
-                  <td className="p-4 text-right">
-                    <span className={`text-sm font-medium mono ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
-                      {q ? `${isUp ? "+" : ""}${q.change.toFixed(2)}` : "—"}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right hidden md:table-cell">
-                    <span className={`text-xs px-2 py-1 rounded-lg font-medium ${isUp ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
-                      {q ? `${isUp ? "+" : ""}${q.changepct.toFixed(2)}%` : "—"}
-                    </span>
-                  </td>
-                  <td className="p-4 text-center hidden lg:table-cell">
-                    {q ? <Sparkline change={q.change} /> : "—"}
-                  </td>
-                  <td className="p-4 text-right hidden lg:table-cell">
-                    <span className="text-xs text-[--text-secondary] mono">{q ? formatVolume(q.volume) : "—"}</span>
-                  </td>
-                  <td className="p-4 text-right hidden xl:table-cell">
-                    <span className="text-xs text-[--text-secondary] mono">{q ? `${q.bid.toFixed(2)} / ${q.ask.toFixed(2)}` : "—"}</span>
-                  </td>
-                  <td className="p-4 text-right hidden xl:table-cell">
-                    <span className="text-xs text-[--text-secondary] mono">{q ? `${q.low52.toFixed(0)} — ${q.high52.toFixed(0)}` : "—"}</span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={() => { setAlertSymbol(item.symbol); setAlertPrice(q ? q.last.toFixed(2) : ""); }}
-                        className={`p-1.5 rounded-lg hover:bg-[--bg-secondary] ${item.alertPrice ? "text-amber-400" : "text-[--text-muted]"}`}
-                        title="Alerte prix"
-                      >
-                        <Bell className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => removeItem(item.symbol)} className="p-1.5 rounded-lg hover:bg-[--bg-secondary] text-[--text-muted] hover:text-rose-400" title="Supprimer">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {filtered.length === 0 && (
-          <div className="text-center py-12 text-[--text-muted]">
-            <Eye className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>Votre watchlist est vide</p>
-            <p className="text-sm mt-1">Ajoutez des instruments pour commencer</p>
+      {/* Loading Skeleton */}
+      {loading && Object.keys(quotes).length === 0 ? (
+        <div className="glass rounded-2xl p-4 animate-pulse">
+          <div className="space-y-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <div className="w-8 h-8 rounded-lg bg-[--bg-secondary]/30" />
+                <div className="flex-1 h-4 bg-[--bg-secondary]/30 rounded" />
+                <div className="w-20 h-4 bg-[--bg-secondary]/30 rounded" />
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        /* Watchlist Table */
+        <div className="glass rounded-2xl overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[--border-subtle]">
+                <th className="text-left text-xs font-semibold text-[--text-muted] p-4">Symbole</th>
+                <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Prix</th>
+                <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Change</th>
+                <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden md:table-cell">%</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">Tendance</th>
+                <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">Volume</th>
+                <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">Bid/Ask</th>
+                <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">52W Range</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((item) => {
+                const q = quotes[item.symbol];
+                const isUp = q ? q.change >= 0 : true;
+                return (
+                  <tr key={item.symbol} className="border-b border-[--border-subtle] hover:bg-[--bg-hover] transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${isUp ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
+                          {item.symbol.slice(0, 2)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-sm text-[--text-primary]">{item.symbol}</p>
+                            {item.alertPrice && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 flex items-center gap-1">
+                                <Bell className="w-2.5 h-2.5" />
+                                ${item.alertPrice}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-[--text-muted]">{item.name}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4 text-right">
+                      <span className="text-sm font-bold mono text-[--text-primary]">{q ? `$${q.last.toFixed(2)}` : "—"}</span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <span className={`text-sm font-medium mono ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
+                        {q ? `${isUp ? "+" : ""}${q.change.toFixed(2)}` : "—"}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right hidden md:table-cell">
+                      <span className={`text-xs px-2 py-1 rounded-lg font-medium ${isUp ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
+                        {q ? `${isUp ? "+" : ""}${q.changepct.toFixed(2)}%` : "—"}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center hidden lg:table-cell">
+                      {q ? <Sparkline change={q.change} /> : "—"}
+                    </td>
+                    <td className="p-4 text-right hidden lg:table-cell">
+                      <span className="text-xs text-[--text-secondary] mono">{q ? formatVolume(q.volume) : "—"}</span>
+                    </td>
+                    <td className="p-4 text-right hidden xl:table-cell">
+                      <span className="text-xs text-[--text-secondary] mono">{q ? `${q.bid.toFixed(2)} / ${q.ask.toFixed(2)}` : "—"}</span>
+                    </td>
+                    <td className="p-4 text-right hidden xl:table-cell">
+                      <span className="text-xs text-[--text-secondary] mono">{q ? `${q.low52.toFixed(0)} — ${q.high52.toFixed(0)}` : "—"}</span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => { setAlertSymbol(item.symbol); setAlertPrice(q ? q.last.toFixed(2) : ""); }}
+                          className={`p-1.5 rounded-lg hover:bg-[--bg-secondary] ${item.alertPrice ? "text-amber-400" : "text-[--text-muted]"}`}
+                          title="Alerte prix"
+                        >
+                          <Bell className="w-4 h-4" />
+                        </button>
+                        {item.alertPrice && (
+                          <button
+                            onClick={() => removeAlert(item.symbol)}
+                            className="p-1.5 rounded-lg hover:bg-[--bg-secondary] text-amber-400 hover:text-amber-300"
+                            title="Supprimer l'alerte"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                        <button onClick={() => removeItem(item.symbol)} className="p-1.5 rounded-lg hover:bg-[--bg-secondary] text-[--text-muted] hover:text-rose-400" title="Supprimer">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {filtered.length === 0 && (
+            <div className="text-center py-12 text-[--text-muted]">
+              <Eye className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p>Votre watchlist est vide</p>
+              <p className="text-sm mt-1">Ajoutez des instruments pour commencer</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Alert Modal */}
       {alertSymbol && (

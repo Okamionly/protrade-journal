@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, TrendingUp, TrendingDown, BarChart3, AlertTriangle, X } from "lucide-react";
+import { RefreshCw, BarChart3, AlertTriangle, X, Clock, Globe } from "lucide-react";
 
 interface SectorStock {
   symbol: string;
   name: string;
   sector: string;
-  marketCap: number; // relative weight
+  marketCap: number;
 }
 
 interface StockQuote {
@@ -24,29 +24,59 @@ const SECTORS: Record<string, SectorStock[]> = {
     { symbol: "GOOGL", name: "Alphabet", sector: "Technology", marketCap: 18 },
     { symbol: "META", name: "Meta", sector: "Technology", marketCap: 12 },
     { symbol: "AMD", name: "AMD", sector: "Technology", marketCap: 8 },
+    { symbol: "INTC", name: "Intel", sector: "Technology", marketCap: 6 },
+    { symbol: "CRM", name: "Salesforce", sector: "Technology", marketCap: 10 },
+    { symbol: "ORCL", name: "Oracle", sector: "Technology", marketCap: 9 },
+    { symbol: "ADBE", name: "Adobe", sector: "Technology", marketCap: 8 },
   ],
   "Consumer": [
     { symbol: "AMZN", name: "Amazon", sector: "Consumer", marketCap: 25 },
     { symbol: "TSLA", name: "Tesla", sector: "Consumer", marketCap: 20 },
     { symbol: "NFLX", name: "Netflix", sector: "Consumer", marketCap: 12 },
     { symbol: "NKE", name: "Nike", sector: "Consumer", marketCap: 8 },
+    { symbol: "SBUX", name: "Starbucks", sector: "Consumer", marketCap: 7 },
+    { symbol: "MCD", name: "McDonald's", sector: "Consumer", marketCap: 9 },
+    { symbol: "DIS", name: "Disney", sector: "Consumer", marketCap: 8 },
   ],
   "Finance": [
     { symbol: "JPM", name: "JPMorgan", sector: "Finance", marketCap: 22 },
     { symbol: "BAC", name: "Bank of America", sector: "Finance", marketCap: 14 },
     { symbol: "GS", name: "Goldman Sachs", sector: "Finance", marketCap: 12 },
     { symbol: "V", name: "Visa", sector: "Finance", marketCap: 18 },
+    { symbol: "MA", name: "Mastercard", sector: "Finance", marketCap: 15 },
+    { symbol: "MS", name: "Morgan Stanley", sector: "Finance", marketCap: 10 },
+    { symbol: "BLK", name: "BlackRock", sector: "Finance", marketCap: 9 },
   ],
   "Healthcare": [
     { symbol: "JNJ", name: "J&J", sector: "Healthcare", marketCap: 18 },
     { symbol: "UNH", name: "UnitedHealth", sector: "Healthcare", marketCap: 20 },
     { symbol: "PFE", name: "Pfizer", sector: "Healthcare", marketCap: 10 },
     { symbol: "ABBV", name: "AbbVie", sector: "Healthcare", marketCap: 14 },
+    { symbol: "LLY", name: "Eli Lilly", sector: "Healthcare", marketCap: 16 },
+    { symbol: "MRK", name: "Merck", sector: "Healthcare", marketCap: 12 },
+    { symbol: "TMO", name: "Thermo Fisher", sector: "Healthcare", marketCap: 8 },
   ],
   "Energy": [
     { symbol: "XOM", name: "ExxonMobil", sector: "Energy", marketCap: 22 },
     { symbol: "CVX", name: "Chevron", sector: "Energy", marketCap: 16 },
     { symbol: "COP", name: "ConocoPhillips", sector: "Energy", marketCap: 10 },
+    { symbol: "SLB", name: "Schlumberger", sector: "Energy", marketCap: 8 },
+    { symbol: "EOG", name: "EOG Resources", sector: "Energy", marketCap: 7 },
+  ],
+  "Industrials": [
+    { symbol: "CAT", name: "Caterpillar", sector: "Industrials", marketCap: 14 },
+    { symbol: "BA", name: "Boeing", sector: "Industrials", marketCap: 12 },
+    { symbol: "HON", name: "Honeywell", sector: "Industrials", marketCap: 10 },
+    { symbol: "UPS", name: "UPS", sector: "Industrials", marketCap: 8 },
+    { symbol: "GE", name: "GE Aerospace", sector: "Industrials", marketCap: 11 },
+  ],
+  "Cybersecurity & Cloud": [
+    { symbol: "CRWD", name: "CrowdStrike", sector: "Cybersecurity & Cloud", marketCap: 12 },
+    { symbol: "ZS", name: "Zscaler", sector: "Cybersecurity & Cloud", marketCap: 8 },
+    { symbol: "NET", name: "Cloudflare", sector: "Cybersecurity & Cloud", marketCap: 9 },
+    { symbol: "DDOG", name: "Datadog", sector: "Cybersecurity & Cloud", marketCap: 8 },
+    { symbol: "SNOW", name: "Snowflake", sector: "Cybersecurity & Cloud", marketCap: 7 },
+    { symbol: "MDB", name: "MongoDB", sector: "Cybersecurity & Cloud", marketCap: 6 },
   ],
   "Indices": [
     { symbol: "SPY", name: "S&P 500", sector: "Indices", marketCap: 30 },
@@ -56,6 +86,29 @@ const SECTORS: Record<string, SectorStock[]> = {
   ],
 };
 
+// Global markets — use simulated data since these are not available on MarketData.app
+const GLOBAL_MARKETS = [
+  { symbol: "DAX", name: "DAX 40", region: "Europe" },
+  { symbol: "FTSE", name: "FTSE 100", region: "Europe" },
+  { symbol: "CAC40", name: "CAC 40", region: "Europe" },
+  { symbol: "STOXX50", name: "Euro Stoxx 50", region: "Europe" },
+  { symbol: "NIKKEI", name: "Nikkei 225", region: "Asie" },
+  { symbol: "HSI", name: "Hang Seng", region: "Asie" },
+  { symbol: "SHANGHAI", name: "Shanghai Comp.", region: "Asie" },
+  { symbol: "KOSPI", name: "KOSPI", region: "Asie" },
+  { symbol: "ASX200", name: "ASX 200", region: "Asie-Pacifique" },
+  { symbol: "IBOV", name: "Bovespa", region: "Amériques" },
+  { symbol: "TSX", name: "TSX", region: "Amériques" },
+];
+
+function generateGlobalMarketsData() {
+  return GLOBAL_MARKETS.map((m) => ({
+    ...m,
+    changepct: (Math.random() - 0.45) * 4,
+    last: 5000 + Math.random() * 30000,
+  }));
+}
+
 export default function SectorHeatmapPage() {
   const [quotes, setQuotes] = useState<Record<string, StockQuote>>({});
   const [loading, setLoading] = useState(false);
@@ -63,6 +116,9 @@ export default function SectorHeatmapPage() {
   const [usingFallback, setUsingFallback] = useState(false);
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [view, setView] = useState<"treemap" | "table">("treemap");
+  const [showGlobal, setShowGlobal] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [globalData, setGlobalData] = useState<ReturnType<typeof generateGlobalMarketsData>>([]);
 
   const allSymbols = Object.values(SECTORS).flat().map((s) => s.symbol);
 
@@ -84,42 +140,50 @@ export default function SectorHeatmapPage() {
             };
           });
           setQuotes(newQuotes);
+          setLastUpdated(new Date());
         }
+      } else {
+        throw new Error("API error");
       }
     } catch {
       setError("Impossible de charger les données. Réessayez.");
-      // If we have no data yet, mark as using fallback (empty quotes shown)
       if (Object.keys(quotes).length === 0) {
         setUsingFallback(true);
       }
     }
+    // Generate global markets data (simulated)
+    setGlobalData(generateGlobalMarketsData());
     setLoading(false);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  // Enhanced color gradient — more visible and varied
   const getColor = (pct: number): string => {
+    if (pct >= 5) return "bg-emerald-700";
     if (pct >= 3) return "bg-emerald-600";
     if (pct >= 2) return "bg-emerald-500";
     if (pct >= 1) return "bg-emerald-500/80";
-    if (pct >= 0.5) return "bg-emerald-500/60";
-    if (pct >= 0) return "bg-emerald-500/30";
-    if (pct >= -0.5) return "bg-rose-500/30";
-    if (pct >= -1) return "bg-rose-500/60";
+    if (pct >= 0.5) return "bg-emerald-500/50";
+    if (pct >= 0.1) return "bg-emerald-500/25";
+    if (pct >= -0.1) return "bg-gray-600/40";
+    if (pct >= -0.5) return "bg-rose-500/25";
+    if (pct >= -1) return "bg-rose-500/50";
     if (pct >= -2) return "bg-rose-500/80";
     if (pct >= -3) return "bg-rose-500";
-    return "bg-rose-600";
+    if (pct >= -5) return "bg-rose-600";
+    return "bg-rose-700";
   };
 
-  const getTextColor = (pct: number) => Math.abs(pct) >= 1 ? "text-white" : "text-[--text-primary]";
+  const getTextColor = (pct: number) => Math.abs(pct) >= 0.5 ? "text-white" : "text-[--text-primary]";
 
   const sectorPerf = Object.entries(SECTORS).map(([name, stocks]) => {
     const pcts = stocks.map((s) => quotes[s.symbol]?.changepct || 0);
     const weights = stocks.map((s) => s.marketCap);
     const totalWeight = weights.reduce((a, b) => a + b, 0);
-    const avg = pcts.reduce((s, p, i) => s + p * (weights[i] / totalWeight), 0);
+    const avg = totalWeight > 0 ? pcts.reduce((s, p, i) => s + p * (weights[i] / totalWeight), 0) : 0;
     return { name, avg, stocks };
   });
 
@@ -153,9 +217,25 @@ export default function SectorHeatmapPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[--text-primary]">Heatmap Sectorielle</h1>
-          <p className="text-sm text-[--text-secondary]">Performance des secteurs en temps réel</p>
+          <p className="text-sm text-[--text-secondary]">
+            Performance des secteurs en temps réel
+            {lastUpdated && (
+              <span className="ml-2 text-[--text-muted]">
+                <Clock className="w-3 h-3 inline mr-1" />
+                Dernière mise à jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowGlobal(!showGlobal)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${
+              showGlobal ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary]"
+            }`}
+          >
+            <Globe className="w-4 h-4" /> Global
+          </button>
           <button
             onClick={() => setView("treemap")}
             className={`px-4 py-2 rounded-xl text-sm font-medium ${view === "treemap" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary]"}`}
@@ -173,6 +253,37 @@ export default function SectorHeatmapPage() {
           </button>
         </div>
       </div>
+
+      {/* Global Markets */}
+      {showGlobal && (
+        <div className="glass rounded-2xl p-5">
+          <h3 className="font-semibold text-[--text-primary] flex items-center gap-2 mb-4">
+            <Globe className="w-5 h-5 text-cyan-400" />
+            Marchés Mondiaux
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+            {globalData.map((m) => {
+              const pct = m.changepct;
+              const isUp = pct >= 0;
+              return (
+                <div
+                  key={m.symbol}
+                  className={`${getColor(pct)} rounded-xl p-3 transition-transform hover:scale-105 cursor-default`}
+                >
+                  <p className={`text-xs opacity-70 ${getTextColor(pct)}`}>{m.region}</p>
+                  <p className={`text-sm font-bold ${getTextColor(pct)}`}>{m.name}</p>
+                  <p className={`text-lg font-bold mono mt-1 ${getTextColor(pct)}`}>
+                    {m.last.toFixed(0)}
+                  </p>
+                  <p className={`text-sm font-medium ${getTextColor(pct)}`}>
+                    {isUp ? "+" : ""}{pct.toFixed(2)}%
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Sector Pills */}
       <div className="flex flex-wrap gap-2">
@@ -198,7 +309,16 @@ export default function SectorHeatmapPage() {
         ))}
       </div>
 
-      {view === "treemap" ? (
+      {/* Loading Skeleton */}
+      {loading && Object.keys(quotes).length === 0 ? (
+        <div className="glass rounded-2xl p-5 animate-pulse">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="h-24 rounded-xl bg-[--bg-secondary]/30" />
+            ))}
+          </div>
+        </div>
+      ) : view === "treemap" ? (
         /* Treemap View */
         <div className="space-y-6">
           {displaySectors.map(({ name, avg, stocks }) => (
@@ -207,12 +327,13 @@ export default function SectorHeatmapPage() {
                 <div className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-cyan-400" />
                   <h3 className="font-semibold text-[--text-primary]">{name}</h3>
+                  <span className="text-xs text-[--text-muted]">({stocks.length} titres)</span>
                 </div>
                 <span className={`text-sm font-medium ${avg >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                   {avg >= 0 ? "+" : ""}{avg.toFixed(2)}%
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                 {stocks.map((stock) => {
                   const q = quotes[stock.symbol];
                   const pct = q?.changepct || 0;
@@ -220,7 +341,7 @@ export default function SectorHeatmapPage() {
                     <div
                       key={stock.symbol}
                       className={`${getColor(pct)} rounded-xl p-3 flex flex-col justify-between transition-transform hover:scale-105 cursor-default`}
-                      style={{ minHeight: `${60 + stock.marketCap * 1.5}px` }}
+                      style={{ minHeight: `${60 + stock.marketCap * 1.2}px` }}
                     >
                       <div>
                         <p className={`text-sm font-bold ${getTextColor(pct)}`}>{stock.symbol}</p>
@@ -291,13 +412,15 @@ export default function SectorHeatmapPage() {
       <div className="glass rounded-2xl p-4">
         <div className="flex items-center justify-center gap-2 flex-wrap">
           {[
-            { label: "-3%+", cls: "bg-rose-600" },
+            { label: "-5%+", cls: "bg-rose-700" },
+            { label: "-3%", cls: "bg-rose-600" },
             { label: "-2%", cls: "bg-rose-500" },
-            { label: "-1%", cls: "bg-rose-500/60" },
-            { label: "0%", cls: "bg-gray-500/30" },
-            { label: "+1%", cls: "bg-emerald-500/60" },
+            { label: "-1%", cls: "bg-rose-500/50" },
+            { label: "0%", cls: "bg-gray-600/40" },
+            { label: "+1%", cls: "bg-emerald-500/50" },
             { label: "+2%", cls: "bg-emerald-500" },
-            { label: "+3%+", cls: "bg-emerald-600" },
+            { label: "+3%", cls: "bg-emerald-600" },
+            { label: "+5%+", cls: "bg-emerald-700" },
           ].map(({ label, cls }) => (
             <div key={label} className="flex items-center gap-1">
               <div className={`w-6 h-4 rounded ${cls}`} />

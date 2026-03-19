@@ -111,8 +111,8 @@ const navItems = [
   // PREMIUM
   { divider: true, label: "PREMIUM" },
   { href: "/vip", label: "VIP", icon: Crown, isVip: true },
-  { href: "/vip#indicateurs", label: "Indicateurs", icon: Crosshair, isVip: true },
-  { href: "/vip#analyses", label: "Analyses Macro", icon: Globe, isVip: true },
+  { href: "/vip/indicateurs", label: "Indicateurs", icon: Crosshair, isVip: true },
+  { href: "/vip/analyses", label: "Analyses Macro", icon: Globe, isVip: true },
 ] as const;
 
 export function Sidebar() {
