@@ -94,17 +94,17 @@ async function fetchFinnhub(): Promise<NewsArticle[]> {
   }));
 }
 
-// --------------- Source 2: Yahoo Finance RSS ---------------
+// --------------- Source 2: CNBC RSS (reliable, 30+ articles) ---------------
 
-async function fetchYahooFinanceRSS(): Promise<NewsArticle[]> {
-  const res = await fetch("https://finance.yahoo.com/news/rssindex", {
+async function fetchCNBCRSS(): Promise<NewsArticle[]> {
+  const res = await fetch("https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114", {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; MarketPhase/1.0)" },
     next: { revalidate: 300 },
   });
-  if (!res.ok) throw new Error(`Yahoo RSS error: ${res.status}`);
+  if (!res.ok) throw new Error(`CNBC RSS error: ${res.status}`);
   const xml = await res.text();
   const items = parseRSS(xml);
-  return rssToArticles(items, "Yahoo Finance");
+  return rssToArticles(items, "CNBC");
 }
 
 // --------------- Source 3: Google News RSS (Finance FR) ---------------
@@ -123,20 +123,36 @@ async function fetchGoogleNewsRSS(): Promise<NewsArticle[]> {
   return rssToArticles(items, "Google News");
 }
 
-// --------------- Source 4: Finviz News ---------------
+// --------------- Source 4: BBC Business RSS ---------------
 
-async function fetchFinvizNews(): Promise<NewsArticle[]> {
-  const res = await fetch("https://finviz.com/news.ashx", {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    },
+async function fetchBBCBusinessRSS(): Promise<NewsArticle[]> {
+  const res = await fetch("https://feeds.bbci.co.uk/news/business/rss.xml", {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; MarketPhase/1.0)" },
     next: { revalidate: 300 },
   });
-  if (!res.ok) throw new Error(`Finviz error: ${res.status}`);
-  const html = await res.text();
+  if (!res.ok) throw new Error(`BBC RSS error: ${res.status}`);
+  const xml = await res.text();
+  const items = parseRSS(xml);
+  return rssToArticles(items, "BBC Business");
+}
 
+// --------------- Source 5: Investing.com RSS ---------------
+
+async function fetchInvestingRSS(): Promise<NewsArticle[]> {
+  const res = await fetch("https://www.investing.com/rss/news.rss", {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; MarketPhase/1.0)" },
+    next: { revalidate: 300 },
+  });
+  if (!res.ok) throw new Error(`Investing.com RSS error: ${res.status}`);
+  const xml = await res.text();
+  const items = parseRSS(xml);
+  return rssToArticles(items, "Investing.com");
+}
+
+// --------------- (removed Finviz — unreliable scraping) ---------------
+function _placeholder_removed() {
   const articles: NewsArticle[] = [];
-  // Match news table rows: <a ...href="URL"...>TITLE</a>
+  const html = "";
   const linkRegex = /<a[^>]+class="nn-tab-link"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
   let m;
   let idx = 0;
@@ -247,12 +263,12 @@ export async function GET() {
     console.warn("[News] Finnhub failed:", e);
   }
 
-  // Source 2: Yahoo Finance RSS
+  // Source 2: CNBC RSS (reliable, 30+ articles)
   try {
-    const data = await fetchYahooFinanceRSS();
+    const data = await fetchCNBCRSS();
     if (data.length > 0) allArticles.push(...data);
   } catch (e) {
-    console.warn("[News] Yahoo Finance RSS failed:", e);
+    console.warn("[News] CNBC RSS failed:", e);
   }
 
   // Source 3: Google News RSS (FR finance)
@@ -263,12 +279,20 @@ export async function GET() {
     console.warn("[News] Google News RSS failed:", e);
   }
 
-  // Source 4: Finviz
+  // Source 4: BBC Business RSS
   try {
-    const data = await fetchFinvizNews();
+    const data = await fetchBBCBusinessRSS();
     if (data.length > 0) allArticles.push(...data);
   } catch (e) {
-    console.warn("[News] Finviz failed:", e);
+    console.warn("[News] BBC Business failed:", e);
+  }
+
+  // Source 5: Investing.com RSS
+  try {
+    const data = await fetchInvestingRSS();
+    if (data.length > 0) allArticles.push(...data);
+  } catch (e) {
+    console.warn("[News] Investing.com failed:", e);
   }
 
   if (allArticles.length > 0) {
