@@ -1,0 +1,260 @@
+import { NextResponse } from "next/server";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+interface PriceItem {
+  symbol: string;
+  price: number;
+  change: number; // percent
+}
+
+interface LivePricesResponse {
+  forex: PriceItem[];
+  crypto: PriceItem[];
+  commodities: PriceItem[];
+  indices: PriceItem[];
+  timestamp: number;
+}
+
+// ---------------------------------------------------------------------------
+// 5-minute in-memory cache
+// ---------------------------------------------------------------------------
+let cache: { data: LivePricesResponse; ts: number } | null = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Store previous forex rates so we can compute session change %
+let prevForexRates: Record<string, number> = {};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+async function safeFetch(url: string): Promise<Response> {
+  return fetch(url, {
+    signal: AbortSignal.timeout(5000),
+    headers: { Accept: "application/json" },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Forex (open.er-api.com  free, no key)
+// ---------------------------------------------------------------------------
+async function fetchForex(): Promise<{
+  pairs: PriceItem[];
+  rates: Record<string, number>;
+}> {
+  try {
+    const res = await safeFetch("https://open.er-api.com/v6/latest/USD");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const r: Record<string, number> = data.rates ?? {};
+
+    const defs: { symbol: string; value: () => number; decimals: number }[] = [
+      { symbol: "EUR/USD", value: () => 1 / (r.EUR || 1), decimals: 4 },
+      { symbol: "GBP/USD", value: () => 1 / (r.GBP || 1), decimals: 4 },
+      { symbol: "USD/JPY", value: () => r.JPY || 149, decimals: 2 },
+      { symbol: "AUD/USD", value: () => 1 / (r.AUD || 1), decimals: 4 },
+      { symbol: "USD/CAD", value: () => r.CAD || 1.36, decimals: 4 },
+      { symbol: "USD/CHF", value: () => r.CHF || 0.88, decimals: 4 },
+      { symbol: "NZD/USD", value: () => 1 / (r.NZD || 1), decimals: 4 },
+      { symbol: "EUR/GBP", value: () => (r.GBP || 1) / (r.EUR || 1), decimals: 4 },
+      { symbol: "EUR/JPY", value: () => (r.JPY || 149) / (r.EUR || 1), decimals: 2 },
+      { symbol: "GBP/JPY", value: () => (r.JPY || 149) / (r.GBP || 1), decimals: 2 },
+    ];
+
+    const pairs: PriceItem[] = defs.map((d) => {
+      const price = parseFloat(d.value().toFixed(d.decimals));
+      const prev = prevForexRates[d.symbol];
+      let change = 0;
+      if (prev && prev !== 0) {
+        change = parseFloat((((price - prev) / prev) * 100).toFixed(2));
+      }
+      return { symbol: d.symbol, price, change };
+    });
+
+    // Update stored rates for next diff
+    defs.forEach((d) => {
+      prevForexRates[d.symbol] = parseFloat(d.value().toFixed(d.decimals));
+    });
+
+    return { pairs, rates: r };
+  } catch {
+    return { pairs: [], rates: {} };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bitcoin  (CoinGecko free endpoint, no key)
+// ---------------------------------------------------------------------------
+async function fetchBitcoin(): Promise<PriceItem[]> {
+  try {
+    const res = await safeFetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true"
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const btc = data.bitcoin;
+    if (!btc) return [];
+    return [
+      {
+        symbol: "BTC/USD",
+        price: Math.round(btc.usd ?? 0),
+        change: parseFloat((btc.usd_24h_change ?? 0).toFixed(2)),
+      },
+    ];
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Gold XAU/USD
+// We try gold-api.com first; fall back to exchange-rate XAU if available.
+// ---------------------------------------------------------------------------
+async function fetchGold(
+  forexRates: Record<string, number>
+): Promise<PriceItem[]> {
+  // Attempt 1 : gold-api.com (free, no key)
+  try {
+    const res = await safeFetch("https://api.gold-api.com/price/XAU");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.price) {
+        return [
+          {
+            symbol: "XAU/USD",
+            price: parseFloat((data.price as number).toFixed(1)),
+            change: parseFloat((data.ch ?? data.chp ?? 0).toFixed(2)),
+          },
+        ];
+      }
+    }
+  } catch {
+    // continue
+  }
+
+  // Attempt 2: derive from exchange-rate API if it returned XAU
+  if (forexRates.XAU && forexRates.XAU > 0) {
+    const price = parseFloat((1 / forexRates.XAU).toFixed(1));
+    return [{ symbol: "XAU/USD", price, change: 0 }];
+  }
+
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// S&P 500 approximation via Yahoo Finance SPY chart
+// ---------------------------------------------------------------------------
+async function fetchSP500(): Promise<PriceItem[]> {
+  try {
+    const res = await safeFetch(
+      "https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=1d&range=1d"
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const meta = data?.chart?.result?.[0]?.meta;
+    if (!meta) return [];
+    const price = Math.round(meta.regularMarketPrice ?? 0);
+    const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? price;
+    const change =
+      prevClose !== 0
+        ? parseFloat((((price - prevClose) / prevClose) * 100).toFixed(2))
+        : 0;
+    // SPY tracks S&P 500 at ~1/10 scale; multiply for approximate index value
+    return [
+      {
+        symbol: "S&P 500",
+        price: Math.round(price * 10),
+        change,
+      },
+    ];
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// DXY approximation
+// ICE DXY weights: EUR 57.6%, JPY 13.6%, GBP 11.9%, CAD 9.1%, SEK 4.2%, CHF 3.6%
+// Formula: DXY = 50.14348112 * (EURUSD^-0.576) * (USDJPY^0.136) * (GBPUSD^-0.119)
+//          * (USDCAD^0.091) * (USDSEK^0.042) * (USDCHF^0.036)
+// ---------------------------------------------------------------------------
+function calcDXY(rates: Record<string, number>): PriceItem | null {
+  const eur = rates.EUR;
+  const jpy = rates.JPY;
+  const gbp = rates.GBP;
+  const cad = rates.CAD;
+  const sek = rates.SEK;
+  const chf = rates.CHF;
+  if (!eur || !jpy || !gbp || !cad || !sek || !chf) return null;
+
+  const eurusd = 1 / eur;
+  const usdjpy = jpy;
+  const gbpusd = 1 / gbp;
+  const usdcad = cad;
+  const usdsek = sek;
+  const usdchf = chf;
+
+  const dxy =
+    50.14348112 *
+    Math.pow(eurusd, -0.576) *
+    Math.pow(usdjpy, 0.136) *
+    Math.pow(gbpusd, -0.119) *
+    Math.pow(usdcad, 0.091) *
+    Math.pow(usdsek, 0.042) *
+    Math.pow(usdchf, 0.036);
+
+  const price = parseFloat(dxy.toFixed(2));
+
+  // Compute change from previous cached value
+  const prev = prevForexRates["DXY"];
+  let change = 0;
+  if (prev && prev !== 0) {
+    change = parseFloat((((price - prev) / prev) * 100).toFixed(2));
+  }
+  prevForexRates["DXY"] = price;
+
+  return { symbol: "DXY", price, change };
+}
+
+// ---------------------------------------------------------------------------
+// Main handler
+// ---------------------------------------------------------------------------
+export async function GET() {
+  // Return cache if still fresh
+  if (cache && Date.now() - cache.ts < CACHE_TTL) {
+    return NextResponse.json(cache.data);
+  }
+
+  // Fire all fetches in parallel
+  const [forexResult, crypto, sp500] = await Promise.all([
+    fetchForex(),
+    fetchBitcoin(),
+    fetchSP500(),
+  ]);
+
+  const { pairs: forex, rates } = forexResult;
+
+  // Gold needs forex rates as fallback input
+  const commodities = await fetchGold(rates);
+
+  // DXY from forex rates
+  const dxy = calcDXY(rates);
+
+  const indices: PriceItem[] = [];
+  if (sp500.length > 0) indices.push(...sp500);
+  if (dxy) indices.push(dxy);
+
+  const result: LivePricesResponse = {
+    forex,
+    crypto,
+    commodities,
+    indices,
+    timestamp: Date.now(),
+  };
+
+  // Populate cache
+  cache = { data: result, ts: Date.now() };
+
+  return NextResponse.json(result);
+}

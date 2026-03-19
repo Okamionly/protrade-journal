@@ -21,8 +21,8 @@ export interface NewsArticle {
 
 // --------------- RSS Parser (no external lib) ---------------
 
-function parseRSS(xml: string): Array<{ title: string; link: string; pubDate: string; source: string }> {
-  const items: Array<{ title: string; link: string; pubDate: string; source: string }> = [];
+function parseRSS(xml: string): Array<{ title: string; link: string; pubDate: string; source: string; description: string; imageUrl: string }> {
+  const items: Array<{ title: string; link: string; pubDate: string; source: string; description: string; imageUrl: string }> = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
@@ -31,17 +31,33 @@ function parseRSS(xml: string): Array<{ title: string; link: string; pubDate: st
     const link = content.match(/<link>([\s\S]*?)<\/link>/)?.[1] || "";
     const pubDate = content.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] || "";
     const source = content.match(/<source.*?>([\s\S]*?)<\/source>/)?.[1] || "";
+    const description = content.match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
+
+    // Try to extract image from media:content, media:thumbnail, enclosure, or description
+    let imageUrl = "";
+    const mediaContent = content.match(/<media:content[^>]+url="([^"]+)"/)?.[1];
+    const mediaThumbnail = content.match(/<media:thumbnail[^>]+url="([^"]+)"/)?.[1];
+    const enclosure = content.match(/<enclosure[^>]+url="([^"]+)"[^>]+type="image/)?.[1];
+    const descImg = description.match(/<img[^>]+src="([^"]+)"/)?.[1];
+
+    imageUrl = mediaContent || mediaThumbnail || enclosure || descImg || "";
+
     items.push({
       title: title.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").trim(),
       link: link.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").trim(),
       pubDate,
       source,
+      description: description.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").replace(/<[^>]+>/g, "").trim(),
+      imageUrl: imageUrl.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").trim(),
     });
   }
   return items;
 }
 
-function rssToArticles(items: Array<{ title: string; link: string; pubDate: string; source: string }>, fallbackSource: string): NewsArticle[] {
+function rssToArticles(
+  items: Array<{ title: string; link: string; pubDate: string; source: string; description: string; imageUrl: string }>,
+  fallbackSource: string
+): NewsArticle[] {
   return items.map((item, idx) => {
     const dt = item.pubDate ? Math.floor(new Date(item.pubDate).getTime() / 1000) : Math.floor(Date.now() / 1000) - idx * 300;
     return {
@@ -49,10 +65,10 @@ function rssToArticles(items: Array<{ title: string; link: string; pubDate: stri
       category: categorizeHeadline(item.title),
       datetime: isNaN(dt) ? Math.floor(Date.now() / 1000) - idx * 300 : dt,
       headline: item.title,
-      image: "",
+      image: item.imageUrl || "",
       related: "",
       source: item.source || fallbackSource,
-      summary: "",
+      summary: item.description ? item.description.slice(0, 200) : "",
       url: item.link,
     };
   });
@@ -94,7 +110,7 @@ async function fetchFinnhub(): Promise<NewsArticle[]> {
   }));
 }
 
-// --------------- Source 2: CNBC RSS (reliable, 30+ articles) ---------------
+// --------------- Source 2: CNBC RSS ---------------
 
 async function fetchCNBCRSS(): Promise<NewsArticle[]> {
   const res = await fetch("https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114", {
@@ -149,50 +165,102 @@ async function fetchInvestingRSS(): Promise<NewsArticle[]> {
   return rssToArticles(items, "Investing.com");
 }
 
-// --------------- (removed Finviz — unreliable scraping) ---------------
-function _placeholder_removed() {
-  const articles: NewsArticle[] = [];
-  const html = "";
-  const linkRegex = /<a[^>]+class="nn-tab-link"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
-  let m;
-  let idx = 0;
-  while ((m = linkRegex.exec(html)) !== null) {
-    const url = m[1];
-    const title = m[2].replace(/<[^>]+>/g, "").trim();
-    if (title && url) {
-      articles.push({
-        id: Date.now() + idx + Math.floor(Math.random() * 100000),
-        category: categorizeHeadline(title),
-        datetime: Math.floor(Date.now() / 1000) - idx * 600,
-        headline: title,
-        image: "",
-        related: "",
-        source: "Finviz",
-        summary: "",
-        url: url.startsWith("http") ? url : `https://finviz.com${url}`,
-      });
-      idx++;
-    }
-  }
-  return articles;
+// --------------- Source 6: MarketWatch RSS ---------------
+
+async function fetchMarketWatchRSS(): Promise<NewsArticle[]> {
+  const res = await fetch("https://feeds.marketwatch.com/marketwatch/topstories/", {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; MarketPhase/1.0)" },
+    next: { revalidate: 300 },
+  });
+  if (!res.ok) throw new Error(`MarketWatch RSS error: ${res.status}`);
+  const xml = await res.text();
+  const items = parseRSS(xml);
+  return rssToArticles(items, "MarketWatch");
 }
 
-// --------------- Deduplication ---------------
+// --------------- Source 7: Reuters RSS ---------------
+
+async function fetchReutersRSS(): Promise<NewsArticle[]> {
+  const res = await fetch("https://www.reutersagency.com/feed/?taxonomy=best-sectors&post_type=best", {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; MarketPhase/1.0)" },
+    next: { revalidate: 300 },
+  });
+  if (!res.ok) throw new Error(`Reuters RSS error: ${res.status}`);
+  const xml = await res.text();
+  const items = parseRSS(xml);
+  return rssToArticles(items, "Reuters");
+}
+
+// --------------- Source 8: Yahoo Finance RSS ---------------
+
+async function fetchYahooFinanceRSS(): Promise<NewsArticle[]> {
+  const res = await fetch("https://finance.yahoo.com/news/rssindex", {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; MarketPhase/1.0)" },
+    next: { revalidate: 300 },
+  });
+  if (!res.ok) throw new Error(`Yahoo Finance RSS error: ${res.status}`);
+  const xml = await res.text();
+  const items = parseRSS(xml);
+  return rssToArticles(items, "Yahoo Finance");
+}
+
+// --------------- Improved Deduplication ---------------
+
+/** Normalize a title for comparison: lowercase, remove special chars, collapse whitespace */
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9àâäéèêëïîôùûüÿçœæ\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Calculate word-level similarity between two normalized strings (Jaccard-like) */
+function titleSimilarity(a: string, b: string): number {
+  const wordsA = new Set(a.split(" ").filter((w) => w.length > 2));
+  const wordsB = new Set(b.split(" ").filter((w) => w.length > 2));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  let intersection = 0;
+  for (const w of wordsA) {
+    if (wordsB.has(w)) intersection++;
+  }
+  const union = new Set([...wordsA, ...wordsB]).size;
+  return union > 0 ? intersection / union : 0;
+}
 
 function deduplicateArticles(articles: NewsArticle[]): NewsArticle[] {
-  const seen = new Map<string, NewsArticle>();
+  const kept: NewsArticle[] = [];
+  const normalizedKept: string[] = [];
+
   for (const article of articles) {
-    // Normalize title for comparison
-    const key = article.headline
-      .toLowerCase()
-      .replace(/[^a-z0-9àâäéèêëïîôùûüÿçœæ]/g, "")
-      .slice(0, 60);
-    if (key.length < 5) continue; // skip empty/tiny titles
-    if (!seen.has(key)) {
-      seen.set(key, article);
+    const norm = normalizeTitle(article.headline);
+    if (norm.length < 5) continue; // skip empty/tiny titles
+
+    // Check exact normalized match
+    const exactKey = norm.replace(/\s/g, "").slice(0, 60);
+    let isDuplicate = false;
+
+    for (let i = 0; i < normalizedKept.length; i++) {
+      const existingKey = normalizedKept[i].replace(/\s/g, "").slice(0, 60);
+      // Exact prefix match
+      if (exactKey === existingKey) {
+        isDuplicate = true;
+        break;
+      }
+      // Similarity check: if >65% words overlap, it's likely the same article
+      if (titleSimilarity(norm, normalizedKept[i]) > 0.65) {
+        isDuplicate = true;
+        break;
+      }
+    }
+
+    if (!isDuplicate) {
+      kept.push(article);
+      normalizedKept.push(norm);
     }
   }
-  return Array.from(seen.values());
+
+  return kept;
 }
 
 // --------------- Fallback news ---------------
@@ -255,45 +323,27 @@ export async function GET() {
 
   const allArticles: NewsArticle[] = [];
 
-  // Source 1: Finnhub (primary)
-  try {
-    const data = await fetchFinnhub();
-    if (data.length > 0) allArticles.push(...data);
-  } catch (e) {
-    console.warn("[News] Finnhub failed:", e);
-  }
+  // Fetch all sources in parallel for speed
+  const results = await Promise.allSettled([
+    fetchFinnhub(),
+    fetchCNBCRSS(),
+    fetchGoogleNewsRSS(),
+    fetchBBCBusinessRSS(),
+    fetchInvestingRSS(),
+    fetchMarketWatchRSS(),
+    fetchReutersRSS(),
+    fetchYahooFinanceRSS(),
+  ]);
 
-  // Source 2: CNBC RSS (reliable, 30+ articles)
-  try {
-    const data = await fetchCNBCRSS();
-    if (data.length > 0) allArticles.push(...data);
-  } catch (e) {
-    console.warn("[News] CNBC RSS failed:", e);
-  }
+  const sourceNames = ["Finnhub", "CNBC RSS", "Google News RSS", "BBC Business", "Investing.com", "MarketWatch", "Reuters", "Yahoo Finance"];
 
-  // Source 3: Google News RSS (FR finance)
-  try {
-    const data = await fetchGoogleNewsRSS();
-    if (data.length > 0) allArticles.push(...data);
-  } catch (e) {
-    console.warn("[News] Google News RSS failed:", e);
-  }
-
-  // Source 4: BBC Business RSS
-  try {
-    const data = await fetchBBCBusinessRSS();
-    if (data.length > 0) allArticles.push(...data);
-  } catch (e) {
-    console.warn("[News] BBC Business failed:", e);
-  }
-
-  // Source 5: Investing.com RSS
-  try {
-    const data = await fetchInvestingRSS();
-    if (data.length > 0) allArticles.push(...data);
-  } catch (e) {
-    console.warn("[News] Investing.com failed:", e);
-  }
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled" && result.value.length > 0) {
+      allArticles.push(...result.value);
+    } else if (result.status === "rejected") {
+      console.warn(`[News] ${sourceNames[index]} failed:`, result.reason);
+    }
+  });
 
   if (allArticles.length > 0) {
     // Deduplicate and sort by date descending

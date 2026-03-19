@@ -27,6 +27,25 @@ interface VolData {
   volume?: number;
 }
 
+interface VixApiData {
+  vix: {
+    current: number;
+    previousClose: number;
+    changePct: number;
+    history: number[];
+    dates: string[];
+  };
+  spy: {
+    current: number;
+    previousClose: number;
+    changePct: number;
+    history: number[];
+    dates: string[];
+  };
+  fetchedAt: string;
+  source: "yahoo" | "mock";
+}
+
 /* ------------------------------------------------------------------ */
 /*  Mock / fallback data (used when API unavailable)                   */
 /* ------------------------------------------------------------------ */
@@ -111,7 +130,7 @@ function getIvSignal(iv: number, hv: number) {
 /*  SVG Charts                                                         */
 /* ------------------------------------------------------------------ */
 
-function VixHistoryChart({ data }: { data: number[] }) {
+function VixHistoryChart({ data, dates }: { data: number[]; dates?: string[] }) {
   const width = 600;
   const height = 160;
   const padding = { top: 15, right: 10, bottom: 25, left: 35 };
@@ -131,6 +150,11 @@ function VixHistoryChart({ data }: { data: number[] }) {
   const areaPath = `${linePath} L${points[points.length - 1].x},${padding.top + chartH} L${points[0].x},${padding.top + chartH} Z`;
 
   const gridLines = [min, min + (max - min) / 3, min + (2 * (max - min)) / 3, max];
+
+  // X-axis labels: use real dates if available
+  const xLabels = dates && dates.length > 0
+    ? { start: dates[0], mid: dates[Math.floor(dates.length / 2)], end: dates[dates.length - 1] }
+    : { start: "J-30", mid: "J-15", end: "Auj." };
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
@@ -157,9 +181,9 @@ function VixHistoryChart({ data }: { data: number[] }) {
       {/* Last point dot */}
       <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r="4" fill="#0ea5e9" />
       {/* X labels */}
-      <text x={padding.left} y={height - 5} className="fill-[--text-muted]" fontSize="9">J-30</text>
-      <text x={padding.left + chartW / 2} y={height - 5} textAnchor="middle" className="fill-[--text-muted]" fontSize="9">J-15</text>
-      <text x={width - padding.right} y={height - 5} textAnchor="end" className="fill-[--text-muted]" fontSize="9">Auj.</text>
+      <text x={padding.left} y={height - 5} className="fill-[--text-muted]" fontSize="9">{xLabels.start}</text>
+      <text x={padding.left + chartW / 2} y={height - 5} textAnchor="middle" className="fill-[--text-muted]" fontSize="9">{xLabels.mid}</text>
+      <text x={width - padding.right} y={height - 5} textAnchor="end" className="fill-[--text-muted]" fontSize="9">{xLabels.end}</text>
     </svg>
   );
 }
@@ -211,20 +235,60 @@ function TermStructureChart({ data }: { data: { label: string; value: number }[]
 }
 
 /* ------------------------------------------------------------------ */
+/*  Loading skeleton                                                   */
+/* ------------------------------------------------------------------ */
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Row 1 skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="glass rounded-2xl p-6">
+            <div className="h-4 bg-[--bg-secondary]/50 rounded w-1/3 mb-4" />
+            <div className="h-12 bg-[--bg-secondary]/50 rounded w-1/2 mb-3" />
+            <div className="h-3 bg-[--bg-secondary]/50 rounded w-2/3" />
+          </div>
+        ))}
+      </div>
+      {/* Chart skeleton */}
+      <div className="glass rounded-2xl p-6">
+        <div className="h-4 bg-[--bg-secondary]/50 rounded w-1/4 mb-4" />
+        <div className="h-40 bg-[--bg-secondary]/30 rounded" />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Page Component                                                     */
 /* ------------------------------------------------------------------ */
 
 export default function VolatilityPage() {
   const [volData, setVolData] = useState<Record<string, VolData>>({});
-  const [loading, setLoading] = useState(false);
+  const [vixApiData, setVixApiData] = useState<VixApiData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingMock, setUsingMock] = useState(false);
 
   const allSymbols = [...VOL_INSTRUMENTS, ...MARKET_ETFS].map((i) => i.symbol);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  /* ---- Fetch real VIX data from our API ---- */
+  const fetchVixData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/market-data/vix");
+      if (!res.ok) throw new Error(`VIX API: ${res.status}`);
+      const data: VixApiData = await res.json();
+      setVixApiData(data);
+      return data;
+    } catch {
+      // Will use mock data via fallback
+      return null;
+    }
+  }, []);
+
+  /* ---- Fetch quotes for instruments ---- */
+  const fetchQuotes = useCallback(async () => {
     try {
       const res = await fetch(`/api/market-data/quotes?symbols=${allSymbols.join(",")}`);
       if (!res.ok) throw new Error(`Erreur API : ${res.status}`);
@@ -241,45 +305,96 @@ export default function VolatilityPage() {
             volume: data.volume?.[idx] ?? 0,
           };
         });
-        setVolData(newData);
-        setUsingMock(false);
-      } else {
-        throw new Error("Données invalides reçues de l'API");
+        return newData;
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erreur inconnue";
-      setError(message);
-      setUsingMock(true);
-      // Load mock data as fallback
+      throw new Error("Données invalides reçues de l'API");
+    } catch {
+      return null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    // Fetch VIX data and quotes in parallel
+    const [vixData, quotesData] = await Promise.all([fetchVixData(), fetchQuotes()]);
+
+    // Handle VIX data
+    if (vixData) {
+      setUsingMock(vixData.source === "mock");
+      if (vixData.source === "mock") {
+        setError("Yahoo Finance non disponible — données de démonstration");
+      }
+    }
+
+    // Handle quotes
+    if (quotesData) {
+      // If we have real VIX API data, overlay VIX and SPY values onto quotes
+      if (vixData) {
+        if (quotesData["VIX"]) {
+          quotesData["VIX"].last = vixData.vix.current;
+          quotesData["VIX"].changepct = vixData.vix.changePct;
+        } else {
+          quotesData["VIX"] = {
+            symbol: "VIX",
+            name: "CBOE Volatility Index",
+            last: vixData.vix.current,
+            changepct: vixData.vix.changePct,
+          };
+        }
+        if (quotesData["SPY"]) {
+          quotesData["SPY"].last = vixData.spy.current;
+          quotesData["SPY"].changepct = vixData.spy.changePct;
+        } else {
+          quotesData["SPY"] = {
+            symbol: "SPY",
+            name: "S&P 500",
+            last: vixData.spy.current,
+            changepct: vixData.spy.changePct,
+          };
+        }
+      }
+      setVolData(quotesData);
+    } else {
+      // Quotes failed, build from VIX API data + mock for the rest
       const mockData: Record<string, VolData> = {};
       [...VOL_INSTRUMENTS, ...MARKET_ETFS].forEach((item) => {
         mockData[item.symbol] = {
           symbol: item.symbol,
           name: item.name,
-          last: item.symbol === "VIX" ? 18.6 : item.symbol === "SPY" ? 582.4 : item.symbol === "QQQ" ? 498.7 : item.symbol === "IWM" ? 215.3 : item.symbol === "DIA" ? 428.1 : item.symbol === "GLD" ? 298.5 : item.symbol === "TLT" ? 91.2 : item.symbol === "USO" ? 72.8 : item.symbol === "UUP" ? 27.1 : item.symbol === "UVXY" ? 28.4 : item.symbol === "SVXY" ? 58.7 : item.symbol === "VIXY" ? 14.3 : 100,
-          changepct: item.symbol === "VIX" ? 3.2 : item.symbol === "SPY" ? -0.45 : item.symbol === "QQQ" ? -0.62 : item.symbol === "GLD" ? 0.8 : Math.random() * 4 - 2,
+          last: item.symbol === "VIX" ? (vixData?.vix.current ?? 18.6) : item.symbol === "SPY" ? (vixData?.spy.current ?? 582.4) : item.symbol === "QQQ" ? 498.7 : item.symbol === "IWM" ? 215.3 : item.symbol === "DIA" ? 428.1 : item.symbol === "GLD" ? 298.5 : item.symbol === "TLT" ? 91.2 : item.symbol === "USO" ? 72.8 : item.symbol === "UUP" ? 27.1 : item.symbol === "UVXY" ? 28.4 : item.symbol === "SVXY" ? 58.7 : item.symbol === "VIXY" ? 14.3 : 100,
+          changepct: item.symbol === "VIX" ? (vixData?.vix.changePct ?? 3.2) : item.symbol === "SPY" ? (vixData?.spy.changePct ?? -0.45) : item.symbol === "QQQ" ? -0.62 : item.symbol === "GLD" ? 0.8 : Math.random() * 4 - 2,
           volume: 0,
         };
       });
       setVolData(mockData);
+      if (!error) {
+        setError("API Quotes non disponible — données partielles");
+        setUsingMock(true);
+      }
     }
+
     setLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchVixData, fetchQuotes, error]);
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* Derived values */
   const vix = volData["VIX"];
-  const vixLevel = vix?.last ?? 18.6;
+  const vixLevel = vixApiData?.vix.current ?? vix?.last ?? 18.6;
+  const vixChangePct = vixApiData?.vix.changePct ?? vix?.changepct ?? 0;
   const vixZone = getVixZone(vixLevel);
 
   const spy = volData["SPY"];
-  const fearGreed = vix && spy
-    ? Math.max(0, Math.min(100, 50 + spy.changepct * 10 - (vixLevel - 20) * 2))
-    : 50;
+  const spyChangePct = vixApiData?.spy.changePct ?? spy?.changepct ?? 0;
+
+  // Calculate Fear & Greed from real VIX + SPY change
+  const fearGreed = Math.max(0, Math.min(100, 50 + spyChangePct * 10 - (vixLevel - 20) * 2));
 
   const getFearGreedLabel = (v: number) => {
     if (v >= 80) return { label: "Avidité Extrême", color: "text-emerald-400" };
@@ -290,6 +405,10 @@ export default function VolatilityPage() {
   };
   const fg = getFearGreedLabel(fearGreed);
 
+  // VIX history: prefer real data, fallback to mock
+  const vixHistory = vixApiData?.vix.history ?? MOCK_VIX_HISTORY;
+  const vixDates = vixApiData?.vix.dates;
+
   const termStructure = MOCK_TERM_STRUCTURE.map((t, i) => ({
     ...t,
     value: i === 0 ? vixLevel : t.value + (vixLevel - 18.6),
@@ -298,13 +417,43 @@ export default function VolatilityPage() {
 
   const fear = MOCK_FEAR_INDICATORS;
 
+  // Data source label
+  const dataSourceLabel = vixApiData?.source === "yahoo" ? "Yahoo Finance" : "Données de démonstration";
+  const fetchedAtLabel = vixApiData?.fetchedAt
+    ? new Date(vixApiData.fetchedAt).toLocaleString("fr-FR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
+    : null;
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[--text-primary]">Volatilité</h1>
+            <p className="text-sm text-[--text-secondary]">Chargement des données...</p>
+          </div>
+          <button disabled className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm">
+            <RefreshCw className="w-4 h-4 animate-spin" /> Rafraîchir
+          </button>
+        </div>
+        <LoadingSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[--text-primary]">Volatilité</h1>
-          <p className="text-sm text-[--text-secondary]">Analyse de la volatilité et sentiment du marché</p>
+          <p className="text-sm text-[--text-secondary]">
+            Analyse de la volatilité et sentiment du marché
+            {fetchedAtLabel && (
+              <span className="text-[--text-muted] ml-2">
+                — {dataSourceLabel} ({fetchedAtLabel})
+              </span>
+            )}
+          </p>
         </div>
         <button onClick={fetchData} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm hover:text-[--text-primary] transition">
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Rafraîchir
@@ -333,14 +482,15 @@ export default function VolatilityPage() {
           <div className="flex items-center gap-2 mb-3">
             <Activity className="w-5 h-5 text-cyan-400" />
             <h3 className="font-semibold text-[--text-primary]">VIX Index</h3>
+            {vixApiData?.source === "yahoo" && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">LIVE</span>
+            )}
           </div>
           <p className={`text-5xl font-bold mono ${vixZone.color}`}>{vixLevel.toFixed(2)}</p>
-          {vix && (
-            <p className={`text-sm mt-2 flex items-center gap-1 ${vix.changepct >= 0 ? "text-rose-400" : "text-emerald-400"}`}>
-              {vix.changepct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-              {vix.changepct >= 0 ? "+" : ""}{vix.changepct.toFixed(2)}% aujourd&apos;hui
-            </p>
-          )}
+          <p className={`text-sm mt-2 flex items-center gap-1 ${vixChangePct >= 0 ? "text-rose-400" : "text-emerald-400"}`}>
+            {vixChangePct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            {vixChangePct >= 0 ? "+" : ""}{vixChangePct.toFixed(2)}% aujourd&apos;hui
+          </p>
           <div className={`mt-4 px-3 py-2 rounded-xl ${vixZone.bg}`}>
             <p className={`text-sm font-medium ${vixZone.color}`}>{vixZone.label}</p>
           </div>
@@ -381,6 +531,7 @@ export default function VolatilityPage() {
             </div>
           </div>
           <p className={`text-center font-medium ${fg.color}`}>{fg.label}</p>
+          <p className="text-[10px] text-center text-[--text-muted] mt-1">Basé sur VIX ({vixLevel.toFixed(1)}) + SPY ({spyChangePct >= 0 ? "+" : ""}{spyChangePct.toFixed(2)}%)</p>
           <div className="mt-3 h-2 rounded-full bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 relative overflow-hidden">
             <div
               className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full border-2 border-gray-800 shadow transition-all"
@@ -397,8 +548,8 @@ export default function VolatilityPage() {
           </div>
           <div className="space-y-3 mt-4">
             {[
-              { label: "Risk-On", condition: vixLevel < 20 && (spy?.changepct ?? 0) > 0, desc: "VIX bas + SPY haussier" },
-              { label: "Risk-Off", condition: vixLevel > 25 && (spy?.changepct ?? 0) < 0, desc: "VIX élevé + SPY baissier" },
+              { label: "Risk-On", condition: vixLevel < 20 && spyChangePct > 0, desc: "VIX bas + SPY haussier" },
+              { label: "Risk-Off", condition: vixLevel > 25 && spyChangePct < 0, desc: "VIX élevé + SPY baissier" },
               { label: "Indécision", condition: vixLevel >= 20 && vixLevel <= 25, desc: "Volatilité modérée" },
               { label: "Complaisance", condition: vixLevel < 15, desc: "VIX très bas — attention" },
             ].map((regime) => (
@@ -425,8 +576,11 @@ export default function VolatilityPage() {
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="w-5 h-5 text-cyan-400" />
           <h3 className="font-semibold text-[--text-primary]">VIX — 30 Derniers Jours</h3>
+          {vixApiData?.source === "yahoo" && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium ml-1">LIVE</span>
+          )}
         </div>
-        <VixHistoryChart data={MOCK_VIX_HISTORY} />
+        <VixHistoryChart data={vixHistory} dates={vixDates} />
       </div>
 
       {/* ============================================================ */}

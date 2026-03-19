@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw,
   TrendingUp,
@@ -14,35 +14,49 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Activity,
+  Clock,
 } from "lucide-react";
 import { fetchMultipleFredSeries, type FredSeriesData } from "@/lib/market/fred";
 
 /* ------------------------------------------------------------------ */
-/*  Hardcoded macro data for March 2026                                */
+/*  FRED series keys we want for the macro overlay                     */
+/* ------------------------------------------------------------------ */
+
+const MACRO_FRED_KEYS = [
+  "FED_RATE",      // FEDFUNDS
+  "CPI",           // CPIAUCSL
+  "TREASURY_10Y",  // DGS10
+  "TREASURY_2Y",   // DGS2
+  "DXY",           // DTWEXBGS
+  "UNEMPLOYMENT",  // UNRATE
+];
+
+/* ------------------------------------------------------------------ */
+/*  Hardcoded macro data for March 2026 (fallback)                     */
 /* ------------------------------------------------------------------ */
 
 const CENTRAL_BANK_RATES = [
-  { bank: "Fed (US)", rate: "4.25 – 4.50%", value: 4.375, prev: 4.625, trend: "down" as const, flag: "🇺🇸", color: "text-cyan-400", nextMeeting: "19 mars 2026" },
-  { bank: "BCE (EU)", rate: "2.65%", value: 2.65, prev: 2.90, trend: "down" as const, flag: "🇪🇺", color: "text-blue-400", nextMeeting: "17 avr. 2026" },
-  { bank: "BoE (UK)", rate: "4.50%", value: 4.50, prev: 4.75, trend: "down" as const, flag: "🇬🇧", color: "text-purple-400", nextMeeting: "8 mai 2026" },
-  { bank: "BoJ (JP)", rate: "0.50%", value: 0.50, prev: 0.25, trend: "up" as const, flag: "🇯🇵", color: "text-rose-400", nextMeeting: "28 avr. 2026" },
-  { bank: "PBoC (CN)", rate: "3.10%", value: 3.10, prev: 3.10, trend: "flat" as const, flag: "🇨🇳", color: "text-amber-400", nextMeeting: "20 avr. 2026" },
-  { bank: "RBA (AU)", rate: "3.85%", value: 3.85, prev: 4.10, trend: "down" as const, flag: "🇦🇺", color: "text-emerald-400", nextMeeting: "6 mai 2026" },
+  { bank: "Fed (US)", rate: "4.25 – 4.50%", value: 4.375, prev: 4.625, trend: "down" as const, flag: "\u{1F1FA}\u{1F1F8}", color: "text-cyan-400", nextMeeting: "19 mars 2026", fredKey: "FED_RATE" },
+  { bank: "BCE (EU)", rate: "2.65%", value: 2.65, prev: 2.90, trend: "down" as const, flag: "\u{1F1EA}\u{1F1FA}", color: "text-blue-400", nextMeeting: "17 avr. 2026" },
+  { bank: "BoE (UK)", rate: "4.50%", value: 4.50, prev: 4.75, trend: "down" as const, flag: "\u{1F1EC}\u{1F1E7}", color: "text-purple-400", nextMeeting: "8 mai 2026" },
+  { bank: "BoJ (JP)", rate: "0.50%", value: 0.50, prev: 0.25, trend: "up" as const, flag: "\u{1F1EF}\u{1F1F5}", color: "text-rose-400", nextMeeting: "28 avr. 2026" },
+  { bank: "PBoC (CN)", rate: "3.10%", value: 3.10, prev: 3.10, trend: "flat" as const, flag: "\u{1F1E8}\u{1F1F3}", color: "text-amber-400", nextMeeting: "20 avr. 2026" },
+  { bank: "RBA (AU)", rate: "3.85%", value: 3.85, prev: 4.10, trend: "down" as const, flag: "\u{1F1E6}\u{1F1FA}", color: "text-emerald-400", nextMeeting: "6 mai 2026" },
 ];
 
-const INFLATION_DATA = [
-  { country: "US", flag: "🇺🇸", label: "CPI US", current: 2.8, previous: 3.0, target: 2.0, yoy: 2.8 },
-  { country: "EU", flag: "🇪🇺", label: "HICP EU", current: 2.4, previous: 2.6, target: 2.0, yoy: 2.4 },
-  { country: "UK", flag: "🇬🇧", label: "CPI UK", current: 3.0, previous: 3.2, target: 2.0, yoy: 3.0 },
-  { country: "JP", flag: "🇯🇵", label: "CPI Japon", current: 2.6, previous: 2.8, target: 2.0, yoy: 2.6 },
-  { country: "CN", flag: "🇨🇳", label: "CPI Chine", current: 0.6, previous: 0.5, target: 3.0, yoy: 0.6 },
+const INFLATION_DATA_DEFAULT = [
+  { country: "US", flag: "\u{1F1FA}\u{1F1F8}", label: "CPI US", current: 2.8, previous: 3.0, target: 2.0, yoy: 2.8, fredKey: "CPI" },
+  { country: "EU", flag: "\u{1F1EA}\u{1F1FA}", label: "HICP EU", current: 2.4, previous: 2.6, target: 2.0, yoy: 2.4 },
+  { country: "UK", flag: "\u{1F1EC}\u{1F1E7}", label: "CPI UK", current: 3.0, previous: 3.2, target: 2.0, yoy: 3.0 },
+  { country: "JP", flag: "\u{1F1EF}\u{1F1F5}", label: "CPI Japon", current: 2.6, previous: 2.8, target: 2.0, yoy: 2.6 },
+  { country: "CN", flag: "\u{1F1E8}\u{1F1F3}", label: "CPI Chine", current: 0.6, previous: 0.5, target: 3.0, yoy: 0.6 },
 ];
 
-const BOND_YIELDS = {
+const BOND_YIELDS_DEFAULT = {
   us: [
-    { tenor: "2A", value: 4.12, prev: 4.25, change: -0.13 },
+    { tenor: "2A", value: 4.12, prev: 4.25, change: -0.13, fredKey: "TREASURY_2Y" },
     { tenor: "5A", value: 4.08, prev: 4.18, change: -0.10 },
-    { tenor: "10A", value: 4.25, prev: 4.30, change: -0.05 },
+    { tenor: "10A", value: 4.25, prev: 4.30, change: -0.05, fredKey: "TREASURY_10Y" },
     { tenor: "30A", value: 4.52, prev: 4.55, change: -0.03 },
   ],
   de: [
@@ -55,7 +69,7 @@ const BOND_YIELDS = {
   ],
 };
 
-const DXY_DATA = {
+const DXY_DATA_DEFAULT = {
   value: 104.2,
   change: -0.35,
   changePct: -0.34,
@@ -70,12 +84,12 @@ const DXY_DATA = {
 };
 
 const PMI_DATA = [
-  { country: "US", flag: "🇺🇸", manufacturing: 52.1, services: 54.3, composite: 53.5 },
-  { country: "EU", flag: "🇪🇺", manufacturing: 47.8, services: 51.2, composite: 50.2 },
-  { country: "UK", flag: "🇬🇧", manufacturing: 48.5, services: 53.1, composite: 51.6 },
-  { country: "CN", flag: "🇨🇳", manufacturing: 50.8, services: 52.5, composite: 51.9 },
-  { country: "JP", flag: "🇯🇵", manufacturing: 49.2, services: 53.8, composite: 52.1 },
-  { country: "DE", flag: "🇩🇪", manufacturing: 45.3, services: 50.8, composite: 48.9 },
+  { country: "US", flag: "\u{1F1FA}\u{1F1F8}", manufacturing: 52.1, services: 54.3, composite: 53.5 },
+  { country: "EU", flag: "\u{1F1EA}\u{1F1FA}", manufacturing: 47.8, services: 51.2, composite: 50.2 },
+  { country: "UK", flag: "\u{1F1EC}\u{1F1E7}", manufacturing: 48.5, services: 53.1, composite: 51.6 },
+  { country: "CN", flag: "\u{1F1E8}\u{1F1F3}", manufacturing: 50.8, services: 52.5, composite: 51.9 },
+  { country: "JP", flag: "\u{1F1EF}\u{1F1F5}", manufacturing: 49.2, services: 53.8, composite: 52.1 },
+  { country: "DE", flag: "\u{1F1E9}\u{1F1EA}", manufacturing: 45.3, services: 50.8, composite: 48.9 },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -148,7 +162,6 @@ function YieldCurveChart({ data }: { data: { tenor: string; value: number; prev:
 /* ------------------------------------------------------------------ */
 
 function InflationSparkline({ current, previous, target }: { current: number; previous: number; target: number }) {
-  // Simple 3-point sparkline: prev, midpoint, current
   const points = [previous, (previous + current) / 2, current];
   const min = Math.min(...points, target) - 0.3;
   const max = Math.max(...points, target) + 0.3;
@@ -180,32 +193,128 @@ export default function MacroPage() {
   const [fredData, setFredData] = useState<FredSeriesData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [hasFredKey, setHasFredKey] = useState<boolean | null>(null);
 
-  const loadFred = async () => {
+  const loadFred = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchMultipleFredSeries();
+      const data = await fetchMultipleFredSeries(MACRO_FRED_KEYS);
       if (data.length === 0) {
-        setError("Aucune donnée FRED récupérée — vérifiez la clé API.");
+        setError("Aucune donnée FRED récupérée — clé API absente ou invalide.");
+        setHasFredKey(false);
+      } else {
+        setFredData(data);
+        setLastUpdated(new Date());
+        setHasFredKey(true);
       }
-      setFredData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur de chargement des données FRED");
+      const msg = err instanceof Error ? err.message : "Erreur de chargement des données FRED";
+      // If it's a 500 error about missing key, mark as no key
+      if (msg.includes("500") || msg.includes("key")) {
+        setHasFredKey(false);
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadFred();
-  }, []);
+  }, [loadFred]);
 
-  // Map FRED data for quick access
+  // Map FRED data for quick access by key
   const fredMap: Record<string, FredSeriesData> = {};
   fredData.forEach((s) => { fredMap[s.key] = s; });
 
+  /* ---- Compute overlaid values ---- */
+
+  // Central bank rates: overlay Fed rate from FRED
+  const centralBankRates = CENTRAL_BANK_RATES.map((cb) => {
+    if (cb.fredKey && fredMap[cb.fredKey]) {
+      const fred = fredMap[cb.fredKey];
+      const newValue = fred.latest;
+      const newPrev = fred.previous;
+      const trend = newValue < newPrev ? "down" as const : newValue > newPrev ? "up" as const : "flat" as const;
+      return {
+        ...cb,
+        value: newValue,
+        prev: newPrev,
+        rate: `${newValue.toFixed(2)}%`,
+        trend,
+      };
+    }
+    return cb;
+  });
+
+  // Inflation: overlay CPI from FRED (compute YoY change from index)
+  const inflationData = INFLATION_DATA_DEFAULT.map((inf) => {
+    if (inf.fredKey && fredMap[inf.fredKey]) {
+      const fred = fredMap[inf.fredKey];
+      // FRED CPI is an index, not a %. The latest and previous are index values.
+      // We still show the raw latest for now as the CPI index;
+      // but we can compute a simple month-over-month annualized approximation
+      // For a real YoY, we'd need 12-month-ago data. Use changePercent as an approximation.
+      // The observations array has the full history, so let's try to compute real YoY
+      const obs = fred.observations;
+      if (obs.length >= 13) {
+        const latest = obs[obs.length - 1].value;
+        const prev = obs[obs.length - 2].value;
+        const yearAgo = obs[obs.length - 13].value;
+        const yoy = ((latest - yearAgo) / yearAgo) * 100;
+        const prevYoy = obs.length >= 14 ? ((prev - obs[obs.length - 14].value) / obs[obs.length - 14].value) * 100 : inf.previous;
+        return {
+          ...inf,
+          current: Math.round(yoy * 10) / 10,
+          previous: Math.round(prevYoy * 10) / 10,
+          yoy: Math.round(yoy * 10) / 10,
+        };
+      }
+    }
+    return inf;
+  });
+
+  // Bond yields: overlay 2Y and 10Y from FRED
+  const bondYieldsUs = BOND_YIELDS_DEFAULT.us.map((b) => {
+    if (b.fredKey && fredMap[b.fredKey]) {
+      const fred = fredMap[b.fredKey];
+      const newValue = fred.latest;
+      const newPrev = fred.previous;
+      return {
+        ...b,
+        value: newValue,
+        prev: newPrev,
+        change: Math.round((newValue - newPrev) * 100) / 100,
+      };
+    }
+    return b;
+  });
+
+  const BOND_YIELDS = {
+    us: bondYieldsUs,
+    de: BOND_YIELDS_DEFAULT.de,
+    uk: BOND_YIELDS_DEFAULT.uk,
+  };
+
+  // DXY: overlay from FRED DTWEXBGS
+  const dxyFred = fredMap["DXY"];
+  const DXY_DATA = dxyFred
+    ? {
+        ...DXY_DATA_DEFAULT,
+        value: Math.round(dxyFred.latest * 10) / 10,
+        change: Math.round(dxyFred.change * 100) / 100,
+        changePct: Math.round(dxyFred.changePercent * 100) / 100,
+      }
+    : DXY_DATA_DEFAULT;
+
+  // Unemployment from FRED
+  const unrateFred = fredMap["UNEMPLOYMENT"];
+
   const usYieldInverted = BOND_YIELDS.us[0].value > BOND_YIELDS.us[BOND_YIELDS.us.length - 1].value;
+
+  const hasLiveData = fredData.length > 0;
 
   return (
     <div className="space-y-6">
@@ -213,11 +322,26 @@ export default function MacroPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[--text-primary]">Macro</h1>
-          <p className="text-sm text-[--text-secondary]">Indicateurs macroéconomiques mondiaux — Mars 2026</p>
+          <p className="text-sm text-[--text-secondary]">
+            Indicateurs macroéconomiques mondiaux
+            {hasLiveData && (
+              <span className="text-[9px] ml-2 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium align-middle">FRED LIVE</span>
+            )}
+          </p>
         </div>
-        <button onClick={loadFred} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm hover:text-[--text-primary] transition">
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Rafraîchir FRED
-        </button>
+        <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <div className="flex items-center gap-1.5 text-[11px] text-[--text-muted]">
+              <Clock className="w-3.5 h-3.5" />
+              <span>
+                Dernière mise à jour : {lastUpdated.toLocaleString("fr-FR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" })}
+              </span>
+            </div>
+          )}
+          <button onClick={loadFred} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm hover:text-[--text-primary] transition">
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Rafraîchir FRED
+          </button>
+        </div>
       </div>
 
       {/* Error banner */}
@@ -227,7 +351,11 @@ export default function MacroPage() {
             <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
             <p className="text-sm text-amber-400">{error}</p>
           </div>
-          <p className="text-xs text-[--text-muted] mt-1 ml-6">Les données statiques de mars 2026 sont affichées ci-dessous.</p>
+          <p className="text-xs text-[--text-muted] mt-1 ml-6">
+            {hasFredKey === false
+              ? "FRED_API_KEY non configurée. Les données statiques sont affichées ci-dessous."
+              : "Les données statiques sont affichées en fallback."}
+          </p>
         </div>
       )}
 
@@ -240,7 +368,7 @@ export default function MacroPage() {
           <h2 className="font-semibold text-[--text-primary]">Taux Directeurs</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {CENTRAL_BANK_RATES.map((cb) => (
+          {centralBankRates.map((cb) => (
             <div key={cb.bank} className="metric-card rounded-xl p-4 text-center">
               <p className="text-2xl mb-1">{cb.flag}</p>
               <p className="text-xs text-[--text-muted] font-medium">{cb.bank}</p>
@@ -268,7 +396,7 @@ export default function MacroPage() {
           <h2 className="font-semibold text-[--text-primary]">Inflation (CPI YoY)</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {INFLATION_DATA.map((inf) => {
+          {inflationData.map((inf) => {
             const diff = inf.current - inf.previous;
             const aboveTarget = inf.current > inf.target;
             return (
@@ -543,6 +671,11 @@ export default function MacroPage() {
           <div className="flex items-center gap-2 mb-5">
             <BarChart3 className="w-5 h-5 text-cyan-400" />
             <h2 className="font-semibold text-[--text-primary]">Données FRED (en direct)</h2>
+            {unrateFred && (
+              <span className="text-[10px] ml-2 px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium">
+                Chômage US : {unrateFred.latest.toFixed(1)}%
+              </span>
+            )}
           </div>
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -580,18 +713,24 @@ export default function MacroPage() {
       {/*  SECTION 7 — Summary / Macro Outlook                         */}
       {/* ============================================================ */}
       <div className="glass rounded-2xl p-6">
-        <h2 className="font-semibold text-[--text-primary] mb-4">Résumé Macro — Mars 2026</h2>
+        <h2 className="font-semibold text-[--text-primary] mb-4">Résumé Macro</h2>
         <div className="space-y-3">
           <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
             <p className="text-sm text-cyan-400">
               <Landmark className="w-4 h-4 inline mr-1.5" />
               <strong>Politique monétaire :</strong> Cycle de baisse des taux en cours (Fed, BCE, BoE). BoJ en hausse graduelle.
+              {fredMap["FED_RATE"] && (
+                <span className="ml-1">Fed Funds : {fredMap["FED_RATE"].latest.toFixed(2)}%</span>
+              )}
             </p>
           </div>
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
             <p className="text-sm text-amber-400">
               <Activity className="w-4 h-4 inline mr-1.5" />
               <strong>Inflation :</strong> En baisse mais encore au-dessus des cibles dans la plupart des pays développés.
+              {inflationData[0] && (
+                <span className="ml-1">CPI US YoY : {inflationData[0].current.toFixed(1)}%</span>
+              )}
             </p>
           </div>
           <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
@@ -604,7 +743,7 @@ export default function MacroPage() {
             <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
               <p className="text-sm text-rose-400">
                 <AlertTriangle className="w-4 h-4 inline mr-1.5" />
-                <strong>Courbe des taux :</strong> Inversion 2A/10A US — signal historique de récession.
+                <strong>Courbe des taux :</strong> Inversion 2A/10A US ({(BOND_YIELDS.us[2].value - BOND_YIELDS.us[0].value).toFixed(2)}%) — signal historique de récession.
               </p>
             </div>
           )}
@@ -614,6 +753,19 @@ export default function MacroPage() {
               <strong>Dollar :</strong> DXY à {DXY_DATA.value} — {DXY_DATA.changePct < 0 ? "en baisse, favorable aux actifs risqués" : "en hausse, pression sur les marchés émergents"}.
             </p>
           </div>
+          {unrateFred && (
+            <div className="p-3 rounded-xl bg-[--bg-secondary]/30 border border-[--border-subtle]">
+              <p className="text-sm text-[--text-secondary]">
+                <Activity className="w-4 h-4 inline mr-1.5" />
+                <strong>Emploi :</strong> Taux de chômage US à {unrateFred.latest.toFixed(1)}%
+                {unrateFred.change !== 0 && (
+                  <span className={`ml-1 ${unrateFred.change > 0 ? "text-rose-400" : "text-emerald-400"}`}>
+                    ({unrateFred.change > 0 ? "+" : ""}{unrateFred.change.toFixed(1)} vs préc.)
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

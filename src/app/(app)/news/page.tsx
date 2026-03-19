@@ -49,6 +49,9 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string; border: string }
   cnbc: { bg: "rgba(56, 189, 248, 0.15)", text: "#38bdf8", border: "rgba(56, 189, 248, 0.3)" },
   finnhub: { bg: "rgba(6, 182, 212, 0.15)", text: "#22d3ee", border: "rgba(6, 182, 212, 0.3)" },
   marketphase: { bg: "rgba(6, 182, 212, 0.15)", text: "#22d3ee", border: "rgba(6, 182, 212, 0.3)" },
+  marketwatch: { bg: "rgba(34, 197, 94, 0.15)", text: "#4ade80", border: "rgba(34, 197, 94, 0.3)" },
+  "bbc business": { bg: "rgba(239, 68, 68, 0.15)", text: "#f87171", border: "rgba(239, 68, 68, 0.3)" },
+  "investing.com": { bg: "rgba(16, 185, 129, 0.15)", text: "#34d399", border: "rgba(16, 185, 129, 0.3)" },
 };
 
 const DEFAULT_SOURCE_COLOR = { bg: "rgba(148, 163, 184, 0.15)", text: "#94a3b8", border: "rgba(148, 163, 184, 0.3)" };
@@ -128,21 +131,52 @@ function SkeletonCard() {
   );
 }
 
+/** Filter out logos, icons, tracking pixels, and other non-article images */
 function isRealImage(url: string): boolean {
   if (!url) return false;
-  if (url.includes("logo")) return false;
-  if (url.includes("finnhub.io/file/finnhub")) return false;
+  const lower = url.toLowerCase();
+
+  // Known bad patterns: logos, icons, tracking pixels, sprites
+  const badPatterns = [
+    "logo", "icon", "favicon", "brand", "sprite",
+    "pixel", "tracker", "1x1", "blank",
+    "badge", "avatar", "placeholder", "spacer",
+    "widget", "button", "banner-ad", "ad-",
+    "ads/", "adserver", "doubleclick",
+  ];
+  for (const pattern of badPatterns) {
+    if (lower.includes(pattern)) return false;
+  }
+
+  // Finnhub default image
+  if (lower.includes("finnhub.io/file/finnhub")) return false;
+
+  // Filter very short URLs (likely not real images)
   if (url.length < 40) return false;
+
+  // Filter tiny images by URL dimensions if visible (e.g. ?w=50&h=50, /50x50/, etc.)
+  const dimMatch = lower.match(/[?&/](?:w|width|h|height)=(\d+)/);
+  if (dimMatch && parseInt(dimMatch[1]) < 100) return false;
+  const sizeMatch = lower.match(/\/(\d+)x(\d+)\//);
+  if (sizeMatch && (parseInt(sizeMatch[1]) < 100 || parseInt(sizeMatch[2]) < 100)) return false;
+
+  // Filter data URIs that are too small
+  if (lower.startsWith("data:")) return false;
+
   return true;
 }
 
 const SOURCE_GRADIENTS: Record<string, string> = {
-  reuters: "from-orange-600 to-orange-800",
-  cnbc: "from-blue-600 to-blue-800",
-  "bbc business": "from-red-700 to-red-900",
-  "google news": "from-emerald-600 to-emerald-800",
-  "investing.com": "from-green-600 to-green-800",
-  default: "from-gray-600 to-gray-800",
+  reuters: "from-orange-600 via-orange-700 to-red-800",
+  cnbc: "from-blue-600 via-blue-700 to-indigo-800",
+  "bbc business": "from-red-700 via-red-800 to-rose-900",
+  "google news": "from-emerald-600 via-teal-700 to-cyan-800",
+  "investing.com": "from-green-600 via-green-700 to-emerald-800",
+  "marketwatch": "from-green-500 via-emerald-600 to-teal-800",
+  "yahoo finance": "from-purple-600 via-violet-700 to-indigo-800",
+  finnhub: "from-cyan-600 via-cyan-700 to-blue-800",
+  marketphase: "from-cyan-600 via-teal-700 to-blue-800",
+  default: "from-slate-600 via-slate-700 to-gray-800",
 };
 
 function NewsCard({ item }: { item: NewsItem }) {
@@ -169,10 +203,19 @@ function NewsCard({ item }: { item: NewsItem }) {
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         ) : (
-          <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-            <span className="text-white/20 font-black text-4xl uppercase tracking-widest">
-              {item.source}
-            </span>
+          <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center relative overflow-hidden`}>
+            {/* Decorative background pattern */}
+            <div className="absolute inset-0 opacity-[0.07]">
+              <div className="absolute top-2 left-4 w-24 h-24 border border-white rounded-full" />
+              <div className="absolute -bottom-4 -right-4 w-32 h-32 border border-white rounded-full" />
+              <div className="absolute top-8 right-8 w-12 h-12 border border-white rounded-full" />
+            </div>
+            <div className="flex flex-col items-center gap-1 z-10">
+              <Newspaper className="w-8 h-8 text-white/25" />
+              <span className="text-white/20 font-black text-sm uppercase tracking-[0.2em]">
+                {item.source}
+              </span>
+            </div>
           </div>
         )}
         {/* Time badge overlay */}
