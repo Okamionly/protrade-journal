@@ -25,7 +25,9 @@ import {
   BellOff,
   Check,
   Loader2,
+  Upload,
 } from "lucide-react";
+import Link from "next/link";
 
 interface UserProfile {
   id: string;
@@ -686,6 +688,62 @@ export default function ProfilePage() {
               <Download className="w-4 h-4" />
               Exporter
             </button>
+          </div>
+
+          {/* Separator */}
+          <div className="border-t border-gray-200 dark:border-white/10" />
+
+          {/* Export CSV trades */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Export CSV Trades</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                Télécharger vos trades au format CSV (compatible Excel).
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch("/api/trades/export");
+                  if (res.ok) {
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "marketphase-export.csv";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast("Trades exportés en CSV", "success");
+                  }
+                } catch {
+                  toast("Erreur lors de l'export", "error");
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-[var(--bg-hover)] transition"
+            >
+              <Download className="w-4 h-4" />
+              CSV
+            </button>
+          </div>
+
+          {/* Separator */}
+          <div className="border-t border-gray-200 dark:border-white/10" />
+
+          {/* Import CSV */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Import CSV Trades</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                Importer des trades depuis MT4, MT5, cTrader ou TradingView.
+              </p>
+            </div>
+            <Link
+              href="/import"
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-[var(--bg-hover)] transition"
+            >
+              <Upload className="w-4 h-4" />
+              Importer
+            </Link>
           </div>
 
           {/* Separator */}

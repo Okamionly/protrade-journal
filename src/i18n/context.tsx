@@ -38,6 +38,14 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     if (stored && dictionaries[stored]) {
       setLocaleState(stored);
     }
+    // Sync when Header changes locale
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue && dictionaries[e.newValue as Locale]) {
+        setLocaleState(e.newValue as Locale);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   const setLocale = (l: Locale) => {

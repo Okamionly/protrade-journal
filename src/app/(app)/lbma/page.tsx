@@ -604,19 +604,6 @@ function LBMAContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Language selector */}
-          <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-            {(["fr", "en", "ar", "es", "de"] as Locale[]).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLocale(l)}
-                className={`px-2.5 py-1.5 text-xs font-medium transition ${locale === l ? "bg-cyan-500/20 text-cyan-400" : ""}`}
-                style={locale !== l ? { color: "var(--text-secondary)" } : {}}
-              >
-                {LOCALE_LABELS[l]}
-              </button>
-            ))}
-          </div>
           {/* Currency selector */}
           <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             {(["USD", "GBP", "EUR"] as Currency[]).map((c) => (

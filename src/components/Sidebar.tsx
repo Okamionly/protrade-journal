@@ -43,7 +43,17 @@ import {
   Camera,
   User,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { Locale } from "@/i18n/types";
+
+const LOCALE_FLAGS: Record<Locale, { flag: string; short: string }> = {
+  fr: { flag: "🇫🇷", short: "FR" },
+  en: { flag: "🇬🇧", short: "EN" },
+  ar: { flag: "🇸🇦", short: "AR" },
+  es: { flag: "🇪🇸", short: "ES" },
+  de: { flag: "🇩🇪", short: "DE" },
+};
+const LOCALE_STORAGE_KEY = "lbma-locale";
 
 // Admin nav item (shown only for ADMIN users)
 const adminItem = {
@@ -120,11 +130,43 @@ export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [locale, setLocaleState] = useState<Locale>("fr");
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("sidebar-collapsed");
     if (stored === "true") setCollapsed(true);
+    const storedLocale = localStorage.getItem(LOCALE_STORAGE_KEY) as Locale | null;
+    if (storedLocale && LOCALE_FLAGS[storedLocale]) setLocaleState(storedLocale);
   }, []);
+
+  // Sync locale from Header/LBMA changes
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === LOCALE_STORAGE_KEY && e.newValue && LOCALE_FLAGS[e.newValue as Locale]) {
+        setLocaleState(e.newValue as Locale);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  // Close lang dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
+    };
+    if (langOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [langOpen]);
+
+  const setLocale = (l: Locale) => {
+    setLocaleState(l);
+    localStorage.setItem(LOCALE_STORAGE_KEY, l);
+    window.dispatchEvent(new StorageEvent("storage", { key: LOCALE_STORAGE_KEY, newValue: l }));
+    setLangOpen(false);
+  };
 
   useEffect(() => {
     fetch("/api/user/role")
@@ -240,8 +282,44 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Collapse button */}
-      <div className="p-2 border-t border-gray-200 dark:border-gray-800">
+      {/* Language selector + Collapse button */}
+      <div className="p-2 border-t border-gray-200 dark:border-gray-800 space-y-1">
+        {/* Language */}
+        <div className="relative" ref={langRef}>
+          <button
+            onClick={() => setLangOpen(!langOpen)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition text-xs"
+            title="Langue"
+          >
+            <span className="text-base leading-none">{LOCALE_FLAGS[locale].flag}</span>
+            {!collapsed && <span className="flex-1 text-left">{LOCALE_FLAGS[locale].short}</span>}
+          </button>
+          {langOpen && (
+            <div
+              className="absolute bottom-full left-0 mb-1 w-40 rounded-xl overflow-hidden shadow-xl z-50"
+              style={{ background: "var(--bg-card, #1a1a2e)", border: "1px solid var(--border, rgba(255,255,255,0.08))" }}
+            >
+              {(Object.keys(LOCALE_FLAGS) as Locale[]).map((l) => {
+                const isActive = locale === l;
+                const { flag, short } = LOCALE_FLAGS[l];
+                return (
+                  <button
+                    key={l}
+                    onClick={() => setLocale(l)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs transition hover:bg-[var(--bg-hover)] ${isActive ? "bg-blue-500/10" : ""}`}
+                    style={{ color: isActive ? "rgb(59,130,246)" : "var(--text-primary, #e5e7eb)" }}
+                  >
+                    <span className="text-base leading-none">{flag}</span>
+                    <span className="font-medium">{short}</span>
+                    {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Collapse */}
         <button
           onClick={toggleCollapsed}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition text-xs"
