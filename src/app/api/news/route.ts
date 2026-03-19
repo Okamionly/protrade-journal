@@ -73,6 +73,8 @@ function parseRSS(xml: string): Array<{ title: string; link: string; pubDate: st
   return items;
 }
 
+let globalIdCounter = 0;
+
 function rssToArticles(
   items: Array<{ title: string; link: string; pubDate: string; source: string; description: string; imageUrl: string }>,
   fallbackSource: string
@@ -80,7 +82,7 @@ function rssToArticles(
   return items.map((item, idx) => {
     const dt = item.pubDate ? Math.floor(new Date(item.pubDate).getTime() / 1000) : Math.floor(Date.now() / 1000) - idx * 300;
     return {
-      id: Date.now() + idx + Math.floor(Math.random() * 10000),
+      id: ++globalIdCounter,
       category: categorizeHeadline(item.title),
       datetime: isNaN(dt) ? Math.floor(Date.now() / 1000) - idx * 300 : dt,
       headline: decodeEntities(item.title),

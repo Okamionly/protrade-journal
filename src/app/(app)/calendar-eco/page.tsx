@@ -181,19 +181,15 @@ function compareActualForecast(actual?: string, forecast?: string): "better" | "
 
 function SkeletonUpcoming() {
   return (
-    <div className="glass rounded-2xl p-4 animate-pulse">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="glass rounded-2xl p-3 animate-pulse">
+      <div className="flex items-center gap-2 mb-2">
         <div className="w-4 h-4 bg-[--bg-secondary]/40 rounded" />
-        <div className="h-4 w-40 bg-[--bg-secondary]/40 rounded" />
+        <div className="h-3 w-32 bg-[--bg-secondary]/40 rounded" />
       </div>
-      <div className="flex gap-3">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex-shrink-0 rounded-xl border border-[--border]/30 p-3 min-w-[200px]">
-            <div className="h-3 w-12 bg-[--bg-secondary]/40 rounded mb-2" />
-            <div className="flex items-center gap-1.5 mb-2">
-              <div className="w-5 h-5 bg-[--bg-secondary]/30 rounded" />
-              <div className="h-3 w-8 bg-[--bg-secondary]/30 rounded" />
-            </div>
+      <div className="flex gap-2 overflow-hidden">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex-shrink-0 rounded-lg border border-[--border]/30 p-2 min-w-[180px]">
+            <div className="h-3 w-12 bg-[--bg-secondary]/40 rounded mb-1.5" />
             <div className="h-3 w-full bg-[--bg-secondary]/30 rounded mb-1" />
             <div className="h-3 w-2/3 bg-[--bg-secondary]/30 rounded" />
           </div>
@@ -203,51 +199,23 @@ function SkeletonUpcoming() {
   );
 }
 
-function SkeletonWeekGrid() {
-  return (
-    <div className="grid grid-cols-5 gap-3">
-      {[1, 2, 3, 4, 5].map((col) => (
-        <div key={col} className="glass rounded-2xl overflow-hidden animate-pulse">
-          <div className="px-3 py-2.5 border-b border-[--border]/50 bg-[--bg-secondary]/30">
-            <div className="h-3 w-8 bg-[--bg-secondary]/40 rounded mb-1" />
-            <div className="h-6 w-6 bg-[--bg-secondary]/40 rounded" />
-          </div>
-          <div className="divide-y divide-[--border-subtle]/20">
-            {[1, 2, 3].map((row) => (
-              <div key={row} className="px-3 py-2">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <div className="h-2.5 w-10 bg-[--bg-secondary]/30 rounded" />
-                  <div className="w-1.5 h-1.5 bg-[--bg-secondary]/30 rounded-full" />
-                </div>
-                <div className="h-3 w-full bg-[--bg-secondary]/30 rounded mb-1" />
-                <div className="h-3 w-2/3 bg-[--bg-secondary]/20 rounded" />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function SkeletonDayTable() {
+function SkeletonTable() {
   return (
     <div className="glass rounded-2xl overflow-hidden animate-pulse">
-      <div className="p-4">
-        <div className="h-4 w-full bg-[--bg-secondary]/30 rounded mb-3" />
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="flex items-center gap-4 py-3 border-b border-[--border]/20">
-            <div className="h-3 w-12 bg-[--bg-secondary]/30 rounded" />
-            <div className="flex gap-1">{[1, 2, 3].map((d) => <div key={d} className="w-2.5 h-2.5 bg-[--bg-secondary]/30 rounded-full" />)}</div>
-            <div className="h-3 w-8 bg-[--bg-secondary]/30 rounded" />
-            <div className="h-3 w-10 bg-[--bg-secondary]/30 rounded" />
-            <div className="h-3 flex-1 bg-[--bg-secondary]/30 rounded" />
-            <div className="h-3 w-14 bg-[--bg-secondary]/30 rounded" />
-            <div className="h-3 w-14 bg-[--bg-secondary]/20 rounded" />
-            <div className="h-3 w-14 bg-[--bg-secondary]/20 rounded" />
-          </div>
-        ))}
+      <div className="px-4 py-3 border-b border-[--border]/50 bg-[--bg-secondary]/20">
+        <div className="h-4 w-48 bg-[--bg-secondary]/40 rounded" />
       </div>
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-[--border]/20">
+          <div className="h-3 w-10 bg-[--bg-secondary]/30 rounded" />
+          <div className="flex gap-0.5">{[1, 2, 3].map((d) => <div key={d} className="w-2 h-2 bg-[--bg-secondary]/30 rounded-full" />)}</div>
+          <div className="h-3 w-14 bg-[--bg-secondary]/30 rounded" />
+          <div className="h-3 flex-1 bg-[--bg-secondary]/30 rounded" />
+          <div className="h-3 w-14 bg-[--bg-secondary]/20 rounded" />
+          <div className="h-3 w-14 bg-[--bg-secondary]/20 rounded" />
+          <div className="h-3 w-14 bg-[--bg-secondary]/20 rounded" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -366,6 +334,11 @@ export default function CalendarEcoPage() {
     return map;
   }, [filteredEvents]);
 
+  // Week view: sorted dates that fall within the week
+  const weekViewDates = useMemo(() => {
+    return weekDates.filter((d) => eventsByDate[d] && eventsByDate[d].length > 0);
+  }, [weekDates, eventsByDate]);
+
   // Day view events
   const dayEvents = useMemo(() => {
     return (eventsByDate[selectedDay] || []);
@@ -389,8 +362,229 @@ export default function CalendarEcoPage() {
     );
   };
 
+  // ─── Render an event row (shared between week and day views) ─────────
+  const renderEventRow = (e: EcoEvent, i: number, showDate?: boolean) => {
+    const cfg = IMPACT_CONFIG[e.impact];
+    const verdict = compareActualForecast(e.actual, e.forecast);
+    const countdown = getCountdownFr(e.date, e.time);
+
+    return (
+      <tr
+        key={`${e.date}-${i}`}
+        className={`border-b border-[--border]/20 transition hover:bg-white/5 group ${
+          e.impact === "high" ? "bg-rose-500/[0.03]" : ""
+        }`}
+      >
+        {/* Time */}
+        <td className="px-3 py-2.5 whitespace-nowrap">
+          <div className="flex flex-col">
+            <span className="mono text-xs font-bold text-[--text-primary]">
+              {e.time || "\u2014"}
+            </span>
+            {countdown && (
+              <span className="text-[10px] text-amber-400 font-medium leading-tight">
+                {countdown}
+              </span>
+            )}
+          </div>
+        </td>
+
+        {/* Currency + flag */}
+        <td className="px-3 py-2.5 whitespace-nowrap">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm leading-none">{COUNTRY_FLAGS[e.country] || ""}</span>
+            <span className="text-[11px] font-semibold text-[--text-secondary]">
+              {e.currency}
+            </span>
+          </div>
+        </td>
+
+        {/* Impact */}
+        <td className="px-3 py-2.5">
+          <div className="flex items-center gap-0.5">
+            {[1, 2, 3].map((dot) => (
+              <span
+                key={dot}
+                className={`w-2 h-2 rounded-full ${
+                  (e.impact === "high" && dot <= 3) ||
+                  (e.impact === "medium" && dot <= 2) ||
+                  (e.impact === "low" && dot <= 1)
+                    ? cfg.dotClass
+                    : "bg-[--bg-secondary]/50"
+                }`}
+              />
+            ))}
+          </div>
+        </td>
+
+        {/* Event name */}
+        <td className="px-3 py-2.5">
+          <span className={`text-xs font-medium text-[--text-primary] ${e.impact === "high" ? "font-semibold" : ""}`}>
+            {e.event}
+          </span>
+        </td>
+
+        {/* Previous */}
+        <td className="px-3 py-2.5 text-right whitespace-nowrap">
+          <span className="mono text-xs text-[--text-muted]">
+            {e.previous || "\u2014"}
+          </span>
+        </td>
+
+        {/* Forecast */}
+        <td className="px-3 py-2.5 text-right whitespace-nowrap">
+          <span className="mono text-xs text-[--text-secondary]">
+            {e.forecast || "\u2014"}
+          </span>
+        </td>
+
+        {/* Actual */}
+        <td className="px-3 py-2.5 text-right whitespace-nowrap">
+          <span
+            className={`mono text-xs font-bold ${
+              verdict === "better"
+                ? "text-emerald-400"
+                : verdict === "worse"
+                ? "text-rose-400"
+                : e.actual
+                ? "text-[--text-primary]"
+                : "text-[--text-muted]"
+            }`}
+          >
+            {e.actual || "\u2014"}
+          </span>
+        </td>
+      </tr>
+    );
+  };
+
+  // ─── Render a mobile card for an event ───────────────────────────────
+  const renderEventCard = (e: EcoEvent, i: number) => {
+    const cfg = IMPACT_CONFIG[e.impact];
+    const verdict = compareActualForecast(e.actual, e.forecast);
+    const countdown = getCountdownFr(e.date, e.time);
+
+    return (
+      <div
+        key={`${e.date}-${i}`}
+        className={`px-3 py-2.5 border-b border-[--border]/20 hover:bg-white/5 transition ${
+          e.impact === "high" ? "bg-rose-500/[0.03]" : ""
+        }`}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <span className="mono text-xs font-bold text-[--text-primary]">{e.time || "\u2014"}</span>
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3].map((dot) => (
+                <span
+                  key={dot}
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    (e.impact === "high" && dot <= 3) ||
+                    (e.impact === "medium" && dot <= 2) ||
+                    (e.impact === "low" && dot <= 1)
+                      ? cfg.dotClass
+                      : "bg-[--bg-secondary]/50"
+                  }`}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-sm leading-none">{COUNTRY_FLAGS[e.country] || ""}</span>
+              <span className="text-[10px] font-semibold text-[--text-secondary]">{e.currency}</span>
+            </div>
+          </div>
+          {countdown && (
+            <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded-full">
+              {countdown}
+            </span>
+          )}
+        </div>
+        <p className={`text-[11px] font-medium text-[--text-primary] leading-tight ${e.impact === "high" ? "font-semibold" : ""}`}>
+          {e.event}
+        </p>
+        {(e.previous || e.forecast || e.actual) && (
+          <div className="flex items-center gap-3 mt-1 text-[10px]">
+            <span className="text-[--text-muted]">Préc: {e.previous || "\u2014"}</span>
+            <span className="text-[--text-secondary]">Prév: {e.forecast || "\u2014"}</span>
+            {e.actual && (
+              <span
+                className={`font-bold ${
+                  verdict === "better" ? "text-emerald-400" : verdict === "worse" ? "text-rose-400" : "text-[--text-primary]"
+                }`}
+              >
+                Act: {e.actual}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ─── Render a date header row ───────────────────────────────────────
+  const renderDateHeader = (date: string, eventCount: number, highCount: number) => {
+    const today = isToday(date);
+    return (
+      <tr key={`header-${date}`}>
+        <td
+          colSpan={7}
+          className={`sticky top-0 z-10 px-3 py-2 border-b border-[--border]/50 ${
+            today
+              ? "bg-cyan-500/10 backdrop-blur-sm"
+              : "bg-[--bg-secondary]/40 backdrop-blur-sm"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {today && <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />}
+            <span className={`text-xs font-bold uppercase tracking-wider ${today ? "text-cyan-400" : "text-[--text-primary]"}`}>
+              {formatDateHeader(date)}
+            </span>
+            <span className="text-[10px] text-[--text-muted]">
+              {eventCount} événement{eventCount > 1 ? "s" : ""}
+            </span>
+            {highCount > 0 && (
+              <span className="text-[10px] font-bold text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded-full ml-auto">
+                {highCount} impact élevé
+              </span>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
+  // ─── Mobile date header ─────────────────────────────────────────────
+  const renderMobileDateHeader = (date: string, eventCount: number, highCount: number) => {
+    const today = isToday(date);
+    return (
+      <div
+        key={`mheader-${date}`}
+        className={`sticky top-0 z-10 px-3 py-2 border-b border-[--border]/50 ${
+          today
+            ? "bg-cyan-500/10 backdrop-blur-sm"
+            : "bg-[--bg-secondary]/40 backdrop-blur-sm"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          {today && <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />}
+          <span className={`text-xs font-bold uppercase tracking-wider ${today ? "text-cyan-400" : "text-[--text-primary]"}`}>
+            {formatDateHeader(date)}
+          </span>
+          <span className="text-[10px] text-[--text-muted]">
+            {eventCount} évt{eventCount > 1 ? "s" : ""}
+          </span>
+          {highCount > 0 && (
+            <span className="text-[10px] font-bold text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded-full ml-auto">
+              {highCount}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* ── Header ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -399,7 +593,7 @@ export default function CalendarEcoPage() {
             Calendrier Économique
           </h1>
           <p className="text-sm text-[--text-secondary] mt-1 flex items-center gap-2">
-            Événements macro-économiques et publications à venir
+            Événements macro-économiques et publications
             {dataSource && !loading && (
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-[--bg-secondary]/50 border border-[--border]">
                 {dataSource === "static" ? (
@@ -450,38 +644,40 @@ export default function CalendarEcoPage() {
         </div>
       </div>
 
-      {/* ── Upcoming Events Widget ───────────────────────────────── */}
+      {/* ── Upcoming Events (compact horizontal strip) ─────────── */}
       {loading ? (
         <SkeletonUpcoming />
       ) : upcomingEvents.length > 0 ? (
-        <div className="glass rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Timer className="w-4 h-4 text-amber-400" />
-            <h2 className="text-sm font-semibold text-[--text-primary]">Prochains événements</h2>
+        <div className="glass rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Timer className="w-3.5 h-3.5 text-amber-400" />
+            <h2 className="text-xs font-semibold text-[--text-primary]">Prochains événements</h2>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className="flex gap-2 overflow-x-auto pb-0.5">
             {upcomingEvents.map((e, i) => {
               const countdown = getCountdownFr(e.date, e.time);
               const cfg = IMPACT_CONFIG[e.impact];
               return (
                 <div
                   key={i}
-                  className={`flex-shrink-0 rounded-xl border p-3 min-w-[200px] ${cfg.bg} ${cfg.border}`}
+                  className={`flex-shrink-0 rounded-lg border px-3 py-2 min-w-[170px] max-w-[220px] ${cfg.bg} ${cfg.border}`}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-bold text-[--text-primary]">{e.time}</span>
-                    {countdown && (
-                      <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded-full">
-                        {countdown}
-                      </span>
-                    )}
+                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm leading-none">{COUNTRY_FLAGS[e.country] || ""}</span>
+                      <span className="text-[10px] font-semibold text-[--text-secondary]">{e.currency}</span>
+                      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dotClass}`} />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-[--text-primary]">{e.time}</span>
+                      {countdown && (
+                        <span className="text-[9px] font-semibold text-amber-400 bg-amber-500/15 px-1 py-0.5 rounded-full leading-none">
+                          {countdown}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="text-sm">{COUNTRY_FLAGS[e.country] || ""}</span>
-                    <span className="text-xs text-[--text-secondary] font-medium">{e.currency}</span>
-                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dotClass}`} />
-                  </div>
-                  <p className="text-xs font-medium text-[--text-primary] leading-tight line-clamp-2">
+                  <p className="text-[10px] font-medium text-[--text-primary] leading-tight line-clamp-2">
                     {e.event}
                   </p>
                 </div>
@@ -491,9 +687,9 @@ export default function CalendarEcoPage() {
         </div>
       ) : null}
 
-      {/* ── Filter Bar ───────────────────────────────────────────── */}
-      <div className="glass rounded-xl p-3 flex items-center gap-3 flex-wrap">
-        <Filter className="w-4 h-4 text-[--text-muted]" />
+      {/* ── Filter Toolbar ────────────────────────────────────────── */}
+      <div className="glass rounded-xl px-3 py-2 flex items-center gap-2 flex-wrap">
+        <Filter className="w-3.5 h-3.5 text-[--text-muted]" />
 
         {/* Impact filter */}
         <div className="flex gap-1">
@@ -505,7 +701,7 @@ export default function CalendarEcoPage() {
             <button
               key={key}
               onClick={() => setImpactFilter(key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition ${
                 impactFilter === key
                   ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
                   : "text-[--text-secondary] hover:text-[--text-primary] border border-[--border] hover:border-[--text-muted]"
@@ -516,83 +712,50 @@ export default function CalendarEcoPage() {
           ))}
         </div>
 
-        <div className="w-px h-5 bg-[--border]" />
-
-        {/* Country filter */}
-        <div className="relative">
-          <button
-            onClick={() => { setShowCountryDropdown(!showCountryDropdown); setShowCurrencyDropdown(false); }}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[--border] text-[--text-secondary] hover:border-[--text-muted] transition flex items-center gap-1.5"
-          >
-            <Eye className="w-3 h-3" />
-            Pays {countryFilter.length > 0 && `(${countryFilter.length})`}
-          </button>
-          {showCountryDropdown && (
-            <div className="absolute top-full mt-1 left-0 z-50 glass rounded-xl border border-[--border] p-2 min-w-[180px] shadow-xl">
-              {countryFilter.length > 0 && (
-                <button
-                  onClick={() => setCountryFilter([])}
-                  className="w-full text-left px-2 py-1 text-[10px] text-cyan-400 hover:bg-white/5 rounded mb-1"
-                >
-                  Réinitialiser
-                </button>
-              )}
-              {ALL_COUNTRIES.map((c) => (
-                <label
-                  key={c}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/5 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={countryFilter.includes(c)}
-                    onChange={() => toggleCountry(c)}
-                    className="rounded text-cyan-500 border-[--border] bg-transparent"
-                  />
-                  <span className="text-sm">{COUNTRY_FLAGS[c]}</span>
-                  <span className="text-xs text-[--text-primary]">{c}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="w-px h-4 bg-[--border]" />
 
         {/* Currency filter */}
-        <div className="relative">
-          <button
-            onClick={() => { setShowCurrencyDropdown(!showCurrencyDropdown); setShowCountryDropdown(false); }}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-[--border] text-[--text-secondary] hover:border-[--text-muted] transition flex items-center gap-1.5"
-          >
-            Devise {currencyFilter.length > 0 && `(${currencyFilter.length})`}
-          </button>
-          {showCurrencyDropdown && (
-            <div className="absolute top-full mt-1 left-0 z-50 glass rounded-xl border border-[--border] p-2 min-w-[140px] shadow-xl">
-              {currencyFilter.length > 0 && (
-                <button
-                  onClick={() => setCurrencyFilter([])}
-                  className="w-full text-left px-2 py-1 text-[10px] text-cyan-400 hover:bg-white/5 rounded mb-1"
-                >
-                  Réinitialiser
-                </button>
-              )}
-              {ALL_CURRENCIES.map((c) => (
-                <label
-                  key={c}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/5 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={currencyFilter.includes(c)}
-                    onChange={() => toggleCurrency(c)}
-                    className="rounded text-cyan-500 border-[--border] bg-transparent"
-                  />
-                  <span className="text-xs font-mono text-[--text-primary]">{c}</span>
-                </label>
-              ))}
-            </div>
+        <div className="flex gap-1 flex-wrap">
+          {ALL_CURRENCIES.map((c) => {
+            const isActive = currencyFilter.includes(c);
+            const flagKey = ALL_COUNTRIES.find((co) => {
+              if (c === "USD") return co === "US";
+              if (c === "EUR") return co === "EU";
+              if (c === "GBP") return co === "GB";
+              if (c === "JPY") return co === "JP";
+              if (c === "CNY") return co === "CN";
+              if (c === "CHF") return co === "CH";
+              if (c === "AUD") return co === "AU";
+              if (c === "CAD") return co === "CA";
+              if (c === "NZD") return co === "NZ";
+              return false;
+            });
+            return (
+              <button
+                key={c}
+                onClick={() => toggleCurrency(c)}
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold transition flex items-center gap-1 ${
+                  isActive
+                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
+                    : "text-[--text-muted] hover:text-[--text-primary] border border-transparent hover:border-[--border]"
+                }`}
+              >
+                <span className="text-xs leading-none">{flagKey ? COUNTRY_FLAGS[flagKey] : ""}</span>
+                {c}
+              </button>
+            );
+          })}
+          {currencyFilter.length > 0 && (
+            <button
+              onClick={() => setCurrencyFilter([])}
+              className="px-2 py-0.5 rounded text-[10px] text-cyan-400 hover:bg-white/5 transition"
+            >
+              Réinitialiser
+            </button>
           )}
         </div>
 
-        <span className="text-xs text-[--text-muted] ml-auto">
+        <span className="text-[10px] text-[--text-muted] ml-auto whitespace-nowrap">
           {filteredEvents.length} événements
         </span>
       </div>
@@ -605,7 +768,7 @@ export default function CalendarEcoPage() {
         />
       )}
 
-      {/* ── Week View ────────────────────────────────────────────── */}
+      {/* ── Week View (vertical table with date group headers) ────── */}
       {viewMode === "week" && (
         <>
           {/* Week navigation */}
@@ -627,116 +790,73 @@ export default function CalendarEcoPage() {
             </button>
           </div>
 
-          {/* Week grid */}
+          {/* Vertical table */}
           {loading ? (
-            <SkeletonWeekGrid />
+            <SkeletonTable />
           ) : (
-            <div className="grid grid-cols-5 gap-3">
-              {weekDates.map((date) => {
-                const evts = eventsByDate[date] || [];
-                const today = isToday(date);
-                const highCount = evts.filter((e) => e.impact === "high").length;
-
-                return (
-                  <div
-                    key={date}
-                    className={`glass rounded-2xl overflow-hidden flex flex-col ${
-                      today ? "ring-1 ring-cyan-500/50" : ""
-                    }`}
-                  >
-                    {/* Day header */}
-                    <div
-                      className={`px-3 py-2.5 border-b border-[--border]/50 sticky top-0 z-10 cursor-pointer hover:bg-white/5 transition ${
-                        today ? "bg-cyan-500/10" : "bg-[--bg-secondary]/30"
-                      }`}
-                      onClick={() => { setViewMode("day"); setSelectedDay(date); }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className={`text-xs font-bold ${today ? "text-cyan-400" : "text-[--text-primary]"}`}>
-                            {DAYS_SHORT[new Date(date + "T00:00:00").getDay()]}
-                          </p>
-                          <p className={`text-lg font-bold ${today ? "text-cyan-400" : "text-[--text-primary]"}`}>
-                            {new Date(date + "T00:00:00").getDate()}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-0.5">
-                          {today && (
-                            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                          )}
-                          {highCount > 0 && (
-                            <span className="text-[10px] font-bold text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded-full">
-                              {highCount} {"\u{1F534}"}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Events list */}
-                    <div className="flex-1 overflow-y-auto max-h-[420px] divide-y divide-[--border-subtle]/20">
-                      {evts.length === 0 ? (
-                        <div className="p-3 text-center text-[10px] text-[--text-muted]">
-                          Aucun événement
-                        </div>
-                      ) : (
-                        evts.map((e, i) => {
-                          const cfg = IMPACT_CONFIG[e.impact];
-                          const verdict = compareActualForecast(e.actual, e.forecast);
-                          return (
-                            <div
-                              key={i}
-                              className={`px-3 py-2 hover:bg-white/5 transition ${
-                                e.impact === "high" ? "bg-rose-500/[0.03]" : ""
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className="text-[10px] font-bold mono text-[--text-secondary]">
-                                  {e.time}
-                                </span>
-                                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dotClass}`} />
-                                <span className="text-xs">{COUNTRY_FLAGS[e.country]}</span>
-                              </div>
-                              <p className="text-[11px] font-medium text-[--text-primary] leading-tight mb-1">
-                                {e.event}
-                              </p>
-                              {(e.previous || e.forecast || e.actual) && (
-                                <div className="flex items-center gap-2 text-[10px]">
-                                  {e.actual && (
-                                    <span
-                                      className={`font-bold ${
-                                        verdict === "better"
-                                          ? "text-emerald-400"
-                                          : verdict === "worse"
-                                          ? "text-rose-400"
-                                          : "text-[--text-secondary]"
-                                      }`}
-                                    >
-                                      A: {e.actual}
-                                    </span>
-                                  )}
-                                  {e.forecast && (
-                                    <span className="text-[--text-muted]">P: {e.forecast}</span>
-                                  )}
-                                  {e.previous && (
-                                    <span className="text-[--text-muted]">Préc: {e.previous}</span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block glass rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-[10px] uppercase tracking-wider text-[--text-muted] border-b border-[--border]/50 bg-[--bg-secondary]/20">
+                        <th className="px-3 py-2 w-[70px]">Heure</th>
+                        <th className="px-3 py-2 w-[80px]">Devise</th>
+                        <th className="px-3 py-2 w-[60px]">Impact</th>
+                        <th className="px-3 py-2">Événement</th>
+                        <th className="px-3 py-2 text-right w-[80px]">Précédent</th>
+                        <th className="px-3 py-2 text-right w-[80px]">Prévision</th>
+                        <th className="px-3 py-2 text-right w-[80px]">Actuel</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {weekDates.map((date) => {
+                        const evts = eventsByDate[date] || [];
+                        if (evts.length === 0) return null;
+                        const highCount = evts.filter((e) => e.impact === "high").length;
+                        return [
+                          renderDateHeader(date, evts.length, highCount),
+                          ...evts.map((e, i) => renderEventRow(e, i)),
+                        ];
+                      })}
+                      {weekDates.every((d) => !eventsByDate[d] || eventsByDate[d].length === 0) && (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-[--text-muted] text-sm">
+                            Aucun événement pour cette semaine
+                          </td>
+                        </tr>
                       )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Mobile card list */}
+              <div className="md:hidden glass rounded-2xl overflow-hidden">
+                {weekDates.map((date) => {
+                  const evts = eventsByDate[date] || [];
+                  if (evts.length === 0) return null;
+                  const highCount = evts.filter((e) => e.impact === "high").length;
+                  return (
+                    <div key={`m-${date}`}>
+                      {renderMobileDateHeader(date, evts.length, highCount)}
+                      {evts.map((e, i) => renderEventCard(e, i))}
                     </div>
+                  );
+                })}
+                {weekDates.every((d) => !eventsByDate[d] || eventsByDate[d].length === 0) && (
+                  <div className="px-4 py-8 text-center text-[--text-muted] text-sm">
+                    Aucun événement pour cette semaine
                   </div>
-                );
-              })}
-            </div>
+                )}
+              </div>
+            </>
           )}
         </>
       )}
 
-      {/* ── Day View ─────────────────────────────────────────────── */}
+      {/* ── Day View (vertical table for a single day) ────────────── */}
       {viewMode === "day" && (
         <>
           {/* Day navigation */}
@@ -756,6 +876,11 @@ export default function CalendarEcoPage() {
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
               )}
               {formatDateHeader(selectedDay)}
+              {dayEvents.length > 0 && (
+                <span className="text-[10px] text-[--text-muted] font-normal">
+                  ({dayEvents.length} événement{dayEvents.length > 1 ? "s" : ""})
+                </span>
+              )}
             </h2>
             <button
               onClick={() => {
@@ -769,155 +894,66 @@ export default function CalendarEcoPage() {
             </button>
           </div>
 
-          {/* Day events table */}
+          {/* Day events */}
           {loading ? (
-            <SkeletonDayTable />
+            <SkeletonTable />
+          ) : dayEvents.length === 0 ? (
+            <div className="glass rounded-2xl p-8 text-center text-[--text-muted]">
+              Aucun événement pour cette journée
+            </div>
           ) : (
-            <div className="glass rounded-2xl overflow-hidden">
-              {dayEvents.length === 0 ? (
-                <div className="p-8 text-center text-[--text-muted]">
-                  Aucun événement pour cette journée
-                </div>
-              ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block glass rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-left text-[--text-muted] text-xs uppercase tracking-wider border-b border-[--border]/50">
-                        <th className="px-4 py-3 w-16">Heure</th>
-                        <th className="px-4 py-3 w-16">Impact</th>
-                        <th className="px-4 py-3 w-20">Pays</th>
-                        <th className="px-4 py-3 w-16">Devise</th>
-                        <th className="px-4 py-3">Événement</th>
-                        <th className="px-4 py-3 text-right w-24">Actuel</th>
-                        <th className="px-4 py-3 text-right w-24">Prévision</th>
-                        <th className="px-4 py-3 text-right w-24">Précédent</th>
+                      <tr className="text-left text-[10px] uppercase tracking-wider text-[--text-muted] border-b border-[--border]/50 bg-[--bg-secondary]/20">
+                        <th className="px-3 py-2 w-[70px]">Heure</th>
+                        <th className="px-3 py-2 w-[80px]">Devise</th>
+                        <th className="px-3 py-2 w-[60px]">Impact</th>
+                        <th className="px-3 py-2">Événement</th>
+                        <th className="px-3 py-2 text-right w-[80px]">Précédent</th>
+                        <th className="px-3 py-2 text-right w-[80px]">Prévision</th>
+                        <th className="px-3 py-2 text-right w-[80px]">Actuel</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {dayEvents.map((e, i) => {
-                        const cfg = IMPACT_CONFIG[e.impact];
-                        const verdict = compareActualForecast(e.actual, e.forecast);
-                        const countdown = getCountdownFr(e.date, e.time);
-
-                        return (
-                          <tr
-                            key={i}
-                            className={`border-b border-[--border-subtle]/30 transition hover:bg-white/5 ${
-                              e.impact === "high" ? "bg-rose-500/[0.03]" : i % 2 === 1 ? "bg-white/[0.01]" : ""
-                            }`}
-                          >
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col">
-                                <span className="mono text-xs font-bold text-[--text-primary]">
-                                  {e.time || "\u2014"}
-                                </span>
-                                {countdown && (
-                                  <span className="text-[10px] text-amber-400 font-medium">
-                                    {countdown}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-1">
-                                {[1, 2, 3].map((dot) => (
-                                  <span
-                                    key={dot}
-                                    className={`w-2.5 h-2.5 rounded-full ${
-                                      (e.impact === "high" && dot <= 3) ||
-                                      (e.impact === "medium" && dot <= 2) ||
-                                      (e.impact === "low" && dot <= 1)
-                                        ? cfg.dotClass
-                                        : "bg-[--bg-secondary]"
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-base">{COUNTRY_FLAGS[e.country] || ""}</span>
-                                <span className="text-xs font-semibold bg-[--bg-secondary] px-1.5 py-0.5 rounded text-[--text-secondary]">
-                                  {e.country}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="text-xs font-mono text-[--text-secondary]">
-                                {e.currency}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="font-medium text-[--text-primary]">
-                                {e.event}
-                              </span>
-                              {e.impact === "high" && (
-                                <p className="text-[10px] text-[--text-muted] mt-0.5">
-                                  Forte volatilité attendue
-                                </p>
-                              )}
-                            </td>
-                            <td
-                              className={`px-4 py-3 text-right mono text-xs font-bold ${
-                                verdict === "better"
-                                  ? "text-emerald-400"
-                                  : verdict === "worse"
-                                  ? "text-rose-400"
-                                  : e.actual
-                                  ? "text-[--text-primary]"
-                                  : "text-[--text-muted]"
-                              }`}
-                            >
-                              {e.actual || "\u2014"}
-                            </td>
-                            <td className="px-4 py-3 text-right mono text-xs text-[--text-secondary]">
-                              {e.forecast || "\u2014"}
-                            </td>
-                            <td className="px-4 py-3 text-right mono text-xs text-[--text-muted]">
-                              {e.previous || "\u2014"}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {dayEvents.map((e, i) => renderEventRow(e, i))}
                     </tbody>
                   </table>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
 
-          {/* Day summary card */}
-          {!loading && dayEvents.length > 0 && (
-            <div className="glass rounded-2xl p-4">
-              <h3 className="text-sm font-semibold text-[--text-primary] mb-3 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-cyan-400" />
-                Résumé du jour
-              </h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-[--text-primary]">{dayEvents.length}</p>
-                  <p className="text-[10px] text-[--text-muted] uppercase tracking-wider">
-                    Événements
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-rose-400">
-                    {dayEvents.filter((e) => e.impact === "high").length}
-                  </p>
-                  <p className="text-[10px] text-[--text-muted] uppercase tracking-wider">
-                    Impact élevé
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-amber-400">
-                    {[...new Set(dayEvents.map((e) => e.currency))].length}
-                  </p>
-                  <p className="text-[10px] text-[--text-muted] uppercase tracking-wider">
-                    Devises
-                  </p>
+              {/* Mobile card list */}
+              <div className="md:hidden glass rounded-2xl overflow-hidden">
+                {dayEvents.map((e, i) => renderEventCard(e, i))}
+              </div>
+
+              {/* Day summary */}
+              <div className="glass rounded-xl p-3">
+                <div className="flex items-center gap-4 justify-center">
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-[--text-primary]">{dayEvents.length}</p>
+                    <p className="text-[9px] text-[--text-muted] uppercase tracking-wider">Événements</p>
+                  </div>
+                  <div className="w-px h-8 bg-[--border]" />
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-rose-400">
+                      {dayEvents.filter((e) => e.impact === "high").length}
+                    </p>
+                    <p className="text-[9px] text-[--text-muted] uppercase tracking-wider">Impact élevé</p>
+                  </div>
+                  <div className="w-px h-8 bg-[--border]" />
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-amber-400">
+                      {[...new Set(dayEvents.map((e) => e.currency))].length}
+                    </p>
+                    <p className="text-[9px] text-[--text-muted] uppercase tracking-wider">Devises</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </>
       )}

@@ -31,8 +31,8 @@ export default function DashboardPage() {
 
   const handleAddTrade = async (trade: Record<string, unknown>) => {
     const ok = await addTrade(trade);
-    if (ok) toast("Trade cree avec succes", "success");
-    else toast("Erreur lors de la creation", "error");
+    if (ok) toast("Trade créé avec succès", "success");
+    else toast("Erreur lors de la création", "error");
     return ok;
   };
 
@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const handleDelete = async (id: string) => {
     if (confirm("Supprimer ce trade ?")) {
       const ok = await deleteTrade(id);
-      if (ok) toast("Trade supprime", "success");
+      if (ok) toast("Trade supprimé", "success");
       else toast("Erreur lors de la suppression", "error");
     }
   };
@@ -57,10 +57,10 @@ export default function DashboardPage() {
     if (!isNaN(value) && value >= 0) {
       const ok = await updateBalance(value);
       if (ok) {
-        toast("Balance mise a jour", "success");
+        toast("Balance mise à jour", "success");
         setShowBalanceModal(false);
       } else {
-        toast("Erreur lors de la mise a jour", "error");
+        toast("Erreur lors de la mise à jour", "error");
       }
     }
   };
@@ -75,7 +75,7 @@ export default function DashboardPage() {
     setMonthlyGoal(value);
     localStorage.setItem("monthlyGoal", String(value));
     setShowGoalModal(false);
-    toast("Objectif mensuel mis a jour", "success");
+    toast("Objectif mensuel mis à jour", "success");
   };
 
   const handleGoalInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,7 +193,7 @@ export default function DashboardPage() {
             onClick={() => { setGoalInput(String(monthlyGoal || "")); setShowGoalModal(true); }}
             className="text-sm text-blue-400 hover:text-blue-300 transition"
           >
-            {monthlyGoal > 0 ? "Modifier" : "Definir un objectif"}
+            {monthlyGoal > 0 ? "Modifier" : "Définir un objectif"}
           </button>
         </div>
         {monthlyGoal > 0 ? (
@@ -217,7 +217,7 @@ export default function DashboardPage() {
             </p>
           </>
         ) : (
-          <p className="text-[--text-muted] text-sm">Aucun objectif defini. Cliquez pour en definir un.</p>
+          <p className="text-[--text-muted] text-sm">Aucun objectif défini. Cliquez pour en définir un.</p>
         )}
       </div>
 
@@ -256,7 +256,7 @@ export default function DashboardPage() {
                     {currentStreak}
                   </div>
                   <div className="text-xs text-[--text-muted]">
-                    {streakType === "win" ? "victoires" : streakType === "loss" ? "defaites" : "---"}
+                    {streakType === "win" ? "victoires" : streakType === "loss" ? "défaites" : "---"}
                   </div>
                 </div>
               </div>
@@ -385,7 +385,7 @@ export default function DashboardPage() {
                 {avgRisk.toFixed(2)}%
               </div>
               <div className="text-xs text-[--text-muted] mt-1">
-                {avgRisk <= 1 ? "Conservateur" : avgRisk <= 2 ? "Modere" : "Agressif"} -- moy. sur {trades.length} trades
+                {avgRisk <= 1 ? "Conservateur" : avgRisk <= 2 ? "Modéré" : "Agressif"} -- moy. sur {trades.length} trades
               </div>
             </div>
           </div>

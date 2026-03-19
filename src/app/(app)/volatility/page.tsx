@@ -32,6 +32,9 @@ interface VixApiData {
     current: number;
     previousClose: number;
     changePct: number;
+    high: number;
+    low: number;
+    open: number;
     history: number[];
     dates: string[];
   };
@@ -42,8 +45,14 @@ interface VixApiData {
     history: number[];
     dates: string[];
   };
+  termStructure: {
+    label: string;
+    value: number;
+    symbol: string;
+  }[];
   fetchedAt: string;
-  source: "yahoo" | "mock";
+  source: "cboe" | "yahoo" | "mock";
+  sourceDetails: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -325,7 +334,7 @@ export default function VolatilityPage() {
     if (vixData) {
       setUsingMock(vixData.source === "mock");
       if (vixData.source === "mock") {
-        setError("Yahoo Finance non disponible — données de démonstration");
+        setError("Sources de données non disponibles — données de démonstration");
       }
     }
 
@@ -344,16 +353,19 @@ export default function VolatilityPage() {
             changepct: vixData.vix.changePct,
           };
         }
-        if (quotesData["SPY"]) {
-          quotesData["SPY"].last = vixData.spy.current;
-          quotesData["SPY"].changepct = vixData.spy.changePct;
-        } else {
-          quotesData["SPY"] = {
-            symbol: "SPY",
-            name: "S&P 500",
-            last: vixData.spy.current,
-            changepct: vixData.spy.changePct,
-          };
+        // Only overlay SPY if the API actually returned SPY data (current > 0)
+        if (vixData.spy.current > 0) {
+          if (quotesData["SPY"]) {
+            quotesData["SPY"].last = vixData.spy.current;
+            quotesData["SPY"].changepct = vixData.spy.changePct;
+          } else {
+            quotesData["SPY"] = {
+              symbol: "SPY",
+              name: "S&P 500",
+              last: vixData.spy.current,
+              changepct: vixData.spy.changePct,
+            };
+          }
         }
       }
       setVolData(quotesData);
@@ -409,19 +421,33 @@ export default function VolatilityPage() {
   const vixHistory = vixApiData?.vix.history ?? MOCK_VIX_HISTORY;
   const vixDates = vixApiData?.vix.dates;
 
-  const termStructure = MOCK_TERM_STRUCTURE.map((t, i) => ({
-    ...t,
-    value: i === 0 ? vixLevel : t.value + (vixLevel - 18.6),
-  }));
+  // Term structure: prefer API data, fallback to adjusted mock
+  const termStructure = vixApiData?.termStructure?.length
+    ? vixApiData.termStructure
+    : MOCK_TERM_STRUCTURE.map((t, i) => ({
+        ...t,
+        value: i === 0 ? vixLevel : t.value + (vixLevel - 18.6),
+      }));
   const isContango = termStructure[termStructure.length - 1].value > termStructure[0].value;
 
   const fear = MOCK_FEAR_INDICATORS;
 
   // Data source label
-  const dataSourceLabel = vixApiData?.source === "yahoo" ? "Yahoo Finance" : "Données de démonstration";
+  const dataSourceLabel = vixApiData?.source === "cboe"
+    ? "CBOE"
+    : vixApiData?.source === "yahoo"
+      ? "Yahoo Finance"
+      : "Données de démonstration";
+  const isLiveSource = vixApiData?.source === "cboe" || vixApiData?.source === "yahoo";
   const fetchedAtLabel = vixApiData?.fetchedAt
     ? new Date(vixApiData.fetchedAt).toLocaleString("fr-FR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
     : null;
+
+  // VIX intraday range from API
+  const vixHigh = vixApiData?.vix.high ?? 0;
+  const vixLow = vixApiData?.vix.low ?? 0;
+  const vixOpen = vixApiData?.vix.open ?? 0;
+  const hasVixRange = vixHigh > 0 && vixLow > 0;
 
   if (loading) {
     return (
@@ -450,7 +476,7 @@ export default function VolatilityPage() {
             Analyse de la volatilité et sentiment du marché
             {fetchedAtLabel && (
               <span className="text-[--text-muted] ml-2">
-                — {dataSourceLabel} ({fetchedAtLabel})
+                — {vixApiData?.sourceDetails ?? dataSourceLabel} ({fetchedAtLabel})
               </span>
             )}
           </p>
@@ -482,8 +508,11 @@ export default function VolatilityPage() {
           <div className="flex items-center gap-2 mb-3">
             <Activity className="w-5 h-5 text-cyan-400" />
             <h3 className="font-semibold text-[--text-primary]">VIX Index</h3>
-            {vixApiData?.source === "yahoo" && (
+            {isLiveSource && (
               <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">LIVE</span>
+            )}
+            {isLiveSource && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium">{dataSourceLabel}</span>
             )}
           </div>
           <p className={`text-5xl font-bold mono ${vixZone.color}`}>{vixLevel.toFixed(2)}</p>
@@ -491,6 +520,13 @@ export default function VolatilityPage() {
             {vixChangePct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
             {vixChangePct >= 0 ? "+" : ""}{vixChangePct.toFixed(2)}% aujourd&apos;hui
           </p>
+          {hasVixRange && (
+            <div className="flex gap-3 mt-2 text-xs text-[--text-muted]">
+              <span>O: <span className="mono text-[--text-secondary]">{vixOpen.toFixed(2)}</span></span>
+              <span>H: <span className="mono text-[--text-secondary]">{vixHigh.toFixed(2)}</span></span>
+              <span>L: <span className="mono text-[--text-secondary]">{vixLow.toFixed(2)}</span></span>
+            </div>
+          )}
           <div className={`mt-4 px-3 py-2 rounded-xl ${vixZone.bg}`}>
             <p className={`text-sm font-medium ${vixZone.color}`}>{vixZone.label}</p>
           </div>
@@ -576,7 +612,7 @@ export default function VolatilityPage() {
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="w-5 h-5 text-cyan-400" />
           <h3 className="font-semibold text-[--text-primary]">VIX — 30 Derniers Jours</h3>
-          {vixApiData?.source === "yahoo" && (
+          {isLiveSource && (
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium ml-1">LIVE</span>
           )}
         </div>

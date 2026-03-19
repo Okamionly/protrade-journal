@@ -59,7 +59,7 @@ export default async function Home() {
             <div className="flex items-center gap-3">
               <Link href="/login" className="hidden sm:inline-flex text-sm text-gray-500 hover:text-gray-900 px-4 py-2 transition">Connexion</Link>
               <Link href="/register" className="text-sm font-semibold text-white px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-lg hover:shadow-blue-500/25 transition-all">
-                Commencer &rarr;
+                Commencer →
               </Link>
             </div>
           </div>
@@ -79,7 +79,7 @@ export default async function Home() {
               {/* Badge */}
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-200 bg-blue-50 text-blue-600 text-sm font-medium mb-6">
                 <Flame className="w-3.5 h-3.5" />
-                N&deg;1 des journaux de trading gratuits
+                N°1 des journaux de trading gratuits
               </div>
 
               {/* Headline */}
@@ -93,8 +93,8 @@ export default async function Home() {
 
               {/* Sub */}
               <p className="mt-5 text-base sm:text-lg text-gray-500 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                MarketPhase vous montre les m&eacute;triques qui comptent &mdash; et les comportements qui m&egrave;nent au profit.
-                35+ outils pro, IA, et analytics avanc&eacute;s.
+                MarketPhase vous montre les métriques qui comptent — et les comportements qui mènent au profit.
+                35+ outils pro, IA, et analytics avancés.
               </p>
 
               {/* CTA */}
@@ -104,7 +104,7 @@ export default async function Home() {
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link href="/login" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition py-4">
-                  Tester le compte d&eacute;mo
+                  Tester le compte démo
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -185,7 +185,7 @@ export default async function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
             {[
               { value: "35+", label: "Outils Pro", sub: "Analyse, IA, Market Data" },
-              { value: "0\€", label: "Pour Toujours", sub: "Aucun plan payant" },
+              { value: "0€", label: "Pour Toujours", sub: "Aucun plan payant" },
               { value: "1.2K+", label: "Traders Actifs", sub: "Communauté croissante" },
               { value: "24/7", label: "Market Data", sub: "Cours en temps réel" },
             ].map((s) => (
@@ -199,11 +199,11 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ==================== NUMBERED SECTIONS 1\→6 ==================== */}
+      {/* ==================== NUMBERED SECTIONS 1→6 ==================== */}
       <section id="preview" className="py-16 sm:py-24 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-24 sm:space-y-32">
 
-          {/* Section 1 \— Journal */}
+          {/* Section 1 — Journal */}
           <div className="relative">
             <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">1</span>
             <div className="relative">
@@ -235,7 +235,7 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Section 2 \— Analytics */}
+          {/* Section 2 — Analytics */}
           <div className="relative">
             <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">2</span>
             <div className="relative">
@@ -246,7 +246,7 @@ export default async function Home() {
               </h2>
               <p className="text-sm sm:text-base text-gray-500 max-w-2xl mb-8 sm:mb-12 leading-relaxed">
                 Comprenez vos erreurs, identifiez vos forces.
-                Sortino, Calmar, drawdown, corrélation \— tout est calculé pour vous.
+                Sortino, Calmar, drawdown, corrélation — tout est calculé pour vous.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 mb-8 sm:mb-12">
                 {[
@@ -267,7 +267,7 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Section 3 \— AI Coach */}
+          {/* Section 3 — AI Coach */}
           <div className="relative">
             <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">3</span>
             <div className="relative">
@@ -299,7 +299,7 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Section 4 \— War Room */}
+          {/* Section 4 — War Room */}
           <div className="relative">
             <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">4</span>
             <div className="relative">
@@ -332,7 +332,7 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Section 5 \— Backtesting */}
+          {/* Section 5 — Backtesting */}
           <div className="relative">
             <span className="absolute -top-4 left-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">5</span>
             <div className="relative">
@@ -342,7 +342,7 @@ export default async function Home() {
                 <span className="bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">tradé différemment</span> ?
               </h2>
               <p className="text-sm sm:text-base text-gray-500 max-w-2xl mb-8 sm:mb-12 leading-relaxed">
-                Modifiez votre SL, TP, taille, nombre de trades. Voyez l&apos;impact instantanément.
+                Modifiez votre SL, TP, taille, nombre de trades. Voyez l'impact instantanément.
                 Comparez Actual vs Simulated avec une equity curve interactive.
               </p>
               <div className="flex flex-wrap gap-3 mb-8 sm:mb-12">
@@ -356,7 +356,7 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Section 6 \— Gamification */}
+          {/* Section 6 — Gamification */}
           <div className="relative">
             <span className="absolute -top-4 right-0 text-[120px] sm:text-[180px] font-black text-gray-100/40 leading-none select-none pointer-events-none -z-10">6</span>
             <div className="relative">
@@ -368,7 +368,7 @@ export default async function Home() {
               </h2>
               <p className="text-sm sm:text-base text-gray-500 max-w-2xl mb-8 sm:mb-12 leading-relaxed">
                 Challenges actifs, badges, système XP, niveaux, leaderboard.
-                Parce que la discipline est la clé \— et la gamification la rend fun.
+                Parce que la discipline est la clé — et la gamification la rend fun.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mb-8 sm:mb-12">
                 {[
@@ -407,7 +407,7 @@ export default async function Home() {
               { icon: BarChart3, title: "Analytics", desc: "Sharpe, Profit Factor, Drawdown, R-Multiple" },
               { icon: Brain, title: "AI Coach", desc: "Patterns, discipline, insights personnalisés" },
               { icon: Monitor, title: "War Room", desc: "P&L live, sessions, checklist, gauges" },
-              { icon: Play, title: "Trade Replay", desc: "Rejouez vos trades avec analyse \« Et si \»" },
+              { icon: Play, title: "Trade Replay", desc: "Rejouez vos trades avec analyse « Et si »" },
               { icon: LineChart, title: "Backtesting", desc: "Simulez SL, TP, taille, stratégie" },
               { icon: Swords, title: "Challenges", desc: "Badges, XP, niveaux, streaks" },
               { icon: Layers, title: "Corrélation", desc: "Matrice de Pearson, diversification" },
@@ -439,7 +439,7 @@ export default async function Home() {
           <div className="text-center mb-12 sm:mb-16">
             <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-wider uppercase mb-3">Comparatif</p>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900">
-              Pourquoi payer<br /><span className="text-gray-400">quand c&apos;est mieux gratuit ?</span>
+              Pourquoi payer<br /><span className="text-gray-400">quand c'est mieux gratuit ?</span>
             </h2>
           </div>
           <div className="max-w-4xl mx-auto rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-lg overflow-x-auto">
@@ -510,7 +510,7 @@ export default async function Home() {
                 <div className="flex items-center gap-1 mb-4 sm:mb-5">
                   {[1,2,3,4,5].map(i => <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 fill-amber-400" />)}
                 </div>
-                <p className="text-gray-600 leading-relaxed mb-5 sm:mb-6 text-sm sm:text-base">&ldquo;{t.text}&rdquo;</p>
+                <p className="text-gray-600 leading-relaxed mb-5 sm:mb-6 text-sm sm:text-base">"{t.text}"</p>
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-white text-xs sm:text-sm font-bold`}>{t.avatar}</div>
                   <div>
@@ -534,8 +534,8 @@ export default async function Home() {
             <div className="relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-3xl blur-sm opacity-20" />
               <div className="relative rounded-3xl p-6 sm:p-10 bg-white border border-gray-200 shadow-xl">
-                <div className="text-5xl sm:text-6xl font-black text-gray-900 mb-1">0&euro;</div>
-                <p className="text-gray-400 mb-6 sm:mb-8 text-sm sm:text-base">/ mois &mdash; pour toujours</p>
+                <div className="text-5xl sm:text-6xl font-black text-gray-900 mb-1">0€</div>
+                <p className="text-gray-400 mb-6 sm:mb-8 text-sm sm:text-base">/ mois — pour toujours</p>
                 <div className="w-full h-px bg-gray-100 mb-6 sm:mb-8" />
                 <ul className="space-y-2.5 sm:space-y-3 text-left mb-8 sm:mb-10">
                   {["35+ outils professionnels", "AI Trade Coach", "War Room temps réel", "Backtesting & Replay", "Challenges & Gamification", "Market Data live", "Stockage illimité", "Mises à jour continues"].map((item) => (
@@ -566,10 +566,10 @@ export default async function Home() {
             </span>
           </h2>
           <p className="text-sm sm:text-lg text-gray-500 mb-8 sm:mb-10 max-w-xl mx-auto">
-            Le journal de trading le plus complet du marché est gratuit. Il n&apos;y a aucune raison de ne pas essayer.
+            Le journal de trading le plus complet du marché est gratuit. Il n'y a aucune raison de ne pas essayer.
           </p>
           <Link href="/register" className="group inline-flex items-center gap-2 text-base sm:text-lg font-bold text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all hover:-translate-y-1">
-            Commencer Maintenant &mdash; C&apos;est Gratuit
+            Commencer Maintenant — C'est Gratuit
             <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
@@ -614,7 +614,7 @@ export default async function Home() {
                   <Globe className="w-4 h-4 text-gray-500" />
                 </a>
               </div>
-              <p className="text-xs text-gray-400">&copy; 2026 MarketPhase. Tous droits réservés.</p>
+              <p className="text-xs text-gray-400">© 2026 MarketPhase. Tous droits réservés.</p>
             </div>
           </div>
         </div>
