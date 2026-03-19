@@ -83,6 +83,7 @@ const navItems = [
   { href: "/currency-strength", label: "Force Devises", icon: Zap },
   { href: "/news", label: "News", icon: Newspaper },
   { href: "/market", label: "Market Data", icon: Activity },
+  { href: "/lbma", label: "LBMA Métaux", icon: Award },
   { href: "/scanner", label: "Scanner", icon: Crosshair },
   { href: "/watchlist", label: "Watchlist", icon: Eye },
   { href: "/sector-heatmap", label: "Heatmap Secteurs", icon: Grid3x3 },

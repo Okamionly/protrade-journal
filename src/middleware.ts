@@ -38,6 +38,7 @@ export const config = {
     "/mistakes/:path*",
     "/chat/:path*",
     "/market/:path*",
+    "/lbma/:path*",
     "/calculator/:path*",
     "/ai-coach/:path*",
     "/replay/:path*",
