@@ -9,7 +9,7 @@ import { useToast } from "@/components/Toast";
 import { ForexSessions } from "@/components/ForexSessions";
 import { calculateRR, formatDate, computeStats } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair } from "lucide-react";
+import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair, DollarSign, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -125,8 +125,125 @@ export default function DashboardPage() {
     }
   }
 
+  // === Daily P&L Card data ===
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayTrades = trades.filter(t => new Date(t.date).toISOString().slice(0, 10) === todayStr);
+  const todayPnL = todayTrades.reduce((s, t) => s + t.result, 0);
+  const todayWins = todayTrades.filter(t => t.result > 0).length;
+  const todayWinRate = todayTrades.length > 0 ? (todayWins / todayTrades.length) * 100 : 0;
+  const todayBestTrade = todayTrades.length > 0 ? Math.max(...todayTrades.map(t => t.result)) : 0;
+
+  // Yesterday comparison
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  const yesterdayTrades = trades.filter(t => new Date(t.date).toISOString().slice(0, 10) === yesterdayStr);
+  const yesterdayPnL = yesterdayTrades.reduce((s, t) => s + t.result, 0);
+  const dailyDelta = todayPnL - yesterdayPnL;
+
+  // Daily goal progress (daily = monthly / trading days ~22)
+  const dailyGoal = monthlyGoal > 0 ? monthlyGoal / 22 : 0;
+  const dailyGoalProgress = dailyGoal > 0 ? Math.min(Math.max((todayPnL / dailyGoal) * 100, 0), 100) : 0;
+
+  // Risk exposure today (sum of absolute risk on today's trades)
+  const balance = user?.balance ?? 25000;
+  const todayRiskExposure = todayTrades.reduce((s, t) => {
+    const risk = Math.abs(t.entry - t.sl) * t.lots;
+    return s + risk;
+  }, 0);
+  const todayRiskPercent = balance > 0 ? (todayRiskExposure / balance) * 100 : 0;
+
+  // === Weekly sparkline data (last 7 days P&L) ===
+  const last7Days: number[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dStr = d.toISOString().slice(0, 10);
+    const dayPnL = trades
+      .filter(t => new Date(t.date).toISOString().slice(0, 10) === dStr)
+      .reduce((s, t) => s + t.result, 0);
+    last7Days.push(dayPnL);
+  }
+  const sparklineMax = Math.max(...last7Days.map(Math.abs), 1);
+  const weeklyTotal = last7Days.reduce((a, b) => a + b, 0);
+
   return (
     <>
+      {/* === PROMINENT DAILY P&L CARD === */}
+      <div className="glass rounded-2xl p-6 mb-6" style={{ border: "1px solid", borderColor: todayPnL >= 0 ? "rgba(52,211,153,0.3)" : "rgba(248,113,113,0.3)" }}>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          {/* Left: Main P&L */}
+          <div className="flex items-center gap-4">
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${todayPnL >= 0 ? "bg-emerald-500/20" : "bg-rose-500/20"}`}>
+              <DollarSign className={`w-8 h-8 ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`} />
+            </div>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
+                P&L Aujourd&apos;hui
+              </div>
+              <div className={`text-4xl font-black mono ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                {todayPnL >= 0 ? "+" : ""}{todayPnL.toFixed(2)}
+              </div>
+              {/* vs hier */}
+              <div className="flex items-center gap-1 mt-1">
+                {dailyDelta >= 0 ? (
+                  <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <ArrowDownRight className="w-3.5 h-3.5 text-rose-400" />
+                )}
+                <span className={`text-xs font-semibold ${dailyDelta >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                  {dailyDelta >= 0 ? "+" : ""}{dailyDelta.toFixed(2)} vs hier
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Today's sub-stats */}
+          <div className="flex flex-wrap gap-6">
+            <div className="text-center">
+              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Trades</div>
+              <div className="text-2xl font-bold mono" style={{ color: "var(--text-primary)" }}>{todayTrades.length}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Win Rate</div>
+              <div className={`text-2xl font-bold mono ${todayWinRate >= 50 ? "text-emerald-400" : todayWinRate > 0 ? "text-amber-400" : ""}`}
+                style={todayTrades.length === 0 ? { color: "var(--text-muted)" } : {}}>
+                {todayWinRate.toFixed(0)}%
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Meilleur</div>
+              <div className={`text-2xl font-bold mono ${todayBestTrade > 0 ? "text-emerald-400" : ""}`}
+                style={todayBestTrade <= 0 ? { color: "var(--text-muted)" } : {}}>
+                {todayBestTrade > 0 ? `+${todayBestTrade.toFixed(0)}` : "---"}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Risque</div>
+              <div className="text-2xl font-bold mono" style={{ color: todayRiskPercent <= 1 ? "#34d399" : todayRiskPercent <= 3 ? "#fbbf24" : "#f87171" }}>
+                {todayRiskPercent.toFixed(1)}%
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Daily goal progress bar */}
+        {monthlyGoal > 0 && (
+          <div className="mt-4">
+            <div className="flex justify-between text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+              <span>Progression objectif journalier</span>
+              <span>{todayPnL.toFixed(0)} / {dailyGoal.toFixed(0)}</span>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${todayPnL >= dailyGoal ? "bg-emerald-500" : todayPnL >= 0 ? "bg-blue-500" : "bg-rose-500"}`}
+                style={{ width: `${Math.max(dailyGoalProgress, 0)}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       <DashboardCards
         trades={trades}
         balance={user?.balance ?? 25000}
@@ -137,7 +254,7 @@ export default function DashboardPage() {
       />
 
       {/* Fix #5: Quick Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div className="glass rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <BarChart3 className="w-4 h-4 text-blue-400" />
@@ -170,14 +287,65 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Enhanced Streak with flame icon */}
         <div className="glass rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Zap className={`w-4 h-4 ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-gray-400"}`} />
+            {streakType === "win" ? (
+              <Flame className="w-4 h-4 text-orange-400 animate-pulse" />
+            ) : (
+              <Zap className={`w-4 h-4 ${streakType === "loss" ? "text-rose-400" : "text-gray-400"}`} />
+            )}
             <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Serie en cours</span>
           </div>
-          <div className={`text-2xl font-bold mono ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : ""}`}
-            style={streakType === "none" ? { color: "var(--text-muted)" } : {}}>
-            {currentStreak > 0 ? `${currentStreak} ${streakType === "win" ? "W" : "L"}` : "---"}
+          <div className="flex items-center gap-2">
+            <div className={`text-2xl font-bold mono ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : ""}`}
+              style={streakType === "none" ? { color: "var(--text-muted)" } : {}}>
+              {currentStreak > 0 ? `${currentStreak} ${streakType === "win" ? "W" : "L"}` : "---"}
+            </div>
+            {streakType === "win" && currentStreak >= 3 && (
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-bold animate-pulse">
+                🔥
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Weekly Sparkline card */}
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Activity className="w-4 h-4 text-purple-400" />
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>7 derniers jours</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`text-lg font-bold mono ${weeklyTotal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+              {weeklyTotal >= 0 ? "+" : ""}{weeklyTotal.toFixed(0)}
+            </div>
+          </div>
+          {/* Mini sparkline SVG */}
+          <div className="mt-2">
+            <svg width="100%" height="32" viewBox="0 0 140 32" preserveAspectRatio="none" className="overflow-visible">
+              {/* Zero line */}
+              <line x1="0" y1="16" x2="140" y2="16" stroke="var(--text-muted)" strokeWidth="0.5" opacity="0.3" />
+              {/* Sparkline bars */}
+              {last7Days.map((val, i) => {
+                const barHeight = sparklineMax > 0 ? (Math.abs(val) / sparklineMax) * 14 : 0;
+                const isPositive = val >= 0;
+                const x = i * 20 + 2;
+                const y = isPositive ? 16 - barHeight : 16;
+                return (
+                  <rect
+                    key={i}
+                    x={x}
+                    y={y}
+                    width="16"
+                    height={Math.max(barHeight, 1)}
+                    rx="2"
+                    fill={isPositive ? "#34d399" : "#f87171"}
+                    opacity={i === 6 ? 1 : 0.6}
+                  />
+                );
+              })}
+            </svg>
           </div>
         </div>
       </div>
@@ -268,29 +436,33 @@ export default function DashboardPage() {
           );
         })()}
 
-        {/* Quick Stats */}
+        {/* Quick Stats - Enhanced */}
         <div className="glass rounded-2xl p-4">
           <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider mb-3">Aujourd&apos;hui</h4>
-          {(() => {
-            const today = new Date().toISOString().slice(0, 10);
-            const todayTrades = trades.filter(t => new Date(t.date).toISOString().slice(0, 10) === today);
-            const todayPnL = todayTrades.reduce((s, t) => s + t.result, 0);
-            const todayWins = todayTrades.filter(t => t.result > 0).length;
-            return (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  {todayPnL >= 0 ? <TrendingUp className="w-5 h-5 text-emerald-400" /> : <TrendingDown className="w-5 h-5 text-rose-400" />}
-                  <span className={`text-xl font-bold mono ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {todayPnL >= 0 ? "+" : ""}{todayPnL.toFixed(2)}
-                  </span>
-                </div>
-                <div className="text-xs text-[--text-muted]">{todayTrades.length} trades -- {todayWins} gagnants</div>
-                <div className="text-xs text-[--text-muted]">
-                  WR: {todayTrades.length > 0 ? ((todayWins / todayTrades.length) * 100).toFixed(0) : 0}%
-                </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              {todayPnL >= 0 ? <TrendingUp className="w-5 h-5 text-emerald-400" /> : <TrendingDown className="w-5 h-5 text-rose-400" />}
+              <span className={`text-xl font-bold mono ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                {todayPnL >= 0 ? "+" : ""}{todayPnL.toFixed(2)}
+              </span>
+            </div>
+            <div className="text-xs text-[--text-muted]">{todayTrades.length} trades -- {todayWins} gagnants</div>
+            <div className="text-xs text-[--text-muted]">
+              WR: {todayWinRate.toFixed(0)}%
+            </div>
+            {todayBestTrade > 0 && (
+              <div className="flex items-center gap-1 text-xs">
+                <Trophy className="w-3 h-3 text-emerald-400" />
+                <span className="text-emerald-400 font-semibold">Meilleur: +{todayBestTrade.toFixed(2)}</span>
               </div>
-            );
-          })()}
+            )}
+            <div className="flex items-center gap-1 text-xs">
+              <AlertTriangle className={`w-3 h-3 ${todayRiskPercent <= 1 ? "text-emerald-400" : todayRiskPercent <= 3 ? "text-amber-400" : "text-rose-400"}`} />
+              <span style={{ color: todayRiskPercent <= 1 ? "#34d399" : todayRiskPercent <= 3 ? "#fbbf24" : "#f87171" }}>
+                Risque: {todayRiskPercent.toFixed(1)}%
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Forex Sessions */}

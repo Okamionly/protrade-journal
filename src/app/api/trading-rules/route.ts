@@ -35,9 +35,13 @@ export async function POST(req: Request) {
 
     const count = await prisma.tradingRule.count({ where: { userId: session.user.id } });
 
+    const validCategories = ["risk", "setup", "mental", "exit"];
+    const category = validCategories.includes(body.category) ? body.category : "setup";
+
     const rule = await prisma.tradingRule.create({
       data: {
         text: body.text.trim(),
+        category,
         order: count,
         userId: session.user.id,
       },

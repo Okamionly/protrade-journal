@@ -22,6 +22,43 @@ export async function GET() {
   }
 }
 
+export async function DELETE(req: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const ids: string[] = body.ids;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: "Liste d'IDs requise" }, { status: 400 });
+    }
+
+    // Verify all trades belong to user
+    const trades = await prisma.trade.findMany({
+      where: { id: { in: ids }, userId: session.user.id },
+      select: { id: true },
+    });
+
+    const validIds = trades.map((t) => t.id);
+
+    if (validIds.length === 0) {
+      return NextResponse.json({ error: "Aucun trade trouvé" }, { status: 404 });
+    }
+
+    // Delete screenshots first, then trades
+    await prisma.screenshot.deleteMany({ where: { tradeId: { in: validIds } } });
+    await prisma.trade.deleteMany({ where: { id: { in: validIds } } });
+
+    return NextResponse.json({ success: true, deleted: validIds.length });
+  } catch (error) {
+    console.error("DELETE trades (bulk) error:", error);
+    return NextResponse.json({ error: "Erreur lors de la suppression" }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth();

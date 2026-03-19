@@ -22,6 +22,8 @@ export interface Trade {
   result: number;
   emotion: string | null;
   setup: string | null;
+  commission: number;
+  swap: number;
   tags: string | null;
   screenshots: Screenshot[];
   createdAt: string;
@@ -84,6 +86,24 @@ export function useTrades() {
     return false;
   };
 
+  const bulkDeleteTrades = async (ids: string[]) => {
+    // Optimistic: remove from local state immediately
+    const previous = trades;
+    setTrades((prev) => prev.filter((t) => !ids.includes(t.id)));
+
+    const res = await fetch("/api/trades", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    if (res.ok) {
+      return true;
+    }
+    // Rollback on failure
+    setTrades(previous);
+    return false;
+  };
+
   const updateTrade = async (id: string, data: Record<string, unknown>) => {
     const res = await fetch(`/api/trades/${id}`, {
       method: "PUT",
@@ -99,7 +119,7 @@ export function useTrades() {
     return false;
   };
 
-  return { trades, loading, fetchTrades, addTrade, deleteTrade, updateTrade };
+  return { trades, loading, fetchTrades, addTrade, deleteTrade, bulkDeleteTrades, updateTrade };
 }
 
 export function useUser() {

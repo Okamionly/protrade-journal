@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { CheckSquare, Plus, Trash2, GripVertical, Shield, AlertTriangle, Save, RotateCcw, TrendingUp, Brain } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { CheckSquare, Plus, Trash2, GripVertical, Shield, AlertTriangle, Save, RotateCcw, TrendingUp, Brain, Loader2 } from "lucide-react";
 
 interface Rule {
   id: string;
@@ -38,7 +38,7 @@ const DEFAULT_RULES: Rule[] = [
 ];
 
 export default function ChecklistPage() {
-  const [rules, setRules] = useState<Rule[]>(DEFAULT_RULES);
+  const [rules, setRules] = useState<Rule[]>([]);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
   const [history, setHistory] = useState<ChecklistEntry[]>([]);
@@ -46,28 +46,78 @@ export default function ChecklistPage() {
   const [newCategory, setNewCategory] = useState<Rule["category"]>("setup");
   const [showAddRule, setShowAddRule] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  // Load from localStorage
+  // Fetch rules from API
+  const fetchRules = useCallback(async () => {
+    try {
+      setError(null);
+      const res = await fetch("/api/trading-rules");
+      if (!res.ok) {
+        throw new Error("Erreur lors du chargement des règles");
+      }
+      const data = await res.json();
+      if (data.length === 0) {
+        // Seed default rules for new users
+        await seedDefaultRules();
+      } else {
+        setRules(
+          data.map((r: { id: string; text: string; category?: string }) => ({
+            id: r.id,
+            text: r.text,
+            category: r.category || "setup",
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to fetch rules:", err);
+      setError("Impossible de charger les règles. Vérifiez votre connexion.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Seed default rules for first-time users
+  const seedDefaultRules = async () => {
+    try {
+      const created: Rule[] = [];
+      for (const rule of DEFAULT_RULES) {
+        const res = await fetch("/api/trading-rules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: rule.text, category: rule.category }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          created.push({ id: data.id, text: data.text, category: data.category || "setup" });
+        }
+      }
+      setRules(created);
+    } catch (err) {
+      console.error("Failed to seed default rules:", err);
+      setError("Impossible de créer les règles par défaut.");
+    }
+  };
+
+  // Load rules from API + history/checks from localStorage
   useEffect(() => {
-    const savedRules = localStorage.getItem("checklist-rules");
-    if (savedRules) setRules(JSON.parse(savedRules));
+    fetchRules();
+
+    // Load history and today's checks from localStorage
     const savedHistory = localStorage.getItem("checklist-history");
-    if (savedHistory) setHistory(JSON.parse(savedHistory));
-    // Load today's checks if any
-    const today = new Date().toISOString().split("T")[0];
     if (savedHistory) {
-      const todayEntry = JSON.parse(savedHistory).find((e: ChecklistEntry) => e.date === today);
+      const parsed = JSON.parse(savedHistory);
+      setHistory(parsed);
+      const today = new Date().toISOString().split("T")[0];
+      const todayEntry = parsed.find((e: ChecklistEntry) => e.date === today);
       if (todayEntry) {
         setChecks(todayEntry.checks);
         setNotes(todayEntry.notes);
       }
     }
-  }, []);
-
-  const saveRules = (newRules: Rule[]) => {
-    setRules(newRules);
-    localStorage.setItem("checklist-rules", JSON.stringify(newRules));
-  };
+  }, [fetchRules]);
 
   const toggleCheck = (ruleId: string) => {
     setChecks((prev) => ({ ...prev, [ruleId]: !prev[ruleId] }));
@@ -103,16 +153,43 @@ export default function ChecklistPage() {
     setNotes("");
   };
 
-  const addRule = () => {
-    if (!newRule.trim()) return;
-    const rule: Rule = { id: `r${Date.now()}`, text: newRule.trim(), category: newCategory };
-    saveRules([...rules, rule]);
-    setNewRule("");
-    setShowAddRule(false);
+  const addRule = async () => {
+    if (!newRule.trim() || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/trading-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: newRule.trim(), category: newCategory }),
+      });
+      if (!res.ok) {
+        throw new Error("Erreur lors de la création de la règle");
+      }
+      const data = await res.json();
+      setRules((prev) => [...prev, { id: data.id, text: data.text, category: data.category || newCategory }]);
+      setNewRule("");
+      setShowAddRule(false);
+    } catch (err) {
+      console.error("Failed to add rule:", err);
+      setError("Impossible d'ajouter la règle.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const removeRule = (id: string) => {
-    saveRules(rules.filter((r) => r.id !== id));
+  const removeRule = async (id: string) => {
+    setError(null);
+    try {
+      const res = await fetch(`/api/trading-rules/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        throw new Error("Erreur lors de la suppression");
+      }
+      setRules((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.error("Failed to delete rule:", err);
+      setError("Impossible de supprimer la règle.");
+    }
   };
 
   // Group rules by category
@@ -125,6 +202,17 @@ export default function ChecklistPage() {
   // History stats
   const avgScore = history.length > 0 ? Math.round(history.reduce((s, h) => s + h.score, 0) / history.length) : 0;
   const perfectDays = history.filter((h) => h.score === 100).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+          <p className="text-sm text-[--text-secondary]">Chargement des règles...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -143,6 +231,13 @@ export default function ChecklistPage() {
           </button>
         </div>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 p-4 text-sm text-rose-400">
+          {error}
+        </div>
+      )}
 
       {/* Score Card */}
       <div className={`glass rounded-2xl p-6 border-2 transition-all ${canTrade ? "border-emerald-500/30" : score >= 60 ? "border-amber-500/30" : "border-rose-500/30"}`}>
@@ -271,8 +366,12 @@ export default function ChecklistPage() {
               placeholder="Texte de la règle..."
               className="input-field flex-1"
             />
-            <button onClick={addRule} className="px-6 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-medium text-sm">
-              Ajouter
+            <button
+              onClick={addRule}
+              disabled={saving}
+              className="px-6 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-medium text-sm disabled:opacity-50"
+            >
+              {saving ? "..." : "Ajouter"}
             </button>
           </div>
         </div>

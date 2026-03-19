@@ -115,11 +115,12 @@ model MonthlyGoal {
 }
 
 model TradingRule {
-  id     String @id @default(cuid())
-  text   String
-  order  Int    @default(0)
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  id       String @id @default(cuid())
+  text     String
+  category String @default("setup")
+  order    Int    @default(0)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
 }
 
 model DailyPlan {

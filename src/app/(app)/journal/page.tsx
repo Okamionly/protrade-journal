@@ -5,11 +5,11 @@ import { TradeForm } from "@/components/TradeForm";
 import { JournalSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { calculateRR, formatDate } from "@/lib/utils";
-import { useState } from "react";
-import { Plus, Search, Camera, Trash2, Pencil, FilterX, ArrowUpDown } from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
+import { Plus, Search, Camera, Trash2, Pencil, FilterX, ArrowUpDown, Download, X } from "lucide-react";
 
 export default function JournalPage() {
-  const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
+  const { trades, loading, addTrade, deleteTrade, bulkDeleteTrades, updateTrade } = useTrades();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
@@ -22,6 +22,11 @@ export default function JournalPage() {
   const [emotionFilter, setEmotionFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"date" | "result" | "rr">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const hasFilters = search || assetFilter !== "all" || directionFilter !== "all" || resultFilter !== "all" || dateFrom || dateTo || emotionFilter !== "all";
 
@@ -58,6 +63,91 @@ export default function JournalPage() {
 
   const assets = [...new Set(trades.map((t) => t.asset))];
 
+  // Selection helpers
+  const filteredIds = useMemo(() => new Set(sorted.map((t) => t.id)), [sorted]);
+  const allFilteredSelected = sorted.length > 0 && sorted.every((t) => selectedIds.has(t.id));
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelectAll = useCallback(() => {
+    if (allFilteredSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        filteredIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        filteredIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  }, [allFilteredSelected, filteredIds]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  // CSV Export
+  const exportCSV = useCallback(() => {
+    const headers = ["Date", "Actif", "Direction", "Entrée", "Sortie", "Résultat", "Émotion", "Stratégie", "Commission", "Swap"];
+    const escapeCSV = (val: string | number | null | undefined) => {
+      const str = val == null ? "" : String(val);
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+    const rows = sorted.map((t) => [
+      formatDate(t.date),
+      t.asset,
+      t.direction,
+      t.entry,
+      t.exit ?? "",
+      t.result,
+      t.emotion ?? "",
+      t.strategy,
+      t.commission ?? 0,
+      t.swap ?? 0,
+    ].map(escapeCSV).join(","));
+
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `trades_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast("Export CSV terminé", "success");
+  }, [sorted, toast]);
+
+  // Bulk delete
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    const ids = [...selectedIds];
+    const ok = await bulkDeleteTrades(ids);
+    if (ok) {
+      toast(`${ids.length} trade${ids.length > 1 ? "s" : ""} supprimé${ids.length > 1 ? "s" : ""}`, "success");
+      setSelectedIds(new Set());
+    } else {
+      toast("Erreur lors de la suppression", "error");
+    }
+    setBulkDeleting(false);
+    setShowDeleteModal(false);
+  };
+
   const handleAddTrade = async (trade: Record<string, unknown>) => {
     const ok = await addTrade(trade);
     if (ok) toast("Trade créé avec succès", "success");
@@ -88,10 +178,19 @@ export default function JournalPage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">Historique Complet</h3>
-          <button onClick={() => setShowForm(true)} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center">
-            <Plus className="w-4 h-4 mr-2" />
-            Nouveau Trade
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportCSV}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition"
+            >
+              <Download className="w-4 h-4" />
+              Exporter CSV
+            </button>
+            <button onClick={() => setShowForm(true)} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center">
+              <Plus className="w-4 h-4 mr-2" />
+              Nouveau Trade
+            </button>
+          </div>
         </div>
 
         {/* Filtres avancés */}
@@ -153,6 +252,16 @@ export default function JournalPage() {
           <table className="w-full">
             <thead>
               <tr className="text-left text-[--text-secondary] text-sm border-b border-[--border]">
+                <th className="pb-3 pr-2 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={toggleSelectAll}
+                    disabled={sorted.length === 0}
+                    className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
+                    title="Tout sélectionner"
+                  />
+                </th>
                 <th className="pb-3 font-medium">Date</th>
                 <th className="pb-3 font-medium">Actif</th>
                 <th className="pb-3 font-medium">Direction</th>
@@ -170,14 +279,23 @@ export default function JournalPage() {
             <tbody className="text-sm">
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="py-8 text-center text-[--text-muted]">Aucun trade trouvé</td>
+                  <td colSpan={13} className="py-8 text-center text-[--text-muted]">Aucun trade trouvé</td>
                 </tr>
               ) : (
                 sorted.map((trade) => {
                   const isWin = trade.result > 0;
                   const rr = calculateRR(trade.entry, trade.sl, trade.tp);
+                  const isSelected = selectedIds.has(trade.id);
                   return (
-                    <tr key={trade.id} className="trade-row border-b border-[--border-subtle]">
+                    <tr key={trade.id} className={`trade-row border-b border-[--border-subtle] ${isSelected ? "bg-blue-500/10" : ""}`}>
+                      <td className="py-4 pr-2">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(trade.id)}
+                          className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="py-4 mono text-[--text-secondary]">{formatDate(trade.date)}</td>
                       <td className="py-4 font-medium">{trade.asset}</td>
                       <td className="py-4">
@@ -221,6 +339,57 @@ export default function JournalPage() {
           </table>
         </div>
       </div>
+
+      {/* Floating action bar for bulk actions */}
+      {someSelected && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 glass rounded-xl px-6 py-3 flex items-center gap-4 shadow-2xl border border-[--border] animate-in slide-in-from-bottom-4">
+          <span className="text-sm font-medium">
+            {selectedIds.size} trade{selectedIds.size > 1 ? "s" : ""} sélectionné{selectedIds.size > 1 ? "s" : ""}
+          </span>
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 transition"
+          >
+            <Trash2 className="w-4 h-4" />
+            Supprimer {selectedIds.size} trade{selectedIds.size > 1 ? "s" : ""}
+          </button>
+          <button
+            onClick={clearSelection}
+            className="text-[--text-muted] hover:text-[--text-primary] transition"
+            title="Annuler la sélection"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Confirmation modal for bulk delete */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="glass rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-[--border]">
+            <h3 className="text-lg font-semibold mb-3">Confirmer la suppression</h3>
+            <p className="text-sm text-[--text-secondary] mb-6">
+              Êtes-vous sûr de vouloir supprimer {selectedIds.size} trade{selectedIds.size > 1 ? "s" : ""} ? Cette action est irréversible.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={bulkDeleting}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-500 text-white hover:bg-rose-600 transition disabled:opacity-50"
+              >
+                {bulkDeleting ? "Suppression..." : `Supprimer ${selectedIds.size} trade${selectedIds.size > 1 ? "s" : ""}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && <TradeForm onSubmit={handleAddTrade} onClose={() => setShowForm(false)} />}
       {editingTrade && <TradeForm onSubmit={handleUpdateTrade} onClose={() => setEditingTrade(null)} editTrade={editingTrade} />}
