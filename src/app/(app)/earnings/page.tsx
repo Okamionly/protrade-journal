@@ -156,8 +156,8 @@ export default function EarningsCalendarPage() {
             <h3 className="font-semibold text-amber-400">Attention — Earnings sur vos instruments</h3>
           </div>
           <div className="space-y-2">
-            {alertEarnings.map((e) => (
-              <div key={e.symbol + e.date} className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10">
+            {alertEarnings.map((e, idx) => (
+              <div key={`alert-${e.symbol}-${e.date}-${idx}`} className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10">
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-[--text-primary]">{e.symbol}</span>
                 </div>
@@ -222,10 +222,10 @@ export default function EarningsCalendarPage() {
                       {day.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}
                     </p>
                     <div className="space-y-2">
-                      {dayEarnings.map((e) => {
+                      {dayEarnings.map((e, idx) => {
                         const isTraded = tradedSymbols.has(e.symbol);
                         return (
-                          <div key={e.symbol} className={`p-2.5 rounded-lg text-xs ${isTraded ? "bg-amber-500/15 border border-amber-500/30" : "bg-[--bg-secondary]/50"}`}>
+                          <div key={`${e.symbol}-${e.hour}-${idx}`} className={`p-2.5 rounded-lg text-xs ${isTraded ? "bg-amber-500/15 border border-amber-500/30" : "bg-[--bg-secondary]/50"}`}>
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-[--text-primary]">{e.symbol}</span>
                               {TIME_LABELS[e.hour] && (
@@ -271,12 +271,12 @@ export default function EarningsCalendarPage() {
               </tr>
             </thead>
             <tbody>
-              {earningsData.sort((a, b) => a.date.localeCompare(b.date)).map((e) => {
+              {earningsData.sort((a, b) => a.date.localeCompare(b.date)).map((e, idx) => {
                 const isTraded = tradedSymbols.has(e.symbol);
                 const timeInfo = TIME_LABELS[e.hour];
                 const epsBeat = e.epsActual != null && e.epsEstimate != null ? e.epsActual >= e.epsEstimate : null;
                 return (
-                  <tr key={e.symbol + e.date} className={`border-b border-[--border-subtle] hover:bg-[--bg-hover] ${isTraded ? "bg-amber-500/5" : ""}`}>
+                  <tr key={`${e.symbol}-${e.date}-${idx}`} className={`border-b border-[--border-subtle] hover:bg-[--bg-hover] ${isTraded ? "bg-amber-500/5" : ""}`}>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         {isTraded && <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />}
