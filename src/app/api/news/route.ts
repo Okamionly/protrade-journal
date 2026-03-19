@@ -19,6 +19,25 @@ export interface NewsArticle {
   url: string;
 }
 
+// Decode HTML entities (&#x2019; &#8217; &amp; &quot; etc.)
+function decodeEntities(str: string): string {
+  return str
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&rsquo;/g, "\u2019")
+    .replace(/&lsquo;/g, "\u2018")
+    .replace(/&rdquo;/g, "\u201D")
+    .replace(/&ldquo;/g, "\u201C")
+    .replace(/&mdash;/g, "\u2014")
+    .replace(/&ndash;/g, "\u2013")
+    .replace(/&nbsp;/g, " ");
+}
+
 // --------------- RSS Parser (no external lib) ---------------
 
 function parseRSS(xml: string): Array<{ title: string; link: string; pubDate: string; source: string; description: string; imageUrl: string }> {
@@ -43,7 +62,7 @@ function parseRSS(xml: string): Array<{ title: string; link: string; pubDate: st
     imageUrl = mediaContent || mediaThumbnail || enclosure || descImg || "";
 
     items.push({
-      title: title.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").trim(),
+      title: decodeEntities(title.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").trim()),
       link: link.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, "$1").trim(),
       pubDate,
       source,
@@ -64,11 +83,11 @@ function rssToArticles(
       id: Date.now() + idx + Math.floor(Math.random() * 10000),
       category: categorizeHeadline(item.title),
       datetime: isNaN(dt) ? Math.floor(Date.now() / 1000) - idx * 300 : dt,
-      headline: item.title,
+      headline: decodeEntities(item.title),
       image: item.imageUrl || "",
       related: "",
-      source: item.source || fallbackSource,
-      summary: item.description ? item.description.slice(0, 200) : "",
+      source: decodeEntities(item.source || fallbackSource),
+      summary: item.description ? decodeEntities(item.description.slice(0, 200)) : "",
       url: item.link,
     };
   });
