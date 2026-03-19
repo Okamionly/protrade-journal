@@ -120,7 +120,7 @@ export function NewsTicker() {
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer group shrink-0"
+            className="inline-flex items-center gap-1.5 px-4 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition-colors cursor-pointer group shrink-0"
             title={`${item.source} — ${item.headline}`}
           >
             <span

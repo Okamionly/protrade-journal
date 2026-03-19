@@ -130,7 +130,7 @@ function MessageBubble({
 
   return (
     <div
-      className={`group relative flex gap-3 px-4 ${isConsecutive ? "py-0.5" : "py-2"} hover:bg-black/5 dark:hover:bg-white/[0.02] transition-colors ${
+      className={`group relative flex gap-3 px-4 ${isConsecutive ? "py-0.5" : "py-2"} hover:bg-black/5 dark:hover:bg-[var(--bg-hover)] transition-colors ${
         msg.isPinned ? "bg-amber-500/5 border-l-2 border-amber-500/50" : ""
       }`}
     >
@@ -323,7 +323,7 @@ function SearchOverlay({ messages, onClose, onJump }: { messages: ChatMessage[];
             <button
               key={m.id}
               onClick={() => { onJump(m.id); onClose(); }}
-              className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 border-b border-gray-100 dark:border-gray-800/50 transition"
+              className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-[var(--bg-hover)] border-b border-gray-100 dark:border-gray-800/50 transition"
             >
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -411,7 +411,7 @@ function RightPanel({
               </div>
             ) : (
               pinned.map((m) => (
-                <div key={m.id} className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800">
+                <div key={m.id} className="p-3 rounded-xl bg-gray-50 dark:bg-[var(--bg-hover)] border border-gray-200 dark:border-gray-800">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-[11px] font-semibold" style={{ color: "var(--text-primary)" }}>
                       {m.user.name || m.user.email.split("@")[0]}
@@ -446,7 +446,7 @@ function RightPanel({
           <div>
             {/* Room info */}
             {activeRoom && (
-              <div className="mb-4 p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800">
+              <div className="mb-4 p-3 rounded-xl bg-gray-50 dark:bg-[var(--bg-hover)] border border-gray-200 dark:border-gray-800">
                 <div className="flex items-center gap-2 mb-2">
                   <RoomIcon icon={activeRoom.icon} className="w-5 h-5 text-cyan-400" />
                   <span className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{activeRoom.name}</span>
@@ -464,7 +464,7 @@ function RightPanel({
               </h4>
               <div className="space-y-1">
                 {Array.from(uniqueUsers.entries()).map(([id, u]) => (
-                  <div key={id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5">
+                  <div key={id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[var(--bg-hover)]">
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
                       {u.initial}
                     </div>
@@ -485,7 +485,7 @@ function RightPanel({
                   { label: "Épinglés", value: pinned.length, icon: Pin },
                   { label: "Membres", value: uniqueUsers.size, icon: Users },
                 ].map((s) => (
-                  <div key={s.label} className="p-2 rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-gray-800 text-center">
+                  <div key={s.label} className="p-2 rounded-lg bg-gray-50 dark:bg-[var(--bg-hover)] border border-gray-200 dark:border-gray-800 text-center">
                     <s.icon className="w-3.5 h-3.5 mx-auto text-[--text-muted] mb-1" />
                     <p className="text-sm font-bold mono" style={{ color: "var(--text-primary)" }}>{s.value}</p>
                     <p className="text-[10px] text-[--text-muted]">{s.label}</p>
@@ -734,7 +734,7 @@ export default function ChatPage() {
         </button>
         <button
           onClick={() => setShowRightPanel(!showRightPanel)}
-          className={`p-1.5 rounded-lg transition ${showRightPanel ? "bg-cyan-500/10 text-cyan-400" : "text-[--text-muted] hover:text-[--text-secondary] hover:bg-gray-100 dark:hover:bg-white/5"}`}
+          className={`p-1.5 rounded-lg transition ${showRightPanel ? "bg-cyan-500/10 text-cyan-400" : "text-[--text-muted] hover:text-[--text-secondary] hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)]"}`}
           title="Panneau latéral"
         >
           {showRightPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
@@ -813,7 +813,7 @@ export default function ChatPage() {
                           className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] transition-all ${
                             isActive
                               ? "bg-cyan-500/10 text-cyan-500 font-semibold"
-                              : "text-[--text-secondary] hover:bg-gray-100 dark:hover:bg-white/5 hover:text-[--text-primary]"
+                              : "text-[--text-secondary] hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] hover:text-[--text-primary]"
                           }`}
                         >
                           <RoomIcon icon={room.icon} className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-cyan-400" : "text-[--text-muted]"}`} />
@@ -876,7 +876,7 @@ export default function ChatPage() {
                 )}
                 <button
                   onClick={() => setShowRightPanel(!showRightPanel)}
-                  className="p-1.5 rounded-md text-[--text-muted] hover:text-[--text-secondary] hover:bg-gray-100 dark:hover:bg-white/5 transition"
+                  className="p-1.5 rounded-md text-[--text-muted] hover:text-[--text-secondary] hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition"
                 >
                   <Users className="w-4 h-4" />
                 </button>

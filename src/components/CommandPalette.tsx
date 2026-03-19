@@ -146,7 +146,7 @@ export function CommandPalette() {
                   onClick={() => execute(cmd)}
                   onMouseEnter={() => setSelectedIndex(i)}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                    i === selectedIndex ? "bg-cyan-500/10 text-cyan-400" : "text-[--text-secondary] hover:bg-white/5"
+                    i === selectedIndex ? "bg-cyan-500/10 text-cyan-400" : "text-[--text-secondary] hover:bg-[var(--bg-hover)]"
                   }`}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />

@@ -380,7 +380,7 @@ export default function ProfilePage() {
                 </span>
                 <button
                   onClick={() => setEditingName(true)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-white/5 transition"
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-400 hover:bg-[var(--bg-hover)] transition"
                 >
                   <Pencil className="w-4 h-4" />
                 </button>
@@ -416,7 +416,7 @@ export default function ProfilePage() {
               type="email"
               value={profile?.email || ""}
               readOnly
-              className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-gray-500 dark:text-gray-500 cursor-not-allowed"
+              className="w-full bg-gray-100 dark:bg-[var(--bg-hover)] border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-gray-500 dark:text-gray-500 cursor-not-allowed"
             />
           </div>
           {/* Balance initiale */}

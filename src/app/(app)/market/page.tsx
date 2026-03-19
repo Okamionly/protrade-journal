@@ -230,14 +230,15 @@ export default function MarketPage() {
       <div className="metric-card rounded-2xl p-5">
         <div className="flex gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-muted)" }} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "var(--text-muted)" }} />
             <input
               type="text"
               placeholder="Rechercher un symbole (ex: AAPL, TSLA, NVDA)..."
               value={searchSymbol}
               onChange={(e) => setSearchSymbol(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="input-field pl-10 w-full"
+              className="input-field w-full"
+              style={{ paddingLeft: "2.75rem" }}
             />
           </div>
           <button onClick={handleSearch} className="px-6 py-2 rounded-xl bg-cyan-500 text-white font-medium text-sm hover:bg-cyan-600 transition">
@@ -413,7 +414,7 @@ export default function MarketPage() {
                   const pctDisplay = q.changepct != null ? (q.changepct * 100).toFixed(2) : "0.00";
                   const isUp = (q.changepct ?? 0) >= 0;
                   return (
-                    <tr key={q.symbol} className="border-t transition hover:bg-white/5" style={{ borderColor: "var(--border)" }}>
+                    <tr key={q.symbol} className="border-t transition hover:bg-[var(--bg-hover)]" style={{ borderColor: "var(--border)" }}>
                       <td className="px-4 py-3 font-bold" style={{ color: "var(--text-primary)" }}>{q.symbol}</td>
                       <td className="px-4 py-3 text-right mono font-medium" style={{ color: "var(--text-primary)" }}>${formatPrice(q.last)}</td>
                       <td className="px-4 py-3 text-right">
@@ -423,8 +424,8 @@ export default function MarketPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right mono text-sm hidden md:table-cell" style={{ color: "var(--text-secondary)" }}>{formatVol(q.volume)}</td>
-                      <td className="px-4 py-3 text-right mono text-sm hidden lg:table-cell text-emerald-400">${formatPrice(q.high52)}</td>
-                      <td className="px-4 py-3 text-right mono text-sm hidden lg:table-cell text-rose-400">${formatPrice(q.low52)}</td>
+                      <td className="px-4 py-3 text-right mono text-sm hidden lg:table-cell" style={{ color: q.high52 ? "#34d399" : "var(--text-muted)" }}>{q.high52 ? `$${formatPrice(q.high52)}` : "N/A"}</td>
+                      <td className="px-4 py-3 text-right mono text-sm hidden lg:table-cell" style={{ color: q.low52 ? "#f87171" : "var(--text-muted)" }}>{q.low52 ? `$${formatPrice(q.low52)}` : "N/A"}</td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex justify-center gap-2">
                           <button onClick={() => { setCandleSymbol(q.symbol); loadCandles(q.symbol); }} className="text-xs text-cyan-400 hover:underline">Chart</button>
@@ -486,7 +487,7 @@ export default function MarketPage() {
                 </thead>
                 <tbody>
                   {optionsData.strike.map((strike, i) => (
-                    <tr key={i} className="border-t transition hover:bg-white/5" style={{ borderColor: "var(--border)" }}>
+                    <tr key={i} className="border-t transition hover:bg-[var(--bg-hover)]" style={{ borderColor: "var(--border)" }}>
                       <td className="px-3 py-2 font-bold mono" style={{ color: "var(--text-primary)" }}>${strike?.toFixed(2) ?? "—"}</td>
                       <td className="px-3 py-2 text-right mono" style={{ color: "var(--text-primary)" }}>${optionsData.last[i]?.toFixed(2) ?? "—"}</td>
                       <td className="px-3 py-2 text-right mono text-emerald-400">${optionsData.bid[i]?.toFixed(2) ?? "—"}</td>

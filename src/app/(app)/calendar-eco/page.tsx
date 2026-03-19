@@ -371,7 +371,7 @@ export default function CalendarEcoPage() {
     return (
       <tr
         key={`${e.date}-${i}`}
-        className={`border-b border-[--border]/20 transition hover:bg-white/5 group ${
+        className={`border-b border-[--border]/20 transition hover:bg-[var(--bg-hover)] group ${
           e.impact === "high" ? "bg-rose-500/[0.03]" : ""
         }`}
       >
@@ -467,7 +467,7 @@ export default function CalendarEcoPage() {
     return (
       <div
         key={`${e.date}-${i}`}
-        className={`px-3 py-2.5 border-b border-[--border]/20 hover:bg-white/5 transition ${
+        className={`px-3 py-2.5 border-b border-[--border]/20 hover:bg-[var(--bg-hover)] transition ${
           e.impact === "high" ? "bg-rose-500/[0.03]" : ""
         }`}
       >
@@ -608,7 +608,7 @@ export default function CalendarEcoPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={fetchCalendar}
-            className="p-2 rounded-lg hover:bg-white/5 transition"
+            className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition"
             title="Rafraîchir"
           >
             <RefreshCw className={`w-4 h-4 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
@@ -625,7 +625,7 @@ export default function CalendarEcoPage() {
               className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition ${
                 viewMode === "week"
                   ? "bg-cyan-500/20 text-cyan-400"
-                  : "text-[--text-secondary] hover:bg-white/5"
+                  : "text-[--text-secondary] hover:bg-[var(--bg-hover)]"
               }`}
             >
               <Columns3 className="w-3.5 h-3.5" /> Semaine
@@ -635,7 +635,7 @@ export default function CalendarEcoPage() {
               className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition ${
                 viewMode === "day"
                   ? "bg-cyan-500/20 text-cyan-400"
-                  : "text-[--text-secondary] hover:bg-white/5"
+                  : "text-[--text-secondary] hover:bg-[var(--bg-hover)]"
               }`}
             >
               <List className="w-3.5 h-3.5" /> Jour
@@ -748,7 +748,7 @@ export default function CalendarEcoPage() {
           {currencyFilter.length > 0 && (
             <button
               onClick={() => setCurrencyFilter([])}
-              className="px-2 py-0.5 rounded text-[10px] text-cyan-400 hover:bg-white/5 transition"
+              className="px-2 py-0.5 rounded text-[10px] text-cyan-400 hover:bg-[var(--bg-hover)] transition"
             >
               Réinitialiser
             </button>
@@ -775,7 +775,7 @@ export default function CalendarEcoPage() {
           <div className="flex items-center justify-between">
             <button
               onClick={() => navigateWeek(-1)}
-              className="p-2 rounded-lg hover:bg-white/5 transition text-[--text-secondary]"
+              className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition text-[--text-secondary]"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -784,7 +784,7 @@ export default function CalendarEcoPage() {
             </h2>
             <button
               onClick={() => navigateWeek(1)}
-              className="p-2 rounded-lg hover:bg-white/5 transition text-[--text-secondary]"
+              className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition text-[--text-secondary]"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -867,7 +867,7 @@ export default function CalendarEcoPage() {
                 d.setDate(d.getDate() - 1);
                 setSelectedDay(d.toISOString().slice(0, 10));
               }}
-              className="p-2 rounded-lg hover:bg-white/5 transition text-[--text-secondary]"
+              className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition text-[--text-secondary]"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -888,7 +888,7 @@ export default function CalendarEcoPage() {
                 d.setDate(d.getDate() + 1);
                 setSelectedDay(d.toISOString().slice(0, 10));
               }}
-              className="p-2 rounded-lg hover:bg-white/5 transition text-[--text-secondary]"
+              className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition text-[--text-secondary]"
             >
               <ChevronRight className="w-5 h-5" />
             </button>

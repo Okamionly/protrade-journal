@@ -8,7 +8,7 @@ export function TradeCard({ trade }: { trade: SharedTrade }) {
   const isLong = trade.direction === "LONG";
 
   return (
-    <div className="rounded-xl p-3 mt-2 max-w-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-gray-700/50">
+    <div className="rounded-xl p-3 mt-2 max-w-sm bg-gray-50 dark:bg-[var(--bg-hover)] border border-gray-200 dark:border-gray-700/50">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{trade.asset}</span>

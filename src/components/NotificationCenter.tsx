@@ -246,7 +246,7 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
       {/* Bell button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition"
+        className="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition"
         style={{ color: "var(--text-secondary)" }}
         aria-label="Notifications"
       >
@@ -301,7 +301,7 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
               className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
                 tab === t.key
                   ? "bg-cyan-500/10 text-cyan-500"
-                  : "hover:bg-gray-100 dark:hover:bg-white/5"
+                  : "hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)]"
               }`}
               style={tab !== t.key ? { color: "var(--text-muted)" } : undefined}
             >
@@ -327,7 +327,7 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
                 <div
                   key={n.id}
                   onClick={() => markRead(n.id)}
-                  className={`group flex items-start gap-3 px-4 py-3 cursor-pointer transition border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-white/[0.03] ${
+                  className={`group flex items-start gap-3 px-4 py-3 cursor-pointer transition border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-[var(--bg-hover)] ${
                     !isRead ? "bg-cyan-500/[0.04]" : ""
                   }`}
                   style={{ borderColor: "var(--border)" }}

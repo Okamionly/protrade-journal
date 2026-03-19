@@ -58,7 +58,7 @@ export function TradeShareModal({ onSelect, onClose }: TradeShareModalProps) {
                     const content = `📊 Trade partagé : ${trade.asset} ${trade.direction} — ${isWin ? "+" : ""}${trade.result}€`;
                     onSelect(trade.id, content);
                   }}
-                  className="w-full text-left p-3 rounded-xl border border-[--border] hover:bg-white/5 transition flex items-center justify-between"
+                  className="w-full text-left p-3 rounded-xl border border-[--border] hover:bg-[var(--bg-hover)] transition flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <span

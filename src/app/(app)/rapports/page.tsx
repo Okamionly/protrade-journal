@@ -190,7 +190,7 @@ export default function RapportsPage() {
               className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
                 period === p
                   ? "bg-cyan-500 text-white"
-                  : "hover:bg-white/5"
+                  : "hover:bg-[var(--bg-hover)]"
               }`}
               style={period !== p ? { color: "var(--text-secondary)" } : {}}
             >
@@ -281,7 +281,7 @@ export default function RapportsPage() {
           {/* Collapsible Sections */}
           {/* By Asset */}
           <div className="glass rounded-2xl overflow-hidden">
-            <button onClick={() => toggle("asset")} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition">
+            <button onClick={() => toggle("asset")} className="w-full flex items-center justify-between p-4 hover:bg-[var(--bg-hover)] transition">
               <span className="font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <BarChart3 className="w-4 h-4 text-cyan-500" /> Performance par Actif
               </span>
@@ -321,7 +321,7 @@ export default function RapportsPage() {
 
           {/* By Strategy */}
           <div className="glass rounded-2xl overflow-hidden">
-            <button onClick={() => toggle("strategy")} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition">
+            <button onClick={() => toggle("strategy")} className="w-full flex items-center justify-between p-4 hover:bg-[var(--bg-hover)] transition">
               <span className="font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <Target className="w-4 h-4 text-indigo-500" /> Performance par Stratégie
               </span>
@@ -361,7 +361,7 @@ export default function RapportsPage() {
 
           {/* By Day of Week */}
           <div className="glass rounded-2xl overflow-hidden">
-            <button onClick={() => toggle("day")} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition">
+            <button onClick={() => toggle("day")} className="w-full flex items-center justify-between p-4 hover:bg-[var(--bg-hover)] transition">
               <span className="font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <Calendar className="w-4 h-4 text-amber-500" /> Performance par Jour
               </span>
@@ -393,7 +393,7 @@ export default function RapportsPage() {
 
           {/* Trade History */}
           <div className="glass rounded-2xl overflow-hidden">
-            <button onClick={() => toggle("trades")} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition">
+            <button onClick={() => toggle("trades")} className="w-full flex items-center justify-between p-4 hover:bg-[var(--bg-hover)] transition">
               <span className="font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <Clock className="w-4 h-4 text-teal-500" /> Historique des Trades ({filtered.length})
               </span>

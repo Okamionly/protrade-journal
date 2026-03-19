@@ -190,7 +190,7 @@ function NewsRow({ item }: { item: NewsItem }) {
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.04] transition-colors group border-b border-[--border]/40 last:border-b-0"
+      className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors group border-b border-[--border]/40 last:border-b-0"
       style={{ cursor: item.url === "#" ? "default" : "pointer" }}
     >
       {/* Thumbnail */}
@@ -306,7 +306,7 @@ function SourceDropdown({
             className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition ${
               sourceFilter === "all"
                 ? "bg-cyan-500/15 text-cyan-400"
-                : "text-[--text-secondary] hover:bg-white/[0.04]"
+                : "text-[--text-secondary] hover:bg-[var(--bg-hover)]"
             }`}
           >
             Toutes les sources
@@ -319,7 +319,7 @@ function SourceDropdown({
                 key={src}
                 onClick={() => { setSourceFilter(active ? "all" : src); setOpen(false); }}
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2 ${
-                  active ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
+                  active ? "bg-[var(--bg-hover)]" : "hover:bg-[var(--bg-hover)]"
                 }`}
               >
                 <span
@@ -465,7 +465,7 @@ export default function NewsPage() {
           </span>
           <button
             onClick={load}
-            className="p-1.5 rounded-lg hover:bg-white/5 transition"
+            className="p-1.5 rounded-lg hover:bg-[var(--bg-hover)] transition"
             title="Rafraîchir"
           >
             <RefreshCw className={`w-4 h-4 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />

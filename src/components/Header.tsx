@@ -41,7 +41,7 @@ export function Header() {
             else if (theme === "light") setTheme("oled");
             else setTheme("dark");
           }}
-          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           title={mounted ? `Thème: ${theme === "oled" ? "OLED" : theme === "dark" ? "Sombre" : "Clair"}` : "Thème"}
         >
           {mounted && (theme === "dark" ? (

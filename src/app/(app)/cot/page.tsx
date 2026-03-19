@@ -194,7 +194,7 @@ export default function CotPage() {
               <span className="mono text-xs text-[--text-muted]">CFTC #{currentContract?.code}</span>
             </div>
           </div>
-          <button onClick={() => loadDetail(asset)} className="ml-auto p-2 rounded-lg hover:bg-white/5 transition">
+          <button onClick={() => loadDetail(asset)} className="ml-auto p-2 rounded-lg hover:bg-[var(--bg-hover)] transition">
             <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${detailLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
@@ -250,7 +250,7 @@ export default function CotPage() {
                   </thead>
                   <tbody>
                     {detailData.slice(-10).reverse().map((r) => (
-                      <tr key={r.date} className="border-b border-[--border-subtle] hover:bg-white/5">
+                      <tr key={r.date} className="border-b border-[--border-subtle] hover:bg-[var(--bg-hover)]">
                         <td className="py-2.5 px-2 mono text-[--text-secondary]">{r.date}</td>
                         <td className="py-2.5 px-2 mono">{r.nonCommLong.toLocaleString()}</td>
                         <td className="py-2.5 px-2 mono">{r.nonCommShort.toLocaleString()}</td>
@@ -278,7 +278,7 @@ export default function CotPage() {
           <h1 className="text-2xl font-bold">Rapport COT</h1>
           <p className="text-sm text-[--text-secondary] mt-1">Analyse des positions des traders engagés</p>
         </div>
-        <button onClick={loadOverview} className="p-2 rounded-lg hover:bg-white/5 transition" title="Rafraîchir">
+        <button onClick={loadOverview} className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition" title="Rafraîchir">
           <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
@@ -338,7 +338,7 @@ export default function CotPage() {
                   return (
                     <tr key={r.key}
                       onClick={() => openDetail(r.key)}
-                      className="border-b border-[--border-subtle]/50 hover:bg-white/5 cursor-pointer transition">
+                      className="border-b border-[--border-subtle]/50 hover:bg-[var(--bg-hover)] cursor-pointer transition">
                       <td className="px-4 py-3 font-bold text-[--text-primary]">{r.key}</td>
                       <td className="px-4 py-3 text-[--text-secondary] text-xs">{r.name}</td>
                       <td className="px-4 py-3">

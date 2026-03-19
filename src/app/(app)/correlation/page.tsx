@@ -930,7 +930,7 @@ export default function CorrelationPage() {
                   {topPositive.map((p, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between text-sm py-1 cursor-pointer hover:bg-white/5 rounded px-2 -mx-2 transition-colors"
+                      className="flex items-center justify-between text-sm py-1 cursor-pointer hover:bg-[var(--bg-hover)] rounded px-2 -mx-2 transition-colors"
                       onClick={() => handleCellClick(p.assetA, p.assetB)}
                     >
                       <span
@@ -960,7 +960,7 @@ export default function CorrelationPage() {
                   {topNegative.map((p, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between text-sm py-1 cursor-pointer hover:bg-white/5 rounded px-2 -mx-2 transition-colors"
+                      className="flex items-center justify-between text-sm py-1 cursor-pointer hover:bg-[var(--bg-hover)] rounded px-2 -mx-2 transition-colors"
                       onClick={() => handleCellClick(p.assetA, p.assetB)}
                     >
                       <span
