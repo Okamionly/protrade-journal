@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { RefreshCw, BarChart3, AlertTriangle, X, Clock, Globe } from "lucide-react";
 
 interface SectorStock {
@@ -16,13 +16,23 @@ interface StockQuote {
   changepct: number;
 }
 
+interface GlobalMarketEntry {
+  symbol: string;
+  name: string;
+  region: string;
+  last: number;
+  changepct: number;
+  change: number;
+  previousClose: number;
+}
+
 const SECTORS: Record<string, SectorStock[]> = {
   "Technology": [
-    { symbol: "AAPL", name: "Apple", sector: "Technology", marketCap: 30 },
-    { symbol: "MSFT", name: "Microsoft", sector: "Technology", marketCap: 28 },
-    { symbol: "NVDA", name: "NVIDIA", sector: "Technology", marketCap: 25 },
-    { symbol: "GOOGL", name: "Alphabet", sector: "Technology", marketCap: 18 },
-    { symbol: "META", name: "Meta", sector: "Technology", marketCap: 12 },
+    { symbol: "AAPL", name: "Apple", sector: "Technology", marketCap: 350 },
+    { symbol: "MSFT", name: "Microsoft", sector: "Technology", marketCap: 320 },
+    { symbol: "NVDA", name: "NVIDIA", sector: "Technology", marketCap: 300 },
+    { symbol: "GOOGL", name: "Alphabet", sector: "Technology", marketCap: 220 },
+    { symbol: "META", name: "Meta", sector: "Technology", marketCap: 160 },
     { symbol: "AMD", name: "AMD", sector: "Technology", marketCap: 8 },
     { symbol: "INTC", name: "Intel", sector: "Technology", marketCap: 6 },
     { symbol: "CRM", name: "Salesforce", sector: "Technology", marketCap: 10 },
@@ -30,8 +40,8 @@ const SECTORS: Record<string, SectorStock[]> = {
     { symbol: "ADBE", name: "Adobe", sector: "Technology", marketCap: 8 },
   ],
   "Consumer": [
-    { symbol: "AMZN", name: "Amazon", sector: "Consumer", marketCap: 25 },
-    { symbol: "TSLA", name: "Tesla", sector: "Consumer", marketCap: 20 },
+    { symbol: "AMZN", name: "Amazon", sector: "Consumer", marketCap: 210 },
+    { symbol: "TSLA", name: "Tesla", sector: "Consumer", marketCap: 100 },
     { symbol: "NFLX", name: "Netflix", sector: "Consumer", marketCap: 12 },
     { symbol: "NKE", name: "Nike", sector: "Consumer", marketCap: 8 },
     { symbol: "SBUX", name: "Starbucks", sector: "Consumer", marketCap: 7 },
@@ -39,16 +49,16 @@ const SECTORS: Record<string, SectorStock[]> = {
     { symbol: "DIS", name: "Disney", sector: "Consumer", marketCap: 8 },
   ],
   "Finance": [
-    { symbol: "JPM", name: "JPMorgan", sector: "Finance", marketCap: 22 },
+    { symbol: "JPM", name: "JPMorgan", sector: "Finance", marketCap: 70 },
     { symbol: "BAC", name: "Bank of America", sector: "Finance", marketCap: 14 },
     { symbol: "GS", name: "Goldman Sachs", sector: "Finance", marketCap: 12 },
-    { symbol: "V", name: "Visa", sector: "Finance", marketCap: 18 },
+    { symbol: "V", name: "Visa", sector: "Finance", marketCap: 60 },
     { symbol: "MA", name: "Mastercard", sector: "Finance", marketCap: 15 },
     { symbol: "MS", name: "Morgan Stanley", sector: "Finance", marketCap: 10 },
     { symbol: "BLK", name: "BlackRock", sector: "Finance", marketCap: 9 },
   ],
   "Healthcare": [
-    { symbol: "JNJ", name: "J&J", sector: "Healthcare", marketCap: 18 },
+    { symbol: "JNJ", name: "J&J", sector: "Healthcare", marketCap: 50 },
     { symbol: "UNH", name: "UnitedHealth", sector: "Healthcare", marketCap: 20 },
     { symbol: "PFE", name: "Pfizer", sector: "Healthcare", marketCap: 10 },
     { symbol: "ABBV", name: "AbbVie", sector: "Healthcare", marketCap: 14 },
@@ -86,27 +96,19 @@ const SECTORS: Record<string, SectorStock[]> = {
   ],
 };
 
-// Global markets — use simulated data since these are not available on MarketData.app
-const GLOBAL_MARKETS = [
-  { symbol: "DAX", name: "DAX 40", region: "Europe" },
-  { symbol: "FTSE", name: "FTSE 100", region: "Europe" },
-  { symbol: "CAC40", name: "CAC 40", region: "Europe" },
-  { symbol: "STOXX50", name: "Euro Stoxx 50", region: "Europe" },
-  { symbol: "NIKKEI", name: "Nikkei 225", region: "Asie" },
-  { symbol: "HSI", name: "Hang Seng", region: "Asie" },
-  { symbol: "SHANGHAI", name: "Shanghai Comp.", region: "Asie" },
-  { symbol: "KOSPI", name: "KOSPI", region: "Asie" },
-  { symbol: "ASX200", name: "ASX 200", region: "Asie-Pacifique" },
-  { symbol: "IBOV", name: "Bovespa", region: "Amériques" },
-  { symbol: "TSX", name: "TSX", region: "Amériques" },
-];
-
-function generateGlobalMarketsData() {
-  return GLOBAL_MARKETS.map((m) => ({
-    ...m,
-    changepct: (Math.random() - 0.45) * 4,
-    last: 5000 + Math.random() * 30000,
-  }));
+/** Check if current time is within US market hours (9:30-16:00 ET, weekdays) */
+function isMarketHours(): boolean {
+  const now = new Date();
+  // Convert to Eastern Time using Intl
+  const etString = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+  const et = new Date(etString);
+  const day = et.getDay(); // 0=Sun, 6=Sat
+  if (day === 0 || day === 6) return false;
+  const hours = et.getHours();
+  const minutes = et.getMinutes();
+  const totalMinutes = hours * 60 + minutes;
+  // 9:30 = 570, 16:00 = 960
+  return totalMinutes >= 570 && totalMinutes < 960;
 }
 
 export default function SectorHeatmapPage() {
@@ -118,9 +120,34 @@ export default function SectorHeatmapPage() {
   const [view, setView] = useState<"treemap" | "table">("treemap");
   const [showGlobal, setShowGlobal] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [globalData, setGlobalData] = useState<ReturnType<typeof generateGlobalMarketsData>>([]);
+  const [globalData, setGlobalData] = useState<GlobalMarketEntry[]>([]);
+  const [globalLoading, setGlobalLoading] = useState(false);
+  const [globalLastUpdated, setGlobalLastUpdated] = useState<Date | null>(null);
+  const [globalCached, setGlobalCached] = useState(false);
+  const [globalLive, setGlobalLive] = useState(false);
+  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const allSymbols = Object.values(SECTORS).flat().map((s) => s.symbol);
+
+  const fetchGlobalData = useCallback(async () => {
+    setGlobalLoading(true);
+    try {
+      const res = await fetch("/api/market-data/global-indices");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.s === "ok" && Array.isArray(json.data)) {
+          setGlobalData(json.data);
+          setGlobalLastUpdated(new Date(json.timestamp));
+          setGlobalCached(json.cached === true);
+          setGlobalLive(json.live === true);
+        }
+      }
+    } catch {
+      // Keep existing data if fetch fails
+    } finally {
+      setGlobalLoading(false);
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -146,21 +173,44 @@ export default function SectorHeatmapPage() {
         throw new Error("API error");
       }
     } catch {
-      setError("Impossible de charger les données. Réessayez.");
+      setError("Impossible de charger les donnees. Reessayez.");
       if (Object.keys(quotes).length === 0) {
         setUsingFallback(true);
       }
     }
-    // Generate global markets data (simulated)
-    setGlobalData(generateGlobalMarketsData());
     setLoading(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchGlobalData();
+  }, [fetchData, fetchGlobalData]);
 
-  // Enhanced color gradient — more visible and varied
+  // Auto-refresh every 60 seconds during market hours (9:30-16:00 ET on weekdays)
+  useEffect(() => {
+    const startAutoRefresh = () => {
+      if (autoRefreshRef.current) {
+        clearInterval(autoRefreshRef.current);
+      }
+      autoRefreshRef.current = setInterval(() => {
+        if (isMarketHours()) {
+          fetchData();
+          fetchGlobalData();
+        }
+      }, 60000);
+    };
+
+    startAutoRefresh();
+
+    return () => {
+      if (autoRefreshRef.current) {
+        clearInterval(autoRefreshRef.current);
+        autoRefreshRef.current = null;
+      }
+    };
+  }, [fetchData, fetchGlobalData]);
+
+  // Enhanced color gradient
   const getColor = (pct: number): string => {
     if (pct >= 5) return "bg-emerald-700";
     if (pct >= 3) return "bg-emerald-600";
@@ -189,6 +239,13 @@ export default function SectorHeatmapPage() {
 
   const displaySectors = selectedSector ? sectorPerf.filter((s) => s.name === selectedSector) : sectorPerf;
 
+  // Group global data by region
+  const globalByRegion = globalData.reduce<Record<string, GlobalMarketEntry[]>>((acc, entry) => {
+    if (!acc[entry.region]) acc[entry.region] = [];
+    acc[entry.region].push(entry);
+    return acc;
+  }, {});
+
   return (
     <div className="space-y-6">
       {/* Error Banner */}
@@ -199,7 +256,7 @@ export default function SectorHeatmapPage() {
             <span className="text-sm font-medium">{error}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchData} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Réessayer</button>
+            <button onClick={fetchData} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Reessayer</button>
             <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
           </div>
         </div>
@@ -209,7 +266,7 @@ export default function SectorHeatmapPage() {
       {usingFallback && !error && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          <span className="text-sm">Données de démonstration — API indisponible</span>
+          <span className="text-sm">Donnees de demonstration — API indisponible</span>
         </div>
       )}
 
@@ -218,11 +275,17 @@ export default function SectorHeatmapPage() {
         <div>
           <h1 className="text-2xl font-bold text-[--text-primary]">Heatmap Sectorielle</h1>
           <p className="text-sm text-[--text-secondary]">
-            Performance des secteurs en temps réel
+            Performance des secteurs en temps reel
             {lastUpdated && (
               <span className="ml-2 text-[--text-muted]">
                 <Clock className="w-3 h-3 inline mr-1" />
-                Dernière mise à jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                Derniere mise a jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+            {isMarketHours() && (
+              <span className="ml-2 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Auto-refresh
               </span>
             )}
           </p>
@@ -248,8 +311,8 @@ export default function SectorHeatmapPage() {
           >
             Table
           </button>
-          <button onClick={fetchData} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm">
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          <button onClick={() => { fetchData(); fetchGlobalData(); }} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm">
+            <RefreshCw className={`w-4 h-4 ${loading || globalLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
       </div>
@@ -257,31 +320,80 @@ export default function SectorHeatmapPage() {
       {/* Global Markets */}
       {showGlobal && (
         <div className="glass rounded-2xl p-5">
-          <h3 className="font-semibold text-[--text-primary] flex items-center gap-2 mb-4">
-            <Globe className="w-5 h-5 text-cyan-400" />
-            Marchés Mondiaux
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-            {globalData.map((m) => {
-              const pct = m.changepct;
-              const isUp = pct >= 0;
-              return (
-                <div
-                  key={m.symbol}
-                  className={`${getColor(pct)} rounded-xl p-3 transition-transform hover:scale-105 cursor-default`}
-                >
-                  <p className={`text-xs opacity-70 ${getTextColor(pct)}`}>{m.region}</p>
-                  <p className={`text-sm font-bold ${getTextColor(pct)}`}>{m.name}</p>
-                  <p className={`text-lg font-bold mono mt-1 ${getTextColor(pct)}`}>
-                    {m.last.toFixed(0)}
-                  </p>
-                  <p className={`text-sm font-medium ${getTextColor(pct)}`}>
-                    {isUp ? "+" : ""}{pct.toFixed(2)}%
-                  </p>
-                </div>
-              );
-            })}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-[--text-primary] flex items-center gap-2">
+              <Globe className="w-5 h-5 text-cyan-400" />
+              Marches Mondiaux
+              {globalLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />}
+              {globalLive && !globalLoading && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  LIVE
+                </span>
+              )}
+              {!globalLive && !globalLoading && globalData.length > 0 && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                  MOCK
+                </span>
+              )}
+            </h3>
+            <div className="flex items-center gap-3">
+              {globalCached && (
+                <span className="text-xs px-2 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  Cache
+                </span>
+              )}
+              {globalLastUpdated && (
+                <span className="text-xs text-[--text-muted] flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Derniere mise a jour: {globalLastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                </span>
+              )}
+            </div>
           </div>
+
+          {globalData.length === 0 && !globalLoading && (
+            <p className="text-sm text-[--text-muted] text-center py-4">
+              Aucune donnee disponible. Les marches sont peut-etre fermes.
+            </p>
+          )}
+
+          {Object.entries(globalByRegion).map(([region, entries]) => (
+            <div key={region} className="mb-4 last:mb-0">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2 text-[--text-muted]">{region}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {entries.map((m) => {
+                  const pct = m.changepct;
+                  const isUp = pct >= 0;
+                  const hasData = m.last > 0;
+                  return (
+                    <div
+                      key={m.symbol}
+                      className={`${hasData ? getColor(pct) : "bg-gray-600/20"} rounded-xl p-3 transition-transform hover:scale-105 cursor-default`}
+                    >
+                      <p className={`text-sm font-bold ${hasData ? getTextColor(pct) : "text-[--text-muted]"}`}>{m.name}</p>
+                      {hasData ? (
+                        <>
+                          <p className={`text-lg font-bold mono mt-1 ${getTextColor(pct)}`}>
+                            {m.last.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                          </p>
+                          <p className={`text-sm font-medium ${getTextColor(pct)}`}>
+                            {isUp ? "+" : ""}{pct.toFixed(2)}%
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-[--text-muted] mt-1">Indisponible</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <p className="text-[10px] text-[--text-muted] mt-3 text-center">
+            Donnees via Yahoo Finance — Rafraichissement auto toutes les 60s pendant heures de marche — Cache 10 min
+          </p>
         </div>
       )}
 
@@ -341,7 +453,7 @@ export default function SectorHeatmapPage() {
                     <div
                       key={stock.symbol}
                       className={`${getColor(pct)} rounded-xl p-3 flex flex-col justify-between transition-transform hover:scale-105 cursor-default`}
-                      style={{ minHeight: `${60 + stock.marketCap * 1.2}px` }}
+                      style={{ minHeight: `${60 + stock.marketCap * 0.15}px` }}
                     >
                       <div>
                         <p className={`text-sm font-bold ${getTextColor(pct)}`}>{stock.symbol}</p>
@@ -349,10 +461,10 @@ export default function SectorHeatmapPage() {
                       </div>
                       <div>
                         <p className={`text-lg font-bold mono ${getTextColor(pct)}`}>
-                          {q ? `$${q.last.toFixed(2)}` : "—"}
+                          {q ? `$${q.last.toFixed(2)}` : "\u2014"}
                         </p>
                         <p className={`text-sm font-medium ${getTextColor(pct)}`}>
-                          {q ? `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%` : "—"}
+                          {q ? `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%` : "\u2014"}
                         </p>
                       </div>
                     </div>
@@ -386,7 +498,7 @@ export default function SectorHeatmapPage() {
                       <p className="text-xs text-[--text-muted]">{stock.name}</p>
                     </td>
                     <td className="p-4 text-sm text-[--text-secondary]">{stock.sector}</td>
-                    <td className="p-4 text-right text-sm font-bold mono text-[--text-primary]">{q ? `$${q.last.toFixed(2)}` : "—"}</td>
+                    <td className="p-4 text-right text-sm font-bold mono text-[--text-primary]">{q ? `$${q.last.toFixed(2)}` : "\u2014"}</td>
                     <td className="p-4 text-right">
                       <span className={`text-sm font-medium px-2 py-1 rounded-lg ${pct >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
                         {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%

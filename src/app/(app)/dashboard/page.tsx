@@ -9,7 +9,7 @@ import { useToast } from "@/components/Toast";
 import { ForexSessions } from "@/components/ForexSessions";
 import { calculateRR, formatDate, computeStats } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent } from "lucide-react";
+import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -31,15 +31,15 @@ export default function DashboardPage() {
 
   const handleAddTrade = async (trade: Record<string, unknown>) => {
     const ok = await addTrade(trade);
-    if (ok) toast("Trade créé avec succès", "success");
-    else toast("Erreur lors de la création", "error");
+    if (ok) toast("Trade cree avec succes", "success");
+    else toast("Erreur lors de la creation", "error");
     return ok;
   };
 
   const handleUpdateTrade = async (trade: Record<string, unknown>) => {
     if (!editingTrade) return false;
     const ok = await updateTrade(editingTrade.id, trade);
-    if (ok) toast("Trade modifié avec succès", "success");
+    if (ok) toast("Trade modifie avec succes", "success");
     else toast("Erreur lors de la modification", "error");
     return ok;
   };
@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const handleDelete = async (id: string) => {
     if (confirm("Supprimer ce trade ?")) {
       const ok = await deleteTrade(id);
-      if (ok) toast("Trade supprimé", "success");
+      if (ok) toast("Trade supprime", "success");
       else toast("Erreur lors de la suppression", "error");
     }
   };
@@ -57,36 +57,73 @@ export default function DashboardPage() {
     if (!isNaN(value) && value >= 0) {
       const ok = await updateBalance(value);
       if (ok) {
-        toast("Balance mise à jour", "success");
+        toast("Balance mise a jour", "success");
         setShowBalanceModal(false);
       } else {
-        toast("Erreur lors de la mise à jour", "error");
+        toast("Erreur lors de la mise a jour", "error");
       }
     }
   };
 
+  // Fix #2: Validate goal input - prevent negative numbers and NaN
   const saveGoal = () => {
     const value = parseFloat(goalInput);
-    if (!isNaN(value) && value > 0) {
-      setMonthlyGoal(value);
-      localStorage.setItem("monthlyGoal", String(value));
-      setShowGoalModal(false);
-      toast("Objectif mensuel mis à jour", "success");
+    if (isNaN(value) || value <= 0) {
+      toast("Veuillez entrer un nombre positif valide", "error");
+      return;
+    }
+    setMonthlyGoal(value);
+    localStorage.setItem("monthlyGoal", String(value));
+    setShowGoalModal(false);
+    toast("Objectif mensuel mis a jour", "success");
+  };
+
+  const handleGoalInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Allow empty string for clearing, but prevent negative
+    if (val === "" || val === "-") {
+      setGoalInput(val === "-" ? "" : val);
+      return;
+    }
+    const num = parseFloat(val);
+    if (!isNaN(num) && num >= 0) {
+      setGoalInput(val);
     }
   };
 
-  // Monthly P&L
+  // Monthly P&L - Fix #4: handle edge cases
   const now = new Date();
   const monthlyTrades = trades.filter((t) => {
     const d = new Date(t.date);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
   const monthlyPnL = monthlyTrades.reduce((s, t) => s + t.result, 0);
-  const goalProgress = monthlyGoal > 0 ? Math.min((monthlyPnL / monthlyGoal) * 100, 100) : 0;
+  const goalProgress = monthlyGoal > 0 ? Math.min(Math.max((monthlyPnL / monthlyGoal) * 100, 0), 100) : 0;
 
+  // Fix #1: Show loading skeleton
   if (loading) return <DashboardSkeleton />;
 
   const recentTrades = trades.slice(0, 10);
+
+  // Fix #5: Quick Stats calculations
+  const monthlyWins = monthlyTrades.filter((t) => t.result > 0);
+  const monthlyWinRate = monthlyTrades.length > 0 ? (monthlyWins.length / monthlyTrades.length) * 100 : 0;
+  const monthlyBestTrade = monthlyTrades.length > 0 ? Math.max(...monthlyTrades.map((t) => t.result)) : 0;
+
+  // Current streak calculation
+  let currentStreak = 0;
+  let streakType: "win" | "loss" | "none" = "none";
+  const sortedForStreak = [...trades].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  for (const t of sortedForStreak) {
+    if (currentStreak === 0) {
+      streakType = t.result > 0 ? "win" : t.result < 0 ? "loss" : "none";
+      if (streakType !== "none") currentStreak = 1;
+    } else if ((streakType === "win" && t.result > 0) || (streakType === "loss" && t.result < 0)) {
+      currentStreak++;
+    } else {
+      break;
+    }
+  }
 
   return (
     <>
@@ -99,7 +136,53 @@ export default function DashboardPage() {
         }}
       />
 
-      {/* Objectif mensuel */}
+      {/* Fix #5: Quick Stats row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3 className="w-4 h-4 text-blue-400" />
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Trades ce mois</span>
+          </div>
+          <div className="text-2xl font-bold mono" style={{ color: "var(--text-primary)" }}>
+            {monthlyTrades.length}
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Crosshair className="w-4 h-4 text-cyan-400" />
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Win Rate</span>
+          </div>
+          <div className={`text-2xl font-bold mono ${monthlyWinRate >= 50 ? "text-emerald-400" : monthlyWinRate > 0 ? "text-amber-400" : ""}`}
+            style={monthlyWinRate === 0 ? { color: "var(--text-muted)" } : {}}>
+            {monthlyWinRate.toFixed(0)}%
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Trophy className="w-4 h-4 text-emerald-400" />
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Meilleur trade</span>
+          </div>
+          <div className={`text-2xl font-bold mono ${monthlyBestTrade > 0 ? "text-emerald-400" : ""}`}
+            style={monthlyBestTrade <= 0 ? { color: "var(--text-muted)" } : {}}>
+            {monthlyBestTrade > 0 ? `+${monthlyBestTrade.toFixed(0)}` : "---"}
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className={`w-4 h-4 ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-gray-400"}`} />
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Serie en cours</span>
+          </div>
+          <div className={`text-2xl font-bold mono ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : ""}`}
+            style={streakType === "none" ? { color: "var(--text-muted)" } : {}}>
+            {currentStreak > 0 ? `${currentStreak} ${streakType === "win" ? "W" : "L"}` : "---"}
+          </div>
+        </div>
+      </div>
+
+      {/* Objectif mensuel - Fix #4: handles edge cases */}
       <div className="glass rounded-2xl p-6 mb-6">
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
@@ -110,16 +193,16 @@ export default function DashboardPage() {
             onClick={() => { setGoalInput(String(monthlyGoal || "")); setShowGoalModal(true); }}
             className="text-sm text-blue-400 hover:text-blue-300 transition"
           >
-            {monthlyGoal > 0 ? "Modifier" : "Définir un objectif"}
+            {monthlyGoal > 0 ? "Modifier" : "Definir un objectif"}
           </button>
         </div>
         {monthlyGoal > 0 ? (
           <>
             <div className="flex justify-between text-sm mb-2">
               <span className={monthlyPnL >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                {monthlyPnL >= 0 ? "+" : ""}€{monthlyPnL.toFixed(2)}
+                {monthlyPnL >= 0 ? "+" : ""}{monthlyPnL.toFixed(2)}
               </span>
-              <span className="text-[--text-muted]">Objectif : €{monthlyGoal.toFixed(2)}</span>
+              <span className="text-[--text-muted]">Objectif : {monthlyGoal.toFixed(2)}</span>
             </div>
             <div className="h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
               <div
@@ -127,10 +210,14 @@ export default function DashboardPage() {
                 style={{ width: `${Math.max(goalProgress, 0)}%` }}
               />
             </div>
-            <p className="text-xs text-[--text-muted] mt-1">{goalProgress.toFixed(1)}% atteint — {monthlyTrades.length} trades ce mois</p>
+            <p className="text-xs text-[--text-muted] mt-1">
+              {monthlyTrades.length === 0
+                ? "Aucun trade ce mois-ci"
+                : `${goalProgress.toFixed(1)}% atteint -- ${monthlyTrades.length} trade${monthlyTrades.length > 1 ? "s" : ""} ce mois`}
+            </p>
           </>
         ) : (
-          <p className="text-[--text-muted] text-sm">Aucun objectif défini. Cliquez pour en définir un.</p>
+          <p className="text-[--text-muted] text-sm">Aucun objectif defini. Cliquez pour en definir un.</p>
         )}
       </div>
 
@@ -159,7 +246,7 @@ export default function DashboardPage() {
           }
           return (
             <div className="glass rounded-2xl p-4">
-              <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider mb-3">Série en cours</h4>
+              <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider mb-3">Serie en cours</h4>
               <div className="flex items-center gap-3 mb-3">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${streakType === "win" ? "bg-emerald-500/20" : streakType === "loss" ? "bg-rose-500/20" : "bg-gray-500/20"}`}>
                   <Flame className={`w-6 h-6 ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-[--text-muted]"}`} />
@@ -169,13 +256,13 @@ export default function DashboardPage() {
                     {currentStreak}
                   </div>
                   <div className="text-xs text-[--text-muted]">
-                    {streakType === "win" ? "victoires" : streakType === "loss" ? "défaites" : "—"}
+                    {streakType === "win" ? "victoires" : streakType === "loss" ? "defaites" : "---"}
                   </div>
                 </div>
               </div>
               <div className="space-y-1 text-xs">
-                <div className="flex justify-between"><span className="text-[--text-muted]">Meilleure série W</span><span className="text-emerald-400 font-bold">{bestWin}</span></div>
-                <div className="flex justify-between"><span className="text-[--text-muted]">Pire série L</span><span className="text-rose-400 font-bold">{bestLoss}</span></div>
+                <div className="flex justify-between"><span className="text-[--text-muted]">Meilleure serie W</span><span className="text-emerald-400 font-bold">{bestWin}</span></div>
+                <div className="flex justify-between"><span className="text-[--text-muted]">Pire serie L</span><span className="text-rose-400 font-bold">{bestLoss}</span></div>
               </div>
             </div>
           );
@@ -194,10 +281,10 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   {todayPnL >= 0 ? <TrendingUp className="w-5 h-5 text-emerald-400" /> : <TrendingDown className="w-5 h-5 text-rose-400" />}
                   <span className={`text-xl font-bold mono ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {todayPnL >= 0 ? "+" : ""}€{todayPnL.toFixed(2)}
+                    {todayPnL >= 0 ? "+" : ""}{todayPnL.toFixed(2)}
                   </span>
                 </div>
-                <div className="text-xs text-[--text-muted]">{todayTrades.length} trades — {todayWins} gagnants</div>
+                <div className="text-xs text-[--text-muted]">{todayTrades.length} trades -- {todayWins} gagnants</div>
                 <div className="text-xs text-[--text-muted]">
                   WR: {todayTrades.length > 0 ? ((todayWins / todayTrades.length) * 100).toFixed(0) : 0}%
                 </div>
@@ -236,8 +323,8 @@ export default function DashboardPage() {
               </div>
               {bestTrade && bestTrade.result > 0 ? (
                 <>
-                  <div className="text-2xl font-bold mono text-emerald-400">+{bestTrade.result.toFixed(2)}€</div>
-                  <div className="text-xs text-[--text-muted] mt-1">{bestTrade.asset} — {formatDate(bestTrade.date)}</div>
+                  <div className="text-2xl font-bold mono text-emerald-400">+{bestTrade.result.toFixed(2)}</div>
+                  <div className="text-xs text-[--text-muted] mt-1">{bestTrade.asset} -- {formatDate(bestTrade.date)}</div>
                 </>
               ) : (
                 <div className="text-sm text-[--text-muted]">Aucun trade gagnant</div>
@@ -254,8 +341,8 @@ export default function DashboardPage() {
               </div>
               {worstTrade && worstTrade.result < 0 ? (
                 <>
-                  <div className="text-2xl font-bold mono text-rose-400">{worstTrade.result.toFixed(2)}€</div>
-                  <div className="text-xs text-[--text-muted] mt-1">{worstTrade.asset} — {formatDate(worstTrade.date)}</div>
+                  <div className="text-2xl font-bold mono text-rose-400">{worstTrade.result.toFixed(2)}</div>
+                  <div className="text-xs text-[--text-muted] mt-1">{worstTrade.asset} -- {formatDate(worstTrade.date)}</div>
                 </>
               ) : (
                 <div className="text-sm text-[--text-muted]">Aucun trade perdant</div>
@@ -268,7 +355,7 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
                   <Activity className="w-5 h-5 text-cyan-400" />
                 </div>
-                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">Ratios Clés</h4>
+                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">Ratios Cles</h4>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
@@ -280,7 +367,7 @@ export default function DashboardPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-[--text-muted]">Profit Factor</span>
                   <span className={`text-lg font-bold mono ${stats.profitFactor >= 1.5 ? "text-emerald-400" : stats.profitFactor >= 1 ? "text-amber-400" : "text-rose-400"}`}>
-                    {stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)}
+                    {stats.profitFactor === Infinity ? "inf" : stats.profitFactor.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -298,7 +385,7 @@ export default function DashboardPage() {
                 {avgRisk.toFixed(2)}%
               </div>
               <div className="text-xs text-[--text-muted] mt-1">
-                {avgRisk <= 1 ? "Conservateur" : avgRisk <= 2 ? "Modéré" : "Agressif"} — moy. sur {trades.length} trades
+                {avgRisk <= 1 ? "Conservateur" : avgRisk <= 2 ? "Modere" : "Agressif"} -- moy. sur {trades.length} trades
               </div>
             </div>
           </div>
@@ -321,7 +408,7 @@ export default function DashboardPage() {
           <div className="glass rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <PieChart className="w-5 h-5 text-purple-400" />
-              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Répartition par Actif</h3>
+              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Repartition par Actif</h3>
             </div>
             <div className="space-y-3">
               {assetEntries.map(([asset, data]) => {
@@ -339,7 +426,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-[--text-muted]">WR {wr}%</span>
                         <span className={`font-bold mono text-sm ${data.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                          {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(2)}€
+                          {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -380,10 +467,10 @@ export default function DashboardPage() {
         const lwWR = lastWeekTrades.length > 0 ? (lwWins / lastWeekTrades.length) * 100 : 0;
 
         const metrics = [
-          { label: "P&L", current: twPnL, previous: lwPnL, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}€` },
+          { label: "P&L", current: twPnL, previous: lwPnL, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}` },
           { label: "Trades", current: thisWeekTrades.length, previous: lastWeekTrades.length, format: (v: number) => String(v) },
           { label: "Win Rate", current: twWR, previous: lwWR, format: (v: number) => `${v.toFixed(0)}%` },
-          { label: "Avg P&L", current: thisWeekTrades.length ? twPnL / thisWeekTrades.length : 0, previous: lastWeekTrades.length ? lwPnL / lastWeekTrades.length : 0, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}€` },
+          { label: "Avg P&L", current: thisWeekTrades.length ? twPnL / thisWeekTrades.length : 0, previous: lastWeekTrades.length ? lwPnL / lastWeekTrades.length : 0, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}` },
         ];
 
         return (
@@ -405,7 +492,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-1 mt-1">
                       {improved ? <ArrowUpRight className="w-3 h-3 text-emerald-400" /> : <ArrowDownRight className="w-3 h-3 text-rose-400" />}
                       <span className={`text-xs font-medium ${improved ? "text-emerald-400" : "text-rose-400"}`}>
-                        {Math.abs(delta).toFixed(0)}% vs sem. préc.
+                        {Math.abs(delta).toFixed(0)}% vs sem. prec.
                       </span>
                     </div>
                   </div>
@@ -418,18 +505,18 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Courbe d&apos;Équité</h3>
+          <h3 className="text-lg font-semibold mb-4">Courbe d&apos;Equite</h3>
           <EquityChart trades={trades} startingBalance={user?.balance ?? 25000} />
         </div>
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Répartition par Stratégie</h3>
+          <h3 className="text-lg font-semibold mb-4">Repartition par Strategie</h3>
           <StrategyChart trades={trades} />
         </div>
       </div>
 
       <div className="glass rounded-2xl p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold">Trades Récents</h3>
+          <h3 className="text-lg font-semibold">Trades Recents</h3>
           <div className="flex items-center gap-3">
             <Link
               href="/journal"
@@ -444,30 +531,45 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-[--text-muted] text-sm border-b border-[--border]">
-                <th className="pb-3 font-medium">Date</th>
-                <th className="pb-3 font-medium">Actif</th>
-                <th className="pb-3 font-medium">Type</th>
-                <th className="pb-3 font-medium">Entrée</th>
-                <th className="pb-3 font-medium">Sortie</th>
-                <th className="pb-3 font-medium">Screenshots</th>
-                <th className="pb-3 font-medium">R:R</th>
-                <th className="pb-3 font-medium">P&L</th>
-                <th className="pb-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
-              {recentTrades.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="py-8 text-center text-[--text-muted]">
-                    Aucun trade enregistré. Cliquez sur &quot;Nouveau Trade&quot; pour commencer.
-                  </td>
+
+        {/* Fix #3: Better empty state */}
+        {trades.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/15 flex items-center justify-center mx-auto mb-4">
+              <TrendingUp className="w-8 h-8 text-blue-400" />
+            </div>
+            <h4 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
+              Commencez votre journal de trading
+            </h4>
+            <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: "var(--text-muted)" }}>
+              Enregistrez votre premier trade pour commencer a suivre vos performances et ameliorer votre discipline.
+            </p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="btn-primary px-6 py-3 rounded-xl text-white font-medium inline-flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Ajouter mon premier trade
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-[--text-muted] text-sm border-b border-[--border]">
+                  <th className="pb-3 font-medium">Date</th>
+                  <th className="pb-3 font-medium">Actif</th>
+                  <th className="pb-3 font-medium">Type</th>
+                  <th className="pb-3 font-medium">Entree</th>
+                  <th className="pb-3 font-medium">Sortie</th>
+                  <th className="pb-3 font-medium">Screenshots</th>
+                  <th className="pb-3 font-medium">R:R</th>
+                  <th className="pb-3 font-medium">P&L</th>
+                  <th className="pb-3 font-medium">Actions</th>
                 </tr>
-              ) : (
-                recentTrades.map((trade) => {
+              </thead>
+              <tbody className="text-sm">
+                {recentTrades.map((trade) => {
                   const isWin = trade.result > 0;
                   const rr = calculateRR(trade.entry, trade.sl, trade.tp);
                   return (
@@ -493,7 +595,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="py-4 mono text-[--text-muted]">1:{rr}</td>
                       <td className={`py-4 mono font-bold ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
-                        {isWin ? "+" : ""}{trade.result}€
+                        {isWin ? "+" : ""}{trade.result}
                       </td>
                       <td className="py-4 flex gap-2">
                         <button onClick={() => { setEditingTrade(trade); }} className="text-blue-400 hover:text-blue-300">
@@ -505,11 +607,11 @@ export default function DashboardPage() {
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {showForm && <TradeForm onSubmit={handleAddTrade} onClose={() => setShowForm(false)} />}
@@ -543,22 +645,26 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Goal Modal */}
+      {/* Goal Modal - Fix #2: validates input */}
       {showGoalModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass rounded-2xl p-6 w-full max-w-sm">
             <h3 className="text-lg font-bold mb-4">Objectif Mensuel</h3>
-            <p className="text-sm text-[--text-muted] mb-4">Définissez votre objectif de profit mensuel en euros.</p>
+            <p className="text-sm text-[--text-muted] mb-4">Definissez votre objectif de profit mensuel en euros.</p>
             <input
               type="number"
               step="0.01"
+              min="0"
               value={goalInput}
-              onChange={(e) => setGoalInput(e.target.value)}
+              onChange={handleGoalInputChange}
               placeholder="Ex: 500"
               className="modal-input mb-4"
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && saveGoal()}
             />
+            {goalInput !== "" && (isNaN(parseFloat(goalInput)) || parseFloat(goalInput) <= 0) && (
+              <p className="text-xs text-rose-400 mb-3">Veuillez entrer un nombre positif valide.</p>
+            )}
             <div className="flex gap-3">
               <button onClick={() => setShowGoalModal(false)} className="flex-1 py-2 rounded-lg border border-[--border] hover:bg-[--bg-hover] transition">
                 Annuler
