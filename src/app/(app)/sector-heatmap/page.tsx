@@ -173,7 +173,7 @@ export default function SectorHeatmapPage() {
         throw new Error("API error");
       }
     } catch {
-      setError("Impossible de charger les donnees. Reessayez.");
+      setError("Impossible de charger les données. Réessayez.");
       if (Object.keys(quotes).length === 0) {
         setUsingFallback(true);
       }
@@ -256,7 +256,7 @@ export default function SectorHeatmapPage() {
             <span className="text-sm font-medium">{error}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchData} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Reessayer</button>
+            <button onClick={fetchData} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Réessayer</button>
             <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
           </div>
         </div>
@@ -266,7 +266,7 @@ export default function SectorHeatmapPage() {
       {usingFallback && !error && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          <span className="text-sm">Donnees de demonstration — API indisponible</span>
+          <span className="text-sm">Données de démonstration — API indisponible</span>
         </div>
       )}
 
@@ -275,11 +275,11 @@ export default function SectorHeatmapPage() {
         <div>
           <h1 className="text-2xl font-bold text-[--text-primary]">Heatmap Sectorielle</h1>
           <p className="text-sm text-[--text-secondary]">
-            Performance des secteurs en temps reel
+            Performance des secteurs en temps réel
             {lastUpdated && (
               <span className="ml-2 text-[--text-muted]">
                 <Clock className="w-3 h-3 inline mr-1" />
-                Derniere mise a jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                Dernière mise à jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
             {isMarketHours() && (
@@ -323,7 +323,7 @@ export default function SectorHeatmapPage() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-[--text-primary] flex items-center gap-2">
               <Globe className="w-5 h-5 text-cyan-400" />
-              Marches Mondiaux
+              Marchés Mondiaux
               {globalLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />}
               {globalLive && !globalLoading && (
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 flex items-center gap-1">
@@ -346,7 +346,7 @@ export default function SectorHeatmapPage() {
               {globalLastUpdated && (
                 <span className="text-xs text-[--text-muted] flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  Derniere mise a jour: {globalLastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                  Dernière mise à jour: {globalLastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                 </span>
               )}
             </div>
@@ -354,7 +354,7 @@ export default function SectorHeatmapPage() {
 
           {globalData.length === 0 && !globalLoading && (
             <p className="text-sm text-[--text-muted] text-center py-4">
-              Aucune donnee disponible. Les marches sont peut-etre fermes.
+              Aucune donnée disponible. Les marchés sont peut-être fermés.
             </p>
           )}
 
@@ -392,7 +392,7 @@ export default function SectorHeatmapPage() {
           ))}
 
           <p className="text-[10px] text-[--text-muted] mt-3 text-center">
-            Donnees via Yahoo Finance — Rafraichissement auto toutes les 60s pendant heures de marche — Cache 10 min
+            Données via Yahoo Finance — Rafraîchissement auto toutes les 60s pendant heures de marché — Cache 10 min
           </p>
         </div>
       )}

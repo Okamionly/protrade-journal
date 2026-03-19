@@ -46,11 +46,11 @@ function classifyScore(v: number): {
   bg: string;
   border: string;
 } {
-  if (v <= 24) return { key: "extreme-fear", label: "Peur Extreme", color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30" };
+  if (v <= 24) return { key: "extreme-fear", label: "Peur Extrême", color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30" };
   if (v <= 44) return { key: "fear", label: "Peur", color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30" };
   if (v <= 55) return { key: "neutral", label: "Neutre", color: "text-[--text-secondary]", bg: "bg-gray-500/10", border: "border-gray-500/30" };
-  if (v <= 74) return { key: "greed", label: "Avidite", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" };
-  return { key: "extreme-greed", label: "Avidite Extreme", color: "text-emerald-300", bg: "bg-emerald-500/15", border: "border-emerald-400/30" };
+  if (v <= 74) return { key: "greed", label: "Avidité", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" };
+  return { key: "extreme-greed", label: "Avidité Extrême", color: "text-emerald-300", bg: "bg-emerald-500/15", border: "border-emerald-400/30" };
 }
 
 type RangeOption = 30 | 90 | 365;
@@ -116,7 +116,7 @@ function ManualSentimentGauge() {
         <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Sentiment Manuel</h3>
       </div>
       <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
-        L&apos;API Fear &amp; Greed est indisponible. Utilisez ce curseur pour enregistrer votre propre evaluation du sentiment.
+        L&apos;API Fear &amp; Greed est indisponible. Utilisez ce curseur pour enregistrer votre propre évaluation du sentiment.
       </p>
       <GaugeChart value={manualValue} />
       <p className={`text-lg font-bold mt-2 ${cls.color}`}>{cls.label}</p>
@@ -129,8 +129,8 @@ function ManualSentimentGauge() {
         className="w-full mt-4 accent-cyan-500"
       />
       <div className="flex justify-between text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-        <span>Peur Extreme</span>
-        <span>Avidite Extreme</span>
+        <span>Peur Extrême</span>
+        <span>Avidité Extrême</span>
       </div>
     </div>
   );
@@ -172,8 +172,8 @@ function MarketPulseCards({
   if (vix !== null) {
     if (vix < 15) { volLabel = "Faible"; volColor = "text-emerald-400"; volBg = "bg-emerald-500/10"; }
     else if (vix < 20) { volLabel = "Normal"; volColor = "text-cyan-400"; volBg = "bg-cyan-500/10"; }
-    else if (vix < 25) { volLabel = "Eleve"; volColor = "text-amber-400"; volBg = "bg-amber-500/10"; }
-    else if (vix < 30) { volLabel = "Tres Eleve"; volColor = "text-orange-400"; volBg = "bg-orange-500/10"; }
+    else if (vix < 25) { volLabel = "Élevé"; volColor = "text-amber-400"; volBg = "bg-amber-500/10"; }
+    else if (vix < 30) { volLabel = "Très Élevé"; volColor = "text-orange-400"; volBg = "bg-orange-500/10"; }
     else { volLabel = "Panique"; volColor = "text-rose-400"; volBg = "bg-rose-500/10"; }
   } else {
     volLabel = "N/A"; volColor = "text-gray-400"; volBg = "bg-gray-500/10";
@@ -205,7 +205,7 @@ function MarketPulseCards({
       iconColor: trendColor,
       label: "Tendance",
       value: trendLabel,
-      sub: spyChange !== null ? `SPY ${spyChange >= 0 ? "+" : ""}${spyChange.toFixed(2)}%` : "Pas de donnees",
+      sub: spyChange !== null ? `SPY ${spyChange >= 0 ? "+" : ""}${spyChange.toFixed(2)}%` : "Pas de données",
       bg: trendBg,
       border: trendColor.replace("text-", "border-").replace("400", "500/30"),
       valueColor: trendColor,
@@ -213,7 +213,7 @@ function MarketPulseCards({
     {
       icon: <Eye className="w-5 h-5" />,
       iconColor: volColor,
-      label: "Regime Volatilite",
+      label: "Régime Volatilité",
       value: volLabel,
       sub: vix !== null ? `VIX: ${vix.toFixed(1)}` : "",
       bg: volBg,
@@ -260,17 +260,17 @@ function MarketPulseSection({
   const riskFactors: { text: string; severity: "danger" | "warning" | "info" | "safe" }[] = [];
 
   if (vixValue !== null) {
-    if (vixValue >= 30) riskFactors.push({ text: `VIX extremement eleve (${vixValue.toFixed(1)}) — volatilite de panique`, severity: "danger" });
-    else if (vixValue >= 25) riskFactors.push({ text: `VIX eleve (${vixValue.toFixed(1)}) — stress du marche`, severity: "danger" });
+    if (vixValue >= 30) riskFactors.push({ text: `VIX extrêmement élevé (${vixValue.toFixed(1)}) — volatilité de panique`, severity: "danger" });
+    else if (vixValue >= 25) riskFactors.push({ text: `VIX élevé (${vixValue.toFixed(1)}) — stress du marché`, severity: "danger" });
     else if (vixValue >= 20) riskFactors.push({ text: `VIX au-dessus de la moyenne (${vixValue.toFixed(1)}) — prudence`, severity: "warning" });
-    else if (vixValue < 13) riskFactors.push({ text: `VIX tres bas (${vixValue.toFixed(1)}) — complaisance possible`, severity: "warning" });
-    else riskFactors.push({ text: `VIX normal (${vixValue.toFixed(1)}) — volatilite contenue`, severity: "safe" });
+    else if (vixValue < 13) riskFactors.push({ text: `VIX très bas (${vixValue.toFixed(1)}) — complaisance possible`, severity: "warning" });
+    else riskFactors.push({ text: `VIX normal (${vixValue.toFixed(1)}) — volatilité contenue`, severity: "safe" });
   }
 
-  if (fngValue <= 20) riskFactors.push({ text: "Sentiment crypto en peur extreme — possibilite de capitulation", severity: "danger" });
-  else if (fngValue <= 35) riskFactors.push({ text: "Sentiment crypto negatif — marche sous pression", severity: "warning" });
+  if (fngValue <= 20) riskFactors.push({ text: "Sentiment crypto en peur extrême — possibilité de capitulation", severity: "danger" });
+  else if (fngValue <= 35) riskFactors.push({ text: "Sentiment crypto négatif — marché sous pression", severity: "warning" });
   else if (fngValue >= 80) riskFactors.push({ text: "Sentiment crypto en euphorie — risque de correction", severity: "warning" });
-  else if (fngValue >= 65) riskFactors.push({ text: "Sentiment crypto positif — tendance haussiere", severity: "safe" });
+  else if (fngValue >= 65) riskFactors.push({ text: "Sentiment crypto positif — tendance haussière", severity: "safe" });
   else riskFactors.push({ text: "Sentiment crypto neutre — pas de signal fort", severity: "info" });
 
   // Signal
@@ -303,7 +303,7 @@ function MarketPulseSection({
     <div className="metric-card rounded-2xl p-6">
       <div className="flex items-center gap-2 mb-5">
         <Heart className="w-5 h-5 text-rose-400" />
-        <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Pouls du Marche</h3>
+        <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Pouls du Marché</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -371,13 +371,13 @@ export default function SentimentPage() {
           setLastUpdated(new Date());
         } else {
           setData([]);
-          setError("Aucune donnee de sentiment disponible.");
+          setError("Aucune donnée de sentiment disponible.");
         }
       } else {
-        setError("Impossible de charger les donnees de sentiment. Reessayez.");
+        setError("Impossible de charger les données de sentiment. Réessayez.");
       }
     } catch {
-      setError("Impossible de charger les donnees de sentiment. Verifiez votre connexion.");
+      setError("Impossible de charger les données de sentiment. Vérifiez votre connexion.");
     } finally {
       setLoading(false);
     }
@@ -500,12 +500,12 @@ export default function SentimentPage() {
     if (vixValue !== null && vixValue > 0) {
       let vixLevel: MarketIndicator["level"] = "neutral";
       let vixColor = "text-gray-400";
-      let vixDesc = "Volatilite normale";
-      if (vixValue < 15) { vixLevel = "bullish"; vixColor = "text-emerald-400"; vixDesc = "Tres faible volatilite — marche complaisant"; }
-      else if (vixValue < 20) { vixLevel = "bullish"; vixColor = "text-emerald-400"; vixDesc = "Volatilite moderee — marche calme"; }
-      else if (vixValue < 25) { vixLevel = "neutral"; vixColor = "text-amber-400"; vixDesc = "Volatilite elevee — prudence"; }
-      else if (vixValue < 30) { vixLevel = "bearish"; vixColor = "text-orange-400"; vixDesc = "Volatilite forte — stress du marche"; }
-      else { vixLevel = "bearish"; vixColor = "text-rose-400"; vixDesc = "Volatilite extreme — panique"; }
+      let vixDesc = "Volatilité normale";
+      if (vixValue < 15) { vixLevel = "bullish"; vixColor = "text-emerald-400"; vixDesc = "Très faible volatilité — marché complaisant"; }
+      else if (vixValue < 20) { vixLevel = "bullish"; vixColor = "text-emerald-400"; vixDesc = "Volatilité modérée — marché calme"; }
+      else if (vixValue < 25) { vixLevel = "neutral"; vixColor = "text-amber-400"; vixDesc = "Volatilité élevée — prudence"; }
+      else if (vixValue < 30) { vixLevel = "bearish"; vixColor = "text-orange-400"; vixDesc = "Volatilité forte — stress du marché"; }
+      else { vixLevel = "bearish"; vixColor = "text-rose-400"; vixDesc = "Volatilité extrême — panique"; }
       indicators.push({
         label: `VIX: ${vixValue.toFixed(2)}`,
         value: `${vixData!.vix.changePct >= 0 ? "+" : ""}${vixData!.vix.changePct.toFixed(2)}%`,
@@ -525,9 +525,9 @@ export default function SentimentPage() {
     let pcrLevel: MarketIndicator["level"] = "neutral";
     let pcrColor = "text-gray-400";
     let pcrDesc = "Ratio Put/Call neutre";
-    if (pcr < 0.7) { pcrLevel = "bullish"; pcrColor = "text-emerald-400"; pcrDesc = "Sentiment haussier — plus de Calls que de Puts"; }
-    else if (pcr < 0.95) { pcrLevel = "neutral"; pcrColor = "text-amber-400"; pcrDesc = "Ratio equilibre — sentiment neutre"; }
-    else if (pcr < 1.1) { pcrLevel = "bearish"; pcrColor = "text-orange-400"; pcrDesc = "Sentiment prudent — legere dominance des Puts"; }
+    if (pcr < 0.7) { pcrLevel = "bullish"; pcrColor = "text-emerald-400"; pcrDesc = "Sentiment haussier — plus de calls que de puts"; }
+    else if (pcr < 0.95) { pcrLevel = "neutral"; pcrColor = "text-amber-400"; pcrDesc = "Ratio équilibré — sentiment neutre"; }
+    else if (pcr < 1.1) { pcrLevel = "bearish"; pcrColor = "text-orange-400"; pcrDesc = "Sentiment prudent — légère dominance des Puts"; }
     else { pcrLevel = "bearish"; pcrColor = "text-rose-400"; pcrDesc = "Sentiment baissier — forte dominance des Puts"; }
     indicators.push({
       label: `Put/Call: ${pcr.toFixed(2)}`,
@@ -563,10 +563,10 @@ export default function SentimentPage() {
     let breadthLevel: MarketIndicator["level"] = "neutral";
     let breadthColor = "text-gray-400";
     let breadthDesc = "Breadth neutre";
-    if (advPct > 65) { breadthLevel = "bullish"; breadthColor = "text-emerald-400"; breadthDesc = "Large participation haussiere"; }
-    else if (advPct > 50) { breadthLevel = "neutral"; breadthColor = "text-amber-400"; breadthDesc = "Participation moderee"; }
+    if (advPct > 65) { breadthLevel = "bullish"; breadthColor = "text-emerald-400"; breadthDesc = "Large participation haussière"; }
+    else if (advPct > 50) { breadthLevel = "neutral"; breadthColor = "text-amber-400"; breadthDesc = "Participation modérée"; }
     else if (advPct > 40) { breadthLevel = "neutral"; breadthColor = "text-amber-400"; breadthDesc = "Participation faible"; }
-    else { breadthLevel = "bearish"; breadthColor = "text-rose-400"; breadthDesc = "Majorite de titres en baisse"; }
+    else { breadthLevel = "bearish"; breadthColor = "text-rose-400"; breadthDesc = "Majorité de titres en baisse"; }
     indicators.push({
       label: `Breadth: ${advPct}%`,
       value: advPct > 50 ? `${advPct}% hausse` : `${100 - advPct}% baisse`,
@@ -581,11 +581,11 @@ export default function SentimentPage() {
 
       let bbLevel: MarketIndicator["level"] = "neutral";
       let bbColor = "text-gray-400";
-      let bbDesc = "Tendance neutre par rapport a la semaine";
-      if (ratio > 1.15) { bbLevel = "bullish"; bbColor = "text-emerald-400"; bbDesc = "Forte amelioration du sentiment vs 7j"; }
-      else if (ratio > 1.02) { bbLevel = "bullish"; bbColor = "text-emerald-400"; bbDesc = "Leger biais haussier vs 7j"; }
-      else if (ratio < 0.85) { bbLevel = "bearish"; bbColor = "text-rose-400"; bbDesc = "Forte degradation du sentiment vs 7j"; }
-      else if (ratio < 0.98) { bbLevel = "bearish"; bbColor = "text-orange-400"; bbDesc = "Leger biais baissier vs 7j"; }
+      let bbDesc = "Tendance neutre par rapport à la semaine";
+      if (ratio > 1.15) { bbLevel = "bullish"; bbColor = "text-emerald-400"; bbDesc = "Forte amélioration du sentiment vs 7j"; }
+      else if (ratio > 1.02) { bbLevel = "bullish"; bbColor = "text-emerald-400"; bbDesc = "Léger biais haussier vs 7j"; }
+      else if (ratio < 0.85) { bbLevel = "bearish"; bbColor = "text-rose-400"; bbDesc = "Forte dégradation du sentiment vs 7j"; }
+      else if (ratio < 0.98) { bbLevel = "bearish"; bbColor = "text-orange-400"; bbDesc = "Léger biais baissier vs 7j"; }
       else { bbDesc = "Sentiment stable par rapport aux 7 derniers jours"; }
 
       indicators.push({
@@ -612,7 +612,7 @@ export default function SentimentPage() {
             <span className="text-sm font-medium">{error}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => load(range)} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Reessayer</button>
+            <button onClick={() => load(range)} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Réessayer</button>
             <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
           </div>
         </div>
@@ -620,12 +620,12 @@ export default function SentimentPage() {
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Sentiment du Marche</h1>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Sentiment du Marché</h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
             Fear &amp; Greed Index — Crypto Market
             {lastUpdated && (
               <span className="ml-2" style={{ color: "var(--text-muted)" }}>
-                — Derniere mise a jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                — Dernière mise à jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </p>
@@ -643,7 +643,7 @@ export default function SentimentPage() {
               </button>
             ))}
           </div>
-          <button onClick={() => { load(range); loadVix(); loadLivePrices(); }} className="p-2 rounded-lg transition" style={{ color: "var(--text-muted)" }} title="Rafraichir">
+          <button onClick={() => { load(range); loadVix(); loadLivePrices(); }} className="p-2 rounded-lg transition" style={{ color: "var(--text-muted)" }} title="Rafraîchir">
             <RefreshCw className={`w-5 h-5 ${loading || vixLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
