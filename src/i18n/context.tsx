@@ -18,6 +18,51 @@ const dictionaries: Record<Locale, LbmaTranslations> = {
   de: de as LbmaTranslations,
 };
 
+const SUPPORTED_LOCALES: Locale[] = ["fr", "en", "ar", "es", "de"];
+
+/**
+ * Detect locale from browser navigator.language(s).
+ * Maps language codes like "fr-FR" -> "fr", "en-US" -> "en", "ar-SA" -> "ar", etc.
+ * Returns "en" as fallback.
+ */
+function detectBrowserLocale(): Locale {
+  try {
+    const languages = navigator.languages?.length
+      ? navigator.languages
+      : [navigator.language];
+
+    for (const lang of languages) {
+      // Extract primary language tag (before the hyphen)
+      const primary = lang.split("-")[0].toLowerCase() as Locale;
+      if (SUPPORTED_LOCALES.includes(primary)) {
+        return primary;
+      }
+    }
+  } catch {
+    // SSR or navigator not available
+  }
+  return "en";
+}
+
+/**
+ * Try geo-based detection as a secondary signal via /api/geo.
+ * Called only once on first visit when no stored locale exists.
+ */
+async function detectGeoLocale(): Promise<Locale | null> {
+  try {
+    const res = await fetch("/api/geo", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.locale && SUPPORTED_LOCALES.includes(data.locale)) {
+        return data.locale as Locale;
+      }
+    }
+  } catch {
+    // Network error or API unavailable — ignore
+  }
+  return null;
+}
+
 interface LocaleContextValue {
   locale: Locale;
   setLocale: (l: Locale) => void;
@@ -36,9 +81,29 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Locale | null;
     if (stored && dictionaries[stored]) {
+      // User already has a saved preference — use it
       setLocaleState(stored);
+    } else {
+      // First visit: auto-detect language
+      const browserLocale = detectBrowserLocale();
+      setLocaleState(browserLocale);
+      localStorage.setItem(STORAGE_KEY, browserLocale);
+
+      // Also try geo-based detection as a refinement (async)
+      detectGeoLocale().then((geoLocale) => {
+        if (geoLocale) {
+          // Geo detection gives a more accurate result — update if different
+          // Only override if browser detection was the generic "en" fallback
+          const currentStored = localStorage.getItem(STORAGE_KEY) as Locale;
+          if (currentStored === "en" && geoLocale !== "en") {
+            setLocaleState(geoLocale);
+            localStorage.setItem(STORAGE_KEY, geoLocale);
+          }
+        }
+      });
     }
-    // Sync when Header changes locale
+
+    // Sync when Header/Sidebar changes locale
     const handleStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue && dictionaries[e.newValue as Locale]) {
         setLocaleState(e.newValue as Locale);

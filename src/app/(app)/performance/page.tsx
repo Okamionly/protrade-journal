@@ -3,6 +3,7 @@
 import { useTrades } from "@/hooks/useTrades";
 import { calculateRR } from "@/lib/utils";
 import { Trophy, TrendingUp, TrendingDown, Target, Zap, Shield, BarChart3, Clock, Activity, Waves, Users } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 function ScoreGauge({ score, label }: { score: number; label: string }) {
   const getColor = (s: number) => {
@@ -37,12 +38,13 @@ function getBadge(score: number): { label: string; color: string; bg: string } {
   if (score >= 75) return { label: "Gold", color: "text-yellow-400", bg: "bg-yellow-500/15 border-yellow-500/30" };
   if (score >= 60) return { label: "Silver", color: "text-[--text-secondary]", bg: "bg-gray-500/15 border-gray-400/30" };
   if (score >= 40) return { label: "Bronze", color: "text-orange-400", bg: "bg-orange-500/15 border-orange-500/30" };
-  return { label: "Débutant", color: "text-[--text-muted]", bg: "bg-gray-600/15 border-gray-600/30" };
+  return { label: "beginner", color: "text-[--text-muted]", bg: "bg-gray-600/15 border-gray-600/30" };
 }
 
 /* ─── SVG Line Chart: Score trend over last N trades ─── */
 function ScoreTrendChart({ dataPoints }: { dataPoints: number[] }) {
-  if (dataPoints.length < 2) return <p className="text-sm text-[--text-muted] text-center py-8">Pas assez de trades pour afficher la tendance.</p>;
+  const { t } = useTranslation();
+  if (dataPoints.length < 2) return <p className="text-sm text-[--text-muted] text-center py-8">{t("notEnoughTrend")}</p>;
   const W = 600, H = 200, PX = 40, PY = 20;
   const min = Math.min(...dataPoints), max = Math.max(...dataPoints);
   const range = max - min || 1;
@@ -96,7 +98,8 @@ function ScoreTrendChart({ dataPoints }: { dataPoints: number[] }) {
 
 /* ─── SVG Area Chart: Underwater (drawdown) plot ─── */
 function UnderwaterChart({ drawdowns }: { drawdowns: number[] }) {
-  if (drawdowns.length < 2) return <p className="text-sm text-[--text-muted] text-center py-8">Pas assez de trades pour afficher le drawdown.</p>;
+  const { t } = useTranslation();
+  if (drawdowns.length < 2) return <p className="text-sm text-[--text-muted] text-center py-8">{t("notEnoughDrawdown")}</p>;
   const W = 600, H = 160, PX = 40, PY = 16;
   const maxDD = Math.max(...drawdowns.map(Math.abs)) || 1;
   const pts = drawdowns.map((v, i) => ({
@@ -142,6 +145,7 @@ function UnderwaterChart({ drawdowns }: { drawdowns: number[] }) {
 function BenchmarkBar({ label, userValue, medianValue, unit, higherIsBetter = true }: {
   label: string; userValue: number; medianValue: number; unit: string; higherIsBetter?: boolean;
 }) {
+  const { t } = useTranslation();
   const maxVal = Math.max(userValue, medianValue, 0.01) * 1.2;
   const userPct = Math.max(0, Math.min((userValue / maxVal) * 100, 100));
   const medianPct = Math.max(0, Math.min((medianValue / maxVal) * 100, 100));
@@ -163,8 +167,8 @@ function BenchmarkBar({ label, userValue, medianValue, unit, higherIsBetter = tr
           style={{ width: `${userPct}%` }} />
       </div>
       <div className="flex justify-between text-[9px] text-[--text-muted]">
-        <span>Toi: {userValue.toFixed(unit === "%" ? 1 : 2)}{unit}</span>
-        <span>Median: {medianValue.toFixed(unit === "%" ? 1 : 2)}{unit}</span>
+        <span>{t("benchmarkYou")}: {userValue.toFixed(unit === "%" ? 1 : 2)}{unit}</span>
+        <span>{t("benchmarkMedian")}: {medianValue.toFixed(unit === "%" ? 1 : 2)}{unit}</span>
       </div>
     </div>
   );
@@ -172,8 +176,9 @@ function BenchmarkBar({ label, userValue, medianValue, unit, higherIsBetter = tr
 
 export default function PerformancePage() {
   const { trades, loading } = useTrades();
+  const { t } = useTranslation();
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-[--text-secondary]">Chargement...</div>;
+  if (loading) return <div className="flex items-center justify-center h-64 text-[--text-secondary]">{t("loading")}</div>;
 
   const wins = trades.filter((t) => t.result > 0);
   const losses = trades.filter((t) => t.result < 0);
@@ -286,9 +291,9 @@ export default function PerformancePage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Trophy className="w-6 h-6 text-amber-400" />
-          Score de Performance
+          {t("performanceScore")}
         </h1>
-        <p className="text-sm text-[--text-secondary] mt-1">Analyse complète de ta performance de trading</p>
+        <p className="text-sm text-[--text-secondary] mt-1">{t("completeAnalysis")}</p>
       </div>
 
       {/* Main score */}
@@ -306,9 +311,9 @@ export default function PerformancePage() {
           </div>
         </div>
         <span className={`px-4 py-2 rounded-full text-sm font-bold border ${badge.bg} ${badge.color}`}>
-          {badge.label}
+          {badge.label === "beginner" ? t("beginner") : badge.label}
         </span>
-        {trades.length < 5 && <p className="text-xs text-[--text-muted] mt-3">Minimum 5 trades requis pour le score</p>}
+        {trades.length < 5 && <p className="text-xs text-[--text-muted] mt-3">{t("min5Trades")}</p>}
       </div>
 
       {/* Sub-scores */}
@@ -342,13 +347,13 @@ export default function PerformancePage() {
 
       {/* Current streak */}
       <div className="glass rounded-2xl p-6">
-        <h3 className="font-semibold mb-3">Série actuelle</h3>
+        <h3 className="font-semibold mb-3">{t("currentStreakLabel")}</h3>
         <div className="flex items-center gap-3">
           <span className={`text-3xl font-bold mono ${currentStreak > 0 ? "text-emerald-400" : currentStreak < 0 ? "text-rose-400" : "text-[--text-secondary]"}`}>
             {Math.abs(currentStreak)}
           </span>
           <span className="text-sm text-[--text-secondary]">
-            {currentStreak > 0 ? "trades gagnants d'affilée" : currentStreak < 0 ? "trades perdants d'affilée" : "—"}
+            {currentStreak > 0 ? t("winningTradesInRow") : currentStreak < 0 ? t("losingTradesInRow") : "—"}
           </span>
         </div>
       </div>
@@ -357,32 +362,32 @@ export default function PerformancePage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="w-5 h-5 text-cyan-400" />
-          <h3 className="font-semibold">Facteur de Récupération</h3>
+          <h3 className="font-semibold">{t("recoveryFactorLabel")}</h3>
         </div>
         <div className="flex items-center gap-6">
           <div className="flex flex-col items-center">
             <span className={`text-4xl font-bold mono ${recoveryFactor >= 3 ? "text-emerald-400" : recoveryFactor >= 1.5 ? "text-amber-400" : "text-rose-400"}`}>
               {recoveryFactor === Infinity ? "∞" : recoveryFactor.toFixed(2)}
             </span>
-            <span className="text-xs text-[--text-muted] mt-1">Profit total / Drawdown max</span>
+            <span className="text-xs text-[--text-muted] mt-1">{t("totalProfitLabel")} / {t("maxDrawdownLabel")}</span>
           </div>
           <div className="flex-1 space-y-2 text-xs text-[--text-secondary]">
             <div className="flex justify-between">
-              <span>Profit total</span>
+              <span>{t("totalProfitLabel")}</span>
               <span className={`mono font-semibold ${totalProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                 {totalProfit >= 0 ? "+" : ""}€{totalProfit.toFixed(2)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Drawdown max</span>
+              <span>{t("maxDrawdownLabel")}</span>
               <span className="mono font-semibold text-rose-400">€{maxDD.toFixed(2)}</span>
             </div>
             <div className="mt-2 text-[10px] text-[--text-muted]">
               {recoveryFactor >= 3
-                ? "Excellent — forte capacité de récupération"
+                ? t("excellentRecovery")
                 : recoveryFactor >= 1.5
-                ? "Correct — marge d'amélioration possible"
-                : "Faible — le drawdown est important par rapport aux gains"}
+                ? t("correctRecovery")
+                : t("weakRecovery")}
             </div>
           </div>
         </div>
@@ -392,7 +397,7 @@ export default function PerformancePage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Activity className="w-5 h-5 text-cyan-400" />
-          <h3 className="font-semibold">Évolution du Score (30 derniers trades)</h3>
+          <h3 className="font-semibold">{t("scoreTrend")}</h3>
         </div>
         <ScoreTrendChart dataPoints={scoreTrendData} />
       </div>
@@ -401,10 +406,10 @@ export default function PerformancePage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Waves className="w-5 h-5 text-rose-400" />
-          <h3 className="font-semibold">Drawdown sous le High Watermark</h3>
+          <h3 className="font-semibold">{t("drawdownHWM")}</h3>
         </div>
         <p className="text-xs text-[--text-muted] mb-3">
-          Périodes où le capital est en dessous de son plus haut historique. Plus le creux est profond, plus la récupération prend du temps.
+          {t("drawdownDesc")}
         </p>
         <UnderwaterChart drawdowns={underwaterData} />
       </div>
@@ -413,10 +418,10 @@ export default function PerformancePage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <Users className="w-5 h-5 text-amber-400" />
-          <h3 className="font-semibold">Comparaison avec le Trader Médian</h3>
+          <h3 className="font-semibold">{t("benchmarkComparison")}</h3>
         </div>
         <p className="text-xs text-[--text-muted] mb-4">
-          Tes métriques comparées aux benchmarks typiques d'un trader retail.
+          {t("benchmarkDesc")}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <BenchmarkBar label="Win Rate" userValue={winRate} medianValue={45} unit="%" higherIsBetter />
@@ -428,7 +433,7 @@ export default function PerformancePage() {
         </div>
         <div className="mt-4 pt-3 border-t border-[--border-subtle] flex items-center gap-2">
           <div className="w-3 h-0.5 bg-amber-400 rounded" />
-          <span className="text-[10px] text-[--text-muted]">Ligne jaune = trader médian (référence)</span>
+          <span className="text-[10px] text-[--text-muted]">{t("benchmarkLegend")}</span>
         </div>
       </div>
     </div>

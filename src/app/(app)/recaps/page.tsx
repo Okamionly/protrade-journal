@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useTrades } from "@/hooks/useTrades";
 import { TrendingUp, TrendingDown, Calendar, ChevronLeft, ChevronRight, BarChart3, PieChart } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/i18n/context";
 
 type Period = "week" | "month";
 
@@ -29,10 +30,11 @@ function formatDateFr(d: Date): string {
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 }
 
-const DAYS_FR_FULL = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
-
 export default function RecapsPage() {
   const { trades, loading } = useTrades();
+  const { t } = useTranslation();
+
+  const DAYS_FR_FULL = [t("daySunFull"), t("dayMonFull"), t("dayTueFull"), t("dayWedFull"), t("dayThuFull"), t("dayFriFull"), t("daySatFull")];
   const [period, setPeriod] = useState<Period>("week");
   const [offset, setOffset] = useState(0);
 
@@ -177,7 +179,7 @@ export default function RecapsPage() {
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Recaps</h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            Résumé de vos performances par période.
+            {t("recapSummary")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -187,14 +189,14 @@ export default function RecapsPage() {
               className={`px-4 py-2 text-sm font-medium transition ${period === "week" ? "bg-cyan-500/20 text-cyan-400" : ""}`}
               style={period !== "week" ? { color: "var(--text-secondary)" } : {}}
             >
-              Semaine
+              {t("weekLabel")}
             </button>
             <button
               onClick={() => { setPeriod("month"); setOffset(0); }}
               className={`px-4 py-2 text-sm font-medium transition ${period === "month" ? "bg-cyan-500/20 text-cyan-400" : ""}`}
               style={period !== "month" ? { color: "var(--text-secondary)" } : {}}
             >
-              Mois
+              {t("monthLabel")}
             </button>
           </div>
         </div>
@@ -222,7 +224,7 @@ export default function RecapsPage() {
           { label: "P&L", value: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}€`, delta: pnlDelta, color: stats.pnl >= 0 ? "#10b981" : "#ef4444" },
           { label: "Trades", value: stats.total, delta: stats.total - prevTrades.length, color: "var(--text-primary)" },
           { label: "Win Rate", value: `${stats.winRate.toFixed(1)}%`, delta: wrDelta, color: stats.winRate >= 50 ? "#10b981" : "#f59e0b" },
-          { label: "Gain moy.", value: `${stats.avgWin.toFixed(2)}€`, delta: null, color: "#10b981" },
+          { label: t("avgGain"), value: `${stats.avgWin.toFixed(2)}€`, delta: null, color: "#10b981" },
         ].map((card) => (
           <div key={card.label} className="metric-card rounded-2xl p-5">
             <div className="text-xs font-medium mb-2" style={{ color: "var(--text-muted)" }}>{card.label}</div>
@@ -233,7 +235,7 @@ export default function RecapsPage() {
                 <span style={{ color: card.delta >= 0 ? "#10b981" : "#ef4444" }}>
                   {card.delta >= 0 ? "+" : ""}{typeof card.delta === "number" && card.label === "P&L" ? `${card.delta.toFixed(2)}€` : card.label === "Win Rate" ? `${card.delta.toFixed(1)}pp` : card.delta}
                 </span>
-                <span style={{ color: "var(--text-muted)" }}>vs precedent</span>
+                <span style={{ color: "var(--text-muted)" }}>{t("vsPrevious")}</span>
               </div>
             )}
           </div>
@@ -243,10 +245,10 @@ export default function RecapsPage() {
       {/* Daily P&L Chart */}
       <div className="metric-card rounded-2xl p-5">
         <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <BarChart3 className="w-5 h-5 text-cyan-400" /> P&L Journalier
+          <BarChart3 className="w-5 h-5 text-cyan-400" /> {t("dailyPnl")}
         </h3>
         {dailyPnl.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette période</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noTradeThisPeriod")}</p>
         ) : (
           <div className="w-full overflow-x-auto">
             <svg viewBox={`0 0 ${Math.max(dailyPnl.length * 60, 200)} 180`} className="w-full" style={{ minWidth: `${dailyPnl.length * 60}px`, maxHeight: "200px" }}>
@@ -302,10 +304,10 @@ export default function RecapsPage() {
       {/* Day of Week Analysis */}
       <div className="metric-card rounded-2xl p-5">
         <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <Calendar className="w-5 h-5 text-purple-400" /> Analyse par jour de la semaine
+          <Calendar className="w-5 h-5 text-purple-400" /> {t("dayOfWeekAnalysis")}
         </h3>
         {periodTrades.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette période</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noTradeThisPeriod")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -343,10 +345,10 @@ export default function RecapsPage() {
       {/* Trade Distribution Histogram */}
       <div className="metric-card rounded-2xl p-5">
         <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <PieChart className="w-5 h-5 text-amber-400" /> Distribution des trades
+          <PieChart className="w-5 h-5 text-amber-400" /> {t("tradeDistribution")}
         </h3>
         {periodTrades.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette période</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noTradeThisPeriod")}</p>
         ) : (
           <div className="w-full">
             <svg viewBox="0 0 420 160" className="w-full" style={{ maxHeight: "180px" }}>
@@ -403,7 +405,7 @@ export default function RecapsPage() {
         <div className="metric-card rounded-2xl p-5">
           <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Top 3 trades</h3>
           {stats.top3.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette période</p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noTradeThisPeriod")}</p>
           ) : (
             <div className="space-y-2">
               {stats.top3.map((t, i) => (
@@ -424,7 +426,7 @@ export default function RecapsPage() {
         <div className="metric-card rounded-2xl p-5">
           <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Pires 3 trades</h3>
           {stats.worst3.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade cette période</p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noTradeThisPeriod")}</p>
           ) : (
             <div className="space-y-2">
               {stats.worst3.map((t, i) => (
@@ -444,7 +446,7 @@ export default function RecapsPage() {
 
       {/* By Strategy */}
       <div className="metric-card rounded-2xl p-5">
-        <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Performance par stratégie</h3>
+        <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>{t("perfByStrategy")}</h3>
         {Object.keys(stats.byStrategy).length === 0 ? (
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucune donnée</p>
         ) : (

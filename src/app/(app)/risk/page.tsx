@@ -4,11 +4,13 @@ import { useState, useMemo } from "react";
 import { useTrades, useUser } from "@/hooks/useTrades";
 import { computeRiskMetrics, computeDrawdownCurve, calculatePositionSize, computeKellyRaw, type Trade, type AssetType } from "@/lib/advancedStats";
 import { Shield, AlertTriangle, Calculator, TrendingDown, Percent, DollarSign, BarChart3, Activity, RotateCcw } from "lucide-react";
-
-const DAYS_FR_SHORT = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+import { useTranslation } from "@/i18n/context";
 
 export default function RiskPage() {
   const { trades, loading } = useTrades();
+  const { t } = useTranslation();
+
+  const DAYS_FR_SHORT = [t("daySun"), t("dayMon"), t("dayTue"), t("dayWed"), t("dayThu"), t("dayFri"), t("daySat")];
   const { user } = useUser();
   const balance = user?.balance || 10000;
 
@@ -301,7 +303,7 @@ export default function RiskPage() {
       {/* Recovery Calculator */}
       <div className="metric-card rounded-2xl p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <RotateCcw className="w-5 h-5 text-emerald-400" /> Calculateur de Recovery
+          <RotateCcw className="w-5 h-5 text-emerald-400" /> {t("recoveryCalculator")}
         </h3>
         {!recoveryCalc ? (
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>Ajoutez des trades pour voir le calculateur de recovery.</p>
@@ -340,7 +342,7 @@ export default function RiskPage() {
       {/* Position Sizing Calculator */}
       <div className="metric-card rounded-2xl p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <Calculator className="w-5 h-5 text-cyan-400" /> Calculateur de Position
+          <Calculator className="w-5 h-5 text-cyan-400" /> {t("positionCalculator")}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">

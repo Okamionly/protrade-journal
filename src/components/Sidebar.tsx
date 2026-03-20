@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -318,10 +319,8 @@ export function Sidebar() {
       }`}
     >
       {/* Logo area */}
-      <div className="flex items-center h-14 px-3 border-b border-gray-200 dark:border-gray-800">
-        <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/20">
-          <BarChart3 className="text-white w-5 h-5" />
-        </div>
+      <div className="flex items-center h-16 px-3 border-b border-gray-200 dark:border-gray-800">
+        <Image src="/logo-icon.png" alt="MarketPhase" width={44} height={44} className="w-11 h-11 rounded-xl flex-shrink-0" />
         {!collapsed && (
           <span className="ml-2.5 text-lg font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent whitespace-nowrap">
             MarketPhase

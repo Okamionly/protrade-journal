@@ -10,6 +10,7 @@ import {
   ChevronDown, ChevronUp, Newspaper, Tv, Map, Layers,
   ExternalLink, RefreshCw, Radio,
 } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -83,13 +84,13 @@ function formatTime(dateStr: string): string {
   }
 }
 
-function timeAgo(timestamp: number): string {
-  const now = Math.floor(Date.now() / 1000);
-  const diff = now - timestamp;
-  if (diff < 60) return "maintenant";
-  if (diff < 3600) return `${Math.floor(diff / 60)}min`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-  return `${Math.floor(diff / 86400)}j`;
+function timeAgo(timestamp: number, labels = { now: "maintenant", min: "min", h: "h", d: "j" }): string {
+  const now2 = Math.floor(Date.now() / 1000);
+  const diff = now2 - timestamp;
+  if (diff < 60) return labels.now;
+  if (diff < 3600) return `${Math.floor(diff / 60)}${labels.min}`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}${labels.h}`;
+  return `${Math.floor(diff / 86400)}${labels.d}`;
 }
 
 // ─── Collapsible Section Hook ───────────────────────────────────────────────
@@ -212,11 +213,11 @@ function getSessionProgress(hour: number, minute: number, session: SessionInfo):
   return Math.max(0, Math.min(100, (elapsed / totalMinutes) * 100));
 }
 
-function getSessionTimeRemaining(hour: number, minute: number, session: SessionInfo): string {
+function getSessionTimeRemaining(hour: number, minute: number, session: SessionInfo, finishedLabel = "Terminée"): string {
   const endMinutes = session.end * 60;
   const currentMinutes = hour * 60 + minute;
   const remaining = endMinutes - currentMinutes;
-  if (remaining <= 0) return "Terminée";
+  if (remaining <= 0) return finishedLabel;
   const h = Math.floor(remaining / 60);
   const m = remaining % 60;
   return `${h}h ${m.toString().padStart(2, "0")}m`;
@@ -803,6 +804,7 @@ function CorrelationMatrix() {
 
 export default function WarRoomPage() {
   const { trades, loading } = useTrades();
+  const { t } = useTranslation();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [checklist, setChecklist] = useState<boolean[]>(CHECKLIST_ITEMS.map(() => false));
   const [currentMood, setCurrentMood] = useState<string | null>(null);
@@ -1183,7 +1185,7 @@ export default function WarRoomPage() {
           {newsLoading && newsArticles.length === 0 ? (
             <div className="flex items-center gap-2 py-3" style={{ color: "var(--text-muted)" }}>
               <RefreshCw size={14} className="animate-spin" />
-              <span className="text-xs">Chargement des actualités...</span>
+              <span className="text-xs">{t("loading")}</span>
             </div>
           ) : newsArticles.length === 0 ? (
             <div className="text-xs py-2" style={{ color: "var(--text-muted)" }}>
@@ -1220,7 +1222,7 @@ export default function WarRoomPage() {
                       {article.source}
                     </span>
                     <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>
-                      {timeAgo(article.datetime)}
+                      {timeAgo(article.datetime, { now: t("timeNow"), min: t("timeMin"), h: t("timeH"), d: t("timeD") })}
                     </span>
                   </div>
                   <p className="text-xs font-medium truncate group-hover:text-blue-400 transition"
@@ -1504,7 +1506,7 @@ export default function WarRoomPage() {
             <div className="space-y-3">
               {activeSessions.map((session) => {
                 const progress = getSessionProgress(hour, minute, session);
-                const remaining = getSessionTimeRemaining(hour, minute, session);
+                const remaining = getSessionTimeRemaining(hour, minute, session, t("finished"));
                 return (
                   <div key={session.name}>
                     <div className="flex items-center justify-between mb-1">
@@ -1715,7 +1717,7 @@ export default function WarRoomPage() {
           </div>
           {keyLevels.length === 0 ? (
             <div className="text-xs py-2" style={{ color: "var(--text-muted)" }}>
-              Chargement des prix...
+              {t("loadingData")}
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">

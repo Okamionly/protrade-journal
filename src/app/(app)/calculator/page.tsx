@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useUser } from "@/hooks/useTrades";
 import { Calculator, DollarSign, Target, Shield, TrendingUp, AlertTriangle, Percent, BarChart3 } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 type Instrument = "forex" | "indices" | "crypto" | "actions";
 
@@ -27,6 +28,7 @@ const PIP_REFERENCE = [
 const RISK_LEVELS = [0.5, 1, 1.5, 2, 3];
 
 export default function CalculatorPage() {
+  const { t } = useTranslation();
   const { user } = useUser();
   const [capital, setCapital] = useState<number>(user?.balance || 10000);
   const [riskPercent, setRiskPercent] = useState(1);
@@ -87,7 +89,7 @@ export default function CalculatorPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <Calculator className="w-6 h-6 text-cyan-400" /> Calculateur de Position
+          <Calculator className="w-6 h-6 text-cyan-400" /> {t("positionCalculator")}
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
           Calculez la taille optimale de vos positions en fonction de votre risque.

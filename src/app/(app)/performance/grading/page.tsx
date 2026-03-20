@@ -4,6 +4,7 @@ import { useTrades } from "@/hooks/useTrades";
 import { calculateRR } from "@/lib/utils";
 import { Award, TrendingUp, TrendingDown, Target, AlertTriangle, Star, ChevronRight } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useTranslation } from "@/i18n/context";
 
 interface TradeGrade {
   tradeId: string;
@@ -96,6 +97,7 @@ function MiniProgressBar({ value, max, color }: { value: number; max: number; co
 
 export default function GradingPage() {
   const { trades, loading } = useTrades();
+  const { t: tr } = useTranslation();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
 
@@ -178,15 +180,15 @@ export default function GradingPage() {
   }, [gradedTrades]);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-muted)" }}>Chargement...</div>;
+    return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-muted)" }}>{tr("loading")}</div>;
   }
 
   if (!stats || gradedTrades.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3" style={{ color: "var(--text-muted)" }}>
         <Award size={48} />
-        <p className="text-lg">Aucun trade à noter</p>
-        <p className="text-sm">Ajoutez des trades pour voir leur notation.</p>
+        <p className="text-lg">{tr("noTradeToGrade")}</p>
+        <p className="text-sm">{tr("addTradesToGrade")}</p>
       </div>
     );
   }
@@ -199,10 +201,10 @@ export default function GradingPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: "var(--text-primary)" }}>
           <Award size={28} />
-          Notation des Trades
+          {tr("gradingTitle")}
         </h1>
         <p className="mt-1" style={{ color: "var(--text-secondary)" }}>
-          {"Évaluez la qualité de chaque trade avec un système de scoring objectif"}
+          {tr("gradingSubtitle")}
         </p>
       </div>
 
@@ -242,7 +244,7 @@ export default function GradingPage() {
             {stats.avgGrade.grade}
           </div>
           <div className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Score moyen: <span className="font-mono font-bold" style={{ color: "var(--text-primary)" }}>{stats.avgScore.toFixed(1)}/100</span>
+            {tr("avgScoreLabel")}: <span className="font-mono font-bold" style={{ color: "var(--text-primary)" }}>{stats.avgScore.toFixed(1)}/100</span>
           </div>
           <div className="text-xs" style={{ color: "var(--text-muted)" }}>
             sur {stats.total} trade{stats.total > 1 ? "s" : ""}
@@ -252,7 +254,7 @@ export default function GradingPage() {
         {/* Breakdown */}
         <div className="metric-card rounded-2xl p-6 space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-            Décomposition par composante
+            {tr("componentBreakdown")}
           </h2>
           <ProgressBar value={stats.avgRR} max={30} color="#06b6d4" label="Risk/Reward" />
           <ProgressBar value={stats.avgResult} max={30} color="#10b981" label="Résultat" />
@@ -266,7 +268,7 @@ export default function GradingPage() {
         <div className="metric-card rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-3">
             <Target size={20} style={{ color: "#10b981" }} />
-            <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Votre meilleur setup</h3>
+            <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>{tr("bestSetup")}</h3>
           </div>
           <div className="text-lg font-bold" style={{ color: "#10b981" }}>
             {stats.bestSetup.key}
@@ -279,7 +281,7 @@ export default function GradingPage() {
         <div className="metric-card rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle size={20} style={{ color: "#f59e0b" }} />
-            <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Point à améliorer</h3>
+            <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>{tr("improvementPoint")}</h3>
           </div>
           <div className="text-lg font-bold" style={{ color: "#f59e0b" }}>
             {stats.weakest.label}
@@ -294,7 +296,7 @@ export default function GradingPage() {
       <div className="metric-card rounded-2xl overflow-hidden">
         <div className="p-4 border-b" style={{ borderColor: "var(--border)" }}>
           <h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>
-            Détail des trades ({stats.total})
+            {tr("tradeDetail")} ({stats.total})
           </h2>
         </div>
 
@@ -427,7 +429,7 @@ export default function GradingPage() {
               onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(6,182,212,0.2)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(6,182,212,0.1)")}
             >
-              Voir plus ({gradedTrades.length - 50} trades restants)
+              {tr("seeMore")} ({gradedTrades.length - 50} {tr("tradesRemaining")})
             </button>
           </div>
         )}

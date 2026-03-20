@@ -44,6 +44,7 @@ export const metadata: Metadata = {
     siteName: "MarketPhase",
     locale: "fr_FR",
     type: "website",
+    images: [{ url: "/og-image.png", width: 800, height: 400, alt: "MarketPhase - Time Creates Opportunity" }],
   },
   twitter: {
     card: "summary_large_image",

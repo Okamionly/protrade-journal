@@ -3,14 +3,16 @@
 import { useTrades } from "@/hooks/useTrades";
 import { useState } from "react";
 import { X, Camera } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 export default function ScreenshotsPage() {
   const { trades, loading } = useTrades();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState("all");
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">Chargement...</div></div>;
+    return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">{t("loading")}</div></div>;
   }
 
   const allScreenshots: { src: string; trade: typeof trades[0] }[] = [];
@@ -41,22 +43,22 @@ export default function ScreenshotsPage() {
     <div className="space-y-6">
       <div className="glass rounded-2xl p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold">Bibliothèque de Screenshots</h3>
+          <h3 className="text-lg font-semibold">{t("screenshotLibrary")}</h3>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-4 py-2 text-sm"
           >
-            <option value="all">Tous les trades</option>
-            <option value="win">Trades gagnants</option>
-            <option value="loss">Trades perdants</option>
+            <option value="all">{t("allTrades")}</option>
+            <option value="win">{t("winningTrades")}</option>
+            <option value="loss">{t("losingTrades")}</option>
           </select>
         </div>
 
         {allScreenshots.length === 0 ? (
           <div className="text-center py-12 text-[--text-muted]">
             <Camera className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Aucun screenshot enregistré</p>
+            <p>{t("noScreenshot")}</p>
           </div>
         ) : (
           <div className="screenshot-gallery">
@@ -80,10 +82,10 @@ export default function ScreenshotsPage() {
       </div>
 
       <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-semibold mb-4">Analyse Visuelle</h3>
+        <h3 className="text-lg font-semibold mb-4">{t("visualAnalysis")}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-[--bg-secondary]/50 rounded-xl p-4">
-            <h4 className="text-sm font-medium text-[--text-secondary] mb-2">Setups les plus profitables</h4>
+            <h4 className="text-sm font-medium text-[--text-secondary] mb-2">{t("mostProfitableSetups")}</h4>
             <div className="space-y-2">
               {sortedStrats.length > 0 ? sortedStrats.map(([name, stats]) => (
                 <div key={name} className="flex justify-between items-center p-2 bg-[--bg-secondary]/50 rounded-lg">
@@ -96,15 +98,15 @@ export default function ScreenshotsPage() {
             </div>
           </div>
           <div className="bg-[--bg-secondary]/50 rounded-xl p-4">
-            <h4 className="text-sm font-medium text-[--text-secondary] mb-2">Erreurs visuelles fréquentes</h4>
+            <h4 className="text-sm font-medium text-[--text-secondary] mb-2">{t("commonVisualErrors")}</h4>
             <div className="space-y-2">
               <div className="flex items-center space-x-2 p-2 bg-[--bg-secondary]/50 rounded-lg">
                 <span className="text-yellow-500">⚠</span>
-                <span className="text-sm">Entrées anticipées sur breakout</span>
+                <span className="text-sm">{t("earlyBreakoutEntry")}</span>
               </div>
               <div className="flex items-center space-x-2 p-2 bg-[--bg-secondary]/50 rounded-lg">
                 <span className="text-yellow-500">⚠</span>
-                <span className="text-sm">SL trop serré en volatilité</span>
+                <span className="text-sm">{t("tightSLVolatility")}</span>
               </div>
             </div>
           </div>

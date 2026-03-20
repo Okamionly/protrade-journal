@@ -124,12 +124,14 @@ function MarkdownEditor({
 }) {
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [showPreview, setShowPreview] = useState(false);
+  const [viewMode, setViewMode] = useState<"edit" | "preview" | "split">("edit");
   const [expanded, setExpanded] = useState(false);
   const [showColors, setShowColors] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
   const colorRef = useRef<HTMLDivElement>(null);
   const emojiRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -201,10 +203,62 @@ function MarkdownEditor({
     [insertAtCursor]
   );
 
-  // Simple markdown preview
+  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/vip/upload", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        insertAtCursor(`\n![${file.name}](${data.url})\n`);
+      } else {
+        const err = await res.json().catch(() => ({ error: "Erreur upload" }));
+        alert(err.error || "Erreur lors de l'upload");
+      }
+    } catch {
+      alert("Erreur réseau lors de l'upload");
+    }
+    setUploading(false);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  }, [insertAtCursor]);
+
+  // Robust markdown preview — preserves HTML inline (span, center, img, etc.)
   const renderPreview = (md: string) => {
-    let html = md;
+    // 1. Extract code blocks first to protect them
+    const codeBlocks: string[] = [];
+    let html = md.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang: string, code: string) => {
+      const escaped = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      codeBlocks.push(
+        `<pre style="background:var(--bg-hover);border:1px solid var(--border);border-radius:8px;padding:12px;margin:8px 0;overflow-x:auto;font-size:12px;line-height:1.5"><code${lang ? ` data-lang="${lang}"` : ""}>${escaped}</code></pre>`
+      );
+      return `%%CODEBLOCK_${codeBlocks.length - 1}%%`;
+    });
+
+    // Inline code
+    const inlineCodes: string[] = [];
+    html = html.replace(/`([^`]+)`/g, (_m, code: string) => {
+      const escaped = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      inlineCodes.push(`<code style="background:var(--bg-hover);padding:1px 5px;border-radius:4px;font-size:12px">${escaped}</code>`);
+      return `%%INLINECODE_${inlineCodes.length - 1}%%`;
+    });
+
+    // 2. Preserve allowed HTML tags (span, center, img, br, div, a, b, i, u, s, strong, em, mark, sub, sup)
+    const htmlTags: string[] = [];
+    html = html.replace(/<(\/?)(?:span|center|img|br|div|a|b|i|u|s|strong|em|mark|sub|sup)(\s[^>]*)?\/?>/gi, (tag) => {
+      htmlTags.push(tag);
+      return `%%HTMLTAG_${htmlTags.length - 1}%%`;
+    });
+
+    // 3. Now escape remaining HTML (unknown tags)
     html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // 4. Restore preserved HTML tags
+    html = html.replace(/%%HTMLTAG_(\d+)%%/g, (_m, i) => htmlTags[parseInt(i)]);
+
+    // 5. Tables
     html = html.replace(/((?:^|\n)\|.+\|(?:\n\|.+\|)+)/g, (_m, tb: string) => {
       const lines = tb.trim().split("\n");
       let t = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin:8px 0">';
@@ -221,16 +275,32 @@ function MarkdownEditor({
       }
       return t + "</tbody></table>";
     });
+
+    // 6. Blockquotes
+    html = html.replace(/((?:^|\n)&gt; .+(?:\n&gt; .+)*)/g, (_m, bq: string) => {
+      const content = bq.trim().split("\n").map(l => l.replace(/^&gt; /, "").trim()).join("<br/>");
+      return `<blockquote style="border-left:3px solid rgb(245,158,11);padding:8px 12px;margin:8px 0;color:var(--text-secondary);background:var(--bg-hover);border-radius:0 8px 8px 0;font-style:italic">${content}</blockquote>`;
+    });
+
+    // 7. Headings, HR
     html = html.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0"/>');
     html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:1rem;font-weight:600;color:rgb(168,85,247);margin:12px 0 4px">$1</h3>');
     html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:1.2rem;font-weight:700;margin:16px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--border)">$1</h2>');
     html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:1.4rem;font-weight:800;margin:20px 0 8px">$1</h1>');
+
+    // 8. Inline formatting
     html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
     html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
     html = html.replace(/__(.+?)__/g, "<u>$1</u>");
     html = html.replace(/~~(.+?)~~/g, "<s>$1</s>");
-    html = html.replace(/&lt;span style=&quot;color:(.+?)&quot;&gt;(.+?)&lt;\/span&gt;/g, '<span style="color:$1">$2</span>');
-    html = html.replace(/&lt;center&gt;(.+?)&lt;\/center&gt;/g, '<div style="text-align:center">$1</div>');
+
+    // 9. Images ![alt](url)
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0"/>');
+
+    // 10. Links [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:rgb(59,130,246);text-decoration:underline">$1</a>');
+
+    // 11. Lists
     html = html.replace(/((?:^|\n)- .+(?:\n- .+)*)/g, (_m, lb: string) => {
       const items = lb.trim().split("\n").map(l => l.replace(/^- /, "").trim()).filter(Boolean);
       return '<ul style="margin:6px 0;padding-left:20px;list-style:disc">' + items.map(i => `<li style="margin:2px 0;font-size:14px">${i}</li>`).join("") + "</ul>";
@@ -239,12 +309,19 @@ function MarkdownEditor({
       const items = lb.trim().split("\n").map(l => l.replace(/^\d+\. /, "").trim()).filter(Boolean);
       return '<ol style="margin:6px 0;padding-left:20px;list-style:decimal">' + items.map(i => `<li style="margin:2px 0;font-size:14px">${i}</li>`).join("") + "</ol>";
     });
+
+    // 12. Paragraphs
     html = html.split("\n").map(l => {
       const t = l.trim();
       if (!t) return "<br/>";
-      if (t.startsWith("<")) return t;
+      if (t.startsWith("<") || t.startsWith("%%")) return t;
       return `<p style="margin:3px 0;font-size:14px;line-height:1.6">${t}</p>`;
     }).join("\n");
+
+    // 13. Restore code blocks and inline codes
+    html = html.replace(/%%CODEBLOCK_(\d+)%%/g, (_m, i) => codeBlocks[parseInt(i)]);
+    html = html.replace(/%%INLINECODE_(\d+)%%/g, (_m, i) => inlineCodes[parseInt(i)]);
+
     return html;
   };
 
@@ -273,19 +350,22 @@ function MarkdownEditor({
         <label className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
           {t("vipContentMarkdown")}
         </label>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowPreview(!showPreview)}
-            className="text-[11px] font-medium px-2.5 py-1 rounded-lg transition"
-            style={{
-              background: showPreview ? "rgba(59,130,246,0.15)" : "var(--bg-hover)",
-              color: showPreview ? "rgb(59,130,246)" : "var(--text-muted)",
-              border: showPreview ? "1px solid rgba(59,130,246,0.3)" : "1px solid var(--border)",
-            }}
-          >
-            {showPreview ? t("vipEdit") : t("vipPreview")}
-          </button>
+        <div className="flex items-center gap-1">
+          {(["edit", "split", "preview"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setViewMode(mode)}
+              className="text-[11px] font-medium px-2.5 py-1 rounded-lg transition"
+              style={{
+                background: viewMode === mode ? "rgba(59,130,246,0.15)" : "var(--bg-hover)",
+                color: viewMode === mode ? "rgb(59,130,246)" : "var(--text-muted)",
+                border: viewMode === mode ? "1px solid rgba(59,130,246,0.3)" : "1px solid var(--border)",
+              }}
+            >
+              {mode === "edit" ? "Éditeur" : mode === "split" ? "Split" : "Aperçu"}
+            </button>
+          ))}
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
@@ -299,7 +379,7 @@ function MarkdownEditor({
       </div>
 
       {/* Toolbar */}
-      {!showPreview && (
+      {viewMode !== "preview" && (
         <div
           className="flex items-center gap-0.5 px-2 py-1.5 rounded-t-xl flex-wrap"
           style={{
@@ -335,6 +415,14 @@ function MarkdownEditor({
           <ToolBtn icon={Minus} title="Séparateur ---" onClick={() => insertAtCursor("\n---\n")} />
           <ToolBtn icon={Code} title="Bloc de code" onClick={() => insertAtCursor("\n```\n", "\n```\n", "code ici")} />
           <ToolBtn icon={Link2} title="Lien" onClick={() => insertAtCursor("[", "](url)", "texte du lien")} />
+
+          {/* Image upload */}
+          <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleImageUpload} />
+          <ToolBtn
+            icon={uploading ? Loader2 : ImageIcon}
+            title="Insérer une image"
+            onClick={() => !uploading && imageInputRef.current?.click()}
+          />
 
           <Separator />
 
@@ -390,8 +478,8 @@ function MarkdownEditor({
         </div>
       )}
 
-      {/* Editor / Preview */}
-      {showPreview ? (
+      {/* Editor / Preview / Split */}
+      {viewMode === "preview" ? (
         <div
           className="rounded-xl p-5 overflow-y-auto"
           style={{
@@ -403,6 +491,34 @@ function MarkdownEditor({
           }}
           dangerouslySetInnerHTML={{ __html: renderPreview(value) }}
         />
+      ) : viewMode === "split" ? (
+        <div className="flex gap-0" style={{ minHeight: expanded ? 600 : 400, maxHeight: expanded ? "80vh" : 500 }}>
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Contenu markdown..."
+            className="w-1/2 px-4 py-3 rounded-bl-xl text-sm focus:outline-none resize-none font-mono"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              borderTop: "none",
+              borderRight: "none",
+              color: "var(--text-primary)",
+              lineHeight: 1.6,
+            }}
+          />
+          <div
+            className="w-1/2 p-4 overflow-y-auto rounded-br-xl"
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              borderTop: "none",
+              color: "var(--text-primary)",
+            }}
+            dangerouslySetInnerHTML={{ __html: renderPreview(value) }}
+          />
+        </div>
       ) : (
         <textarea
           ref={textareaRef}

@@ -2,9 +2,7 @@
 
 import { useTrades } from "@/hooks/useTrades";
 import { Flame } from "lucide-react";
-
-const DAYS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
-const MONTHS_FR = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+import { useTranslation } from "@/i18n/context";
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 function getColor(value: number, max: number): string {
@@ -22,8 +20,12 @@ function getColor(value: number, max: number): string {
 
 export default function HeatmapPage() {
   const { trades, loading } = useTrades();
+  const { t } = useTranslation();
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-[--text-secondary]">Chargement...</div>;
+  const DAYS_FR = [t("daySun"), t("dayMon"), t("dayTue"), t("dayWed"), t("dayThu"), t("dayFri"), t("daySat")];
+  const MONTHS_FR = [t("monthJanShort"), t("monthFebShort"), t("monthMarShort"), t("monthAprShort"), t("monthMayShort"), t("monthJunShort"), t("monthJulShort"), t("monthAugShort"), t("monthSepShort"), t("monthOctShort"), t("monthNovShort"), t("monthDecShort")];
+
+  if (loading) return <div className="flex items-center justify-center h-64 text-[--text-secondary]">{t("loading")}</div>;
 
   // Calendar heatmap - last 365 days
   const today = new Date();
@@ -98,7 +100,7 @@ export default function HeatmapPage() {
 
       {/* GitHub-style calendar */}
       <div className="glass rounded-2xl p-6 overflow-x-auto">
-        <h3 className="font-semibold mb-4">Calendrier annuel</h3>
+        <h3 className="font-semibold mb-4">{t("annualCalendar")}</h3>
         <div className="flex gap-[3px] min-w-[700px]">
           <div className="flex flex-col gap-[3px] mr-1">
             {DAYS_FR.map((d, i) => (
@@ -117,20 +119,20 @@ export default function HeatmapPage() {
           ))}
         </div>
         <div className="flex items-center gap-2 mt-3 text-[10px] text-[--text-muted]">
-          <span>Moins</span>
+          <span>{t("lessLabel")}</span>
           <div className="w-3 h-3 rounded-sm bg-rose-500" />
           <div className="w-3 h-3 rounded-sm bg-rose-500/40" />
           <div className="w-3 h-3 rounded-sm bg-[--bg-secondary]/50" />
           <div className="w-3 h-3 rounded-sm bg-emerald-500/40" />
           <div className="w-3 h-3 rounded-sm bg-emerald-500" />
-          <span>Plus</span>
+          <span>{t("moreLabel")}</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Hour heatmap */}
         <div className="glass rounded-2xl p-6">
-          <h3 className="font-semibold mb-4">Performance par heure</h3>
+          <h3 className="font-semibold mb-4">{t("perfByHourHeatmap")}</h3>
           <div className="grid grid-cols-12 gap-1">
             {HOURS.map((h) => (
               <div key={h} className="flex flex-col items-center">
@@ -146,7 +148,7 @@ export default function HeatmapPage() {
 
         {/* Day of week */}
         <div className="glass rounded-2xl p-6">
-          <h3 className="font-semibold mb-4">Performance par jour</h3>
+          <h3 className="font-semibold mb-4">{t("perfByDayHeatmap")}</h3>
           <div className="space-y-2">
             {DAYS_FR.map((name, i) => {
               const pnl = dayPnL[i] || 0;
@@ -170,7 +172,7 @@ export default function HeatmapPage() {
 
       {/* Monthly bars */}
       <div className="glass rounded-2xl p-6">
-        <h3 className="font-semibold mb-4">P&L mensuel</h3>
+        <h3 className="font-semibold mb-4">{t("monthlyPnl")}</h3>
         <div className="flex items-end gap-2 h-40">
           {sortedMonths.map(([month, pnl]) => {
             const height = (Math.abs(pnl) / maxMonthPnL) * 100;

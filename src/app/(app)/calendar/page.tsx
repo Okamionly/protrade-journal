@@ -3,13 +3,15 @@
 import { useTrades } from "@/hooks/useTrades";
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock, Target, ArrowRight } from "lucide-react";
-
-const MONTH_NAMES = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
-const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-const DAY_FULL = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+import { useTranslation } from "@/i18n/context";
 
 export default function PnLCalendarPage() {
   const { trades, loading } = useTrades();
+  const { t } = useTranslation();
+
+  const MONTH_NAMES = [t("monthJan"), t("monthFeb"), t("monthMar"), t("monthApr"), t("monthMay"), t("monthJun"), t("monthJul"), t("monthAug"), t("monthSep"), t("monthOct"), t("monthNov"), t("monthDec")];
+  const DAY_NAMES = [t("dayMon"), t("dayTue"), t("dayWed"), t("dayThu"), t("dayFri"), t("daySat"), t("daySun")];
+  const DAY_FULL = [t("dayMonFull"), t("dayTueFull"), t("dayWedFull"), t("dayThuFull"), t("dayFriFull"), t("daySatFull"), t("daySunFull")];
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<{ day: number; trades: typeof trades } | null>(null);
   const [view, setView] = useState<"month" | "year">("month");
@@ -103,7 +105,7 @@ export default function PnLCalendarPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">Chargement...</div></div>;
+    return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">{t("loading")}</div></div>;
   }
 
   return (
@@ -112,20 +114,20 @@ export default function PnLCalendarPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[--text-primary]">P&L Calendar</h1>
-          <p className="text-sm text-[--text-secondary]">Visualisez votre performance jour par jour</p>
+          <p className="text-sm text-[--text-secondary]">{t("visualizePerf")}</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setView("month")}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "month" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary] hover:text-[--text-primary]"}`}
           >
-            Mois
+            {t("viewMonth")}
           </button>
           <button
             onClick={() => setView("year")}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "year" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary] hover:text-[--text-primary]"}`}
           >
-            Année
+            {t("viewYear")}
           </button>
         </div>
       </div>
@@ -133,7 +135,7 @@ export default function PnLCalendarPage() {
       {/* Monthly Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
-          <p className="text-[10px] text-[--text-muted] mb-1 truncate">P&L Mois</p>
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("pnlMonth")}</p>
           <p className={`text-base font-bold mono truncate ${stats.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
             {stats.totalPnl >= 0 ? "+" : ""}{stats.totalPnl.toFixed(0)}€
           </p>
@@ -144,27 +146,27 @@ export default function PnLCalendarPage() {
           <p className="text-[10px] text-[--text-muted]">{monthTrades.filter(t => t.result > 0).length}W / {monthTrades.filter(t => t.result <= 0).length}L</p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
-          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Jours +</p>
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("winDays")}</p>
           <p className="text-base font-bold text-emerald-400">{stats.winDays}</p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
-          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Jours -</p>
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("lossDays")}</p>
           <p className="text-base font-bold text-rose-400">{stats.lossDays}</p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
-          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Best Day</p>
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("bestDay")}</p>
           <p className="text-base font-bold text-emerald-400 mono truncate">
             {stats.bestDay ? `+${(+stats.bestDay[1]).toFixed(0)}€` : "—"}
           </p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
-          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Worst Day</p>
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("worstDay")}</p>
           <p className="text-base font-bold text-rose-400 mono truncate">
             {stats.worstDay ? `${(+stats.worstDay[1]).toFixed(0)}€` : "—"}
           </p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
-          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Série W</p>
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("streakW")}</p>
           <p className="text-base font-bold text-amber-400 flex items-center justify-center gap-1">
             <Flame className="w-4 h-4" /> {stats.maxStreak}
           </p>
@@ -183,7 +185,7 @@ export default function PnLCalendarPage() {
                 </h3>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setCurrentDate(new Date())} className="text-xs px-3 py-1.5 rounded-lg glass text-[--text-secondary] hover:text-[--text-primary]">Aujourd&apos;hui</button>
+                <button onClick={() => setCurrentDate(new Date())} className="text-xs px-3 py-1.5 rounded-lg glass text-[--text-secondary] hover:text-[--text-primary]">{t("todayBtn")}</button>
                 <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronLeft className="w-5 h-5 text-[--text-secondary]" /></button>
                 <button onClick={() => changeMonth(1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronRight className="w-5 h-5 text-[--text-secondary]" /></button>
               </div>
@@ -241,15 +243,15 @@ export default function PnLCalendarPage() {
             <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[--border-subtle]">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-emerald-500/30 border border-emerald-500/40" />
-                <span className="text-xs text-[--text-muted]">Jour gagnant</span>
+                <span className="text-xs text-[--text-muted]">{t("winningDay")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-rose-500/30 border border-rose-500/40" />
-                <span className="text-xs text-[--text-muted]">Jour perdant</span>
+                <span className="text-xs text-[--text-muted]">{t("losingDay")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded ring-2 ring-cyan-400/50 bg-[--bg-secondary]/20" />
-                <span className="text-xs text-[--text-muted]">Aujourd&apos;hui</span>
+                <span className="text-xs text-[--text-muted]">{t("todayBtn")}</span>
               </div>
             </div>
           </div>
@@ -259,7 +261,7 @@ export default function PnLCalendarPage() {
             <div className="glass rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-4">
                 <BarChart3 className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-lg font-semibold text-[--text-primary]">Performance par Jour</h3>
+                <h3 className="text-lg font-semibold text-[--text-primary]">{t("perfByDay")}</h3>
               </div>
               <div className="space-y-3">
                 {DAY_FULL.map((dayName, idx) => {
@@ -291,7 +293,7 @@ export default function PnLCalendarPage() {
             <div className="glass rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-lg font-semibold text-[--text-primary]">Performance par Heure</h3>
+                <h3 className="text-lg font-semibold text-[--text-primary]">{t("perfByHour")}</h3>
               </div>
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {Object.entries(stats.hourPnl)
@@ -316,7 +318,7 @@ export default function PnLCalendarPage() {
                     );
                   })}
                 {Object.keys(stats.hourPnl).length === 0 && (
-                  <p className="text-sm text-[--text-muted] text-center py-4">Aucune donnée horaire</p>
+                  <p className="text-sm text-[--text-muted] text-center py-4">{t("noHourData")}</p>
                 )}
               </div>
             </div>
@@ -327,7 +329,7 @@ export default function PnLCalendarPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {stats.bestDay && (
                 <div className="metric-card rounded-xl p-4 border-l-4 border-emerald-400">
-                  <p className="text-xs text-[--text-muted]">Meilleur Jour du Mois</p>
+                  <p className="text-xs text-[--text-muted]">{t("bestDayOfMonth")}</p>
                   <p className="text-lg font-bold text-emerald-400 mono">+{(+stats.bestDay[1]).toFixed(2)}€</p>
                   <p className="text-xs text-[--text-secondary]">
                     {new Date(year, month, +stats.bestDay[0]).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
@@ -336,7 +338,7 @@ export default function PnLCalendarPage() {
               )}
               {stats.worstDay && (
                 <div className="metric-card rounded-xl p-4 border-l-4 border-rose-400">
-                  <p className="text-xs text-[--text-muted]">Pire Jour du Mois</p>
+                  <p className="text-xs text-[--text-muted]">{t("worstDayOfMonth")}</p>
                   <p className="text-lg font-bold text-rose-400 mono">{(+stats.worstDay[1]).toFixed(2)}€</p>
                   <p className="text-xs text-[--text-secondary]">
                     {new Date(year, month, +stats.worstDay[0]).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
@@ -350,7 +352,7 @@ export default function PnLCalendarPage() {
         /* Year View */
         <div className="glass rounded-2xl p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-semibold text-[--text-primary]">Vue Annuelle {year}</h3>
+            <h3 className="text-lg font-semibold text-[--text-primary]">{t("yearView")} {year}</h3>
             <div className="flex items-center gap-2">
               <button onClick={() => changeYear(-1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronLeft className="w-5 h-5 text-[--text-secondary]" /></button>
               <button onClick={() => changeYear(1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronRight className="w-5 h-5 text-[--text-secondary]" /></button>
@@ -381,7 +383,7 @@ export default function PnLCalendarPage() {
           </div>
           {/* Year Total */}
           <div className="mt-6 pt-4 border-t border-[--border-subtle] flex justify-between items-center">
-            <span className="text-sm text-[--text-secondary]">Total {year}</span>
+            <span className="text-sm text-[--text-secondary]">{t("totalYear")} {year}</span>
             <span className={`text-xl font-bold mono ${yearData.reduce((s, d) => s + d.pnl, 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
               {yearData.reduce((s, d) => s + d.pnl, 0) >= 0 ? "+" : ""}{yearData.reduce((s, d) => s + d.pnl, 0).toFixed(2)}€
             </span>
@@ -424,7 +426,7 @@ export default function PnLCalendarPage() {
               </div>
 
               {dt.length === 0 ? (
-                <p className="text-[--text-muted] text-center py-8">Aucun trade ce jour</p>
+                <p className="text-[--text-muted] text-center py-8">{t("noTradeThisDay")}</p>
               ) : (
                 <>
                   {/* Summary Stats */}
@@ -438,11 +440,11 @@ export default function PnLCalendarPage() {
                       <p className={`text-lg font-bold mono ${wr >= 50 ? "text-emerald-400" : "text-rose-400"}`}>{wr.toFixed(0)}%</p>
                     </div>
                     <div className="metric-card rounded-lg p-3 text-center">
-                      <p className="text-[10px] text-[--text-muted]">R:R Moyen</p>
+                      <p className="text-[10px] text-[--text-muted]">{t("avgRRShort")}</p>
                       <p className="text-lg font-bold text-cyan-400 mono">{avgRR > 0 ? `1:${avgRR.toFixed(1)}` : "—"}</p>
                     </div>
                     <div className="metric-card rounded-lg p-3 text-center">
-                      <p className="text-[10px] text-[--text-muted]">Résultat</p>
+                      <p className="text-[10px] text-[--text-muted]">{t("resultLabel")}</p>
                       <p className="text-sm font-bold mono">
                         <span className="text-emerald-400">{wins}W</span>
                         <span className="text-[--text-muted] mx-1">/</span>

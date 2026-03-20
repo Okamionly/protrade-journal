@@ -14,6 +14,7 @@ import {
   ArrowDownRight,
   Minus,
 } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -274,6 +275,7 @@ function LoadingSkeleton() {
 /* ------------------------------------------------------------------ */
 
 export default function VolatilityPage() {
+  const { t } = useTranslation();
   const [volData, setVolData] = useState<Record<string, VolData>>({});
   const [vixApiData, setVixApiData] = useState<VixApiData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -455,7 +457,7 @@ export default function VolatilityPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[--text-primary]">Volatilité</h1>
-            <p className="text-sm text-[--text-secondary]">Chargement des données...</p>
+            <p className="text-sm text-[--text-secondary]">{t("loadingData")}</p>
           </div>
           <button disabled className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm">
             <RefreshCw className="w-4 h-4 animate-spin" /> Rafraîchir
@@ -707,7 +709,7 @@ export default function VolatilityPage() {
               {fear.putCallRatio.toFixed(2)}
             </p>
             <p className="text-xs text-[--text-muted] mt-1">
-              {fear.putCallRatio > 1 ? "Bearish — Plus de puts" : fear.putCallRatio < 0.7 ? "Bullish — Plus de calls" : "Neutre"}
+              {fear.putCallRatio > 1 ? t("bearishMorePuts") : fear.putCallRatio < 0.7 ? t("bullishMoreCalls") : t("volNeutral")}
             </p>
             <div className="mt-2 h-1.5 rounded-full bg-[--bg-secondary]">
               <div
