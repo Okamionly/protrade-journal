@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, ArrowUp, ArrowDown, Upload, Plus } from "lucide-react";
 import { Trade } from "@/hooks/useTrades";
 import { useStrategies } from "@/hooks/useStrategies";
+import { TagPicker } from "@/components/TagPicker";
 import { useTranslation } from "@/i18n/context";
 
 interface TradeFormProps {
@@ -24,6 +25,9 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [showNewStrategy, setShowNewStrategy] = useState(false);
   const [newStratName, setNewStratName] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    editTrade?.tags ? editTrade.tags.split(",").map((t) => t.trim()).filter(Boolean) : []
+  );
 
   const strategyNames = strategies.length > 0
     ? strategies.map((s) => s.name)
@@ -84,7 +88,7 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
       mfePrice: parseFloat(form.get("mfePrice") as string) || null,
       emotion: form.get("emotion"),
       setup: form.get("setup"),
-      tags: form.get("tags"),
+      tags: selectedTags.join(", "),
       screenshots,
     };
 
@@ -296,7 +300,7 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
             </div>
             <div>
               <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("tags")}</label>
-              <input type="text" name="tags" defaultValue={editTrade?.tags || ""} className="input-field" placeholder={t("tagsPlaceholder")} />
+              <TagPicker selected={selectedTags} onChange={setSelectedTags} />
             </div>
           </div>
 

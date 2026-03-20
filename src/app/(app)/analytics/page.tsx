@@ -1,17 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { useTrades } from "@/hooks/useTrades";
 import { computeStats, computeStreaks, computeAssetPerformance, computeEmotionPerformance, computeMonthlyComparison } from "@/lib/utils";
 import { WeekdayChart, EquityChart, MonthlyComparisonChart, EmotionChart, AdvancedEquityChart } from "@/components/ChartComponents";
 import { AnalyticsSkeleton } from "@/components/Skeleton";
 import { useUser } from "@/hooks/useTrades";
-import { TrendingUp, TrendingDown, Zap, Flame, ArrowUpRight, ArrowDownRight, Clock, Activity, ChevronUp, ChevronDown, BarChart3, GitCompare } from "lucide-react";
+import { TrendingUp, TrendingDown, Zap, Flame, ArrowUpRight, ArrowDownRight, Clock, Activity, ChevronUp, ChevronDown, BarChart3, GitCompare, Tag, Crosshair } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 
 export default function AnalyticsPage() {
   const { t } = useTranslation();
   const { trades, loading } = useTrades();
   const { user } = useUser();
+  const [showNet, setShowNet] = useState(false);
   const stats = computeStats(trades);
   const streaks = computeStreaks(trades);
   const assetPerf = computeAssetPerformance(trades);
@@ -30,8 +32,25 @@ export default function AnalyticsPage() {
     );
   }
 
+  const getPnl = (tr: typeof trades[0]) => showNet ? tr.result - (tr.commission || 0) - (tr.swap || 0) : tr.result;
+
   return (
     <div className="space-y-6">
+      {/* Brut/Net Toggle */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowNet(!showNet)}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium transition"
+          style={{
+            background: showNet ? "var(--accent-primary)" : "var(--bg-secondary)",
+            color: showNet ? "#fff" : "var(--text-secondary)",
+            border: `1px solid ${showNet ? "transparent" : "var(--border)"}`,
+          }}
+        >
+          {showNet ? "Net (- frais)" : "Brut"}
+        </button>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="glass rounded-2xl p-6">
@@ -666,7 +685,7 @@ export default function AnalyticsPage() {
                 trades.forEach((tr) => {
                   if (!strategyMap[tr.strategy]) strategyMap[tr.strategy] = { count: 0, wins: 0, total: 0 };
                   strategyMap[tr.strategy].count++;
-                  strategyMap[tr.strategy].total += tr.result;
+                  strategyMap[tr.strategy].total += getPnl(tr);
                   if (tr.result > 0) strategyMap[tr.strategy].wins++;
                 });
                 return Object.entries(strategyMap).map(([name, s]) => (
@@ -693,6 +712,163 @@ export default function AnalyticsPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Performance par Tag */}
+      <div className="glass rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Tag className="w-5 h-5 text-[--text-secondary]" />
+          <h3 className="text-lg font-semibold">Performance par Tag</h3>
+        </div>
+        {(() => {
+          const tagMap: Record<string, { count: number; wins: number; total: number }> = {};
+          trades.forEach((tr) => {
+            if (!tr.tags) return;
+            tr.tags.split(",").map(t => t.trim()).filter(Boolean).forEach(tag => {
+              if (!tagMap[tag]) tagMap[tag] = { count: 0, wins: 0, total: 0 };
+              tagMap[tag].count++;
+              tagMap[tag].total += getPnl(tr);
+              if (tr.result > 0) tagMap[tag].wins++;
+            });
+          });
+          const entries = Object.entries(tagMap).sort((a, b) => b[1].total - a[1].total);
+          if (entries.length === 0) return <p className="text-[--text-muted] text-sm text-center py-8">Aucun tag enregistré</p>;
+          return (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[--text-secondary] border-b border-[--border]">
+                    <th className="pb-3 font-medium">Tag</th>
+                    <th className="pb-3 font-medium">{t("trades")}</th>
+                    <th className="pb-3 font-medium">{t("winRate")}</th>
+                    <th className="pb-3 font-medium">P&L</th>
+                    <th className="pb-3 font-medium">Avg</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map(([tag, s]) => (
+                    <tr key={tag} className="border-b border-[--border-subtle]">
+                      <td className="py-3">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">{tag}</span>
+                      </td>
+                      <td className="py-3 mono">{s.count}</td>
+                      <td className="py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500" style={{ width: `${(s.wins / s.count) * 100}%` }} />
+                          </div>
+                          <span className="mono text-emerald-400 text-xs">{((s.wins / s.count) * 100).toFixed(0)}%</span>
+                        </div>
+                      </td>
+                      <td className={`py-3 mono font-bold ${s.total >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {s.total >= 0 ? "+" : ""}€{s.total.toFixed(2)}
+                      </td>
+                      <td className={`py-3 mono ${s.total / s.count >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        €{(s.total / s.count).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* MAE vs MFE Scatter Plot */}
+      <div className="glass rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Crosshair className="w-5 h-5 text-[--text-secondary]" />
+          <h3 className="text-lg font-semibold">MAE vs MFE Analysis</h3>
+        </div>
+        {(() => {
+          const maeMfeTrades = trades.filter(tr => tr.maePrice != null && tr.mfePrice != null && tr.entry);
+          if (maeMfeTrades.length === 0) {
+            return <p className="text-[--text-muted] text-sm text-center py-8">Renseignez MAE/MFE dans vos trades pour voir l&apos;analyse.</p>;
+          }
+
+          const points = maeMfeTrades.map(tr => {
+            const mae = Math.abs(tr.entry - (tr.maePrice || tr.entry));
+            const mfe = Math.abs((tr.mfePrice || tr.entry) - tr.entry);
+            return { mae, mfe, result: tr.result, asset: tr.asset };
+          });
+
+          const maxMae = Math.max(...points.map(p => p.mae), 0.0001);
+          const maxMfe = Math.max(...points.map(p => p.mfe), 0.0001);
+          const maxAxis = Math.max(maxMae, maxMfe) * 1.1;
+
+          return (
+            <div className="space-y-4">
+              <div className="relative w-full aspect-square max-w-md mx-auto" style={{ border: "1px solid var(--border)" }}>
+                {/* Grid lines */}
+                <div className="absolute inset-0">
+                  {[0.25, 0.5, 0.75].map(pct => (
+                    <div key={`h-${pct}`}>
+                      <div className="absolute w-full" style={{ bottom: `${pct * 100}%`, height: "1px", background: "var(--border-subtle)" }} />
+                      <div className="absolute h-full" style={{ left: `${pct * 100}%`, width: "1px", background: "var(--border-subtle)" }} />
+                    </div>
+                  ))}
+                  {/* Diagonal line (MAE = MFE) */}
+                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <line x1="0" y1="100" x2="100" y2="0" stroke="var(--text-muted)" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.5" />
+                  </svg>
+                </div>
+                {/* Points */}
+                {points.map((p, i) => {
+                  const x = (p.mae / maxAxis) * 100;
+                  const y = (p.mfe / maxAxis) * 100;
+                  return (
+                    <div
+                      key={i}
+                      className="absolute w-2.5 h-2.5 rounded-full transform -translate-x-1/2 translate-y-1/2 transition-all hover:scale-150"
+                      style={{
+                        left: `${x}%`,
+                        bottom: `${y}%`,
+                        background: p.result >= 0 ? "#10b981" : "#ef4444",
+                        opacity: 0.7,
+                      }}
+                      title={`${p.asset} | MAE: ${p.mae.toFixed(5)} | MFE: ${p.mfe.toFixed(5)} | P&L: €${p.result.toFixed(2)}`}
+                    />
+                  );
+                })}
+                {/* Axis labels */}
+                <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-[--text-muted]">MAE (Adverse)</span>
+                <span className="absolute -left-8 top-1/2 -translate-y-1/2 -rotate-90 text-xs text-[--text-muted]">MFE (Favorable)</span>
+              </div>
+              <div className="flex justify-center gap-6 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <span style={{ color: "var(--text-secondary)" }}>Gagnant</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                  <span style={{ color: "var(--text-secondary)" }}>Perdant</span>
+                </div>
+                <span style={{ color: "var(--text-muted)" }}>{maeMfeTrades.length} trades</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-center mt-2">
+                <div>
+                  <p className="text-xs text-[--text-muted]">MAE moyen</p>
+                  <p className="text-lg font-bold mono text-rose-400">{(points.reduce((s, p) => s + p.mae, 0) / points.length).toFixed(5)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[--text-muted]">MFE moyen</p>
+                  <p className="text-lg font-bold mono text-emerald-400">{(points.reduce((s, p) => s + p.mfe, 0) / points.length).toFixed(5)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[--text-muted]">Ratio MFE/MAE</p>
+                  <p className="text-lg font-bold mono text-blue-400">
+                    {(() => {
+                      const avgMae = points.reduce((s, p) => s + p.mae, 0) / points.length;
+                      const avgMfe = points.reduce((s, p) => s + p.mfe, 0) / points.length;
+                      return avgMae > 0 ? (avgMfe / avgMae).toFixed(2) : "—";
+                    })()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

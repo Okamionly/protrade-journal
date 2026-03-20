@@ -24,6 +24,8 @@ export interface Trade {
   setup: string | null;
   commission: number;
   swap: number;
+  maePrice: number | null;
+  mfePrice: number | null;
   tags: string | null;
   screenshots: Screenshot[];
   createdAt: string;

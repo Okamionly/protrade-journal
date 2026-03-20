@@ -362,6 +362,7 @@ export default function SentimentPage() {
   const [vixData, setVixData] = useState<VixApiData | null>(null);
   const [vixLoading, setVixLoading] = useState(false);
   const [livePrices, setLivePrices] = useState<LivePricesData | null>(null);
+  const [btcPrices, setBtcPrices] = useState<{ date: string; price: number }[]>([]);
 
   const load = useCallback(async (days: number) => {
     setLoading(true);
@@ -417,7 +418,14 @@ export default function SentimentPage() {
     }
   }, []);
 
-  useEffect(() => { load(range); }, [range, load]);
+  const loadBtcPrices = useCallback(async (days: number) => {
+    try {
+      const res = await fetch(`/api/btc-price?days=${days}`);
+      if (res.ok) setBtcPrices(await res.json());
+    } catch { /* supplementary */ }
+  }, []);
+
+  useEffect(() => { load(range); loadBtcPrices(range); }, [range, load, loadBtcPrices]);
   useEffect(() => { loadVix(); loadLivePrices(); }, [loadVix, loadLivePrices]);
 
   const current = data && data.length > 0 ? data[0] : undefined;
@@ -775,32 +783,75 @@ export default function SentimentPage() {
             </div>
           )}
 
-          {/* Historical bar chart */}
+          {/* Historical bar chart with BTC overlay */}
           {chartData.length > 0 && (
             <div className="metric-card rounded-2xl p-6">
-              <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-                <Activity className="w-4 h-4 text-cyan-400" />
-                {t("historicalChart")} {range} {t("days")}
-              </h3>
-              <div className="flex items-end gap-[1px] h-40">
-                {chartData.map((entry, i) => {
-                  const val = parseInt(entry.value);
-                  const safeVal = isNaN(val) ? 50 : val;
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+                  <Activity className="w-4 h-4 text-cyan-400" />
+                  {t("historicalChart")} {range} {t("days")}
+                </h3>
+                {btcPrices.length > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                    <div className="w-3 h-0.5 bg-amber-400 rounded" />
+                    BTC/USD
+                  </div>
+                )}
+              </div>
+              <div className="relative">
+                <div className="flex items-end gap-[1px] h-40">
+                  {chartData.map((entry, i) => {
+                    const val = parseInt(entry.value);
+                    const safeVal = isNaN(val) ? 50 : val;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col justify-end items-center group relative h-full">
+                        <div
+                          className="w-full rounded-t transition-all hover:opacity-80 cursor-default"
+                          style={{ height: `${(safeVal / 100) * 160}px`, background: getBarColor(safeVal) }}
+                          title={`${safeVal} - ${t(classifyScore(safeVal).i18nKey)}`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* BTC price overlay line */}
+                {btcPrices.length > 1 && (() => {
+                  const prices = btcPrices.map(p => p.price);
+                  const minP = Math.min(...prices);
+                  const maxP = Math.max(...prices);
+                  const rangeP = maxP - minP || 1;
+                  const step = btcPrices.length <= chartData.length ? 1 : Math.ceil(btcPrices.length / chartData.length);
+                  const sampled = btcPrices.filter((_, i) => i % step === 0);
+                  const points = sampled.map((p, i) => {
+                    const x = (i / (sampled.length - 1)) * 100;
+                    const y = 100 - ((p.price - minP) / rangeP) * 100;
+                    return `${x},${y}`;
+                  }).join(" ");
                   return (
-                    <div key={i} className="flex-1 flex flex-col justify-end items-center group relative h-full">
-                      <div
-                        className="w-full rounded-t transition-all hover:opacity-80 cursor-default"
-                        style={{ height: `${(safeVal / 100) * 160}px`, background: getBarColor(safeVal) }}
-                        title={`${safeVal} - ${t(classifyScore(safeVal).i18nKey)}`}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <polyline
+                        points={points}
+                        fill="none"
+                        stroke="#f59e0b"
+                        strokeWidth="1.5"
+                        vectorEffect="non-scaling-stroke"
+                        opacity="0.8"
                       />
-                    </div>
+                    </svg>
                   );
-                })}
+                })()}
               </div>
               <div className="flex justify-between text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
                 <span>{range}{t("days")}</span>
                 <span>{t("today")}</span>
               </div>
+              {/* BTC price range */}
+              {btcPrices.length > 1 && (
+                <div className="flex justify-between text-[10px] mt-0.5 text-amber-400/60">
+                  <span>${Math.min(...btcPrices.map(p => p.price)).toLocaleString()}</span>
+                  <span>${Math.max(...btcPrices.map(p => p.price)).toLocaleString()}</span>
+                </div>
+              )}
             </div>
           )}
         </>

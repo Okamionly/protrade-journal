@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, ChevronLeft, ChevronRight, Crosshair, TrendingUp, TrendingDown, Minus, Plus, Trash2, CheckSquare, Square, Clock, Globe, MessageSquare, BarChart3 } from "lucide-react";
+import { Save, ChevronLeft, ChevronRight, Crosshair, TrendingUp, TrendingDown, Minus, Plus, Trash2, CheckSquare, Square, Clock, Globe, MessageSquare, BarChart3, Upload, X, Share2 } from "lucide-react";
 import { useTradingRules } from "@/hooks/useTradingRules";
 
 const BIAS_OPTIONS = [
@@ -233,6 +233,8 @@ export default function DailyBiasPage() {
   const [newRuleText, setNewRuleText] = useState("");
   const [showAddRule, setShowAddRule] = useState(false);
   const [commentDuJour, setCommentDuJour] = useState("");
+  const [screenshots, setScreenshots] = useState<string[]>([]);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -256,7 +258,7 @@ export default function DailyBiasPage() {
       const res = await fetch("/api/daily-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(plan),
+        body: JSON.stringify({ ...plan, screenshots }),
       });
       if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
     } catch { /* ignore */ } finally {
@@ -283,6 +285,50 @@ export default function DailyBiasPage() {
     await addRule(newRuleText.trim());
     setNewRuleText("");
     setShowAddRule(false);
+  };
+
+  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          setScreenshots((prev) => [...prev, ev.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const shareToChat = async () => {
+    if (!plan.bias && !plan.notes && !plan.keyLevels) return;
+    setSharing(true);
+    try {
+      // Get the first room (Général)
+      const roomsRes = await fetch("/api/chat/rooms");
+      if (!roomsRes.ok) return;
+      const rooms = await roomsRes.json();
+      if (rooms.length === 0) return;
+      const roomId = rooms[0].id;
+
+      const biasLabel = BIAS_OPTIONS.find(b => b.value === plan.bias)?.label || plan.bias;
+      const dateLabel = new Date(date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+      let content = `📋 Daily Bias — ${dateLabel}\n`;
+      if (plan.bias) content += `Biais: ${biasLabel}\n`;
+      if (plan.pairs) content += `Paires: ${plan.pairs}\n`;
+      if (plan.keyLevels) content += `Niveaux: ${plan.keyLevels}\n`;
+      if (plan.notes) content += `Notes: ${plan.notes}`;
+
+      await fetch("/api/chat/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId, content }),
+      });
+      alert("Bias partagé dans le chat !");
+    } catch { /* ignore */ } finally {
+      setSharing(false);
+    }
   };
 
   const isToday = date === new Date().toISOString().slice(0, 10);
@@ -477,6 +523,38 @@ export default function DailyBiasPage() {
             </p>
           </div>
 
+          {/* Screenshots */}
+          <div className="metric-card rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Upload className="w-4 h-4 text-blue-400" />
+              <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Screenshots</h3>
+            </div>
+            <div
+              className="rounded-xl p-4 text-center cursor-pointer transition hover:opacity-80"
+              style={{ border: "2px dashed var(--border)", background: "var(--bg-secondary)" }}
+              onClick={() => document.getElementById("biasScreenshotInput")?.click()}
+            >
+              <input type="file" id="biasScreenshotInput" accept="image/*" multiple className="hidden" onChange={handleScreenshotUpload} />
+              <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: "var(--text-muted)" }} />
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>Cliquez pour ajouter des captures</p>
+            </div>
+            {screenshots.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                {screenshots.map((src, i) => (
+                  <div key={i} className="relative aspect-video rounded-lg overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+                    <img src={src} alt="" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => setScreenshots((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="absolute top-1 right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-white text-xs hover:bg-rose-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="metric-card rounded-2xl p-6">
             <h3 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Note de la journée</h3>
             <div className="flex gap-2">
@@ -497,12 +575,22 @@ export default function DailyBiasPage() {
             </div>
           </div>
 
-          {/* Fix #1: Save button always enabled when there's any content */}
-          <button onClick={save} disabled={saving || !hasContent}
-            className="w-full btn-primary py-3 rounded-xl text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50">
-            <Save className="w-5 h-5" />
-            {saved ? "Sauvegarde !" : saving ? "Enregistrement..." : !hasContent ? "Ajoutez du contenu" : allChecked || rules.length === 0 ? "Sauvegarder" : `Sauvegarder (checklist ${checkedRules.size}/${rules.length})`}
-          </button>
+          {/* Save + Share buttons */}
+          <div className="flex gap-3">
+            <button onClick={save} disabled={saving || !hasContent}
+              className="flex-1 btn-primary py-3 rounded-xl text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+              <Save className="w-5 h-5" />
+              {saved ? "Sauvegarde !" : saving ? "Enregistrement..." : !hasContent ? "Ajoutez du contenu" : allChecked || rules.length === 0 ? "Sauvegarder" : `Sauvegarder (checklist ${checkedRules.size}/${rules.length})`}
+            </button>
+            <button onClick={shareToChat} disabled={sharing || !hasContent}
+              className="py-3 px-4 rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50 transition"
+              style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+              title="Partager dans le chat"
+            >
+              <Share2 className="w-5 h-5" />
+              {sharing ? "..." : "Chat"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

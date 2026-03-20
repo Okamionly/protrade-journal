@@ -174,7 +174,13 @@ function MessageBubble({
         {/* Content */}
         {msg.content && (
           <p className="text-[13px] leading-relaxed break-words" style={{ color: "var(--text-primary)" }}>
-            {msg.content}
+            {msg.content.split(/(@\w+)/g).map((part, i) =>
+              part.startsWith("@") ? (
+                <span key={i} className="text-cyan-500 font-medium bg-cyan-500/10 px-0.5 rounded">{part}</span>
+              ) : (
+                <span key={i}>{part}</span>
+              )
+            )}
           </p>
         )}
 
@@ -523,6 +529,8 @@ export default function ChatPage() {
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [showNewMsgIndicator, setShowNewMsgIndicator] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -690,6 +698,57 @@ export default function ChatPage() {
 
   const messageGroups = useMemo(() => groupMessagesByDate(messages), [messages]);
   const pinnedCount = messages.filter((m) => m.isPinned).length;
+
+  // @mention users list
+  const chatUsers = useMemo(() => {
+    const map = new Map<string, string>();
+    messages.forEach((m) => {
+      if (!map.has(m.userId)) {
+        map.set(m.userId, m.user.name || m.user.email.split("@")[0]);
+      }
+    });
+    return Array.from(map.values());
+  }, [messages]);
+
+  const mentionResults = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return chatUsers.filter((u) => u.toLowerCase().includes(q)).slice(0, 5);
+  }, [mentionQuery, chatUsers]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInput(val);
+    // Detect @mention
+    const cursorPos = e.target.selectionStart || val.length;
+    const textBeforeCursor = val.slice(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    if (atMatch) {
+      setMentionQuery(atMatch[1]);
+      setMentionIndex(0);
+    } else {
+      setMentionQuery(null);
+    }
+  };
+
+  const insertMention = (username: string) => {
+    const cursorPos = inputRef.current?.selectionStart || input.length;
+    const textBeforeCursor = input.slice(0, cursorPos);
+    const textAfterCursor = input.slice(cursorPos);
+    const newBefore = textBeforeCursor.replace(/@\w*$/, `@${username} `);
+    setInput(newBefore + textAfterCursor);
+    setMentionQuery(null);
+    inputRef.current?.focus();
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (mentionQuery !== null && mentionResults.length > 0) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setMentionIndex((i) => Math.min(i + 1, mentionResults.length - 1)); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setMentionIndex((i) => Math.max(i - 1, 0)); }
+      else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); insertMention(mentionResults[mentionIndex]); }
+      else if (e.key === "Escape") { setMentionQuery(null); }
+    }
+  };
 
   // Keyboard shortcut
   useEffect(() => {
@@ -1040,12 +1099,31 @@ export default function ChatPage() {
                   ref={inputRef}
                   type="text"
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={handleInputChange}
+                  onKeyDown={handleInputKeyDown}
                   placeholder={`Message #${activeRoom?.name || "chat"}...`}
                   maxLength={1000}
                   className="w-full bg-gray-100 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700/50 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition placeholder-gray-400 dark:placeholder-gray-600"
                   style={{ color: "var(--text-primary)" }}
                 />
+                {/* @mention autocomplete */}
+                {mentionQuery !== null && mentionResults.length > 0 && (
+                  <div className="absolute bottom-full left-0 mb-1 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden z-20">
+                    {mentionResults.map((user, i) => (
+                      <button
+                        key={user}
+                        type="button"
+                        onClick={() => insertMention(user)}
+                        className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition ${
+                          i === mentionIndex ? "bg-cyan-500/10 text-cyan-500" : "text-[--text-primary] hover:bg-gray-50 dark:hover:bg-[var(--bg-hover)]"
+                        }`}
+                      >
+                        <AtSign className="w-3.5 h-3.5 text-[--text-muted]" />
+                        {user}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Send */}
