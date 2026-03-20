@@ -294,11 +294,28 @@ export function Sidebar() {
     window.dispatchEvent(new Event("sidebar-toggle"));
   };
 
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Listen for mobile toggle events from AppShell
+  useEffect(() => {
+    const handler = (e: CustomEvent) => setMobileOpen(e.detail);
+    window.addEventListener("mobile-sidebar" as string, handler as EventListener);
+    return () => window.removeEventListener("mobile-sidebar" as string, handler as EventListener);
+  }, []);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+    window.dispatchEvent(new CustomEvent("mobile-sidebar-closed"));
+  }, [pathname]);
+
   return (
     <aside
-      className={`fixed left-0 top-8 h-[calc(100%-2rem)] z-50 flex flex-col transition-all duration-300 ${
+      className={`fixed left-0 top-8 h-[calc(100%-2rem)] z-50 flex-col transition-all duration-300 ${
         collapsed ? "w-16" : "w-56"
-      } bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800`}
+      } bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800 ${
+        mobileOpen ? "flex" : "hidden md:flex"
+      }`}
     >
       {/* Logo area */}
       <div className="flex items-center h-14 px-3 border-b border-gray-200 dark:border-gray-800">

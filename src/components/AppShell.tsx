@@ -8,15 +8,10 @@ import { LiveTicker } from "./LiveTicker";
 import { LocaleProvider } from "@/i18n/context";
 import { Menu, X } from "lucide-react";
 
-const SidebarContext = createContext({ collapsed: false, mobileOpen: false, setMobileOpen: (_v: boolean) => {} });
+const SidebarContext = createContext({ collapsed: false });
 
 export function useIsSidebarCollapsed() {
   return useContext(SidebarContext).collapsed;
-}
-
-export function useMobileSidebar() {
-  const ctx = useContext(SidebarContext);
-  return { mobileOpen: ctx.mobileOpen, setMobileOpen: ctx.setMobileOpen };
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -28,6 +23,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  // Listen for sidebar-closed events
+  useEffect(() => {
+    const handler = () => setMobileOpen(false);
+    window.addEventListener("mobile-sidebar-closed", handler);
+    return () => window.removeEventListener("mobile-sidebar-closed", handler);
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem("sidebar-collapsed");
@@ -47,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <LocaleProvider>
-      <SidebarContext.Provider value={{ collapsed, mobileOpen, setMobileOpen }}>
+      <SidebarContext.Provider value={{ collapsed }}>
         <div className="fixed top-0 left-0 right-0 z-[60]">
           <LiveTicker />
         </div>
@@ -55,21 +57,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Mobile overlay */}
         {mobileOpen && (
           <div
-            className="fixed inset-0 bg-black/60 z-[55] md:hidden"
-            onClick={() => setMobileOpen(false)}
+            className="fixed inset-0 bg-black/60 z-[45] md:hidden"
+            onClick={() => {
+              setMobileOpen(false);
+              window.dispatchEvent(new CustomEvent("mobile-sidebar", { detail: false }));
+            }}
           />
         )}
 
-        {/* Sidebar: hidden on mobile unless mobileOpen */}
-        <div className={`${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 transition-transform duration-300 z-[56]`}>
-          <Sidebar />
-        </div>
+        <Sidebar />
 
         <Header />
 
         {/* Mobile hamburger button */}
         <button
-          onClick={() => setMobileOpen(!mobileOpen)}
+          onClick={() => {
+            const next = !mobileOpen;
+            setMobileOpen(next);
+            window.dispatchEvent(new CustomEvent("mobile-sidebar", { detail: next }));
+          }}
           className="fixed top-10 left-3 z-[57] md:hidden w-10 h-10 rounded-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-lg"
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
