@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "@/i18n/context";
 import {
   Crown,
   Plus,
@@ -54,14 +55,14 @@ interface VipPost {
 }
 
 const TYPE_OPTIONS = [
-  { value: "indicator", label: "Indicateur" },
-  { value: "macro", label: "Analyse Macro" },
-  { value: "options", label: "Analyse Options" },
-  { value: "futures", label: "Analyse Futures" },
+  { value: "indicator", labelKey: "vipTypeIndicator" },
+  { value: "macro", labelKey: "vipTypeMacro" },
+  { value: "options", labelKey: "vipTypeOptions" },
+  { value: "futures", labelKey: "vipTypeFutures" },
 ];
 
-const typeLabel = (type: string) =>
-  TYPE_OPTIONS.find((t) => t.value === type)?.label || type;
+const typeLabelKey = (type: string) =>
+  TYPE_OPTIONS.find((opt) => opt.value === type)?.labelKey || type;
 
 const typeIcon = (type: string) => {
   switch (type) {
@@ -120,6 +121,7 @@ function MarkdownEditor({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -268,7 +270,7 @@ function MarkdownEditor({
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <label className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-          Contenu (Markdown)
+          {t("vipContentMarkdown")}
         </label>
         <div className="flex items-center gap-2">
           <button
@@ -281,14 +283,14 @@ function MarkdownEditor({
               border: showPreview ? "1px solid rgba(59,130,246,0.3)" : "1px solid var(--border)",
             }}
           >
-            {showPreview ? "Éditer" : "Aperçu"}
+            {showPreview ? t("vipEdit") : t("vipPreview")}
           </button>
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
             className="w-7 h-7 rounded-lg flex items-center justify-center transition hover:bg-[var(--bg-hover)]"
             style={{ color: "var(--text-muted)" }}
-            title={expanded ? "Réduire" : "Agrandir"}
+            title={expanded ? t("vipCollapse") : t("vipExpand")}
           >
             {expanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
@@ -433,6 +435,7 @@ function MarkdownEditor({
 }
 
 export default function VipContentPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [posts, setPosts] = useState<VipPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -551,7 +554,7 @@ export default function VipContentPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Supprimer cette publication ?")) return;
+    if (!confirm(t("vipConfirmDelete"))) return;
     setDeleting(id);
     try {
       const res = await fetch(`/api/vip/posts/${id}`, { method: "DELETE" });
@@ -622,10 +625,10 @@ export default function VipContentPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-              Contenu VIP
+              {t("adminVipContent")}
             </h1>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Gérer les publications VIP
+              {t("adminVipContentDesc")}
             </p>
           </div>
         </div>
@@ -638,7 +641,7 @@ export default function VipContentPage() {
           }}
         >
           <Plus className="w-4 h-4" />
-          Nouvelle Publication
+          {t("vipNewPublication")}
         </button>
       </div>
 
@@ -650,7 +653,7 @@ export default function VipContentPage() {
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-              {editingPost ? "Modifier la publication" : "Nouvelle publication"}
+              {editingPost ? t("vipEditPublication") : t("vipNewPublicationForm")}
             </h2>
             <button
               onClick={resetForm}
@@ -665,13 +668,13 @@ export default function VipContentPage() {
             {/* Title */}
             <div>
               <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>
-                Titre
+                {t("title")}
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Titre de la publication..."
+                placeholder={t("vipTitlePlaceholder")}
                 className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                 style={{
                   background: "var(--bg-secondary)",
@@ -684,7 +687,7 @@ export default function VipContentPage() {
             {/* Type */}
             <div>
               <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>
-                Type
+                {t("type")}
               </label>
               <select
                 value={type}
@@ -698,7 +701,7 @@ export default function VipContentPage() {
               >
                 {TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </option>
                 ))}
               </select>
@@ -711,7 +714,7 @@ export default function VipContentPage() {
             <div>
               <label className="text-xs font-medium mb-1.5 flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
                 <Code className="w-3.5 h-3.5" />
-                Script / Code Pine Script (optionnel)
+                {t("vipScriptCode")}
               </label>
               <textarea
                 value={scriptCode}
@@ -731,7 +734,7 @@ export default function VipContentPage() {
             <div>
               <label className="text-xs font-medium mb-1.5 flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
                 <ImageIcon className="w-3.5 h-3.5" />
-                URL Image (optionnel)
+                {t("vipImageUrl")}
               </label>
               <input
                 type="text"
@@ -766,7 +769,7 @@ export default function VipContentPage() {
                 />
               </button>
               <span className="text-sm" style={{ color: "var(--text-primary)" }}>
-                {published ? "Publié" : "Brouillon"}
+                {published ? t("vipPublished") : t("vipDraft")}
               </span>
             </div>
 
@@ -781,7 +784,7 @@ export default function VipContentPage() {
                   color: "var(--text-muted)",
                 }}
               >
-                Annuler
+                {t("cancel")}
               </button>
               <button
                 onClick={handleSave}
@@ -796,7 +799,7 @@ export default function VipContentPage() {
                 ) : (
                   <Save className="w-4 h-4" />
                 )}
-                {editingPost ? "Mettre à jour" : "Enregistrer"}
+                {editingPost ? t("vipUpdate") : t("save")}
               </button>
             </div>
           </div>
@@ -812,7 +815,7 @@ export default function VipContentPage() {
         <div className="glass rounded-2xl p-12 text-center">
           <Crown className="w-12 h-12 mx-auto mb-4" style={{ color: "rgba(245,158,11,0.3)" }} />
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Aucune publication VIP pour le moment.
+            {t("vipNoPublication")}
           </p>
           <button
             onClick={openNewForm}
@@ -821,7 +824,7 @@ export default function VipContentPage() {
               background: "linear-gradient(135deg, rgb(245,158,11), rgb(234,88,12))",
             }}
           >
-            Créer la première publication
+            {t("vipCreateFirst")}
           </button>
         </div>
       ) : (
@@ -858,7 +861,7 @@ export default function VipContentPage() {
                             border: `1px solid ${tc.border}`,
                           }}
                         >
-                          {typeLabel(post.type)}
+                          {t(typeLabelKey(post.type))}
                         </span>
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -867,7 +870,7 @@ export default function VipContentPage() {
                               : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
                           }`}
                         >
-                          {post.published ? "Publié" : "Brouillon"}
+                          {post.published ? t("vipPublished") : t("vipDraft")}
                         </span>
                       </div>
                       <p
@@ -884,7 +887,7 @@ export default function VipContentPage() {
                         {post.scriptCode && (
                           <span className="flex items-center gap-1 text-[10px]" style={{ color: "rgb(168,85,247)" }}>
                             <Code className="w-3 h-3" />
-                            Code inclus
+                            {t("vipCodeIncluded")}
                           </span>
                         )}
                         {post.imageUrl && (
@@ -903,7 +906,7 @@ export default function VipContentPage() {
                       onClick={() => handleTogglePublished(post)}
                       className="w-8 h-8 rounded-lg flex items-center justify-center transition hover:opacity-80"
                       style={{ background: "var(--bg-hover)" }}
-                      title={post.published ? "Dépublier" : "Publier"}
+                      title={post.published ? t("vipUnpublish") : t("vipPublish")}
                     >
                       {post.published ? (
                         <EyeOff className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
@@ -915,7 +918,7 @@ export default function VipContentPage() {
                       onClick={() => openEditForm(post)}
                       className="w-8 h-8 rounded-lg flex items-center justify-center transition hover:opacity-80"
                       style={{ background: "var(--bg-hover)" }}
-                      title="Modifier"
+                      title={t("edit")}
                     >
                       <Edit3 className="w-4 h-4" style={{ color: "rgb(59,130,246)" }} />
                     </button>
@@ -924,7 +927,7 @@ export default function VipContentPage() {
                       disabled={deleting === post.id}
                       className="w-8 h-8 rounded-lg flex items-center justify-center transition hover:opacity-80 disabled:opacity-50"
                       style={{ background: "var(--bg-hover)" }}
-                      title="Supprimer"
+                      title={t("delete")}
                     >
                       {deleting === post.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" style={{ color: "var(--text-muted)" }} />

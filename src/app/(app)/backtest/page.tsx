@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTheme } from "next-themes";
 import { useTrades, Trade } from "@/hooks/useTrades";
 import { calculateRR } from "@/lib/utils";
 import {
@@ -131,6 +132,8 @@ function buildEquityCurve(trades: Trade[], sizeMultiplier: number): number[] {
 
 // --- SVG Equity Chart ---
 function EquityChart({ actual, simulated }: { actual: number[]; simulated: number[] }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark" || theme === "oled";
   const all = [...actual, ...simulated];
   if (all.length === 0) return <div className="h-64 flex items-center justify-center" style={{ color: "var(--text-muted)" }}>Aucun trade</div>;
   const maxLen = Math.max(actual.length, simulated.length);
@@ -150,6 +153,10 @@ function EquityChart({ actual, simulated }: { actual: number[]; simulated: numbe
   let peak = 0;
   for (const v of simulated) { if (v > peak) peak = v; hwm.push(peak); }
 
+  const gridStroke = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)";
+  const zeroStroke = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
+  const legendBg = isDark ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.85)";
+
   return (
     <div className="glass p-5 rounded-xl">
       <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
@@ -162,22 +169,22 @@ function EquityChart({ actual, simulated }: { actual: number[]; simulated: numbe
           const val = minY + f * range;
           return (
             <g key={f}>
-              <line x1={pad} y1={y} x2={w - pad} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
+              <line x1={pad} y1={y} x2={w - pad} y2={y} stroke={gridStroke} strokeWidth="0.5" />
               <text x={pad - 5} y={y + 3} textAnchor="end" fontSize="9" fill="var(--text-muted)">{val.toFixed(0)}</text>
             </g>
           );
         })}
         {/* Zero line */}
-        <line x1={pad} y1={toY(0)} x2={w - pad} y2={toY(0)} stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" strokeDasharray="4,3" />
+        <line x1={pad} y1={toY(0)} x2={w - pad} y2={toY(0)} stroke={zeroStroke} strokeWidth="0.5" strokeDasharray="4,3" />
         {/* HWM */}
         {hwm.length > 1 && <path d={makePath(hwm)} fill="none" stroke="rgba(6,182,212,0.15)" strokeWidth="1" strokeDasharray="3,3" />}
         {/* Actual */}
-        {actual.length > 1 && <path d={makePath(actual)} fill="none" stroke="rgba(156,163,175,0.6)" strokeWidth="1.5" />}
+        {actual.length > 1 && <path d={makePath(actual)} fill="none" stroke={isDark ? "rgba(156,163,175,0.6)" : "rgba(100,116,139,0.7)"} strokeWidth="1.5" />}
         {/* Simulated */}
         {simulated.length > 1 && <path d={makePath(simulated)} fill="none" stroke="#06b6d4" strokeWidth="2" />}
         {/* Legend */}
-        <rect x={w - 170} y={8} width={155} height={36} rx={6} fill="rgba(0,0,0,0.3)" />
-        <line x1={w - 160} y1={20} x2={w - 140} y2={20} stroke="rgba(156,163,175,0.6)" strokeWidth="1.5" />
+        <rect x={w - 170} y={8} width={155} height={36} rx={6} fill={legendBg} stroke="var(--border)" strokeWidth="0.5" />
+        <line x1={w - 160} y1={20} x2={w - 140} y2={20} stroke={isDark ? "rgba(156,163,175,0.6)" : "rgba(100,116,139,0.7)"} strokeWidth="1.5" />
         <text x={w - 135} y={23} fontSize="9" fill="var(--text-secondary)">Actuel</text>
         <line x1={w - 160} y1={35} x2={w - 140} y2={35} stroke="#06b6d4" strokeWidth="2" />
         <text x={w - 135} y={38} fontSize="9" fill="var(--text-secondary)">Simulé</text>
@@ -201,7 +208,7 @@ function Slider({ label, icon: Icon, value, min, max, step, format, onChange }: 
       </div>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(+e.target.value)}
         className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-        style={{ background: `linear-gradient(to right, #06b6d4 ${((value - min) / (max - min)) * 100}%, rgba(255,255,255,0.1) ${((value - min) / (max - min)) * 100}%)` }}
+        style={{ background: `linear-gradient(to right, #06b6d4 ${((value - min) / (max - min)) * 100}%, var(--border) ${((value - min) / (max - min)) * 100}%)` }}
       />
     </div>
   );

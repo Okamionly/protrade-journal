@@ -76,15 +76,6 @@ html:not(.dark):not(.oled) .glass {
   color: var(--text-primary);
 }
 
-html:not(.dark):not(.oled) .metric-card *,
-html:not(.dark):not(.oled) .glass * {
-  color: inherit;
-}
-
-html:not(.dark):not(.oled) .mono {
-  color: var(--text-primary);
-}
-
 /* ---- INPUT & SELECT FIX ---- */
 html:not(.dark):not(.oled) input,
 html:not(.dark):not(.oled) select,
@@ -105,7 +96,7 @@ html:not(.dark):not(.oled) table th {
   color: var(--text-secondary) !important;
 }
 html:not(.dark):not(.oled) table td {
-  color: var(--text-primary) !important;
+  color: var(--text-primary);
 }
 html:not(.dark):not(.oled) table tr {
   border-color: var(--border) !important;
@@ -118,10 +109,13 @@ html:not(.dark):not(.oled) tbody tr {
 }
 
 /* ---- TEXT-WHITE → dark text in light mode ---- */
-html:not(.dark):not(.oled) .text-white {
+/* Only override text-white when NOT inside a colored/gradient background */
+html:not(.dark):not(.oled) .text-white:not([style*="background"]):not([class*="bg-gradient"]):not([class*="bg-blue"]):not([class*="bg-cyan"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-emerald"]):not([class*="bg-purple"]):not([class*="bg-indigo"]):not([class*="bg-orange"]):not([class*="bg-amber"]):not([class*="bg-rose"]) {
   color: var(--text-primary) !important;
 }
 /* Preserve white text on colored/gradient/button backgrounds */
+html:not(.dark):not(.oled) [style*="background: linear-gradient"] .text-white,
+html:not(.dark):not(.oled) [style*="background:linear-gradient"] .text-white,
 html:not(.dark):not(.oled) .bg-gradient-to-r .text-white,
 html:not(.dark):not(.oled) .bg-gradient-to-br .text-white,
 html:not(.dark):not(.oled) .bg-gradient-to-b .text-white,
@@ -146,6 +140,8 @@ html:not(.dark):not(.oled) .bg-indigo-600 .text-white,
 html:not(.dark):not(.oled) .bg-orange-500 .text-white,
 html:not(.dark):not(.oled) .bg-amber-500 .text-white,
 html:not(.dark):not(.oled) [class*="bg-gradient"] .text-white,
+html:not(.dark):not(.oled) [style*="background: linear-gradient"] *,
+html:not(.dark):not(.oled) [style*="background:linear-gradient"] *,
 html:not(.dark):not(.oled) button .text-white,
 html:not(.dark):not(.oled) a[class*="bg-gradient"] .text-white,
 html:not(.dark):not(.oled) .btn-primary .text-white,
@@ -253,10 +249,11 @@ html:not(.dark):not(.oled) .placeholder\:text-gray-600::placeholder {
 }
 
 /* ---- NUMBER/STAT VISIBILITY ---- */
-html:not(.dark):not(.oled) .text-2xl,
-html:not(.dark):not(.oled) .text-3xl,
-html:not(.dark):not(.oled) .text-4xl,
-html:not(.dark):not(.oled) .text-5xl {
+/* Only set default color when no explicit color is provided via style attr */
+html:not(.dark):not(.oled) .text-2xl:not([style*="color"]),
+html:not(.dark):not(.oled) .text-3xl:not([style*="color"]),
+html:not(.dark):not(.oled) .text-4xl:not([style*="color"]),
+html:not(.dark):not(.oled) .text-5xl:not([style*="color"]) {
   color: var(--text-primary);
 }
 
@@ -371,8 +368,9 @@ html:not(.dark):not(.oled) [style*="border: 2px solid white"] {
 }
 
 /* ---- METRIC VALUES ENSURE VISIBLE ---- */
-html:not(.dark):not(.oled) .metric-card .mono,
-html:not(.dark):not(.oled) .glass .mono {
+/* Only override mono text when no explicit color is set via style attr */
+html:not(.dark):not(.oled) .metric-card .mono:not([style*="color"]),
+html:not(.dark):not(.oled) .glass .mono:not([style*="color"]) {
   color: var(--text-primary);
 }
 
@@ -632,6 +630,29 @@ html:not(.dark):not(.oled) .metric-card {
 
 .animate-pulse > div {
   animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* ========== SVG LIGHT MODE FIXES ========== */
+/* Override hardcoded white-alpha SVG strokes/fills for light mode */
+html:not(.dark):not(.oled) svg line[stroke*="rgba(255,255,255"],
+html:not(.dark):not(.oled) svg line[stroke*="rgba(255, 255, 255"] {
+  stroke: rgba(0, 0, 0, 0.08) !important;
+}
+html:not(.dark):not(.oled) svg circle[stroke*="rgba(255,255,255"],
+html:not(.dark):not(.oled) svg circle[stroke*="rgba(255, 255, 255"] {
+  stroke: rgba(0, 0, 0, 0.1) !important;
+}
+html:not(.dark):not(.oled) svg rect[fill*="rgba(0,0,0,0.3)"],
+html:not(.dark):not(.oled) svg rect[fill*="rgba(0, 0, 0, 0.3)"] {
+  fill: rgba(255, 255, 255, 0.85) !important;
+  stroke: rgba(0, 0, 0, 0.1);
+}
+html:not(.dark):not(.oled) div[style*="rgba(255,255,255,0.03)"],
+html:not(.dark):not(.oled) div[style*="rgba(255,255,255,0.05)"] {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"] {
+  background: rgba(0, 0, 0, 0.06) !important;
 }
 
 /* ========== MOBILE RESPONSIVE ========== */

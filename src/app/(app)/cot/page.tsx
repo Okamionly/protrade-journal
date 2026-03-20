@@ -6,6 +6,7 @@ import { fetchCotData, type CotParsed } from "@/lib/market/cot";
 import { COT_CONTRACTS, COT_CATEGORIES } from "@/lib/market/constants";
 import { RefreshCw, Search, TrendingUp, TrendingDown, ArrowLeft } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import { useTheme } from "next-themes";
 
 Chart.register(...registerables);
 
@@ -27,6 +28,7 @@ interface CotOverviewRow {
 
 export default function CotPage() {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const [view, setView] = useState<ViewMode>("overview");
   const [asset, setAsset] = useState("EUR");
   const [category, setCategory] = useState<string>("Tous");
@@ -135,15 +137,15 @@ export default function CotPage() {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: "#94a3b8" } } },
+        plugins: { legend: { labels: { color: theme === "dark" || theme === "oled" ? "#94a3b8" : "#64748b" } } },
         scales: {
-          y: { grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#94a3b8" } },
-          x: { grid: { display: false }, ticks: { color: "#94a3b8", maxTicksLimit: 12 } },
+          y: { grid: { color: theme === "dark" || theme === "oled" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)" }, ticks: { color: theme === "dark" || theme === "oled" ? "#94a3b8" : "#64748b" } },
+          x: { grid: { display: false }, ticks: { color: theme === "dark" || theme === "oled" ? "#94a3b8" : "#64748b", maxTicksLimit: 12 } },
         },
       },
     });
     return () => { netChartInstance.current?.destroy(); };
-  }, [detailData, view]);
+  }, [detailData, view, theme]);
 
   useEffect(() => {
     if (view !== "detail" || !barChartRef.current || detailData.length === 0) return;
@@ -162,15 +164,15 @@ export default function CotPage() {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: "#94a3b8" } } },
+        plugins: { legend: { labels: { color: theme === "dark" || theme === "oled" ? "#94a3b8" : "#64748b" } } },
         scales: {
-          y: { grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "#94a3b8" } },
-          x: { grid: { display: false }, ticks: { color: "#94a3b8" } },
+          y: { grid: { color: theme === "dark" || theme === "oled" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)" }, ticks: { color: theme === "dark" || theme === "oled" ? "#94a3b8" : "#64748b" } },
+          x: { grid: { display: false }, ticks: { color: theme === "dark" || theme === "oled" ? "#94a3b8" : "#64748b" } },
         },
       },
     });
     return () => { barChartInstance.current?.destroy(); };
-  }, [detailData, view]);
+  }, [detailData, view, theme]);
 
   const currentContract = COT_CONTRACTS[asset];
 

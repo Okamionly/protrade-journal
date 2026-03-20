@@ -498,7 +498,7 @@ export default function WatchlistPage() {
             )}
           </div>
           {alertHistory.length === 0 ? (
-            <p className="text-sm text-[--text-muted]">Aucune alerte d&eacute;clench&eacute;e</p>
+            <p className="text-sm text-[--text-muted]">{t("noAlertTriggered")}</p>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {alertHistory.slice(0, 20).map((h, i) => (
@@ -510,7 +510,7 @@ export default function WatchlistPage() {
                         {h.symbol} — ${h.price.toFixed(2)}
                       </p>
                       <p className="text-xs text-[--text-muted]">
-                        {h.direction === "above" ? "Au-dessus de" : "En-dessous de"} ${h.alertPrice.toFixed(2)}
+                        {h.direction === "above" ? t("abovePrice") : t("belowPrice")} ${h.alertPrice.toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -529,7 +529,7 @@ export default function WatchlistPage() {
         <div className="glass rounded-2xl p-5">
           <h3 className="font-semibold text-[--text-primary] flex items-center gap-2 mb-4">
             <Flame className="w-4 h-4 text-orange-400" />
-            Tendances — Plus grands mouvements
+            {t("trendingMovers")}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {trending.map((q) => {
@@ -558,7 +558,7 @@ export default function WatchlistPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher un symbole..."
+          placeholder={t("searchSymbol")}
           className="input-field pl-10"
         />
       </div>
@@ -566,11 +566,11 @@ export default function WatchlistPage() {
       {/* Add Symbol */}
       {showAdd && (
         <div className="glass rounded-2xl p-5">
-          <h3 className="font-semibold text-[--text-primary] mb-3">Ajouter un instrument</h3>
+          <h3 className="font-semibold text-[--text-primary] mb-3">{t("addInstrument")}</h3>
           <div className="flex gap-3 mb-4">
-            <input type="text" value={addSymbol} onChange={(e) => setAddSymbol(e.target.value.toUpperCase())} placeholder="Symbole (ex: AAPL)" className="input-field w-40" />
-            <input type="text" value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Nom (optionnel)" className="input-field flex-1" />
-            <button onClick={addItem} className="px-6 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-medium text-sm">Ajouter</button>
+            <input type="text" value={addSymbol} onChange={(e) => setAddSymbol(e.target.value.toUpperCase())} placeholder={t("symbolPlaceholder")} className="input-field w-40" />
+            <input type="text" value={addName} onChange={(e) => setAddName(e.target.value)} placeholder={t("namePlaceholder")} className="input-field flex-1" />
+            <button onClick={addItem} className="px-6 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-medium text-sm">{t("addSymbol")}</button>
           </div>
           <div className="flex flex-wrap gap-2">
             {POPULAR_SYMBOLS.filter((p) => !items.some((i) => i.symbol === p.symbol)).map((p) => (
@@ -605,15 +605,15 @@ export default function WatchlistPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[--border-subtle]">
-                <th className="text-left text-xs font-semibold text-[--text-muted] p-4">Symbole</th>
-                <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Prix</th>
-                <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Change</th>
+                <th className="text-left text-xs font-semibold text-[--text-muted] p-4">{t("symbol")}</th>
+                <th className="text-right text-xs font-semibold text-[--text-muted] p-4">{t("price")}</th>
+                <th className="text-right text-xs font-semibold text-[--text-muted] p-4">{t("change")}</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden md:table-cell">%</th>
-                <th className="text-center text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">Mini Chart</th>
-                <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">Volume</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">{t("miniChart")}</th>
+                <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">{t("volume")}</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">Bid/Ask</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">52W Range</th>
-                <th className="text-center text-xs font-semibold text-[--text-muted] p-4">Actions</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4">{t("actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -638,9 +638,9 @@ export default function WatchlistPage() {
                               </span>
                             )}
                             {correlations.length > 0 && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 flex items-center gap-1" title={`Corrélé avec ${correlations.map(c => c.symbol).join(", ")}`}>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 flex items-center gap-1" title={t("correlatedWith", { symbols: correlations.map(c => c.symbol).join(", ") })}>
                                 <Link2 className="w-2.5 h-2.5" />
-                                Corr&eacute;l&eacute; ({correlations[0].coefficient.toFixed(2)})
+                                {t("correlated")} ({correlations[0].coefficient.toFixed(2)})
                               </span>
                             )}
                           </div>
@@ -704,8 +704,8 @@ export default function WatchlistPage() {
           {filtered.length === 0 && (
             <div className="text-center py-12 text-[--text-muted]">
               <Eye className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>Votre watchlist est vide</p>
-              <p className="text-sm mt-1">Ajoutez des instruments pour commencer</p>
+              <p>{t("watchlistEmpty")}</p>
+              <p className="text-sm mt-1">{t("watchlistEmptyHint")}</p>
             </div>
           )}
         </div>
@@ -716,11 +716,11 @@ export default function WatchlistPage() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-[--text-primary] flex items-center gap-2">
             <Newspaper className="w-4 h-4 text-cyan-400" />
-            Derni&egrave;res News
+            {t("latestNews")}
           </h3>
           <button onClick={fetchNews} disabled={newsLoading} className="text-xs text-[--text-muted] hover:text-[--text-primary] transition">
             <RefreshCw className={`w-3 h-3 inline mr-1 ${newsLoading ? "animate-spin" : ""}`} />
-            Actualiser
+            {t("refresh")}
           </button>
         </div>
         {newsLoading && news.length === 0 ? (
@@ -766,7 +766,7 @@ export default function WatchlistPage() {
         ) : (
           <div className="text-center py-6 text-[--text-muted]">
             <Newspaper className="w-8 h-8 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">Aucune news disponible pour vos symboles</p>
+            <p className="text-sm">{t("noNewsAvailable")}</p>
           </div>
         )}
       </div>
@@ -775,12 +775,12 @@ export default function WatchlistPage() {
       {alertSymbol && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setAlertSymbol(null); setAlertError(null); }}>
           <div className="glass rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-[--text-primary] mb-4">Alerte pour {alertSymbol}</h3>
+            <h3 className="text-lg font-bold text-[--text-primary] mb-4">{t("alertFor", { symbol: alertSymbol })}</h3>
             <div className="space-y-3">
               <div className="flex gap-3">
                 <select value={alertDir} onChange={(e) => setAlertDir(e.target.value as "above" | "below")} className="input-field w-40">
-                  <option value="above">Au-dessus de</option>
-                  <option value="below">En-dessous de</option>
+                  <option value="above">{t("abovePrice")}</option>
+                  <option value="below">{t("belowPrice")}</option>
                 </select>
                 <input
                   type="number"
@@ -800,8 +800,8 @@ export default function WatchlistPage() {
                 </div>
               )}
               <div className="flex gap-2">
-                <button onClick={() => setAlert(alertSymbol)} className="flex-1 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-medium text-sm">D&eacute;finir l&apos;alerte</button>
-                <button onClick={() => { setAlertSymbol(null); setAlertError(null); }} className="px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm">Annuler</button>
+                <button onClick={() => setAlert(alertSymbol)} className="flex-1 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-medium text-sm">{t("setAlert")}</button>
+                <button onClick={() => { setAlertSymbol(null); setAlertError(null); }} className="px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm">{t("cancel")}</button>
               </div>
             </div>
           </div>

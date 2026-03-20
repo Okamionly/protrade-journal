@@ -124,7 +124,7 @@ export default function RiskPage() {
       {/* Key Risk Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Expectancy", value: `${risk.expectancy >= 0 ? "+" : ""}${risk.expectancy}\u20AC`, color: risk.expectancy >= 0 ? "#10b981" : "#ef4444", icon: TrendingDown },
+          { label: "Expectancy", value: `${risk.expectancy >= 0 ? "+" : ""}${risk.expectancy}€`, color: risk.expectancy >= 0 ? "#10b981" : "#ef4444", icon: TrendingDown },
           { label: "Payoff Ratio", value: risk.payoffRatio.toFixed(2), color: risk.payoffRatio >= 1.5 ? "#10b981" : risk.payoffRatio >= 1 ? "#f59e0b" : "#ef4444", icon: Percent },
           {
             label: "Kelly %",
@@ -161,10 +161,10 @@ export default function RiskPage() {
         <div className="metric-card rounded-2xl p-5">
           <span className="text-xs" style={{ color: "var(--text-muted)" }}>P&L Net (apres frais)</span>
           <div className="text-2xl font-bold mono mt-1" style={{ color: risk.netPnlAfterFees >= 0 ? "#10b981" : "#ef4444" }}>
-            {risk.netPnlAfterFees >= 0 ? "+" : ""}{risk.netPnlAfterFees}\u20AC
+            {risk.netPnlAfterFees >= 0 ? "+" : ""}{risk.netPnlAfterFees}€
           </div>
           <div className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-            Commissions: {risk.totalCommissions}\u20AC &bull; Swaps: {risk.totalSwaps}\u20AC
+            Commissions: {risk.totalCommissions}€ &bull; Swaps: {risk.totalSwaps}€
           </div>
         </div>
       </div>
@@ -180,16 +180,16 @@ export default function RiskPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
               <div className="text-xs mb-1 font-medium" style={{ color: "var(--text-muted)" }}>VaR 95%</div>
-              <div className="text-xl font-bold mono" style={{ color: "#f59e0b" }}>{varMetrics.var95.toFixed(2)}\u20AC</div>
+              <div className="text-xl font-bold mono" style={{ color: "#f59e0b" }}>{varMetrics.var95.toFixed(2)}€</div>
               <p className="text-xs mt-2" style={{ color: "var(--text-secondary)" }}>
-                Il y a 5% de chance de perdre plus de {Math.abs(varMetrics.var95).toFixed(2)}\u20AC par trade
+                Il y a 5% de chance de perdre plus de {Math.abs(varMetrics.var95).toFixed(2)}€ par trade
               </p>
             </div>
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
               <div className="text-xs mb-1 font-medium" style={{ color: "var(--text-muted)" }}>VaR 99%</div>
-              <div className="text-xl font-bold mono" style={{ color: "#ef4444" }}>{varMetrics.var99.toFixed(2)}\u20AC</div>
+              <div className="text-xl font-bold mono" style={{ color: "#ef4444" }}>{varMetrics.var99.toFixed(2)}€</div>
               <p className="text-xs mt-2" style={{ color: "var(--text-secondary)" }}>
-                Il y a 1% de chance de perdre plus de {Math.abs(varMetrics.var99).toFixed(2)}\u20AC par trade
+                Il y a 1% de chance de perdre plus de {Math.abs(varMetrics.var99).toFixed(2)}€ par trade
               </p>
             </div>
           </div>
@@ -224,7 +224,7 @@ export default function RiskPage() {
                       background: p.drawdownPercent > 10 ? "#ef4444" : p.drawdownPercent > 5 ? "#f59e0b" : "#10b981",
                       opacity: 0.7,
                     }}
-                    title={`DD: -${p.drawdownPercent.toFixed(1)}% | Equity: ${p.equity.toFixed(2)}\u20AC`}
+                    title={`DD: -${p.drawdownPercent.toFixed(1)}% | Equity: ${p.equity.toFixed(2)}€`}
                   />
                 </div>
               );
@@ -264,11 +264,11 @@ export default function RiskPage() {
                           key={day}
                           className="p-2 text-center rounded cursor-default"
                           style={{ background: getHeatmapColor(avgPnl, heatmapData.minAvg, heatmapData.maxAvg) }}
-                          title={`${asset} ${DAYS_FR_SHORT[day]}: ${count} trades, avg ${avgPnl.toFixed(2)}\u20AC`}
+                          title={`${asset} ${DAYS_FR_SHORT[day]}: ${count} trades, avg ${avgPnl.toFixed(2)}€`}
                         >
                           {count > 0 ? (
                             <span className="text-xs font-bold mono" style={{ color: avgPnl >= 0 ? "#10b981" : "#ef4444" }}>
-                              {avgPnl >= 0 ? "+" : ""}{avgPnl.toFixed(0)}\u20AC
+                              {avgPnl >= 0 ? "+" : ""}{avgPnl.toFixed(0)}€
                             </span>
                           ) : (
                             <span className="text-xs" style={{ color: "var(--text-muted)" }}>-</span>
@@ -316,12 +316,12 @@ export default function RiskPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
               <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Drawdown actuel</div>
-              <div className="text-xl font-bold mono text-rose-400">-{recoveryCalc.drawdown.toFixed(2)}\u20AC</div>
+              <div className="text-xl font-bold mono text-rose-400">-{recoveryCalc.drawdown.toFixed(2)}€</div>
             </div>
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
               <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Expectancy / trade</div>
               <div className="text-xl font-bold mono" style={{ color: recoveryCalc.expectancy > 0 ? "#10b981" : "#ef4444" }}>
-                {recoveryCalc.expectancy > 0 ? "+" : ""}{recoveryCalc.expectancy.toFixed(2)}\u20AC
+                {recoveryCalc.expectancy > 0 ? "+" : ""}{recoveryCalc.expectancy.toFixed(2)}€
               </div>
             </div>
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
@@ -362,7 +362,7 @@ export default function RiskPage() {
               <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Balance</label>
               <div className="input-field flex items-center gap-2">
                 <DollarSign className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
-                <span className="mono font-bold" style={{ color: "var(--text-primary)" }}>{balance.toFixed(2)}\u20AC</span>
+                <span className="mono font-bold" style={{ color: "var(--text-primary)" }}>{balance.toFixed(2)}€</span>
               </div>
             </div>
             <div>
@@ -400,8 +400,8 @@ export default function RiskPage() {
             <div className="text-5xl font-bold mono text-cyan-400">{posSize.lots}</div>
             <span className="text-lg" style={{ color: "var(--text-secondary)" }}>{posSize.unit}</span>
             <div className="mt-4 space-y-1 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-              <p>Risque: <span className="mono font-bold text-rose-400">{posSize.riskAmount}\u20AC</span></p>
-              <p>{assetType === "forex" ? "Pips at risk" : "Risque/unite"}: <span className="mono font-bold" style={{ color: "var(--text-primary)" }}>{posSize.pipsAtRisk}{assetType === "forex" ? "" : "\u20AC"}</span></p>
+              <p>Risque: <span className="mono font-bold text-rose-400">{posSize.riskAmount}€</span></p>
+              <p>{assetType === "forex" ? "Pips at risk" : "Risque/unite"}: <span className="mono font-bold" style={{ color: "var(--text-primary)" }}>{posSize.pipsAtRisk}{assetType === "forex" ? "" : "€"}</span></p>
               <p>Kelly recommande: <span className="mono font-bold" style={{ color: kellyDisplay ? "#ef4444" : "#0ea5e9" }}>
                 {kellyDisplay ? "N/A" : `${risk.kellyPercent}%`}
               </span></p>

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useTrades } from "@/hooks/useTrades";
+import { useTranslation } from "@/i18n/context";
 import {
   Brain, AlertTriangle, TrendingUp, TrendingDown, Clock,
   Calendar, Target, Shield, Zap, BarChart3, Award,
@@ -65,6 +66,7 @@ function ConfidenceGauge({ score }: { score: number }) {
 }
 
 export default function AICoachPage() {
+  const { t } = useTranslation();
   const { trades, loading } = useTrades();
 
   const analysis = useMemo(() => {
@@ -229,19 +231,19 @@ export default function AICoachPage() {
       dayWR * 0.3 + hourWR * 0.3 + 50 * 0.1 + streakFactor + emotionPenalty + 20
     )));
     const confidenceLabel = confidenceScore >= 70
-      ? "Conditions favorables"
+      ? "coachConditionsFavorable"
       : confidenceScore >= 40
-        ? "Conditions neutres"
-        : "Conditions defavorables";
+        ? "coachConditionsNeutral"
+        : "coachConditionsUnfavorable";
 
     // --- Position Sizing ---
-    let sizingAdvice: { label: string; detail: string; color: string };
+    let sizingAdvice: { labelKey: string; detailKey: string; detailParams: Record<string, string | number>; color: string };
     if (trailingLosses >= 4) {
-      sizingAdvice = { label: "Pause recommandee", detail: `${trailingLosses} pertes consecutives. Arretez de trader.`, color: "text-rose-400" };
+      sizingAdvice = { labelKey: "coachSizingPause", detailKey: "coachSizingPauseDetail", detailParams: { count: trailingLosses }, color: "text-rose-400" };
     } else if (trailingLosses >= 2) {
-      sizingAdvice = { label: "Reduire le risque (0.5-1%)", detail: `${trailingLosses} pertes consecutives. Reduisez la taille.`, color: "text-amber-400" };
+      sizingAdvice = { labelKey: "coachSizingReduce", detailKey: "coachSizingReduceDetail", detailParams: { count: trailingLosses }, color: "text-amber-400" };
     } else {
-      sizingAdvice = { label: "Risque normal (1-2%)", detail: trailingWins > 0 ? `Serie de ${trailingWins} gain(s). Restez discipline.` : "Aucune serie en cours.", color: "text-emerald-400" };
+      sizingAdvice = { labelKey: "coachSizingNormal", detailKey: trailingWins > 0 ? "coachSizingNormalWinDetail" : "coachSizingNormalNoStreakDetail", detailParams: { count: trailingWins }, color: "text-emerald-400" };
     }
 
     // --- Heatmap Horaire: P&L by day-of-week x hour ---
@@ -352,54 +354,54 @@ export default function AICoachPage() {
 
   const insights = useMemo(() => {
     if (!analysis) return [];
-    const msgs: string[] = [];
+    const msgs: { key: string; params?: Record<string, string | number> }[] = [];
     const { dayBW, stratBW, emotionBW, assetBW, trailingLosses } = analysis;
 
     if (dayBW.best && dayBW.worst && dayBW.best.key !== dayBW.worst.key)
-      msgs.push(`Tu gagnes ${dayBW.best.wr.toFixed(0)}% de tes trades le ${dayBW.best.key}, mais seulement ${dayBW.worst.wr.toFixed(0)}% le ${dayBW.worst.key}.`);
+      msgs.push({ key: "coachInsightDay", params: { bestDay: dayBW.best.key, bestWr: dayBW.best.wr.toFixed(0), worstDay: dayBW.worst.key, worstWr: dayBW.worst.wr.toFixed(0) } });
     if (stratBW.best && stratBW.best.total >= 2)
-      msgs.push(`Ta meilleure stratégie est ${stratBW.best.key} avec ${stratBW.best.wr.toFixed(0)}% de win rate.`);
+      msgs.push({ key: "coachInsightStrategy", params: { strat: stratBW.best.key, wr: stratBW.best.wr.toFixed(0) } });
     if (emotionBW.worst && emotionBW.worst.wr < 40 && emotionBW.worst.total >= 2)
-      msgs.push(`Attention : tu as tendance à perdre quand tu es "${emotionBW.worst.key}" (${emotionBW.worst.wr.toFixed(0)}% WR).`);
+      msgs.push({ key: "coachInsightEmotion", params: { emotion: emotionBW.worst.key, wr: emotionBW.worst.wr.toFixed(0) } });
     if (trailingLosses >= 3)
-      msgs.push(`Tu es en série de ${trailingLosses} pertes consécutives, considère une pause.`);
+      msgs.push({ key: "coachInsightLossStreak", params: { count: trailingLosses } });
     if (assetBW.best && assetBW.best.total >= 2)
-      msgs.push(`Ton meilleur actif est ${assetBW.best.key} avec ${assetBW.best.wr.toFixed(0)}% de win rate.`);
-    if (msgs.length === 0) msgs.push("Continue à ajouter des trades pour obtenir des insights personnalisés.");
+      msgs.push({ key: "coachInsightAsset", params: { asset: assetBW.best.key, wr: assetBW.best.wr.toFixed(0) } });
+    if (msgs.length === 0) msgs.push({ key: "coachInsightEmpty" });
     return msgs;
   }, [analysis]);
 
   const alerts = useMemo(() => {
     if (!analysis) return [];
-    const a: { msg: string; level: "warn" | "danger" }[] = [];
-    if (analysis.todayConsec >= 3) a.push({ msg: `${analysis.todayConsec} pertes consecutives aujourd'hui. Fais une pause.`, level: "danger" });
-    if (analysis.trailingLosses >= 3) a.push({ msg: `Serie de ${analysis.trailingLosses} pertes en cours.`, level: "danger" });
+    const a: { msgKey: string; params?: Record<string, string | number>; level: "warn" | "danger" }[] = [];
+    if (analysis.todayConsec >= 3) a.push({ msgKey: "coachAlertTodayLosses", params: { count: analysis.todayConsec }, level: "danger" });
+    if (analysis.trailingLosses >= 3) a.push({ msgKey: "coachAlertLossStreak", params: { count: analysis.trailingLosses }, level: "danger" });
     const now = new Date();
     const curDay = DAYS[now.getDay()];
     if (analysis.dayBW.worst && analysis.dayBW.worst.key === curDay && analysis.dayBW.worst.wr < 40)
-      a.push({ msg: `${curDay} est ton pire jour (${analysis.dayBW.worst.wr.toFixed(0)}% WR). Sois prudent.`, level: "warn" });
+      a.push({ msgKey: "coachAlertWorstDay", params: { day: curDay, wr: analysis.dayBW.worst.wr.toFixed(0) }, level: "warn" });
     if (analysis.lastEmotion) {
       const neg = ["Anxious", "Fearful", "Frustrated", "Angry", "Revenge", "FOMO", "Impatient"];
       if (neg.includes(analysis.lastEmotion))
-        a.push({ msg: `Emotion negative detectee : "${analysis.lastEmotion}". Verifie ton etat mental.`, level: "warn" });
+        a.push({ msgKey: "coachAlertNegativeEmotion", params: { emotion: analysis.lastEmotion }, level: "warn" });
     }
     // Overtrading alert
     if (analysis.recentOvertradingDays > 0)
-      a.push({ msg: `Overtrading detecte : ${analysis.recentOvertradingDays} jour(s) avec 5+ trades cette semaine.`, level: "warn" });
+      a.push({ msgKey: "coachAlertOvertrading", params: { count: analysis.recentOvertradingDays }, level: "warn" });
     // Performance decay alert
     if (analysis.performanceDecay && analysis.prev2wCount >= 3)
-      a.push({ msg: `Performance en baisse : WR ${analysis.wrChange > 0 ? "+" : ""}${analysis.wrChange.toFixed(0)}% vs les 2 semaines precedentes.`, level: "danger" });
+      a.push({ msgKey: "coachAlertPerfDecay", params: { change: `${analysis.wrChange > 0 ? "+" : ""}${analysis.wrChange.toFixed(0)}` }, level: "danger" });
     return a;
   }, [analysis]);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64" style={{ color: "var(--text-muted)" }}>Chargement...</div>
+    <div className="flex items-center justify-center h-64" style={{ color: "var(--text-muted)" }}>{t("loading")}</div>
   );
 
   if (!analysis) return (
     <div className="p-6 space-y-4 text-center" style={{ color: "var(--text-muted)" }}>
       <Brain size={48} className="mx-auto opacity-40" />
-      <p>Ajoute des trades pour activer l&apos;AI Coach.</p>
+      <p>{t("coachAddTrades")}</p>
     </div>
   );
 
@@ -415,7 +417,7 @@ export default function AICoachPage() {
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>AI Trade Coach</h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Analyse automatique de {analysis.totalTrades} trades
+            {t("coachAutoAnalysis", { count: analysis.totalTrades })}
           </p>
         </div>
       </div>
@@ -426,7 +428,7 @@ export default function AICoachPage() {
           {alerts.map((a, i) => (
             <div key={i} className={`glass flex items-center gap-3 p-3 rounded-lg border ${a.level === "danger" ? "border-rose-500/40 bg-rose-500/10" : "border-amber-500/40 bg-amber-500/10"}`}>
               <AlertTriangle size={18} className={a.level === "danger" ? "text-rose-400" : "text-amber-400"} />
-              <span className="text-sm" style={{ color: "var(--text-primary)" }}>{a.msg}</span>
+              <span className="text-sm" style={{ color: "var(--text-primary)" }}>{t(a.msgKey, a.params)}</span>
             </div>
           ))}
         </div>
@@ -438,7 +440,7 @@ export default function AICoachPage() {
         <div className="metric-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Gauge className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Confidence Score Predictif</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachConfidenceScore")}</h2>
           </div>
           <ConfidenceGauge score={analysis.confidenceScore} />
           <div className="mt-3 text-center">
@@ -446,15 +448,15 @@ export default function AICoachPage() {
               analysis.confidenceScore >= 70 ? "text-emerald-400" :
               analysis.confidenceScore >= 40 ? "text-amber-400" : "text-rose-400"
             }`}>
-              {analysis.confidenceLabel}
+              {t(analysis.confidenceLabel)}
             </span>
           </div>
           <div className="mt-3 space-y-1.5 text-xs">
             {[
-              { label: "Jour actuel", val: analysis.dayMap[DAYS[new Date().getDay()]] ? `${((analysis.dayMap[DAYS[new Date().getDay()]].wins / analysis.dayMap[DAYS[new Date().getDay()]].total) * 100).toFixed(0)}% WR` : "N/A" },
-              { label: "Heure actuelle", val: analysis.hourMap[new Date().getHours().toString()] ? `${((analysis.hourMap[new Date().getHours().toString()].wins / analysis.hourMap[new Date().getHours().toString()].total) * 100).toFixed(0)}% WR` : "N/A" },
-              { label: "Serie", val: analysis.trailingWins > 0 ? `+${analysis.trailingWins} gains` : analysis.trailingLosses > 0 ? `-${analysis.trailingLosses} pertes` : "Neutre" },
-              { label: "Emotion", val: analysis.lastEmotion || "N/A" },
+              { label: t("coachCurrentDay"), val: analysis.dayMap[DAYS[new Date().getDay()]] ? `${((analysis.dayMap[DAYS[new Date().getDay()]].wins / analysis.dayMap[DAYS[new Date().getDay()]].total) * 100).toFixed(0)}% WR` : "N/A" },
+              { label: t("coachCurrentHour"), val: analysis.hourMap[new Date().getHours().toString()] ? `${((analysis.hourMap[new Date().getHours().toString()].wins / analysis.hourMap[new Date().getHours().toString()].total) * 100).toFixed(0)}% WR` : "N/A" },
+              { label: t("coachStreak"), val: analysis.trailingWins > 0 ? `+${analysis.trailingWins} ${t("coachWins")}` : analysis.trailingLosses > 0 ? `-${analysis.trailingLosses} ${t("coachLosses")}` : t("coachNeutral") },
+              { label: t("coachEmotion"), val: analysis.lastEmotion || "N/A" },
             ].map(({ label, val }) => (
               <div key={label} className="flex items-center justify-between">
                 <span style={{ color: "var(--text-muted)" }}>{label}</span>
@@ -468,7 +470,7 @@ export default function AICoachPage() {
         <div className="metric-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Scale className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Position Sizing Recommande</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachPositionSizing")}</h2>
           </div>
           <div className="flex flex-col items-center gap-3 mt-2">
             <div className={`text-center p-4 rounded-lg w-full ${
@@ -477,23 +479,23 @@ export default function AICoachPage() {
               "bg-emerald-500/10 border border-emerald-500/30"
             }`}>
               <div className={`text-lg font-bold ${analysis.sizingAdvice.color}`}>
-                {analysis.sizingAdvice.label}
+                {t(analysis.sizingAdvice.labelKey)}
               </div>
               <p className="text-xs mt-2" style={{ color: "var(--text-secondary)" }}>
-                {analysis.sizingAdvice.detail}
+                {t(analysis.sizingAdvice.detailKey, analysis.sizingAdvice.detailParams)}
               </p>
             </div>
             <div className="w-full space-y-2 text-xs mt-2">
               <div className="flex items-center justify-between">
-                <span style={{ color: "var(--text-muted)" }}>Serie de gains</span>
+                <span style={{ color: "var(--text-muted)" }}>{t("coachWinStreak")}</span>
                 <span className="mono text-emerald-400">{analysis.trailingWins}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span style={{ color: "var(--text-muted)" }}>Serie de pertes</span>
+                <span style={{ color: "var(--text-muted)" }}>{t("coachLossStreak")}</span>
                 <span className="mono text-rose-400">{analysis.trailingLosses}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span style={{ color: "var(--text-muted)" }}>Max consecutives</span>
+                <span style={{ color: "var(--text-muted)" }}>{t("coachMaxConsec")}</span>
                 <span className="mono" style={{ color: "var(--text-secondary)" }}>{analysis.maxConsec}</span>
               </div>
             </div>
@@ -504,7 +506,7 @@ export default function AICoachPage() {
         <div className="metric-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Timer className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Meilleure Fenetre de Trading</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachBestWindow")}</h2>
           </div>
           <div className="flex flex-col items-center gap-3 mt-2">
             <div className="text-center p-4 rounded-lg w-full bg-cyan-500/10 border border-cyan-500/30">
@@ -539,18 +541,18 @@ export default function AICoachPage() {
         <div className="metric-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Detection d&apos;Overtrading</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachOvertradingDetect")}</h2>
           </div>
           {analysis.highVolDayCount > 0 ? (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="glass rounded-lg p-3 text-center">
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>Jours 5+ trades</div>
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>{t("coachHighVolDays")}</div>
                   <div className="text-xl font-bold mono text-amber-400 mt-1">{analysis.highVolDayCount}</div>
                   <div className="text-xs mono mt-1" style={{ color: "var(--text-secondary)" }}>WR {analysis.highVolWR.toFixed(0)}%</div>
                 </div>
                 <div className="glass rounded-lg p-3 text-center">
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>Jours normaux</div>
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>{t("coachNormalDays")}</div>
                   <div className="text-xl font-bold mono text-emerald-400 mt-1">{analysis.normalDayCount}</div>
                   <div className="text-xs mono mt-1" style={{ color: "var(--text-secondary)" }}>WR {analysis.normalWR.toFixed(0)}%</div>
                 </div>
@@ -561,14 +563,14 @@ export default function AICoachPage() {
                     <>
                       <AlertTriangle size={14} className="text-amber-400 shrink-0" />
                       <span style={{ color: "var(--text-secondary)" }}>
-                        Jours avec 5+ trades : WR {analysis.highVolWR.toFixed(0)}% | Jours normaux : WR {analysis.normalWR.toFixed(0)}%
+                        {t("coachOvertradingWrCompare", { highWr: analysis.highVolWR.toFixed(0), normalWr: analysis.normalWR.toFixed(0) })}
                       </span>
                     </>
                   ) : (
                     <>
                       <TrendingUp size={14} className="text-emerald-400 shrink-0" />
                       <span style={{ color: "var(--text-secondary)" }}>
-                        Pas de perte de performance sur les jours a volume eleve.
+                        {t("coachNoOvertradingLoss")}
                       </span>
                     </>
                   )}
@@ -578,7 +580,7 @@ export default function AICoachPage() {
           ) : (
             <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
               <TrendingUp size={24} className="opacity-40" />
-              <span className="text-sm">Aucun jour avec 5+ trades detecte.</span>
+              <span className="text-sm">{t("coachNoHighVolDay")}</span>
             </div>
           )}
         </div>
@@ -597,7 +599,7 @@ export default function AICoachPage() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="glass rounded-lg p-3 text-center">
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>2 dernieres semaines</div>
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>{t("coachLast2w")}</div>
                   <div className={`text-xl font-bold mono mt-1 ${analysis.last2wWR >= analysis.prev2wWR ? "text-emerald-400" : "text-rose-400"}`}>
                     {analysis.last2wWR.toFixed(0)}%
                   </div>
@@ -606,7 +608,7 @@ export default function AICoachPage() {
                   </div>
                 </div>
                 <div className="glass rounded-lg p-3 text-center">
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>2 semaines precedentes</div>
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>{t("coachPrev2w")}</div>
                   <div className="text-xl font-bold mono mt-1" style={{ color: "var(--text-secondary)" }}>
                     {analysis.prev2wWR.toFixed(0)}%
                   </div>
@@ -635,7 +637,7 @@ export default function AICoachPage() {
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-rose-500/10 text-xs">
                   <AlertTriangle size={14} className="text-rose-400 shrink-0 mt-0.5" />
                   <span style={{ color: "var(--text-secondary)" }}>
-                    Alerte : ta performance est en baisse significative. Analyse tes récents trades et ajuste ta stratégie.
+                    {t("coachPerfDecayAlert")}
                   </span>
                 </div>
               )}
@@ -643,7 +645,7 @@ export default function AICoachPage() {
           ) : (
             <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
               <BarChart3 size={24} className="opacity-40" />
-              <span className="text-sm">Pas assez de données (min. 4 semaines).</span>
+              <span className="text-sm">{t("coachNotEnoughDataWeeks")}</span>
             </div>
           )}
         </div>
@@ -655,15 +657,15 @@ export default function AICoachPage() {
         <div className="metric-card p-5 flex flex-col items-center gap-3">
           <div className="flex items-center gap-2">
             <Shield className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Score Discipline</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachDisciplineScore")}</h2>
           </div>
           <div className={`text-5xl font-bold mono ${discColor}`}>{analysis.discipline}</div>
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>sur 100 (7 derniers jours)</span>
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>{t("coachDisciplineLast7d")}</span>
           <div className="w-full space-y-1.5 mt-2 text-xs">
             {[
-              { label: "Win Rate", val: Math.min(100, Math.round(analysis.weekTrades > 0 ? (trades.filter(t => new Date(t.date) >= new Date(Date.now() - 7 * 86400000) && t.result > 0).length / analysis.weekTrades) * 100 : 50)) },
-              { label: "Stop Loss", val: Math.round(analysis.weekTrades > 0 ? (trades.filter(t => new Date(t.date) >= new Date(Date.now() - 7 * 86400000) && t.sl && t.sl > 0).length / Math.max(1, analysis.weekTrades)) * 100 : 100) },
-              { label: "Emotions", val: Math.round(analysis.weekTrades > 0 ? (1 - trades.filter(t => new Date(t.date) >= new Date(Date.now() - 7 * 86400000) && ["Anxious", "Fearful", "Frustrated", "Angry", "Revenge", "FOMO", "Impatient"].includes(t.emotion || "")).length / Math.max(1, analysis.weekTrades)) * 100 : 80) },
+              { label: t("winRate"), val: Math.min(100, Math.round(analysis.weekTrades > 0 ? (trades.filter(tr => new Date(tr.date) >= new Date(Date.now() - 7 * 86400000) && tr.result > 0).length / analysis.weekTrades) * 100 : 50)) },
+              { label: t("stopLoss"), val: Math.round(analysis.weekTrades > 0 ? (trades.filter(tr => new Date(tr.date) >= new Date(Date.now() - 7 * 86400000) && tr.sl && tr.sl > 0).length / Math.max(1, analysis.weekTrades)) * 100 : 100) },
+              { label: t("coachEmotion"), val: Math.round(analysis.weekTrades > 0 ? (1 - trades.filter(tr => new Date(tr.date) >= new Date(Date.now() - 7 * 86400000) && ["Anxious", "Fearful", "Frustrated", "Angry", "Revenge", "FOMO", "Impatient"].includes(tr.emotion || "")).length / Math.max(1, analysis.weekTrades)) * 100 : 80) },
             ].map(({ label, val }) => (
               <div key={label} className="flex items-center gap-2">
                 <span style={{ color: "var(--text-muted)" }} className="w-16">{label}</span>
@@ -680,16 +682,16 @@ export default function AICoachPage() {
         <div className="metric-card p-5 lg:col-span-2">
           <div className="flex items-center gap-2 mb-4">
             <Target className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Detection de Patterns</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachPatternDetect")}</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
             {[
-              { icon: Calendar, label: "Meilleur jour", best: analysis.dayBW.best, worst: analysis.dayBW.worst },
-              { icon: Clock, label: "Meilleure heure", best: analysis.hourBW.best ? { ...analysis.hourBW.best, key: `${analysis.hourBW.best.key}h` } : null, worst: analysis.hourBW.worst ? { ...analysis.hourBW.worst, key: `${analysis.hourBW.worst.key}h` } : null },
-              { icon: BarChart3, label: "Meilleur actif", best: analysis.assetBW.best, worst: analysis.assetBW.worst },
-              { icon: Zap, label: "Stratégie", best: analysis.stratBW.best, worst: analysis.stratBW.worst },
-              { icon: Award, label: "Emotion", best: analysis.emotionBW.best, worst: analysis.emotionBW.worst },
-              { icon: TrendingDown, label: "Pertes consécutives", best: null, worst: null, custom: `Max: ${analysis.maxConsec} | En cours: ${analysis.trailingLosses}` },
+              { icon: Calendar, label: t("coachBestDay"), best: analysis.dayBW.best, worst: analysis.dayBW.worst },
+              { icon: Clock, label: t("coachBestHour"), best: analysis.hourBW.best ? { ...analysis.hourBW.best, key: `${analysis.hourBW.best.key}h` } : null, worst: analysis.hourBW.worst ? { ...analysis.hourBW.worst, key: `${analysis.hourBW.worst.key}h` } : null },
+              { icon: BarChart3, label: t("coachBestAsset"), best: analysis.assetBW.best, worst: analysis.assetBW.worst },
+              { icon: Zap, label: t("coachStrategy"), best: analysis.stratBW.best, worst: analysis.stratBW.worst },
+              { icon: Award, label: t("coachEmotion"), best: analysis.emotionBW.best, worst: analysis.emotionBW.worst },
+              { icon: TrendingDown, label: t("consecutiveLosses"), best: null, worst: null, custom: `Max: ${analysis.maxConsec} | ${t("coachOngoing")}: ${analysis.trailingLosses}` },
             ].map(({ icon: Icon, label, best, worst, custom }) => (
               <div key={label} className="glass rounded-lg p-3 space-y-1.5">
                 <div className="flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
@@ -725,13 +727,13 @@ export default function AICoachPage() {
       <div className="metric-card p-5">
         <div className="flex items-center gap-2 mb-3">
           <Brain className="text-cyan-400" size={18} />
-          <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Insights AI</h2>
+          <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachAiInsights")}</h2>
         </div>
         <div className="space-y-2">
           {insights.map((msg, i) => (
             <div key={i} className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "var(--bg-hover)" }}>
               <Zap size={14} className="text-cyan-400 mt-0.5 shrink-0" />
-              <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{msg}</span>
+              <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{t(msg.key, msg.params)}</span>
             </div>
           ))}
         </div>
@@ -743,7 +745,7 @@ export default function AICoachPage() {
         <div className="metric-card p-5">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>P&L par Heure</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachPnlByHour")}</h2>
           </div>
           <div className="flex items-end gap-[1px]">
             {Array.from({ length: 24 }, (_, h) => (
@@ -756,7 +758,7 @@ export default function AICoachPage() {
         <div className="metric-card p-5">
           <div className="flex items-center gap-2 mb-3">
             <Calendar className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>P&L par Jour</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachPnlByDay")}</h2>
           </div>
           <div className="flex items-end gap-2">
             {[1, 2, 3, 4, 5, 6, 0].map(d => (
@@ -770,7 +772,7 @@ export default function AICoachPage() {
       <div className="metric-card p-5">
         <div className="flex items-center gap-2 mb-4">
           <Grid3X3 className="text-cyan-400" size={18} />
-          <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Heatmap Horaire — P&L par Jour &times; Heure</h2>
+          <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachHeatmap")}</h2>
         </div>
         <div className="overflow-x-auto">
           <svg viewBox="0 0 540 170" className="w-full" style={{ minWidth: 480 }}>
@@ -820,13 +822,13 @@ export default function AICoachPage() {
               </g>
             ))}
             {/* Legend */}
-            <text x={60} y={168} fontSize="7" fill="var(--text-muted)">Perte</text>
+            <text x={60} y={168} fontSize="7" fill="var(--text-muted)">{t("loss")}</text>
             <rect x={85} y={161} width={14} height={8} rx={2} fill="rgba(239, 68, 68, 0.7)" />
             <rect x={101} y={161} width={14} height={8} rx={2} fill="rgba(239, 68, 68, 0.3)" />
             <rect x={117} y={161} width={14} height={8} rx={2} fill="var(--bg-hover)" />
             <rect x={133} y={161} width={14} height={8} rx={2} fill="rgba(16, 185, 129, 0.3)" />
             <rect x={149} y={161} width={14} height={8} rx={2} fill="rgba(16, 185, 129, 0.7)" />
-            <text x={168} y={168} fontSize="7" fill="var(--text-muted)">Gain</text>
+            <text x={168} y={168} fontSize="7" fill="var(--text-muted)">{t("gain")}</text>
           </svg>
         </div>
       </div>
@@ -835,7 +837,7 @@ export default function AICoachPage() {
       <div className="metric-card p-5">
         <div className="flex items-center gap-2 mb-4">
           <Heart className="text-cyan-400" size={18} />
-          <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Timeline Emotionnelle</h2>
+          <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachEmotionTimeline")}</h2>
         </div>
         {analysis.emotionTimeline.length > 0 ? (
           <div className="space-y-3">
@@ -865,7 +867,7 @@ export default function AICoachPage() {
         ) : (
           <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
             <Heart size={24} className="opacity-40" />
-            <span className="text-sm">Aucune emotion enregistree. Ajoute des emotions a tes trades.</span>
+            <span className="text-sm">{t("coachNoEmotionHint")}</span>
           </div>
         )}
       </div>
@@ -876,7 +878,7 @@ export default function AICoachPage() {
         <div className="metric-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Flame className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Projection Forward</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachForwardProjection")}</h2>
           </div>
           {analysis.dailyPnlArr.length >= 3 ? (
             <div className="space-y-4">
@@ -885,7 +887,7 @@ export default function AICoachPage() {
                   ? "bg-emerald-500/10 border-emerald-500/30"
                   : "bg-rose-500/10 border-rose-500/30"
               }`}>
-                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>P&L journalier moyen (14j)</div>
+                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("coachAvgDailyPnl")}</div>
                 <div className={`text-2xl font-bold mono ${analysis.avgDailyPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                   {analysis.avgDailyPnl >= 0 ? "+" : ""}&euro;{analysis.avgDailyPnl.toFixed(1)}
                 </div>
@@ -897,11 +899,9 @@ export default function AICoachPage() {
                     <div className="flex items-start gap-2">
                       <AlertTriangle size={14} className="text-rose-400 shrink-0 mt-0.5" />
                       <div className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                        <span className="font-semibold text-rose-400">A ce rythme</span>, drawdown estime de{" "}
-                        <span className="mono font-bold text-rose-400">&euro;{analysis.projectedDrawdown.toFixed(0)}</span>{" "}
-                        dans <span className="mono font-bold text-rose-400">30 jours</span>.
+                        <span className="font-semibold text-rose-400">{t("coachAtThisRate")}</span>, {t("coachEstimatedDrawdown", { dd: analysis.projectedDrawdown.toFixed(0) })}{" "}
                         {analysis.daysToDrawdown && analysis.daysToDrawdown > 0 && (
-                          <span> Profits actuels (&euro;{analysis.totalPnl.toFixed(0)}) epuises dans ~<span className="mono font-bold text-rose-400">{analysis.daysToDrawdown} jours</span>.</span>
+                          <span> {t("coachProfitsExhausted", { pnl: analysis.totalPnl.toFixed(0), days: analysis.daysToDrawdown })}</span>
                         )}
                       </div>
                     </div>
@@ -922,7 +922,7 @@ export default function AICoachPage() {
                     })}
                   </div>
                   <div className="flex justify-between text-[9px]" style={{ color: "var(--text-muted)" }}>
-                    <span>Il y a 14j</span><span>Aujourd&apos;hui</span>
+                    <span>{t("coachDaysAgo14")}</span><span>{t("today")}</span>
                   </div>
                 </div>
               ) : (
@@ -931,8 +931,7 @@ export default function AICoachPage() {
                     <div className="flex items-start gap-2">
                       <TrendingUp size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                       <div className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                        Projection positive : <span className="mono font-bold text-emerald-400">+&euro;{(analysis.avgDailyPnl * 30).toFixed(0)}</span> sur les 30 prochains jours.
-                        Continue comme ca !
+                        {t("coachPositiveProjection", { amount: (analysis.avgDailyPnl * 30).toFixed(0) })}
                       </div>
                     </div>
                   </div>
@@ -952,7 +951,7 @@ export default function AICoachPage() {
                     })}
                   </div>
                   <div className="flex justify-between text-[9px]" style={{ color: "var(--text-muted)" }}>
-                    <span>Il y a 14j</span><span>Aujourd&apos;hui</span>
+                    <span>{t("coachDaysAgo14")}</span><span>{t("today")}</span>
                   </div>
                 </div>
               )}
@@ -960,7 +959,7 @@ export default function AICoachPage() {
           ) : (
             <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
               <Flame size={24} className="opacity-40" />
-              <span className="text-sm">Min. 3 jours de trading pour la projection.</span>
+              <span className="text-sm">{t("coachMin3DaysProjection")}</span>
             </div>
           )}
         </div>
@@ -969,7 +968,7 @@ export default function AICoachPage() {
         <div className="metric-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Crosshair className="text-cyan-400" size={18} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Qualité de Gestion des Trades</h2>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t("coachTradeMgmtQuality")}</h2>
           </div>
           {analysis.managedTradesCount > 0 ? (
             <div className="space-y-4">
@@ -983,7 +982,7 @@ export default function AICoachPage() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span style={{ color: "var(--text-muted)" }}>Score global</span>
+                    <span style={{ color: "var(--text-muted)" }}>{t("coachGlobalScore")}</span>
                     <span className="mono" style={{ color: "var(--text-secondary)" }}>{analysis.mgmtScore}/100</span>
                   </div>
                   <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-hover)" }}>
@@ -1001,13 +1000,13 @@ export default function AICoachPage() {
               {/* Metrics */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="glass rounded-lg p-3 text-center">
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>Capture TP moy.</div>
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>{t("coachAvgTpCapture")}</div>
                   <div className={`text-lg font-bold mono mt-1 ${analysis.avgTpCapture >= 70 ? "text-emerald-400" : analysis.avgTpCapture >= 50 ? "text-amber-400" : "text-rose-400"}`}>
                     {analysis.avgTpCapture.toFixed(0)}%
                   </div>
                 </div>
                 <div className="glass rounded-lg p-3 text-center">
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>TP atteints</div>
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>{t("coachTpReached")}</div>
                   <div className="text-lg font-bold mono mt-1 text-emerald-400">
                     {analysis.tpReachedCount}
                   </div>
@@ -1016,7 +1015,7 @@ export default function AICoachPage() {
                   </div>
                 </div>
                 <div className="glass rounded-lg p-3 text-center">
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>Sorties prematurees</div>
+                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>{t("coachPrematureExits")}</div>
                   <div className="text-lg font-bold mono mt-1 text-amber-400">
                     {analysis.prematureExitCount}
                   </div>
@@ -1026,7 +1025,7 @@ export default function AICoachPage() {
               {/* TP Capture Distribution - mini bar chart */}
               {analysis.tpCaptures.length > 0 && (
                 <div>
-                  <div className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>Distribution de capture TP</div>
+                  <div className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>{t("coachTpCaptureDistrib")}</div>
                   <div className="flex items-end gap-[2px] h-10">
                     {(() => {
                       const buckets = [0, 0, 0, 0, 0]; // 0-20, 20-40, 40-60, 60-80, 80-100
@@ -1059,12 +1058,12 @@ export default function AICoachPage() {
                   <Target size={14} className="text-cyan-400 shrink-0 mt-0.5" />
                   <span style={{ color: "var(--text-secondary)" }}>
                     {analysis.prematureExitCount > analysis.tpReachedCount
-                      ? "Tu coupes trop souvent tes gains avant le TP. Laisse courir tes winners."
+                      ? t("coachAdvicePrematureExit")
                       : analysis.avgTpCapture < 50
-                        ? "Ta capture TP moyenne est faible. Ajuste tes niveaux de sortie."
+                        ? t("coachAdviceLowTpCapture")
                         : analysis.mgmtScore >= 70
-                          ? "Excellente gestion ! Tu laisses bien courir tes gains."
-                          : "Gestion correcte. Travaille a maximiser la capture de tes TP."
+                          ? t("coachAdviceExcellent")
+                          : t("coachAdviceGood")
                     }
                   </span>
                 </div>
@@ -1073,7 +1072,7 @@ export default function AICoachPage() {
           ) : (
             <div className="flex flex-col items-center gap-2 py-4" style={{ color: "var(--text-muted)" }}>
               <Crosshair size={24} className="opacity-40" />
-              <span className="text-sm">Renseigne TP et prix de sortie pour analyser ta gestion.</span>
+              <span className="text-sm">{t("coachFillTpHint")}</span>
             </div>
           )}
         </div>

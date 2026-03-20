@@ -134,12 +134,12 @@ export default function RecapsPage() {
   // Trade distribution histogram
   const histogram = useMemo(() => {
     const bins = [
-      { label: "<-100\u20AC", min: -Infinity, max: -100, count: 0 },
+      { label: "<-100€", min: -Infinity, max: -100, count: 0 },
       { label: "-100/-50", min: -100, max: -50, count: 0 },
       { label: "-50/0", min: -50, max: 0, count: 0 },
       { label: "0/50", min: 0, max: 50, count: 0 },
       { label: "50/100", min: 50, max: 100, count: 0 },
-      { label: ">100\u20AC", min: 100, max: Infinity, count: 0 },
+      { label: ">100€", min: 100, max: Infinity, count: 0 },
     ];
     periodTrades.forEach((t) => {
       for (const bin of bins) {
@@ -219,10 +219,10 @@ export default function RecapsPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "P&L", value: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}\u20AC`, delta: pnlDelta, color: stats.pnl >= 0 ? "#10b981" : "#ef4444" },
+          { label: "P&L", value: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}€`, delta: pnlDelta, color: stats.pnl >= 0 ? "#10b981" : "#ef4444" },
           { label: "Trades", value: stats.total, delta: stats.total - prevTrades.length, color: "var(--text-primary)" },
           { label: "Win Rate", value: `${stats.winRate.toFixed(1)}%`, delta: wrDelta, color: stats.winRate >= 50 ? "#10b981" : "#f59e0b" },
-          { label: "Gain moy.", value: `${stats.avgWin.toFixed(2)}\u20AC`, delta: null, color: "#10b981" },
+          { label: "Gain moy.", value: `${stats.avgWin.toFixed(2)}€`, delta: null, color: "#10b981" },
         ].map((card) => (
           <div key={card.label} className="metric-card rounded-2xl p-5">
             <div className="text-xs font-medium mb-2" style={{ color: "var(--text-muted)" }}>{card.label}</div>
@@ -231,7 +231,7 @@ export default function RecapsPage() {
               <div className="flex items-center gap-1 mt-1 text-xs">
                 {card.delta >= 0 ? <TrendingUp className="w-3 h-3 text-emerald-400" /> : <TrendingDown className="w-3 h-3 text-rose-400" />}
                 <span style={{ color: card.delta >= 0 ? "#10b981" : "#ef4444" }}>
-                  {card.delta >= 0 ? "+" : ""}{typeof card.delta === "number" && card.label === "P&L" ? `${card.delta.toFixed(2)}\u20AC` : card.label === "Win Rate" ? `${card.delta.toFixed(1)}pp` : card.delta}
+                  {card.delta >= 0 ? "+" : ""}{typeof card.delta === "number" && card.label === "P&L" ? `${card.delta.toFixed(2)}€` : card.label === "Win Rate" ? `${card.delta.toFixed(1)}pp` : card.delta}
                 </span>
                 <span style={{ color: "var(--text-muted)" }}>vs precedent</span>
               </div>
@@ -270,7 +270,7 @@ export default function RecapsPage() {
                       fill={isPositive ? "#10b981" : "#ef4444"}
                       opacity="0.75"
                     >
-                      <title>{`${d.date}: ${d.pnl >= 0 ? "+" : ""}${d.pnl.toFixed(2)}\u20AC`}</title>
+                      <title>{`${d.date}: ${d.pnl >= 0 ? "+" : ""}${d.pnl.toFixed(2)}€`}</title>
                     </rect>
                     <text
                       x={x + barWidth / 2}
@@ -280,7 +280,7 @@ export default function RecapsPage() {
                       fill={isPositive ? "#10b981" : "#ef4444"}
                       fontFamily="monospace"
                     >
-                      {d.pnl >= 0 ? "+" : ""}{d.pnl.toFixed(0)}\u20AC
+                      {d.pnl >= 0 ? "+" : ""}{d.pnl.toFixed(0)}€
                     </text>
                     <text
                       x={x + barWidth / 2}
@@ -327,10 +327,10 @@ export default function RecapsPage() {
                       {d.count > 0 ? `${d.winRate.toFixed(0)}%` : "-"}
                     </td>
                     <td className="p-2 text-center mono font-bold" style={{ color: d.avgPnl >= 0 ? "#10b981" : "#ef4444" }}>
-                      {d.count > 0 ? `${d.avgPnl >= 0 ? "+" : ""}${d.avgPnl.toFixed(2)}\u20AC` : "-"}
+                      {d.count > 0 ? `${d.avgPnl >= 0 ? "+" : ""}${d.avgPnl.toFixed(2)}€` : "-"}
                     </td>
                     <td className="p-2 text-right mono font-bold" style={{ color: d.totalPnl >= 0 ? "#10b981" : "#ef4444" }}>
-                      {d.count > 0 ? `${d.totalPnl >= 0 ? "+" : ""}${d.totalPnl.toFixed(2)}\u20AC` : "-"}
+                      {d.count > 0 ? `${d.totalPnl >= 0 ? "+" : ""}${d.totalPnl.toFixed(2)}€` : "-"}
                     </td>
                   </tr>
                 ))}
@@ -413,7 +413,7 @@ export default function RecapsPage() {
                     <span className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>{t.asset}</span>
                     <Link href="/playbook" className="text-xs ml-2 hover:underline" style={{ color: "var(--text-muted)" }}>{t.strategy}</Link>
                   </div>
-                  <span className="font-bold mono" style={{ color: "#10b981" }}>+{t.result.toFixed(2)}\u20AC</span>
+                  <span className="font-bold mono" style={{ color: "#10b981" }}>+{t.result.toFixed(2)}€</span>
                 </div>
               ))}
             </div>
@@ -434,7 +434,7 @@ export default function RecapsPage() {
                     <span className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>{t.asset}</span>
                     <Link href="/playbook" className="text-xs ml-2 hover:underline" style={{ color: "var(--text-muted)" }}>{t.strategy}</Link>
                   </div>
-                  <span className="font-bold mono" style={{ color: "#ef4444" }}>{t.result.toFixed(2)}\u20AC</span>
+                  <span className="font-bold mono" style={{ color: "#ef4444" }}>{t.result.toFixed(2)}€</span>
                 </div>
               ))}
             </div>
@@ -458,7 +458,7 @@ export default function RecapsPage() {
                   </Link>
                   <span className="text-xs" style={{ color: "var(--text-muted)" }}>{data.count} trades</span>
                   <span className="font-bold mono text-sm" style={{ color: data.pnl >= 0 ? "#10b981" : "#ef4444" }}>
-                    {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(2)}\u20AC
+                    {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(2)}€
                   </span>
                 </div>
               ))}

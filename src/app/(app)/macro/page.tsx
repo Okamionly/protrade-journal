@@ -17,6 +17,7 @@ import {
   Clock,
 } from "lucide-react";
 import { fetchMultipleFredSeries, type FredSeriesData } from "@/lib/market/fred";
+import { useTranslation } from "@/i18n/context";
 
 /* ------------------------------------------------------------------ */
 /*  FRED series keys we want for the macro overlay                     */
@@ -150,7 +151,7 @@ function YieldCurveChart({ data }: { data: { tenor: string; value: number; prev:
       {isInverted && (
         <div className="mt-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 inline-flex items-center gap-1.5">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-          <span className="text-xs font-medium text-amber-400">Courbe inversée — Signal de récession potentielle</span>
+          <span className="text-xs font-medium text-amber-400">Inverted curve — potential recession signal</span>
         </div>
       )}
     </div>
@@ -190,6 +191,7 @@ function InflationSparkline({ current, previous, target }: { current: number; pr
 /* ------------------------------------------------------------------ */
 
 export default function MacroPage() {
+  const { t } = useTranslation();
   const [fredData, setFredData] = useState<FredSeriesData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -202,7 +204,7 @@ export default function MacroPage() {
     try {
       const data = await fetchMultipleFredSeries(MACRO_FRED_KEYS);
       if (data.length === 0) {
-        setError("Aucune donnée FRED récupérée — clé API absente ou invalide.");
+        setError(t("macroFredNoData"));
         setHasFredKey(false);
       } else {
         setFredData(data);
@@ -210,7 +212,7 @@ export default function MacroPage() {
         setHasFredKey(true);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur de chargement des données FRED";
+      const msg = err instanceof Error ? err.message : t("macroFredLoadError");
       // If it's a 500 error about missing key, mark as no key
       if (msg.includes("500") || msg.includes("key")) {
         setHasFredKey(false);
@@ -321,9 +323,9 @@ export default function MacroPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[--text-primary]">Macro</h1>
+          <h1 className="text-2xl font-bold text-[--text-primary]">{t("macro")}</h1>
           <p className="text-sm text-[--text-secondary]">
-            Indicateurs macroéconomiques mondiaux
+            {t("macroSubtitle")}
             {hasLiveData && (
               <span className="text-[9px] ml-2 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium align-middle">FRED LIVE</span>
             )}
@@ -334,12 +336,12 @@ export default function MacroPage() {
             <div className="flex items-center gap-1.5 text-[11px] text-[--text-muted]">
               <Clock className="w-3.5 h-3.5" />
               <span>
-                Dernière mise à jour : {lastUpdated.toLocaleString("fr-FR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" })}
+                {t("macroLastUpdated")} : {lastUpdated.toLocaleString("fr-FR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" })}
               </span>
             </div>
           )}
           <button onClick={loadFred} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] text-sm hover:text-[--text-primary] transition">
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Rafraîchir FRED
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> {t("macroRefreshFred")}
           </button>
         </div>
       </div>
@@ -353,8 +355,8 @@ export default function MacroPage() {
           </div>
           <p className="text-xs text-[--text-muted] mt-1 ml-6">
             {hasFredKey === false
-              ? "FRED_API_KEY non configurée. Les données statiques sont affichées ci-dessous."
-              : "Les données statiques sont affichées en fallback."}
+              ? t("macroFredKeyMissing")
+              : t("macroFredFallback")}
           </p>
         </div>
       )}
@@ -365,7 +367,7 @@ export default function MacroPage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <Landmark className="w-5 h-5 text-cyan-400" />
-          <h2 className="font-semibold text-[--text-primary]">Taux Directeurs</h2>
+          <h2 className="font-semibold text-[--text-primary]">{t("macroCentralRates")}</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {centralBankRates.map((cb) => (
@@ -378,10 +380,10 @@ export default function MacroPage() {
                 {cb.trend === "up" && <ArrowUpRight className="w-3 h-3 text-rose-400" />}
                 {cb.trend === "flat" && <Minus className="w-3 h-3 text-[--text-muted]" />}
                 <span className={`text-[10px] font-medium ${cb.trend === "down" ? "text-emerald-400" : cb.trend === "up" ? "text-rose-400" : "text-[--text-muted]"}`}>
-                  {cb.trend === "down" ? "Baisse" : cb.trend === "up" ? "Hausse" : "Stable"}
+                  {cb.trend === "down" ? t("macroCbDown") : cb.trend === "up" ? t("macroCbUp") : t("macroCbFlat")}
                 </span>
               </div>
-              <p className="text-[10px] text-[--text-muted] mt-2">Prochain : {cb.nextMeeting}</p>
+              <p className="text-[10px] text-[--text-muted] mt-2">{t("macroNextMeeting")} : {cb.nextMeeting}</p>
             </div>
           ))}
         </div>
@@ -393,7 +395,7 @@ export default function MacroPage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <Activity className="w-5 h-5 text-cyan-400" />
-          <h2 className="font-semibold text-[--text-primary]">Inflation (CPI YoY)</h2>
+          <h2 className="font-semibold text-[--text-primary]">{t("macroInflation")}</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {inflationData.map((inf) => {
@@ -412,7 +414,7 @@ export default function MacroPage() {
                   {inf.current.toFixed(1)}%
                 </p>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="text-[10px] text-[--text-muted]">Préc. {inf.previous.toFixed(1)}%</span>
+                  <span className="text-[10px] text-[--text-muted]">{t("macroPrev")} {inf.previous.toFixed(1)}%</span>
                   <span className={`text-[10px] font-medium flex items-center gap-0.5 ${diff <= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                     {diff <= 0 ? <ArrowDownRight className="w-2.5 h-2.5" /> : <ArrowUpRight className="w-2.5 h-2.5" />}
                     {diff > 0 ? "+" : ""}{diff.toFixed(1)}
@@ -429,10 +431,10 @@ export default function MacroPage() {
                   <div
                     className="absolute top-0 w-0.5 h-1.5 bg-emerald-300"
                     style={{ left: `${(inf.target / 5) * 100}%` }}
-                    title={`Cible : ${inf.target}%`}
+                    title={`${t("macroTarget")} : ${inf.target}%`}
                   />
                 </div>
-                <p className="text-[10px] text-[--text-muted] mt-1">Cible : {inf.target}%</p>
+                <p className="text-[10px] text-[--text-muted] mt-1">{t("macroTarget")} : {inf.target}%</p>
               </div>
             );
           })}
@@ -447,11 +449,11 @@ export default function MacroPage() {
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-5 h-5 text-cyan-400" />
-            <h2 className="font-semibold text-[--text-primary]">Rendements Obligataires</h2>
+            <h2 className="font-semibold text-[--text-primary]">{t("macroBondYields")}</h2>
           </div>
 
           {/* US Yields */}
-          <h3 className="text-xs font-medium text-[--text-muted] mb-2 uppercase tracking-wider">Trésor US</h3>
+          <h3 className="text-xs font-medium text-[--text-muted] mb-2 uppercase tracking-wider">{t("macroUsTreasury")}</h3>
           <div className="grid grid-cols-4 gap-3 mb-4">
             {BOND_YIELDS.us.map((b) => (
               <div key={`us-${b.tenor}`} className="metric-card rounded-lg p-3 text-center">
@@ -465,7 +467,7 @@ export default function MacroPage() {
           </div>
 
           {/* DE Yields */}
-          <h3 className="text-xs font-medium text-[--text-muted] mb-2 uppercase tracking-wider">Bund Allemand</h3>
+          <h3 className="text-xs font-medium text-[--text-muted] mb-2 uppercase tracking-wider">{t("macroGermanBund")}</h3>
           <div className="grid grid-cols-2 gap-3 mb-4">
             {BOND_YIELDS.de.map((b) => (
               <div key={`de-${b.tenor}`} className="metric-card rounded-lg p-3 text-center">
@@ -479,7 +481,7 @@ export default function MacroPage() {
           </div>
 
           {/* UK Yields */}
-          <h3 className="text-xs font-medium text-[--text-muted] mb-2 uppercase tracking-wider">Gilt UK</h3>
+          <h3 className="text-xs font-medium text-[--text-muted] mb-2 uppercase tracking-wider">{t("macroUkGilt")}</h3>
           <div className="grid grid-cols-2 gap-3">
             {BOND_YIELDS.uk.map((b) => (
               <div key={`uk-${b.tenor}`} className="metric-card rounded-lg p-3 text-center">
@@ -498,25 +500,25 @@ export default function MacroPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-cyan-400" />
-              <h2 className="font-semibold text-[--text-primary]">Courbe de Taux US</h2>
+              <h2 className="font-semibold text-[--text-primary]">{t("macroYieldCurve")}</h2>
             </div>
             <div className="flex items-center gap-3 text-[10px]">
               <span className="flex items-center gap-1 text-[--text-muted]">
-                <span className="w-4 h-0.5 bg-[--text-muted] inline-block" style={{ borderTop: "1.5px dashed var(--text-muted)" }} /> Préc.
+                <span className="w-4 h-0.5 bg-[--text-muted] inline-block" style={{ borderTop: "1.5px dashed var(--text-muted)" }} /> {t("macroPrevious")}
               </span>
               <span className="flex items-center gap-1 text-cyan-400">
-                <span className="w-4 h-0.5 bg-cyan-400 inline-block" /> Actuel
+                <span className="w-4 h-0.5 bg-cyan-400 inline-block" /> {t("macroCurrent")}
               </span>
             </div>
           </div>
           <YieldCurveChart data={BOND_YIELDS.us} />
           <div className="mt-4 p-3 rounded-xl bg-[--bg-secondary]/30 border border-[--border-subtle]">
             <p className="text-xs text-[--text-secondary]">
-              <strong>Spread 2A–10A :</strong>{" "}
+              <strong>{t("macroSpread2y10y")} :</strong>{" "}
               <span className={`mono font-medium ${usYieldInverted ? "text-amber-400" : "text-cyan-400"}`}>
                 {(BOND_YIELDS.us[2].value - BOND_YIELDS.us[0].value).toFixed(2)}%
               </span>
-              {usYieldInverted ? " — Inversion (attention récession)" : " — Normal (pente positive)"}
+              {usYieldInverted ? ` — ${t("macroInverted")}` : ` — ${t("macroNormalSlope")}`}
             </p>
           </div>
         </div>
@@ -542,7 +544,7 @@ export default function MacroPage() {
             </div>
             {/* 52W Range */}
             <div className="mt-4">
-              <p className="text-xs text-[--text-muted] mb-1">Range 52 semaines</p>
+              <p className="text-xs text-[--text-muted] mb-1">{t("macro52wRange")}</p>
               <div className="relative h-2 rounded-full bg-[--bg-secondary]">
                 <div
                   className="absolute h-full rounded-full bg-cyan-500/30"
@@ -567,14 +569,14 @@ export default function MacroPage() {
             {/* Trend */}
             <div className={`mt-3 px-3 py-2 rounded-xl ${DXY_DATA.changePct >= 0 ? "bg-emerald-500/10" : "bg-rose-500/10"}`}>
               <p className={`text-xs font-medium ${DXY_DATA.changePct >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                Tendance : {DXY_DATA.changePct >= 0 ? "Dollar fort — Pression baissière sur les matières premières" : "Dollar faible — Support pour l'or et les marchés émergents"}
+                {t("macroTrend")} : {DXY_DATA.changePct >= 0 ? t("macroDxyStrong") : t("macroDxyWeak")}
               </p>
             </div>
           </div>
 
           {/* Correlations */}
           <div className="lg:col-span-2">
-            <h3 className="text-xs font-medium text-[--text-muted] mb-3 uppercase tracking-wider">Corrélations DXY</h3>
+            <h3 className="text-xs font-medium text-[--text-muted] mb-3 uppercase tracking-wider">{t("macroDxyCorrelations")}</h3>
             <div className="grid grid-cols-2 gap-3">
               {DXY_DATA.correlations.map((c) => (
                 <div key={c.asset} className="metric-card rounded-xl p-4">
@@ -619,17 +621,17 @@ export default function MacroPage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-5">
           <Globe className="w-5 h-5 text-cyan-400" />
-          <h2 className="font-semibold text-[--text-primary]">PMI Global</h2>
-          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-[--bg-secondary] text-[--text-muted] ml-2">Au-dessus de 50 = expansion</span>
+          <h2 className="font-semibold text-[--text-primary]">{t("macroGlobalPmi")}</h2>
+          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-[--bg-secondary] text-[--text-muted] ml-2">{t("macroAbove50Expansion")}</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[--border-subtle]">
-                <th className="text-left py-2 text-[--text-secondary] font-medium">Pays</th>
-                <th className="text-center py-2 text-[--text-secondary] font-medium">Manufacturier</th>
-                <th className="text-center py-2 text-[--text-secondary] font-medium">Services</th>
-                <th className="text-center py-2 text-[--text-secondary] font-medium">Composite</th>
+                <th className="text-left py-2 text-[--text-secondary] font-medium">{t("macroCountry")}</th>
+                <th className="text-center py-2 text-[--text-secondary] font-medium">{t("macroManufacturing")}</th>
+                <th className="text-center py-2 text-[--text-secondary] font-medium">{t("macroServices")}</th>
+                <th className="text-center py-2 text-[--text-secondary] font-medium">{t("macroComposite")}</th>
               </tr>
             </thead>
             <tbody>
@@ -670,10 +672,10 @@ export default function MacroPage() {
         <div className="glass rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-5">
             <BarChart3 className="w-5 h-5 text-cyan-400" />
-            <h2 className="font-semibold text-[--text-primary]">Données FRED (en direct)</h2>
+            <h2 className="font-semibold text-[--text-primary]">{t("macroFredLive")}</h2>
             {unrateFred && (
               <span className="text-[10px] ml-2 px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium">
-                Chômage US : {unrateFred.latest.toFixed(1)}%
+                {t("macroUsUnemployment")} : {unrateFred.latest.toFixed(1)}%
               </span>
             )}
           </div>
@@ -713,12 +715,12 @@ export default function MacroPage() {
       {/*  SECTION 7 — Summary / Macro Outlook                         */}
       {/* ============================================================ */}
       <div className="glass rounded-2xl p-6">
-        <h2 className="font-semibold text-[--text-primary] mb-4">Résumé Macro</h2>
+        <h2 className="font-semibold text-[--text-primary] mb-4">{t("macroSummary")}</h2>
         <div className="space-y-3">
           <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
             <p className="text-sm text-cyan-400">
               <Landmark className="w-4 h-4 inline mr-1.5" />
-              <strong>Politique monétaire :</strong> Cycle de baisse des taux en cours (Fed, BCE, BoE). BoJ en hausse graduelle.
+              <strong>{t("macroMonetaryPolicy")} :</strong> {t("macroMonetaryPolicyDesc")}
               {fredMap["FED_RATE"] && (
                 <span className="ml-1">Fed Funds : {fredMap["FED_RATE"].latest.toFixed(2)}%</span>
               )}
@@ -727,7 +729,7 @@ export default function MacroPage() {
           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
             <p className="text-sm text-amber-400">
               <Activity className="w-4 h-4 inline mr-1.5" />
-              <strong>Inflation :</strong> En baisse mais encore au-dessus des cibles dans la plupart des pays développés.
+              <strong>{t("macroInflationLabel")} :</strong> {t("macroInflationDesc")}
               {inflationData[0] && (
                 <span className="ml-1">CPI US YoY : {inflationData[0].current.toFixed(1)}%</span>
               )}
@@ -736,31 +738,31 @@ export default function MacroPage() {
           <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
             <p className="text-sm text-emerald-400">
               <Globe className="w-4 h-4 inline mr-1.5" />
-              <strong>PMI :</strong> Services en expansion. Manufacturier sous pression en Europe (DE en contraction).
+              <strong>PMI :</strong> {t("macroPmiDesc")}
             </p>
           </div>
           {usYieldInverted && (
             <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
               <p className="text-sm text-rose-400">
                 <AlertTriangle className="w-4 h-4 inline mr-1.5" />
-                <strong>Courbe des taux :</strong> Inversion 2A/10A US ({(BOND_YIELDS.us[2].value - BOND_YIELDS.us[0].value).toFixed(2)}%) — signal historique de récession.
+                <strong>{t("macroYieldCurveLabel")} :</strong> {t("macroYieldInversionDesc", { spread: (BOND_YIELDS.us[2].value - BOND_YIELDS.us[0].value).toFixed(2) })}
               </p>
             </div>
           )}
           <div className="p-3 rounded-xl bg-[--bg-secondary]/30 border border-[--border-subtle]">
             <p className="text-sm text-[--text-secondary]">
               <DollarSign className="w-4 h-4 inline mr-1.5" />
-              <strong>Dollar :</strong> DXY à {DXY_DATA.value} — {DXY_DATA.changePct < 0 ? "en baisse, favorable aux actifs risqués" : "en hausse, pression sur les marchés émergents"}.
+              <strong>{t("macroDollar")} :</strong> DXY {t("macroAt")} {DXY_DATA.value} — {DXY_DATA.changePct < 0 ? t("macroDxyDownDesc") : t("macroDxyUpDesc")}.
             </p>
           </div>
           {unrateFred && (
             <div className="p-3 rounded-xl bg-[--bg-secondary]/30 border border-[--border-subtle]">
               <p className="text-sm text-[--text-secondary]">
                 <Activity className="w-4 h-4 inline mr-1.5" />
-                <strong>Emploi :</strong> Taux de chômage US à {unrateFred.latest.toFixed(1)}%
+                <strong>{t("macroEmployment")} :</strong> {t("macroUnemploymentRate")} {unrateFred.latest.toFixed(1)}%
                 {unrateFred.change !== 0 && (
                   <span className={`ml-1 ${unrateFred.change > 0 ? "text-rose-400" : "text-emerald-400"}`}>
-                    ({unrateFred.change > 0 ? "+" : ""}{unrateFred.change.toFixed(1)} vs préc.)
+                    ({unrateFred.change > 0 ? "+" : ""}{unrateFred.change.toFixed(1)} {t("macroPrevCompare")})
                   </span>
                 )}
               </p>

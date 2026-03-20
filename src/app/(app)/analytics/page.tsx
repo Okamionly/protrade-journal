@@ -20,6 +20,16 @@ export default function AnalyticsPage() {
 
   if (loading) return <AnalyticsSkeleton />;
 
+  if (trades.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <TrendingUp className="w-12 h-12" style={{ color: "var(--text-muted)" }} />
+        <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>{t("analytics")}</h2>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>Ajoutez des trades pour voir vos analytics.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* KPI Cards */}

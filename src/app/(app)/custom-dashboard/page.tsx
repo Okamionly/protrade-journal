@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTrades, Trade } from "@/hooks/useTrades";
+import { useTranslation } from "@/i18n/context";
 import {
   LayoutDashboard,
   Settings2,
@@ -52,29 +53,29 @@ type PresetName = "scalping" | "swing" | "review";
 // ---------------------------------------------------------------------------
 
 const WIDGETS: WidgetMeta[] = [
-  { id: "equity-curve", label: "Courbe de Capital", icon: <TrendingUp size={16} />, wide: true },
-  { id: "win-rate", label: "Taux de Réussite", icon: <Target size={16} />, wide: false },
-  { id: "today-pnl", label: "P&L du Jour", icon: <DollarSign size={16} />, wide: false },
-  { id: "recent-trades", label: "Trades Récents", icon: <List size={16} />, wide: true },
-  { id: "calendar", label: "Calendrier G/P", icon: <CalendarDays size={16} />, wide: true },
-  { id: "best-asset", label: "Meilleur Actif", icon: <Award size={16} />, wide: false },
-  { id: "streak", label: "Série en Cours", icon: <Flame size={16} />, wide: false },
-  { id: "daily-target", label: "Objectif Journalier", icon: <Gauge size={16} />, wide: false },
-  { id: "emotion-dist", label: "\Émotions", icon: <PieChart size={16} />, wide: false },
-  { id: "quick-stats", label: "Stats Rapides", icon: <BarChart3 size={16} />, wide: false },
+  { id: "equity-curve", label: "widgetEquityCurve", icon: <TrendingUp size={16} />, wide: true },
+  { id: "win-rate", label: "widgetWinRate", icon: <Target size={16} />, wide: false },
+  { id: "today-pnl", label: "widgetTodayPnl", icon: <DollarSign size={16} />, wide: false },
+  { id: "recent-trades", label: "widgetRecentTrades", icon: <List size={16} />, wide: true },
+  { id: "calendar", label: "widgetCalendar", icon: <CalendarDays size={16} />, wide: true },
+  { id: "best-asset", label: "widgetBestAsset", icon: <Award size={16} />, wide: false },
+  { id: "streak", label: "widgetStreak", icon: <Flame size={16} />, wide: false },
+  { id: "daily-target", label: "widgetDailyTarget", icon: <Gauge size={16} />, wide: false },
+  { id: "emotion-dist", label: "widgetEmotionDist", icon: <PieChart size={16} />, wide: false },
+  { id: "quick-stats", label: "widgetQuickStats", icon: <BarChart3 size={16} />, wide: false },
 ];
 
 const PRESETS: Record<PresetName, { label: string; widgets: WidgetId[] }> = {
   scalping: {
-    label: "Scalping",
+    label: "presetScalping",
     widgets: ["today-pnl", "recent-trades", "quick-stats", "streak"],
   },
   swing: {
-    label: "Swing",
+    label: "presetSwing",
     widgets: ["equity-curve", "win-rate", "best-asset", "calendar"],
   },
   review: {
-    label: "Revue",
+    label: "presetReview",
     widgets: WIDGETS.map((w) => w.id),
   },
 };
@@ -121,6 +122,7 @@ function formatCurrency(n: number): string {
 // ---------------------------------------------------------------------------
 
 function EquityCurveWidget({ trades }: { trades: Trade[] }) {
+  const { t } = useTranslation();
   const sorted = useMemo(
     () => [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [trades]
@@ -137,7 +139,7 @@ function EquityCurveWidget({ trades }: { trades: Trade[] }) {
   if (cumulative.length < 2) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 120, color: "var(--text-muted)" }}>
-        Pas assez de données
+        {t("notEnoughData")}
       </div>
     );
   }
@@ -236,6 +238,7 @@ function WinRateWidget({ trades }: { trades: Trade[] }) {
 }
 
 function TodayPnlWidget({ trades }: { trades: Trade[] }) {
+  const { t } = useTranslation();
   const todayPnl = useMemo(
     () => trades.filter((t) => isToday(t.date)).reduce((s, t) => s + t.result, 0),
     [trades]
@@ -248,13 +251,14 @@ function TodayPnlWidget({ trades }: { trades: Trade[] }) {
         {formatCurrency(todayPnl)}
       </span>
       <span style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 8 }}>
-        Aujourd&apos;hui
+        {t("today")}
       </span>
     </div>
   );
 }
 
 function RecentTradesWidget({ trades }: { trades: Trade[] }) {
+  const { t } = useTranslation();
   const recent = useMemo(
     () =>
       [...trades]
@@ -266,7 +270,7 @@ function RecentTradesWidget({ trades }: { trades: Trade[] }) {
   if (recent.length === 0) {
     return (
       <div style={{ color: "var(--text-muted)", textAlign: "center", padding: 16 }}>
-        Aucun trade
+        {t("noTradesFound")}
       </div>
     );
   }
@@ -276,10 +280,10 @@ function RecentTradesWidget({ trades }: { trades: Trade[] }) {
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
         <thead>
           <tr style={{ color: "var(--text-muted)", textAlign: "left" }}>
-            <th style={{ padding: "4px 8px", fontWeight: 500 }}>Date</th>
-            <th style={{ padding: "4px 8px", fontWeight: 500 }}>Actif</th>
-            <th style={{ padding: "4px 8px", fontWeight: 500 }}>Dir.</th>
-            <th style={{ padding: "4px 8px", fontWeight: 500, textAlign: "right" }}>Résultat</th>
+            <th style={{ padding: "4px 8px", fontWeight: 500 }}>{t("date")}</th>
+            <th style={{ padding: "4px 8px", fontWeight: 500 }}>{t("asset")}</th>
+            <th style={{ padding: "4px 8px", fontWeight: 500 }}>{t("dir")}</th>
+            <th style={{ padding: "4px 8px", fontWeight: 500, textAlign: "right" }}>{t("result")}</th>
           </tr>
         </thead>
         <tbody>
@@ -407,6 +411,7 @@ function CalendarWidget({ trades }: { trades: Trade[] }) {
 }
 
 function BestAssetWidget({ trades }: { trades: Trade[] }) {
+  const { t } = useTranslation();
   const best = useMemo(() => {
     const map: Record<string, { total: number; count: number }> = {};
     trades.forEach((t) => {
@@ -429,7 +434,7 @@ function BestAssetWidget({ trades }: { trades: Trade[] }) {
   if (!best) {
     return (
       <div style={{ color: "var(--text-muted)", textAlign: "center", padding: 16 }}>
-        Aucune donnée
+        {t("noData")}
       </div>
     );
   }
@@ -449,6 +454,7 @@ function BestAssetWidget({ trades }: { trades: Trade[] }) {
 }
 
 function StreakWidget({ trades }: { trades: Trade[] }) {
+  const { t } = useTranslation();
   const streak = useMemo(() => {
     const sorted = [...trades].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -472,10 +478,10 @@ function StreakWidget({ trades }: { trades: Trade[] }) {
   const color = streak.type === "win" ? "#10b981" : streak.type === "loss" ? "#f43f5e" : "var(--text-muted)";
   const label =
     streak.type === "win"
-      ? "Victoires consécutives"
+      ? t("consecutiveWins")
       : streak.type === "loss"
-      ? "Défaites consécutives"
-      : "Aucune série";
+      ? t("consecutiveLosses")
+      : t("noStreak");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 4, padding: "12px 0" }}>
@@ -489,6 +495,7 @@ function StreakWidget({ trades }: { trades: Trade[] }) {
 }
 
 function DailyTargetWidget({ trades }: { trades: Trade[] }) {
+  const { t } = useTranslation();
   const todayPnl = useMemo(
     () => trades.filter((t) => isToday(t.date)).reduce((s, t) => s + t.result, 0),
     [trades]
@@ -500,7 +507,7 @@ function DailyTargetWidget({ trades }: { trades: Trade[] }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", height: "100%", gap: 8, padding: "12px 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Objectif : {DAILY_TARGET}</span>
+        <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{t("dailyTarget", { target: DAILY_TARGET })}</span>
         <span className="mono" style={{ fontSize: 14, fontWeight: 600, color: barColor }}>
           {pct.toFixed(0)}%
         </span>
@@ -546,6 +553,7 @@ const EMOTION_COLORS: Record<string, string> = {
 };
 
 function EmotionDistWidget({ trades }: { trades: Trade[] }) {
+  const { t } = useTranslation();
   const data = useMemo(() => {
     const map: Record<string, number> = {};
     trades.forEach((t) => {
@@ -562,7 +570,7 @@ function EmotionDistWidget({ trades }: { trades: Trade[] }) {
   if (data.entries.length === 0) {
     return (
       <div style={{ color: "var(--text-muted)", textAlign: "center", padding: 16 }}>
-        Aucune émotion enregistrée
+        {t("noEmotionRecorded")}
       </div>
     );
   }
@@ -626,6 +634,7 @@ function EmotionDistWidget({ trades }: { trades: Trade[] }) {
 }
 
 function QuickStatsWidget({ trades }: { trades: Trade[] }) {
+  const { t } = useTranslation();
   const stats = useMemo(() => {
     const today = trades.filter((t) => isToday(t.date)).length;
     const week = trades.filter((t) => isThisWeek(t.date)).length;
@@ -634,9 +643,9 @@ function QuickStatsWidget({ trades }: { trades: Trade[] }) {
   }, [trades]);
 
   const items = [
-    { label: "Aujourd\’hui", value: stats.today },
-    { label: "Cette semaine", value: stats.week },
-    { label: "Ce mois", value: stats.month },
+    { label: t("today"), value: stats.today },
+    { label: t("thisWeek"), value: stats.week },
+    { label: t("thisMonth"), value: stats.month },
   ];
 
   return (
@@ -675,6 +684,7 @@ const WIDGET_RENDERERS: Record<WidgetId, React.FC<{ trades: Trade[] }>> = {
 // ---------------------------------------------------------------------------
 
 export default function CustomDashboardPage() {
+  const { t } = useTranslation();
   const { trades } = useTrades();
   const [activeWidgets, setActiveWidgets] = useState<WidgetId[]>([]);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -734,7 +744,7 @@ export default function CustomDashboardPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <LayoutDashboard size={22} color="#06b6d4" />
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>
-            Tableau de Bord
+            {t("customDashboard")}
           </h1>
         </div>
 
@@ -768,7 +778,7 @@ export default function CustomDashboardPage() {
               }}
             >
               <Zap size={12} />
-              {PRESETS[name].label}
+              {t(PRESETS[name].label)}
             </button>
           ))}
 
@@ -791,7 +801,7 @@ export default function CustomDashboardPage() {
             }}
           >
             <Settings2 size={14} />
-            Widgets
+            {t("widgets")}
           </button>
         </div>
       </div>
@@ -825,7 +835,7 @@ export default function CustomDashboardPage() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
-                Configurer les Widgets
+                {t("configureWidgets")}
               </h2>
               <button
                 onClick={() => setPanelOpen(false)}
@@ -873,7 +883,7 @@ export default function CustomDashboardPage() {
                         color: active ? "var(--text-primary)" : "var(--text-muted)",
                       }}
                     >
-                      {w.label}
+                      {t(w.label)}
                     </span>
                     {active ? (
                       <Eye size={14} color="#06b6d4" />
@@ -888,7 +898,7 @@ export default function CustomDashboardPage() {
             {/* Presets in panel */}
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
               <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 600, letterSpacing: 1 }}>
-                Préréglages
+                {t("presets")}
               </span>
               <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
                 {(Object.keys(PRESETS) as PresetName[]).map((name) => (
@@ -924,9 +934,9 @@ export default function CustomDashboardPage() {
                     }}
                   >
                     <ChevronRight size={12} />
-                    {PRESETS[name].label}
+                    {t(PRESETS[name].label)}
                     <span style={{ marginLeft: "auto", color: "var(--text-muted)", fontSize: 11 }}>
-                      {PRESETS[name].widgets.length} widgets
+                      {t("nWidgets", { count: PRESETS[name].widgets.length })}
                     </span>
                   </button>
                 ))}
@@ -950,7 +960,7 @@ export default function CustomDashboardPage() {
         >
           <LayoutDashboard size={40} color="var(--text-muted)" />
           <p style={{ color: "var(--text-muted)", fontSize: 14, margin: 0 }}>
-            Aucun widget actif. Cliquez sur <strong>Widgets</strong> pour configurer votre tableau de bord.
+            {t("noActiveWidgets")}
           </p>
         </div>
       ) : (
@@ -993,7 +1003,7 @@ export default function CustomDashboardPage() {
                 >
                   <span style={{ color: "#06b6d4" }}>{meta.icon}</span>
                   <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", flex: 1 }}>
-                    {meta.label}
+                    {t(meta.label)}
                   </span>
                 </div>
 

@@ -115,8 +115,8 @@ export default function CalculatorPage() {
             className="absolute top-0 bottom-0 w-1 rounded-full"
             style={{
               left: `${Math.min((riskPercent / 5) * 100, 100)}%`,
-              background: "#fff",
-              boxShadow: "0 0 6px rgba(255,255,255,0.6)",
+              background: "var(--text-primary)",
+              boxShadow: "0 0 6px var(--border)",
               transform: "translateX(-50%)",
             }}
           />

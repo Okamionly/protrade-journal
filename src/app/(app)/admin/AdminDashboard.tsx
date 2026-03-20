@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/i18n/context";
 import {
   Users,
   BarChart3,
@@ -55,6 +56,7 @@ interface Props {
 }
 
 export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Props) {
+  const { t } = useTranslation();
   const [users, setUsers] = useState(initialUsers);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
@@ -102,17 +104,17 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
     try {
       const res = await fetch("/api/admin/seed", { method: "POST" });
       const data = await res.json();
-      setSeedMessage(data.message || "Seed terminé");
+      setSeedMessage(data.message || t("adminSeedDone"));
     } catch {
-      setSeedMessage("Erreur lors du seed");
+      setSeedMessage(t("adminSeedError"));
     }
     setSeeding(false);
   };
 
   const handleExportCSV = () => {
-    const headers = ["Nom", "Email", "Rôle", "Trades", "Balance", "Inscrit le"];
+    const headers = [t("adminUserName"), "Email", t("adminRole"), "Trades", "Balance", t("adminRegisteredAt")];
     const rows = users.map((u) => [
-      u.name || "Sans nom",
+      u.name || t("adminNoName"),
       u.email,
       u.role,
       u.tradeCount,
@@ -147,10 +149,10 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
         </div>
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-            Panel Admin
+            {t("adminPanel")}
           </h1>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Gestion de MarketPhase
+            {t("adminManage")}
           </p>
         </div>
       </div>
@@ -158,38 +160,38 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
       {/* Stats Globales */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard
-          label="Total Utilisateurs"
+          label={t("adminTotalUsers")}
           value={stats.totalUsers}
           icon={<Users className="w-5 h-5 text-blue-400" />}
           iconBg="bg-blue-500/20"
         />
         <StatCard
-          label="Total Trades"
+          label={t("adminTotalTrades")}
           value={stats.totalTrades}
           icon={<BarChart3 className="w-5 h-5 text-purple-400" />}
           iconBg="bg-purple-500/20"
         />
         <StatCard
-          label="Utilisateurs Actifs"
+          label={t("adminActiveUsers")}
           value={stats.activeUsers}
-          subtitle="7 derniers jours"
+          subtitle={t("adminLast7Days")}
           icon={<Activity className="w-5 h-5 text-emerald-400" />}
           iconBg="bg-emerald-500/20"
         />
         <StatCard
-          label="Trades Aujourd'hui"
+          label={t("adminTradesToday")}
           value={stats.tradesToday}
           icon={<CalendarDays className="w-5 h-5 text-cyan-400" />}
           iconBg="bg-cyan-500/20"
         />
         <StatCard
-          label="VIP Abonnés"
+          label={t("adminVipSubscribers")}
           value={stats.vipCount}
           icon={<Crown className="w-5 h-5 text-amber-400" />}
           iconBg="bg-amber-500/20"
         />
         <StatCard
-          label="Revenus Estimés"
+          label={t("adminEstimatedRevenue")}
           value={`${stats.estimatedRevenue.toFixed(2)}€`}
           subtitle={`${stats.vipCount} × 9.99€`}
           icon={<DollarSign className="w-5 h-5 text-emerald-400" />}
@@ -202,19 +204,19 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
       <div className="glass rounded-2xl p-6">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
           <Users className="w-5 h-5 text-blue-400" />
-          Liste des Utilisateurs ({users.length})
+          {t("adminUserList", { count: users.length })}
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left border-b" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
-                <th className="pb-3 font-medium">Utilisateur</th>
+                <th className="pb-3 font-medium">{t("adminUserName")}</th>
                 <th className="pb-3 font-medium">Email</th>
-                <th className="pb-3 font-medium">Rôle</th>
+                <th className="pb-3 font-medium">{t("adminRole")}</th>
                 <th className="pb-3 font-medium">Trades</th>
                 <th className="pb-3 font-medium">Balance</th>
-                <th className="pb-3 font-medium">Inscrit le</th>
-                <th className="pb-3 font-medium">Actions</th>
+                <th className="pb-3 font-medium">{t("adminRegisteredAt")}</th>
+                <th className="pb-3 font-medium">{t("actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -230,7 +232,7 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
                         {(user.name || user.email)[0].toUpperCase()}
                       </div>
                       <span className="font-medium" style={{ color: "var(--text-primary)" }}>
-                        {user.name || "Sans nom"}
+                        {user.name || t("adminNoName")}
                       </span>
                     </div>
                   </td>
@@ -281,21 +283,21 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
       <div className="glass rounded-2xl p-6">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
           <Activity className="w-5 h-5 text-cyan-400" />
-          Activité Récente
+          {t("adminRecentActivity")}
         </h2>
         {recentTrades.length === 0 ? (
           <p className="text-center py-8" style={{ color: "var(--text-muted)" }}>
-            Aucune activité récente.
+            {t("adminNoRecentActivity")}
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left border-b" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
-                  <th className="pb-3 font-medium">Date</th>
-                  <th className="pb-3 font-medium">Utilisateur</th>
-                  <th className="pb-3 font-medium">Actif</th>
-                  <th className="pb-3 font-medium">Direction</th>
+                  <th className="pb-3 font-medium">{t("date")}</th>
+                  <th className="pb-3 font-medium">{t("adminUser")}</th>
+                  <th className="pb-3 font-medium">{t("asset")}</th>
+                  <th className="pb-3 font-medium">{t("direction")}</th>
                   <th className="pb-3 font-medium text-right">P&L</th>
                 </tr>
               </thead>
@@ -352,7 +354,7 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
         >
           <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
             <Shield className="w-5 h-5 text-rose-400" />
-            Actions Admin
+            {t("adminActions")}
           </h2>
           {expandedActions ? (
             <ChevronUp className="w-5 h-5" style={{ color: "var(--text-muted)" }} />
@@ -371,10 +373,10 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
                 </div>
                 <div>
                   <h3 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
-                    Contenu VIP
+                    {t("adminVipContent")}
                   </h3>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    G&eacute;rer les publications VIP
+                    {t("adminVipContentDesc")}
                   </p>
                 </div>
               </div>
@@ -385,7 +387,7 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
                   background: "linear-gradient(135deg, rgb(245,158,11), rgb(234,88,12))",
                 }}
               >
-                G&eacute;rer le contenu VIP
+                {t("adminManageVipContent")}
               </Link>
             </div>
 
@@ -400,7 +402,7 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
                     Seed Demo Data
                   </h3>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    Injecter des données de test
+                    {t("adminSeedDesc")}
                   </p>
                 </div>
               </div>
@@ -412,7 +414,7 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
                   background: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
                 }}
               >
-                {seeding ? "Seed en cours..." : "Lancer le Seed"}
+                {seeding ? t("adminSeeding") : t("adminLaunchSeed")}
               </button>
               {seedMessage && (
                 <p className="text-xs mt-2 text-center" style={{ color: "var(--text-muted)" }}>
@@ -429,10 +431,10 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
                 </div>
                 <div>
                   <h3 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
-                    Exporter Users CSV
+                    {t("adminExportUsersCsv")}
                   </h3>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    Télécharger la liste des utilisateurs
+                    {t("adminExportUsersDesc")}
                   </p>
                 </div>
               </div>
@@ -443,7 +445,7 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
                   background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                 }}
               >
-                Exporter en CSV
+                {t("adminExportCsv")}
               </button>
             </div>
 
@@ -455,10 +457,10 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
                 </div>
                 <div>
                   <h3 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
-                    Voir les Logs
+                    {t("adminViewLogs")}
                   </h3>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    Consulter les logs du système
+                    {t("adminViewLogsDesc")}
                   </p>
                 </div>
               </div>
@@ -470,7 +472,7 @@ export function AdminDashboard({ stats, users: initialUsers, recentTrades }: Pro
                   color: "var(--text-muted)",
                 }}
               >
-                Bientôt disponible
+                {t("comingSoon")}
               </button>
             </div>
           </div>

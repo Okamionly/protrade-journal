@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTrades, Trade } from "@/hooks/useTrades";
+import { useTranslation } from "@/i18n/context";
 import {
   Play,
   Pause,
@@ -183,7 +184,7 @@ function AnimatedPriceChart({
         fill="#06b6d4"
         fontFamily="monospace"
       >
-        Entrée {trade.entry.toFixed(5)}
+        Entry {trade.entry.toFixed(5)}
       </text>
 
       {/* SL line - red dashed */}
@@ -248,7 +249,7 @@ function AnimatedPriceChart({
             fill={isWin ? "#10b981" : "#f43f5e"}
             fontFamily="monospace"
           >
-            Sortie {exitPrice.toFixed(5)}
+            Exit {exitPrice.toFixed(5)}
           </text>
         </>
       )}
@@ -404,22 +405,22 @@ function computeTradeScore(trade: Trade): {
     rrAchieved: rrScore,
     details: [
       {
-        label: "Qualité d'entrée",
+        label: "replayEntryQuality",
         score: entryQuality,
         max: 10,
-        desc: "Proximité de l'entrée par rapport au SL/TP",
+        desc: "replayEntryQualityDesc",
       },
       {
-        label: "Discipline",
+        label: "replayDiscipline",
         score: disciplineScore,
         max: 10,
-        desc: "Respect du plan et de la stratégie",
+        desc: "replayDisciplineDesc",
       },
       {
-        label: "R:R réalisé",
+        label: "replayRrAchieved",
         score: rrScore,
         max: 10,
-        desc: "Ratio risque/récompense obtenu vs prévu",
+        desc: "replayRrAchievedDesc",
       },
     ],
   };
@@ -432,16 +433,17 @@ function getScoreColor(score: number) {
 }
 
 function getScoreLabel(score: number) {
-  if (score >= 9) return "Excellent";
-  if (score >= 7) return "Bon";
-  if (score >= 5) return "Moyen";
-  if (score >= 3) return "Faible";
-  return "Mauvais";
+  if (score >= 9) return "replayScoreExcellent";
+  if (score >= 7) return "replayScoreGood";
+  if (score >= 5) return "replayScoreAverage";
+  if (score >= 3) return "replayScorePoor";
+  return "replayScoreBad";
 }
 
 /* ─── Main Page ─── */
 
 export default function ReplayPage() {
+  const { t } = useTranslation();
   const { trades, loading } = useTrades();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -633,17 +635,17 @@ export default function ReplayPage() {
 
     return {
       cutAt1R: {
-        label: "Si tu avais coupé à 1R",
+        labelKey: "replayAltCutAt1R",
         price: oneRTarget,
         pl: oneRPL,
       },
       letRunToTP: {
-        label: "Si tu avais laissé courir au TP",
+        labelKey: "replayAltLetRun",
         price: selected.tp,
         pl: tpPL,
       },
       doublePosition: {
-        label: "Si tu avais doublé ta position",
+        labelKey: "replayAltDouble",
         lots: selected.lots * 2,
         pl: doublePL,
       },
@@ -663,7 +665,7 @@ export default function ReplayPage() {
         style={{ color: "var(--text-muted)" }}
       >
         <Activity className="w-5 h-5 animate-spin mr-2" />
-        Chargement...
+        {t("loading")}
       </div>
     );
   }
@@ -673,7 +675,7 @@ export default function ReplayPage() {
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <Rewind className="w-10 h-10 text-cyan-400 opacity-50" />
         <p style={{ color: "var(--text-muted)" }}>
-          Aucun trade clôturé à rejouer
+          {t("replayNoClosedTrades")}
         </p>
       </div>
     );
@@ -688,11 +690,10 @@ export default function ReplayPage() {
             className="text-2xl font-bold flex items-center gap-3"
             style={{ color: "var(--text-primary)" }}
           >
-            <Play className="w-6 h-6 text-cyan-400" /> Replay de Trade
+            <Play className="w-6 h-6 text-cyan-400" /> {t("replayTitle")}
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            Rejouez, analysez et scorez vos trades &mdash; Raccourcis: &larr;
-            &rarr; naviguer, Espace play/pause
+            {t("replaySubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -701,7 +702,7 @@ export default function ReplayPage() {
             disabled={currentIndex <= 0}
             className="glass p-2 rounded-lg hover:opacity-80 transition-opacity disabled:opacity-30"
             style={{ color: "var(--text-secondary)" }}
-            title="Trade précédent (\←)"
+            title={t("replayPrevTrade")}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -719,7 +720,7 @@ export default function ReplayPage() {
             disabled={currentIndex >= closedTrades.length - 1}
             className="glass p-2 rounded-lg hover:opacity-80 transition-opacity disabled:opacity-30"
             style={{ color: "var(--text-secondary)" }}
-            title="Trade suivant (\→)"
+            title={t("replayNextTrade")}
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -732,7 +733,7 @@ export default function ReplayPage() {
           className="text-xs font-medium mb-2 block"
           style={{ color: "var(--text-muted)" }}
         >
-          Sélectionner un trade
+          {t("replaySelectTrade")}
         </label>
         <select
           value={selectedId || ""}
@@ -769,8 +770,7 @@ export default function ReplayPage() {
                 className="text-sm font-semibold flex items-center gap-2"
                 style={{ color: "var(--text-primary)" }}
               >
-                <BarChart3 className="w-4 h-4 text-cyan-400" /> Simulation du
-                prix
+                <BarChart3 className="w-4 h-4 text-cyan-400" /> {t("replayPriceSimulation")}
               </h3>
               <div className="flex items-center gap-2">
                 {/* Speed control */}
@@ -806,7 +806,7 @@ export default function ReplayPage() {
                   onClick={handleReset}
                   className="glass p-1.5 rounded-lg hover:opacity-80 transition-opacity"
                   style={{ color: "var(--text-secondary)" }}
-                  title="Réinitialiser"
+                  title={t("reset")}
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
@@ -830,7 +830,7 @@ export default function ReplayPage() {
                       background: "rgba(6,182,212,0.2)",
                       color: "#06b6d4",
                     }}
-                    title="Lecture (Espace)"
+                    title={t("replayPlay")}
                   >
                     <Play className="w-4 h-4" />
                   </button>
@@ -876,51 +876,50 @@ export default function ReplayPage() {
                 className="text-sm font-semibold mb-4 flex items-center gap-2"
                 style={{ color: "var(--text-primary)" }}
               >
-                <Target className="w-4 h-4 text-cyan-400" /> Détails du
-                Trade
+                <Target className="w-4 h-4 text-cyan-400" /> {t("replayTradeDetails")}
               </h3>
               <div className="space-y-2.5">
                 {[
-                  { label: "Actif", value: selected.asset },
+                  { label: t("asset"), value: selected.asset },
                   {
-                    label: "Direction",
+                    label: t("direction"),
                     value: selected.direction,
                     color:
                       selected.direction === "LONG"
                         ? "#10b981"
                         : "#f43f5e",
                   },
-                  { label: "Date", value: formatDate(selected.date) },
-                  { label: "Lots", value: selected.lots.toString() },
+                  { label: t("date"), value: formatDate(selected.date) },
+                  { label: t("lots"), value: selected.lots.toString() },
                   {
-                    label: "Entrée",
+                    label: t("entry"),
                     value: selected.entry.toFixed(5),
                     mono: true,
                   },
                   {
-                    label: "Sortie",
+                    label: t("exit"),
                     value: (selected.exit ?? 0).toFixed(5),
                     mono: true,
                   },
                   {
-                    label: "Stop Loss",
+                    label: t("stopLoss"),
                     value: selected.sl.toFixed(5),
                     mono: true,
                     color: "#f43f5e",
                   },
                   {
-                    label: "Take Profit",
+                    label: t("takeProfit"),
                     value: selected.tp.toFixed(5),
                     mono: true,
                     color: "#10b981",
                   },
                   {
-                    label: "R:R planifié",
+                    label: t("replayPlannedRR"),
                     value: stats ? stats.rr.toFixed(2) : "\—",
                     mono: true,
                   },
                   {
-                    label: "R:R réalisé",
+                    label: t("replayAchievedRR"),
                     value: stats ? stats.achievedRR.toFixed(2) + "R" : "\—",
                     mono: true,
                     color: stats
@@ -930,23 +929,23 @@ export default function ReplayPage() {
                       : undefined,
                   },
                   {
-                    label: "Résultat",
+                    label: t("result"),
                     value: `${selected.result >= 0 ? "+" : ""}${selected.result.toFixed(2)}€`,
                     color:
                       selected.result >= 0 ? "#10b981" : "#f43f5e",
                     mono: true,
                   },
                   {
-                    label: "Stratégie",
+                    label: t("strategy"),
                     value: selected.strategy || "\—",
                   },
                   {
-                    label: "Émotion",
+                    label: t("emotion"),
                     value: selected.emotion || "\—",
                   },
-                  { label: "Tags", value: selected.tags || "\—" },
+                  { label: t("tags"), value: selected.tags || "\—" },
                   {
-                    label: "Setup",
+                    label: t("setup"),
                     value: selected.setup || "\—",
                   },
                 ].map((item) => (
@@ -986,7 +985,7 @@ export default function ReplayPage() {
                     className="text-sm font-semibold mb-4 flex items-center gap-2"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    <Award className="w-4 h-4 text-cyan-400" /> Score du Trade
+                    <Award className="w-4 h-4 text-cyan-400" /> {t("replayTradeScore")}
                   </h3>
 
                   {/* Overall score */}
@@ -1035,13 +1034,13 @@ export default function ReplayPage() {
                         className="text-lg font-semibold"
                         style={{ color: getScoreColor(score.total) }}
                       >
-                        {getScoreLabel(score.total)}
+                        {t(getScoreLabel(score.total))}
                       </p>
                       <p
                         className="text-xs mt-1"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        Évaluation automatique basée sur l&apos;exécution
+                        {t("replayAutoEval")}
                       </p>
                     </div>
                   </div>
@@ -1052,14 +1051,14 @@ export default function ReplayPage() {
                       <div key={d.label}>
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            {d.label.includes("entrée") ? (
+                            {d.label === "replayEntryQuality" ? (
                               <Target
                                 className="w-3 h-3"
                                 style={{
                                   color: getScoreColor(d.score),
                                 }}
                               />
-                            ) : d.label.includes("Discipline") ? (
+                            ) : d.label === "replayDiscipline" ? (
                               <Shield
                                 className="w-3 h-3"
                                 style={{
@@ -1078,7 +1077,7 @@ export default function ReplayPage() {
                               className="text-xs"
                               style={{ color: "var(--text-secondary)" }}
                             >
-                              {d.label}
+                              {t(d.label)}
                             </span>
                           </div>
                           <span
@@ -1106,7 +1105,7 @@ export default function ReplayPage() {
                           className="text-[10px] mt-0.5"
                           style={{ color: "var(--text-muted)" }}
                         >
-                          {d.desc}
+                          {t(d.desc)}
                         </p>
                       </div>
                     ))}
@@ -1121,8 +1120,7 @@ export default function ReplayPage() {
                     className="text-sm font-semibold mb-4 flex items-center gap-2"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    <Calculator className="w-4 h-4 text-cyan-400" /> Et si...
-                    ?
+                    <Calculator className="w-4 h-4 text-cyan-400" /> {t("replayWhatIf")}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {/* Cut at 1R */}
@@ -1137,7 +1135,7 @@ export default function ReplayPage() {
                         className="text-xs mb-3"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        {alternatives.cutAt1R.label}
+                        {t(alternatives.cutAt1R.labelKey)}
                       </p>
                       <p
                         className="text-lg font-bold mono"
@@ -1155,7 +1153,7 @@ export default function ReplayPage() {
                         className="text-[10px] mono mt-1"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        Sortie à{" "}
+                        {t("replayExitAt")}{" "}
                         {alternatives.cutAt1R.price.toFixed(5)}
                       </p>
                       <div className="mt-2 flex items-center gap-1">
@@ -1176,7 +1174,7 @@ export default function ReplayPage() {
                           {(
                             alternatives.cutAt1R.pl - selected.result
                           ).toFixed(2)}
-                          € vs réel
+                          € {t("replayVsReal")}
                         </span>
                       </div>
                     </div>
@@ -1193,7 +1191,7 @@ export default function ReplayPage() {
                         className="text-xs mb-3"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        {alternatives.letRunToTP.label}
+                        {t(alternatives.letRunToTP.labelKey)}
                       </p>
                       <p
                         className="text-lg font-bold mono"
@@ -1211,7 +1209,7 @@ export default function ReplayPage() {
                         className="text-[10px] mono mt-1"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        Sortie à{" "}
+                        {t("replayExitAt")}{" "}
                         {alternatives.letRunToTP.price.toFixed(5)}
                       </p>
                       <div className="mt-2 flex items-center gap-1">
@@ -1233,7 +1231,7 @@ export default function ReplayPage() {
                           {(
                             alternatives.letRunToTP.pl - selected.result
                           ).toFixed(2)}
-                          € vs réel
+                          € {t("replayVsReal")}
                         </span>
                       </div>
                     </div>
@@ -1250,7 +1248,7 @@ export default function ReplayPage() {
                         className="text-xs mb-3"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        {alternatives.doublePosition.label}
+                        {t(alternatives.doublePosition.labelKey)}
                       </p>
                       <p
                         className="text-lg font-bold mono"
@@ -1268,8 +1266,7 @@ export default function ReplayPage() {
                         className="text-[10px] mono mt-1"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        {alternatives.doublePosition.lots} lots au lieu de{" "}
-                        {selected.lots}
+                        {t("replayLotsInsteadOf", { lots: alternatives.doublePosition.lots, orig: selected.lots })}
                       </p>
                       <div className="mt-2 flex items-center gap-1">
                         <span
@@ -1292,7 +1289,7 @@ export default function ReplayPage() {
                             alternatives.doublePosition.pl -
                             selected.result
                           ).toFixed(2)}
-                          € vs réel
+                          € {t("replayVsReal")}
                         </span>
                       </div>
                     </div>
@@ -1315,7 +1312,7 @@ export default function ReplayPage() {
                         className="text-xs"
                         style={{ color: "var(--text-secondary)" }}
                       >
-                        Résultat réel
+                        {t("replayActualResult")}
                       </span>
                     </div>
                     <span
@@ -1341,8 +1338,7 @@ export default function ReplayPage() {
                 className="text-sm font-semibold mb-4 flex items-center gap-2"
                 style={{ color: "var(--text-primary)" }}
               >
-                <Camera className="w-4 h-4 text-cyan-400" /> Captures
-                d&apos;écran
+                <Camera className="w-4 h-4 text-cyan-400" /> {t("screenshots")}
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {selected.screenshots.map((ss) => (
@@ -1371,8 +1367,7 @@ export default function ReplayPage() {
               className="text-sm font-semibold mb-4 flex items-center gap-2"
               style={{ color: "var(--text-primary)" }}
             >
-              <Edit3 className="w-4 h-4 text-cyan-400" /> Notes &amp;
-              Annotations
+              <Edit3 className="w-4 h-4 text-cyan-400" /> {t("replayNotesAnnotations")}
             </h3>
             {selected.setup && (
               <div
@@ -1386,7 +1381,7 @@ export default function ReplayPage() {
                   className="text-[10px] uppercase tracking-wider mb-1"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  Setup du trade
+                  {t("replayTradeSetup")}
                 </p>
                 <p
                   className="text-sm"
@@ -1402,7 +1397,7 @@ export default function ReplayPage() {
                   value={currentNote}
                   onChange={(e) => setCurrentNote(e.target.value)}
                   rows={4}
-                  placeholder="Ajoutez vos observations, leçons apprises..."
+                  placeholder={t("replayNotesPlaceholder")}
                   className="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none transition-colors"
                   style={{
                     background: "var(--bg-primary)",
@@ -1419,14 +1414,14 @@ export default function ReplayPage() {
                       color: "#06b6d4",
                     }}
                   >
-                    Sauvegarder
+                    {t("save")}
                   </button>
                   <button
                     onClick={() => setEditingNote(false)}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium hover:opacity-80 transition-opacity"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    Annuler
+                    {t("cancel")}
                   </button>
                 </div>
               </div>
@@ -1452,7 +1447,7 @@ export default function ReplayPage() {
                     className="text-sm mb-3"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    Aucune note pour ce trade
+                    {t("replayNoNotes")}
                   </p>
                 )}
                 <button
@@ -1468,8 +1463,8 @@ export default function ReplayPage() {
                 >
                   <Edit3 className="w-3 h-3" />{" "}
                   {notes[selected.id]
-                    ? "Modifier la note"
-                    : "Ajouter une note"}
+                    ? t("replayEditNote")
+                    : t("replayAddNote")}
                 </button>
               </div>
             )}
@@ -1489,7 +1484,7 @@ export default function ReplayPage() {
                 color: "var(--text-secondary)",
               }}
             >
-              <ArrowLeft className="w-4 h-4" /> Trade précédent
+              <ArrowLeft className="w-4 h-4" /> {t("replayPrevTrade")}
             </button>
             <div
               className="text-xs mono"
@@ -1515,7 +1510,7 @@ export default function ReplayPage() {
                 color: "var(--text-secondary)",
               }}
             >
-              Trade suivant <ArrowRight className="w-4 h-4" />
+              {t("replayNextTrade")} <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </>

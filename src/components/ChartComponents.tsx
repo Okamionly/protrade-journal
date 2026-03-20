@@ -275,13 +275,15 @@ export function EmotionChart({ data }: { data: EmotionPerformance[] }) {
 export function AdvancedEquityChart({ trades }: { trades: any[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!canvasRef.current || trades.length === 0) return;
     if (chartRef.current) chartRef.current.destroy();
 
-    const gridColor = "rgba(255,255,255,0.1)";
-    const textColor = "rgba(255,255,255,0.6)";
+    const isDark = theme === "dark" || theme === "oled";
+    const gridColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+    const textColor = isDark ? "rgba(255,255,255,0.6)" : "#64748b";
 
     const sorted = [...trades].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -356,7 +358,7 @@ export function AdvancedEquityChart({ trades }: { trades: any[] }) {
           {
             label: "High Watermark",
             data: Array(labels.length).fill(highWatermark),
-            borderColor: "rgba(255, 255, 255, 0.4)",
+            borderColor: isDark ? "rgba(255, 255, 255, 0.4)" : "rgba(0, 0, 0, 0.25)",
             borderDash: [6, 4],
             borderWidth: 1,
             pointRadius: 0,
@@ -417,7 +419,7 @@ export function AdvancedEquityChart({ trades }: { trades: any[] }) {
     return () => {
       chartRef.current?.destroy();
     };
-  }, [trades]);
+  }, [trades, theme]);
 
   return (
     <div className="chart-container">
