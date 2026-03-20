@@ -6,8 +6,10 @@ import { WeekdayChart, EquityChart, MonthlyComparisonChart, EmotionChart, Advanc
 import { AnalyticsSkeleton } from "@/components/Skeleton";
 import { useUser } from "@/hooks/useTrades";
 import { TrendingUp, TrendingDown, Zap, Flame, ArrowUpRight, ArrowDownRight, Clock, Activity, ChevronUp, ChevronDown, BarChart3, GitCompare } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation();
   const { trades, loading } = useTrades();
   const { user } = useUser();
   const stats = computeStats(trades);
@@ -23,7 +25,7 @@ export default function AnalyticsPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="glass rounded-2xl p-6">
-          <h4 className="text-[--text-secondary] text-sm mb-2">Profit Factor</h4>
+          <h4 className="text-[--text-secondary] text-sm mb-2">{t("profitFactor")}</h4>
           <p className="text-3xl font-bold text-emerald-400 mono">
             {stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)}
           </p>
@@ -41,7 +43,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
         <div className="glass rounded-2xl p-6">
-          <h4 className="text-[--text-secondary] text-sm mb-2">Sharpe Ratio</h4>
+          <h4 className="text-[--text-secondary] text-sm mb-2">{t("sharpeRatio")}</h4>
           <p className="text-3xl font-bold text-blue-400 mono">{stats.sharpeRatio.toFixed(2)}</p>
           <div className="mt-2 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
             <div className="h-full bg-blue-500" style={{ width: `${Math.min(Math.abs(stats.sharpeRatio) * 30, 100)}%` }} />
@@ -77,8 +79,8 @@ export default function AnalyticsPage() {
         let ddStartIdx = 0;
         let ddEndIdx = 0;
         let cumulative = 0;
-        sorted.forEach((t, i) => {
-          cumulative += t.result;
+        sorted.forEach((tr, i) => {
+          cumulative += tr.result;
           if (cumulative > peak) {
             peak = cumulative;
           }
@@ -112,10 +114,10 @@ export default function AnalyticsPage() {
         // Monthly momentum
         const now = new Date();
         const monthMap: Record<string, number> = {};
-        sorted.forEach(t => {
-          const d = new Date(t.date);
+        sorted.forEach(tr => {
+          const d = new Date(tr.date);
           const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-          monthMap[key] = (monthMap[key] || 0) + t.result;
+          monthMap[key] = (monthMap[key] || 0) + tr.result;
         });
         const monthKeys = Object.keys(monthMap).sort();
         const monthlyMomentum = monthKeys.slice(-6).map((key, i, arr) => {
@@ -178,7 +180,7 @@ export default function AnalyticsPage() {
                 <p className={`text-3xl font-bold mono ${sortino >= 1 ? "text-emerald-400" : sortino >= 0 ? "text-amber-400" : "text-rose-400"}`}>
                   {sortino.toFixed(2)}
                 </p>
-                <p className="text-xs text-[--text-muted] mt-1">Rendement / risque baissier</p>
+                <p className="text-xs text-[--text-muted] mt-1">Sortino Ratio</p>
                 <div className="mt-2 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
                   <div className="h-full bg-violet-500" style={{ width: `${Math.min(Math.abs(sortino) * 25, 100)}%` }} />
                 </div>
@@ -191,7 +193,7 @@ export default function AnalyticsPage() {
                 <p className={`text-3xl font-bold mono ${calmar >= 1 ? "text-emerald-400" : calmar >= 0 ? "text-amber-400" : "text-rose-400"}`}>
                   {calmar.toFixed(2)}
                 </p>
-                <p className="text-xs text-[--text-muted] mt-1">Rendement annualisé / drawdown max</p>
+                <p className="text-xs text-[--text-muted] mt-1">Calmar Ratio</p>
                 <div className="mt-2 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
                   <div className="h-full bg-cyan-500" style={{ width: `${Math.min(Math.abs(calmar) * 20, 100)}%` }} />
                 </div>
@@ -199,13 +201,13 @@ export default function AnalyticsPage() {
               <div className="glass rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Clock className="w-4 h-4 text-amber-400" />
-                  <h4 className="text-[--text-secondary] text-sm">Temps de Récupération</h4>
+                  <h4 className="text-[--text-secondary] text-sm">Recovery Time</h4>
                 </div>
                 <p className={`text-3xl font-bold mono ${recoveryTrades < 0 ? "text-rose-400" : recoveryTrades <= 5 ? "text-emerald-400" : "text-amber-400"}`}>
                   {recoveryTrades < 0 ? "N/R" : `${recoveryTrades} trades`}
                 </p>
                 <p className="text-xs text-[--text-muted] mt-1">
-                  {recoveryTrades < 0 ? "Drawdown non récupéré" : "Trades pour récupérer du drawdown max"}
+                  {recoveryTrades < 0 ? "Drawdown not recovered" : "Trades to recover from max drawdown"}
                 </p>
                 <div className="mt-2 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
                   <div className={`h-full ${recoveryTrades < 0 ? "bg-rose-500" : "bg-amber-500"}`} style={{ width: recoveryTrades < 0 ? "100%" : `${Math.min((recoveryTrades / 20) * 100, 100)}%` }} />
@@ -216,7 +218,7 @@ export default function AnalyticsPage() {
             {/* Monthly Momentum */}
             {monthlyMomentum.length > 0 && (
               <div className="glass rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4">Momentum Mensuel</h3>
+                <h3 className="text-lg font-semibold mb-4">Monthly Momentum</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   {monthlyMomentum.map(m => (
                     <div key={m.key} className="bg-[--bg-secondary]/50 rounded-xl p-4 text-center">
@@ -242,22 +244,22 @@ export default function AnalyticsPage() {
             <div className="glass rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-4">
                 <GitCompare className="w-5 h-5 text-[--text-secondary]" />
-                <h3 className="text-lg font-semibold">Comparaison Période</h3>
+                <h3 className="text-lg font-semibold">{t("comparison")}</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* This week vs last week */}
                 <div className="bg-[--bg-secondary]/30 rounded-xl p-5 space-y-4">
-                  <h4 className="text-sm font-medium text-[--text-secondary]">Cette semaine vs Semaine dernière</h4>
+                  <h4 className="text-sm font-medium text-[--text-secondary]">{t("thisWeek")} vs {t("weeklyRecap")}</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-[--text-muted]">Cette semaine</p>
+                      <p className="text-xs text-[--text-muted]">{t("thisWeek")}</p>
                       <p className={`text-xl font-bold mono ${tw.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                         {tw.pnl >= 0 ? "+" : ""}€{tw.pnl.toFixed(2)}
                       </p>
                       <p className="text-xs text-[--text-muted]">{tw.trades} trades | WR {tw.winRate.toFixed(0)}%</p>
                     </div>
                     <div>
-                      <p className="text-xs text-[--text-muted]">Semaine dernière</p>
+                      <p className="text-xs text-[--text-muted]">{t("vsPrevWeek")}</p>
                       <p className={`text-xl font-bold mono ${lw.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                         {lw.pnl >= 0 ? "+" : ""}€{lw.pnl.toFixed(2)}
                       </p>
@@ -273,23 +275,23 @@ export default function AnalyticsPage() {
                     <span className={`text-sm font-medium mono ${pnlChange(tw.pnl, lw.pnl) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {pnlChange(tw.pnl, lw.pnl) >= 0 ? "+" : ""}{pnlChange(tw.pnl, lw.pnl).toFixed(1)}% P&L
                     </span>
-                    <span className="text-xs text-[--text-muted]">vs semaine précédente</span>
+                    <span className="text-xs text-[--text-muted]">{t("vsPrevWeek")}</span>
                   </div>
                 </div>
 
                 {/* This month vs last month */}
                 <div className="bg-[--bg-secondary]/30 rounded-xl p-5 space-y-4">
-                  <h4 className="text-sm font-medium text-[--text-secondary]">Ce mois vs Mois dernier</h4>
+                  <h4 className="text-sm font-medium text-[--text-secondary]">{t("thisMonth")} vs {t("monthlyRecap")}</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-[--text-muted]">Ce mois</p>
+                      <p className="text-xs text-[--text-muted]">{t("thisMonth")}</p>
                       <p className={`text-xl font-bold mono ${tm.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                         {tm.pnl >= 0 ? "+" : ""}€{tm.pnl.toFixed(2)}
                       </p>
                       <p className="text-xs text-[--text-muted]">{tm.trades} trades | WR {tm.winRate.toFixed(0)}%</p>
                     </div>
                     <div>
-                      <p className="text-xs text-[--text-muted]">Mois dernier</p>
+                      <p className="text-xs text-[--text-muted]">{t("comparedToPrev")}</p>
                       <p className={`text-xl font-bold mono ${lm.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                         {lm.pnl >= 0 ? "+" : ""}€{lm.pnl.toFixed(2)}
                       </p>
@@ -305,7 +307,7 @@ export default function AnalyticsPage() {
                     <span className={`text-sm font-medium mono ${pnlChange(tm.pnl, lm.pnl) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {pnlChange(tm.pnl, lm.pnl) >= 0 ? "+" : ""}{pnlChange(tm.pnl, lm.pnl).toFixed(1)}% P&L
                     </span>
-                    <span className="text-xs text-[--text-muted]">vs mois précédent</span>
+                    <span className="text-xs text-[--text-muted]">{t("comparedToPrev")}</span>
                   </div>
                 </div>
               </div>
@@ -321,7 +323,7 @@ export default function AnalyticsPage() {
             <TrendingUp className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <p className="text-xs text-[--text-secondary]">Meilleure série</p>
+            <p className="text-xs text-[--text-secondary]">{t("bestStreakW")}</p>
             <p className="text-xl font-bold text-emerald-400 mono">{streaks.bestWinStreak} wins</p>
           </div>
         </div>
@@ -330,7 +332,7 @@ export default function AnalyticsPage() {
             <TrendingDown className="w-5 h-5 text-rose-400" />
           </div>
           <div>
-            <p className="text-xs text-[--text-secondary]">Pire série</p>
+            <p className="text-xs text-[--text-secondary]">{t("worstStreakL")}</p>
             <p className="text-xl font-bold text-rose-400 mono">{streaks.worstLossStreak} losses</p>
           </div>
         </div>
@@ -339,7 +341,7 @@ export default function AnalyticsPage() {
             {streaks.currentStreakType === "win" ? <Flame className="w-5 h-5 text-emerald-400" /> : <Zap className="w-5 h-5 text-rose-400" />}
           </div>
           <div>
-            <p className="text-xs text-[--text-secondary]">Série en cours</p>
+            <p className="text-xs text-[--text-secondary]">{t("currentStreak")}</p>
             <p className={`text-xl font-bold mono ${streaks.currentStreakType === "win" ? "text-emerald-400" : streaks.currentStreakType === "loss" ? "text-rose-400" : "text-[--text-secondary]"}`}>
               {streaks.currentStreak > 0 ? `${streaks.currentStreak} ${streaks.currentStreakType === "win" ? "wins" : "losses"}` : "-"}
             </p>
@@ -350,7 +352,7 @@ export default function AnalyticsPage() {
             <span className="text-lg">📊</span>
           </div>
           <div>
-            <p className="text-xs text-[--text-secondary]">R:R Moyen</p>
+            <p className="text-xs text-[--text-secondary]">{t("avgRR")}</p>
             <p className="text-xl font-bold text-amber-400 mono">1:{stats.avgRR}</p>
           </div>
         </div>
@@ -359,18 +361,18 @@ export default function AnalyticsPage() {
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Performance par Jour</h3>
+          <h3 className="text-lg font-semibold mb-4">Performance / Day</h3>
           <WeekdayChart trades={trades} />
         </div>
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Courbe d&apos;Équité</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("equityCurve")}</h3>
           <EquityChart trades={trades} startingBalance={user?.balance ?? 25000} />
         </div>
       </div>
 
       {/* Advanced Equity Curve with Drawdown */}
       <div className="glass rounded-2xl p-6 mb-6">
-        <h3 className="text-lg font-semibold mb-4">Equity Avancée + Drawdown</h3>
+        <h3 className="text-lg font-semibold mb-4">Advanced Equity + Drawdown</h3>
         <div className="h-80">
           <AdvancedEquityChart trades={trades} />
         </div>
@@ -379,26 +381,26 @@ export default function AnalyticsPage() {
       {/* Charts row 2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Comparaison Mensuelle</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("monthlyRecap")}</h3>
           {monthlyData.length > 0 ? (
             <MonthlyComparisonChart data={monthlyData} />
           ) : (
-            <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de données</p>
+            <p className="text-[--text-muted] text-sm text-center py-12">No data</p>
           )}
         </div>
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">P&L Moyen par Émotion</h3>
+          <h3 className="text-lg font-semibold mb-4">Avg P&L by Emotion</h3>
           {emotionPerf.length > 0 ? (
             <EmotionChart data={emotionPerf} />
           ) : (
-            <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de données</p>
+            <p className="text-[--text-muted] text-sm text-center py-12">No data</p>
           )}
         </div>
       </div>
 
       {/* R-Multiple Distribution */}
       <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-semibold mb-4">Distribution R-Multiple</h3>
+        <h3 className="text-lg font-semibold mb-4">{t("distribution")} R-Multiple</h3>
         {(() => {
           const rMultiples = trades
             .filter(t => t.sl && t.entry !== t.sl)
@@ -409,7 +411,7 @@ export default function AnalyticsPage() {
             .filter(r => Math.abs(r) < 50);
 
           if (rMultiples.length === 0) {
-            return <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de données</p>;
+            return <p className="text-[--text-muted] text-sm text-center py-12">No data</p>;
           }
 
           const buckets: Record<string, number> = {};
@@ -451,17 +453,17 @@ export default function AnalyticsPage() {
               </div>
               <div className="grid grid-cols-3 gap-4 mt-4 text-center">
                 <div>
-                  <p className="text-xs text-[--text-muted]">R moyen</p>
+                  <p className="text-xs text-[--text-muted]">{t("avgRR")}</p>
                   <p className={`text-lg font-bold mono ${(rMultiples.reduce((a, b) => a + b, 0) / rMultiples.length) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                     {(rMultiples.reduce((a, b) => a + b, 0) / rMultiples.length).toFixed(2)}R
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-[--text-muted]">Meilleur</p>
+                  <p className="text-xs text-[--text-muted]">{t("best")}</p>
                   <p className="text-lg font-bold mono text-emerald-400">+{Math.max(...rMultiples).toFixed(2)}R</p>
                 </div>
                 <div>
-                  <p className="text-xs text-[--text-muted]">Pire</p>
+                  <p className="text-xs text-[--text-muted]">{t("worstTrade")}</p>
                   <p className="text-lg font-bold mono text-rose-400">{Math.min(...rMultiples).toFixed(2)}R</p>
                 </div>
               </div>
@@ -473,15 +475,15 @@ export default function AnalyticsPage() {
       {/* Equity by Strategy - Horizontal Bars */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Equity par Stratégie</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("strategyBreakdown")}</h3>
           {(() => {
             const strategies = [...new Set(trades.map(t => t.strategy))];
-            if (strategies.length === 0) return <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de données</p>;
+            if (strategies.length === 0) return <p className="text-[--text-muted] text-sm text-center py-12">No data</p>;
 
             const bgColors = ["bg-cyan-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-purple-500"];
             const strategyEquity: Record<string, number> = {};
             strategies.forEach(s => { strategyEquity[s] = 0; });
-            trades.forEach(t => { strategyEquity[t.strategy] += t.result; });
+            trades.forEach(tr => { strategyEquity[tr.strategy] += tr.result; });
             const sorted = Object.entries(strategyEquity).sort((a, b) => b[1] - a[1]);
             const maxVal = Math.max(...sorted.map(([, v]) => Math.abs(v)), 1);
 
@@ -511,15 +513,15 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Equity par Asset</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("assetBreakdown")}</h3>
           {(() => {
             const assets = [...new Set(trades.map(t => t.asset))];
-            if (assets.length === 0) return <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de données</p>;
+            if (assets.length === 0) return <p className="text-[--text-muted] text-sm text-center py-12">No data</p>;
 
             const bgColors = ["bg-blue-500", "bg-cyan-500", "bg-purple-500", "bg-amber-500", "bg-emerald-500"];
             const assetEquity: Record<string, number> = {};
             assets.forEach(a => { assetEquity[a] = 0; });
-            trades.forEach(t => { assetEquity[t.asset] += t.result; });
+            trades.forEach(tr => { assetEquity[tr.asset] += tr.result; });
             const sorted = Object.entries(assetEquity).sort((a, b) => b[1] - a[1]);
             const maxVal = Math.max(...sorted.map(([, v]) => Math.abs(v)), 1);
 
@@ -550,16 +552,16 @@ export default function AnalyticsPage() {
 
       {/* Performance par Asset */}
       <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-semibold mb-4">Performance par Asset</h3>
+        <h3 className="text-lg font-semibold mb-4">{t("assetBreakdown")}</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[--text-secondary] border-b border-[--border]">
-                <th className="pb-3 font-medium">Asset</th>
-                <th className="pb-3 font-medium">Trades</th>
-                <th className="pb-3 font-medium">Win Rate</th>
-                <th className="pb-3 font-medium">P&L Total</th>
-                <th className="pb-3 font-medium">P&L Moyen</th>
+                <th className="pb-3 font-medium">{t("asset")}</th>
+                <th className="pb-3 font-medium">{t("trades")}</th>
+                <th className="pb-3 font-medium">{t("winRate")}</th>
+                <th className="pb-3 font-medium">{t("netProfit")}</th>
+                <th className="pb-3 font-medium">{t("avgRR")}</th>
               </tr>
             </thead>
             <tbody>
@@ -584,25 +586,25 @@ export default function AnalyticsPage() {
                 </tr>
               ))}
               {assetPerf.length === 0 && (
-                <tr><td colSpan={5} className="py-6 text-center text-[--text-muted]">Aucun trade</td></tr>
+                <tr><td colSpan={5} className="py-6 text-center text-[--text-muted]">{t("noData")}</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Analyse émotionnelle */}
+      {/* Emotional Analysis */}
       <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-semibold mb-4">Analyse Émotionnelle</h3>
+        <h3 className="text-lg font-semibold mb-4">Emotional Analysis</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[--text-secondary] border-b border-[--border]">
-                <th className="pb-3 font-medium">Émotion</th>
-                <th className="pb-3 font-medium">Trades</th>
-                <th className="pb-3 font-medium">Win Rate</th>
-                <th className="pb-3 font-medium">P&L Total</th>
-                <th className="pb-3 font-medium">P&L Moyen</th>
+                <th className="pb-3 font-medium">{t("emotionPsychology")}</th>
+                <th className="pb-3 font-medium">{t("trades")}</th>
+                <th className="pb-3 font-medium">{t("winRate")}</th>
+                <th className="pb-3 font-medium">{t("netProfit")}</th>
+                <th className="pb-3 font-medium">{t("avgRR")}</th>
               </tr>
             </thead>
             <tbody>
@@ -627,35 +629,35 @@ export default function AnalyticsPage() {
                 </tr>
               ))}
               {emotionPerf.length === 0 && (
-                <tr><td colSpan={5} className="py-6 text-center text-[--text-muted]">Aucun trade</td></tr>
+                <tr><td colSpan={5} className="py-6 text-center text-[--text-muted]">{t("noData")}</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Performance par Stratégie */}
+      {/* Strategy Performance */}
       <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-semibold mb-4">Performance par Stratégie</h3>
+        <h3 className="text-lg font-semibold mb-4">{t("strategyBreakdown")}</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[--text-secondary] border-b border-[--border]">
-                <th className="pb-3 font-medium">Stratégie</th>
-                <th className="pb-3 font-medium">Trades</th>
-                <th className="pb-3 font-medium">Win Rate</th>
-                <th className="pb-3 font-medium">P&L Total</th>
-                <th className="pb-3 font-medium">P&L Moyen</th>
+                <th className="pb-3 font-medium">{t("strategy")}</th>
+                <th className="pb-3 font-medium">{t("trades")}</th>
+                <th className="pb-3 font-medium">{t("winRate")}</th>
+                <th className="pb-3 font-medium">{t("netProfit")}</th>
+                <th className="pb-3 font-medium">{t("avgRR")}</th>
               </tr>
             </thead>
             <tbody>
               {(() => {
                 const strategyMap: Record<string, { count: number; wins: number; total: number }> = {};
-                trades.forEach((t) => {
-                  if (!strategyMap[t.strategy]) strategyMap[t.strategy] = { count: 0, wins: 0, total: 0 };
-                  strategyMap[t.strategy].count++;
-                  strategyMap[t.strategy].total += t.result;
-                  if (t.result > 0) strategyMap[t.strategy].wins++;
+                trades.forEach((tr) => {
+                  if (!strategyMap[tr.strategy]) strategyMap[tr.strategy] = { count: 0, wins: 0, total: 0 };
+                  strategyMap[tr.strategy].count++;
+                  strategyMap[tr.strategy].total += tr.result;
+                  if (tr.result > 0) strategyMap[tr.strategy].wins++;
                 });
                 return Object.entries(strategyMap).map(([name, s]) => (
                   <tr key={name} className="border-b border-[--border-subtle]">

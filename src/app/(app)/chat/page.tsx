@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "@/i18n/context";
 import { useChatRooms, useChat, ChatMessage } from "@/hooks/useChat";
 import { TradeCard } from "@/components/TradeCard";
 import { TradeShareModal } from "@/components/TradeShareModal";
@@ -123,6 +124,7 @@ function MessageBubble({
   currentUserId?: string;
   isConsecutive: boolean;
 }) {
+  const { t } = useTranslation();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const initial = (msg.user.name || msg.user.email)[0].toUpperCase();
@@ -162,7 +164,7 @@ function MessageBubble({
             </span>
             {msg.isPinned && (
               <span className="flex items-center gap-1 text-[10px] text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
-                <Pin className="w-2.5 h-2.5" /> épinglé
+                <Pin className="w-2.5 h-2.5" /> {t("pinned")}
               </span>
             )}
             <span className="text-[11px] text-[--text-muted]">{formatTime(msg.createdAt)}</span>
@@ -224,14 +226,14 @@ function MessageBubble({
         <button
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           className="p-1.5 rounded hover:bg-[var(--bg-hover)] text-[--text-muted] hover:text-amber-400 transition"
-          title="Réagir"
+          title={t("react")}
         >
           <Smile className="w-3.5 h-3.5" />
         </button>
         <button
           onClick={() => onReply(msg)}
           className="p-1.5 rounded hover:bg-[var(--bg-hover)] text-[--text-muted] hover:text-cyan-400 transition"
-          title="Répondre"
+          title={t("reply")}
         >
           <Reply className="w-3.5 h-3.5" />
         </button>
@@ -240,14 +242,14 @@ function MessageBubble({
             <button
               onClick={() => onPin(msg.id)}
               className="p-1.5 rounded hover:bg-[var(--bg-hover)] text-[--text-muted] hover:text-amber-400 transition"
-              title={msg.isPinned ? "Désépingler" : "Épingler"}
+              title={msg.isPinned ? t("unpin") : t("pin")}
             >
               <Pin className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => onDelete(msg.id)}
               className="p-1.5 rounded hover:bg-[var(--bg-hover)] text-[--text-muted] hover:text-rose-400 transition"
-              title="Supprimer"
+              title={t("delete")}
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -288,6 +290,7 @@ function DateSeparator({ date }: { date: string }) {
 
 // ─── Search Modal ─────────────────────────────────────────
 function SearchOverlay({ messages, onClose, onJump }: { messages: ChatMessage[]; onClose: () => void; onJump: (id: string) => void }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const results = useMemo(() => {
     if (!query.trim()) return [];
@@ -306,7 +309,7 @@ function SearchOverlay({ messages, onClose, onJump }: { messages: ChatMessage[];
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher dans les messages..."
+            placeholder={t("searchInMessages")}
             className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400"
             style={{ color: "var(--text-primary)" }}
             autoFocus
@@ -317,7 +320,7 @@ function SearchOverlay({ messages, onClose, onJump }: { messages: ChatMessage[];
         </div>
         <div className="max-h-80 overflow-y-auto">
           {results.length === 0 && query.trim() && (
-            <p className="text-center text-sm text-[--text-muted] py-8">Aucun résultat</p>
+            <p className="text-center text-sm text-[--text-muted] py-8">{t("noResults")}</p>
           )}
           {results.map((m) => (
             <button
@@ -350,6 +353,7 @@ function RightPanel({
   activeRoom: { name: string; description: string | null; icon: string | null } | undefined;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<"pinned" | "trades" | "info">("pinned");
   const pinned = messages.filter((m) => m.isPinned);
   const trades = messages.filter((m) => m.trade);
@@ -367,7 +371,7 @@ function RightPanel({
     <div className="w-72 flex-shrink-0 border-l border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-950/50 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-        <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Détails</span>
+        <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{t("details")}</span>
         <button onClick={onClose} className="p-1 rounded-lg hover:bg-[var(--bg-hover)] text-[--text-muted]">
           <X className="w-4 h-4" />
         </button>
@@ -376,9 +380,9 @@ function RightPanel({
       {/* Tabs */}
       <div className="flex border-b border-gray-200 dark:border-gray-800">
         {[
-          { id: "pinned" as const, label: "Épinglés", icon: Pin, count: pinned.length },
-          { id: "trades" as const, label: "Trades", icon: TrendingUp, count: trades.length },
-          { id: "info" as const, label: "Info", icon: Users, count: uniqueUsers.size },
+          { id: "pinned" as const, label: t("pinnedMessages"), icon: Pin, count: pinned.length },
+          { id: "trades" as const, label: t("trades"), icon: TrendingUp, count: trades.length },
+          { id: "info" as const, label: t("info"), icon: Users, count: uniqueUsers.size },
         ].map((t) => (
           <button
             key={t.id}
@@ -407,7 +411,7 @@ function RightPanel({
             {pinned.length === 0 ? (
               <div className="text-center py-8">
                 <Pin className="w-8 h-8 mx-auto text-[--text-muted] opacity-30 mb-2" />
-                <p className="text-xs text-[--text-muted]">Aucun message épinglé</p>
+                <p className="text-xs text-[--text-muted]">{t("noPinnedMessages")}</p>
               </div>
             ) : (
               pinned.map((m) => (
@@ -430,7 +434,7 @@ function RightPanel({
             {trades.length === 0 ? (
               <div className="text-center py-8">
                 <TrendingUp className="w-8 h-8 mx-auto text-[--text-muted] opacity-30 mb-2" />
-                <p className="text-xs text-[--text-muted]">Aucun trade partagé</p>
+                <p className="text-xs text-[--text-muted]">{t("noSharedTrades")}</p>
               </div>
             ) : (
               trades.map((m) => m.trade && (
@@ -460,7 +464,7 @@ function RightPanel({
             {/* Members */}
             <div>
               <h4 className="text-[11px] font-bold text-[--text-muted] uppercase tracking-wider mb-2 px-1">
-                Membres — {uniqueUsers.size}
+                {t("members")} — {uniqueUsers.size}
               </h4>
               <div className="space-y-1">
                 {Array.from(uniqueUsers.entries()).map(([id, u]) => (
@@ -469,7 +473,7 @@ function RightPanel({
                       {u.initial}
                     </div>
                     <span className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>{u.name}</span>
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 ml-auto flex-shrink-0" title="En ligne" />
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 ml-auto flex-shrink-0" title={t("online")} />
                   </div>
                 ))}
               </div>
@@ -477,13 +481,13 @@ function RightPanel({
 
             {/* Stats */}
             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-              <h4 className="text-[11px] font-bold text-[--text-muted] uppercase tracking-wider mb-2 px-1">Statistiques</h4>
+              <h4 className="text-[11px] font-bold text-[--text-muted] uppercase tracking-wider mb-2 px-1">{t("statistics")}</h4>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: "Messages", value: messages.length, icon: MessageCircle },
-                  { label: "Trades", value: trades.length, icon: TrendingUp },
-                  { label: "Épinglés", value: pinned.length, icon: Pin },
-                  { label: "Membres", value: uniqueUsers.size, icon: Users },
+                  { label: t("messages"), value: messages.length, icon: MessageCircle },
+                  { label: t("trades"), value: trades.length, icon: TrendingUp },
+                  { label: t("pinnedMessages"), value: pinned.length, icon: Pin },
+                  { label: t("members"), value: uniqueUsers.size, icon: Users },
                 ].map((s) => (
                   <div key={s.label} className="p-2 rounded-lg bg-gray-50 dark:bg-[var(--bg-hover)] border border-gray-200 dark:border-gray-800 text-center">
                     <s.icon className="w-3.5 h-3.5 mx-auto text-[--text-muted] mb-1" />
@@ -502,6 +506,7 @@ function RightPanel({
 
 // ─── Main Chat Page ───────────────────────────────────────
 export default function ChatPage() {
+  const { t } = useTranslation();
   const { rooms, loading: roomsLoading } = useChatRooms();
   const [activeRoomId, setActiveRoomId] = useState<string>("");
   const [input, setInput] = useState("");
@@ -568,7 +573,7 @@ export default function ChatPage() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert("Image trop volumineuse (max 2MB)"); return; }
+    if (file.size > 2 * 1024 * 1024) { alert(t("imageTooLarge")); return; }
     setImageFile(file);
     const reader = new FileReader();
     reader.onload = () => setImagePreview(reader.result as string);
@@ -595,7 +600,7 @@ export default function ChatPage() {
       }
     }
 
-    let content = input.trim() || (imageUrl ? "Image partagée" : "");
+    let content = input.trim() || (imageUrl ? t("sharedImage") : "");
     if (replyTo) {
       const replyName = replyTo.user.name || replyTo.user.email.split("@")[0];
       const replyPreview = replyTo.content?.slice(0, 50) || "image";
@@ -623,7 +628,7 @@ export default function ChatPage() {
 
   const handleDelete = async (messageId: string) => {
     if (!adminSecret) return;
-    if (confirm("Supprimer ce message ?")) await deleteMessage(messageId, adminSecret);
+    if (confirm(t("confirmDeleteMessage"))) await deleteMessage(messageId, adminSecret);
   };
 
   const handlePin = async (messageId: string) => {
@@ -707,7 +712,7 @@ export default function ChatPage() {
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center gap-3">
           <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-[--text-secondary] text-sm">Chargement du chat...</span>
+          <span className="text-[--text-secondary] text-sm">{t("loadingChat")}</span>
         </div>
       </div>
     );
@@ -718,7 +723,7 @@ export default function ChatPage() {
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-2 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 rounded-t-2xl">
         <MessageCircle className="w-5 h-5 text-cyan-400" />
-        <h1 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Trading Desk Chat</h1>
+        <h1 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>{t("chatTitle")}</h1>
         <div className="flex items-center gap-1 ml-2">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-[11px] text-emerald-500 font-medium">Live</span>
@@ -729,13 +734,13 @@ export default function ChatPage() {
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-gray-700/50 text-[--text-muted] hover:text-[--text-secondary] text-xs transition"
         >
           <Search className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Rechercher</span>
+          <span className="hidden sm:inline">{t("search")}</span>
           <kbd className="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-[--text-muted]">Ctrl+K</kbd>
         </button>
         <button
           onClick={() => setShowRightPanel(!showRightPanel)}
           className={`p-1.5 rounded-lg transition ${showRightPanel ? "bg-cyan-500/10 text-cyan-400" : "text-[--text-muted] hover:text-[--text-secondary] hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)]"}`}
-          title="Panneau latéral"
+          title={t("sidePanel")}
         >
           {showRightPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
         </button>
@@ -748,11 +753,11 @@ export default function ChatPage() {
           {/* Admin */}
           <div className="px-3 pt-3 pb-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[--text-muted] uppercase tracking-widest">Salons</span>
+              <span className="text-[10px] font-bold text-[--text-muted] uppercase tracking-widest">{t("channels")}</span>
               <button
                 onClick={() => setShowAdminInput(!showAdminInput)}
                 className={`p-1 rounded-md transition ${adminSecret ? "text-amber-500" : "text-[--text-muted] hover:text-[--text-secondary]"}`}
-                title="Mode admin"
+                title={t("adminMode")}
               >
                 <Shield className="w-3.5 h-3.5" />
               </button>
@@ -762,7 +767,7 @@ export default function ChatPage() {
               <div className="mt-2 flex gap-1.5">
                 <input
                   type="password"
-                  placeholder="Clé admin..."
+                  placeholder={t("adminKeyPlaceholder")}
                   value={adminInput}
                   onChange={(e) => setAdminInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}

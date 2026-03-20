@@ -11,11 +11,13 @@ import { calculateRR, formatDate, computeStats } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair, DollarSign, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/i18n/context";
 
 export default function DashboardPage() {
   const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
   const { user, updateBalance } = useUser();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [monthlyGoal, setMonthlyGoal] = useState<number>(0);
@@ -31,24 +33,24 @@ export default function DashboardPage() {
 
   const handleAddTrade = async (trade: Record<string, unknown>) => {
     const ok = await addTrade(trade);
-    if (ok) toast("Trade créé avec succès", "success");
-    else toast("Erreur lors de la création", "error");
+    if (ok) toast(t("tradeCreated"), "success");
+    else toast(t("tradeCreateError"), "error");
     return ok;
   };
 
   const handleUpdateTrade = async (trade: Record<string, unknown>) => {
     if (!editingTrade) return false;
     const ok = await updateTrade(editingTrade.id, trade);
-    if (ok) toast("Trade modifié avec succès", "success");
-    else toast("Erreur lors de la modification", "error");
+    if (ok) toast(t("tradeEdited"), "success");
+    else toast(t("tradeEditError"), "error");
     return ok;
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Supprimer ce trade ?")) {
+    if (confirm(t("deleteConfirm"))) {
       const ok = await deleteTrade(id);
-      if (ok) toast("Trade supprimé", "success");
-      else toast("Erreur lors de la suppression", "error");
+      if (ok) toast(t("tradeDeleted"), "success");
+      else toast(t("tradeDeleteError"), "error");
     }
   };
 
@@ -57,10 +59,10 @@ export default function DashboardPage() {
     if (!isNaN(value) && value >= 0) {
       const ok = await updateBalance(value);
       if (ok) {
-        toast("Balance mise à jour", "success");
+        toast(t("balanceUpdated"), "success");
         setShowBalanceModal(false);
       } else {
-        toast("Erreur lors de la mise à jour", "error");
+        toast(t("balanceUpdateError"), "error");
       }
     }
   };
@@ -69,13 +71,13 @@ export default function DashboardPage() {
   const saveGoal = () => {
     const value = parseFloat(goalInput);
     if (isNaN(value) || value <= 0) {
-      toast("Veuillez entrer un nombre positif valide", "error");
+      toast(t("enterValidNumber"), "error");
       return;
     }
     setMonthlyGoal(value);
     localStorage.setItem("monthlyGoal", String(value));
     setShowGoalModal(false);
-    toast("Objectif mensuel mis à jour", "success");
+    toast(t("goalUpdated"), "success");
   };
 
   const handleGoalInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,7 +181,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
-                P&L Aujourd&apos;hui
+                {t("pnlToday")}
               </div>
               <div className={`text-4xl font-black mono ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                 {todayPnL >= 0 ? "+" : ""}{todayPnL.toFixed(2)}
@@ -192,7 +194,7 @@ export default function DashboardPage() {
                   <ArrowDownRight className="w-3.5 h-3.5 text-rose-400" />
                 )}
                 <span className={`text-xs font-semibold ${dailyDelta >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  {dailyDelta >= 0 ? "+" : ""}{dailyDelta.toFixed(2)} vs hier
+                  {dailyDelta >= 0 ? "+" : ""}{dailyDelta.toFixed(2)} {t("vsYesterday")}
                 </span>
               </div>
             </div>
@@ -201,25 +203,25 @@ export default function DashboardPage() {
           {/* Right: Today's sub-stats */}
           <div className="flex flex-wrap gap-6">
             <div className="text-center">
-              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Trades</div>
+              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>{t("trades")}</div>
               <div className="text-2xl font-bold mono" style={{ color: "var(--text-primary)" }}>{todayTrades.length}</div>
             </div>
             <div className="text-center">
-              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Win Rate</div>
+              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>{t("winRate")}</div>
               <div className={`text-2xl font-bold mono ${todayWinRate >= 50 ? "text-emerald-400" : todayWinRate > 0 ? "text-amber-400" : ""}`}
                 style={todayTrades.length === 0 ? { color: "var(--text-muted)" } : {}}>
                 {todayWinRate.toFixed(0)}%
               </div>
             </div>
             <div className="text-center">
-              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Meilleur</div>
+              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>{t("best")}</div>
               <div className={`text-2xl font-bold mono ${todayBestTrade > 0 ? "text-emerald-400" : ""}`}
                 style={todayBestTrade <= 0 ? { color: "var(--text-muted)" } : {}}>
                 {todayBestTrade > 0 ? `+${todayBestTrade.toFixed(0)}` : "---"}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Risque</div>
+              <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>{t("risk")}</div>
               <div className="text-2xl font-bold mono" style={{ color: todayRiskPercent <= 1 ? "#34d399" : todayRiskPercent <= 3 ? "#fbbf24" : "#f87171" }}>
                 {todayRiskPercent.toFixed(1)}%
               </div>
@@ -231,7 +233,7 @@ export default function DashboardPage() {
         {monthlyGoal > 0 && (
           <div className="mt-4">
             <div className="flex justify-between text-xs mb-1" style={{ color: "var(--text-muted)" }}>
-              <span>Progression objectif journalier</span>
+              <span>{t("dailyGoalProgress")}</span>
               <span>{todayPnL.toFixed(0)} / {dailyGoal.toFixed(0)}</span>
             </div>
             <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
@@ -258,7 +260,7 @@ export default function DashboardPage() {
         <div className="glass rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <BarChart3 className="w-4 h-4 text-blue-400" />
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Trades ce mois</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{t("tradesCount")}</span>
           </div>
           <div className="text-2xl font-bold mono" style={{ color: "var(--text-primary)" }}>
             {monthlyTrades.length}
@@ -268,7 +270,7 @@ export default function DashboardPage() {
         <div className="glass rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <Crosshair className="w-4 h-4 text-cyan-400" />
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Win Rate</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{t("winRate")}</span>
           </div>
           <div className={`text-2xl font-bold mono ${monthlyWinRate >= 50 ? "text-emerald-400" : monthlyWinRate > 0 ? "text-amber-400" : ""}`}
             style={monthlyWinRate === 0 ? { color: "var(--text-muted)" } : {}}>
@@ -279,7 +281,7 @@ export default function DashboardPage() {
         <div className="glass rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <Trophy className="w-4 h-4 text-emerald-400" />
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Meilleur trade</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{t("bestTrade")}</span>
           </div>
           <div className={`text-2xl font-bold mono ${monthlyBestTrade > 0 ? "text-emerald-400" : ""}`}
             style={monthlyBestTrade <= 0 ? { color: "var(--text-muted)" } : {}}>
@@ -295,7 +297,7 @@ export default function DashboardPage() {
             ) : (
               <Zap className={`w-4 h-4 ${streakType === "loss" ? "text-rose-400" : "text-gray-400"}`} />
             )}
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Serie en cours</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{t("currentStreak")}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className={`text-2xl font-bold mono ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : ""}`}
@@ -314,7 +316,7 @@ export default function DashboardPage() {
         <div className="glass rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <Activity className="w-4 h-4 text-purple-400" />
-            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>7 derniers jours</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{t("last7Days")}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className={`text-lg font-bold mono ${weeklyTotal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
@@ -355,13 +357,13 @@ export default function DashboardPage() {
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
             <Target className="w-5 h-5 text-blue-400" />
-            <h3 className="text-lg font-semibold">Objectif Mensuel</h3>
+            <h3 className="text-lg font-semibold">{t("monthlyGoal")}</h3>
           </div>
           <button
             onClick={() => { setGoalInput(String(monthlyGoal || "")); setShowGoalModal(true); }}
             className="text-sm text-blue-400 hover:text-blue-300 transition"
           >
-            {monthlyGoal > 0 ? "Modifier" : "Définir un objectif"}
+            {monthlyGoal > 0 ? t("editGoal") : t("setGoal")}
           </button>
         </div>
         {monthlyGoal > 0 ? (
@@ -370,7 +372,7 @@ export default function DashboardPage() {
               <span className={monthlyPnL >= 0 ? "text-emerald-400" : "text-rose-400"}>
                 {monthlyPnL >= 0 ? "+" : ""}{monthlyPnL.toFixed(2)}
               </span>
-              <span className="text-[--text-muted]">Objectif : {monthlyGoal.toFixed(2)}</span>
+              <span className="text-[--text-muted]">{t("goalLabel")} {monthlyGoal.toFixed(2)}</span>
             </div>
             <div className="h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
               <div
@@ -380,12 +382,12 @@ export default function DashboardPage() {
             </div>
             <p className="text-xs text-[--text-muted] mt-1">
               {monthlyTrades.length === 0
-                ? "Aucun trade ce mois-ci"
-                : `${goalProgress.toFixed(1)}% atteint -- ${monthlyTrades.length} trade${monthlyTrades.length > 1 ? "s" : ""} ce mois`}
+                ? t("noTradesThisMonth")
+                : `${goalProgress.toFixed(1)}% ${t("goalProgress")} -- ${monthlyTrades.length} trade${monthlyTrades.length > 1 ? "s" : ""}`}
             </p>
           </>
         ) : (
-          <p className="text-[--text-muted] text-sm">Aucun objectif défini. Cliquez pour en définir un.</p>
+          <p className="text-[--text-muted] text-sm">{t("noTradesThisMonth")}</p>
         )}
       </div>
 
@@ -414,7 +416,7 @@ export default function DashboardPage() {
           }
           return (
             <div className="glass rounded-2xl p-4">
-              <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider mb-3">Serie en cours</h4>
+              <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider mb-3">{t("currentStreak")}</h4>
               <div className="flex items-center gap-3 mb-3">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${streakType === "win" ? "bg-emerald-500/20" : streakType === "loss" ? "bg-rose-500/20" : "bg-gray-500/20"}`}>
                   <Flame className={`w-6 h-6 ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-[--text-muted]"}`} />
@@ -424,13 +426,13 @@ export default function DashboardPage() {
                     {currentStreak}
                   </div>
                   <div className="text-xs text-[--text-muted]">
-                    {streakType === "win" ? "victoires" : streakType === "loss" ? "défaites" : "---"}
+                    {streakType === "win" ? t("victories") : streakType === "loss" ? t("defeats") : "---"}
                   </div>
                 </div>
               </div>
               <div className="space-y-1 text-xs">
-                <div className="flex justify-between"><span className="text-[--text-muted]">Meilleure serie W</span><span className="text-emerald-400 font-bold">{bestWin}</span></div>
-                <div className="flex justify-between"><span className="text-[--text-muted]">Pire serie L</span><span className="text-rose-400 font-bold">{bestLoss}</span></div>
+                <div className="flex justify-between"><span className="text-[--text-muted]">{t("bestStreakW")}</span><span className="text-emerald-400 font-bold">{bestWin}</span></div>
+                <div className="flex justify-between"><span className="text-[--text-muted]">{t("worstStreakL")}</span><span className="text-rose-400 font-bold">{bestLoss}</span></div>
               </div>
             </div>
           );
@@ -438,7 +440,7 @@ export default function DashboardPage() {
 
         {/* Quick Stats - Enhanced */}
         <div className="glass rounded-2xl p-4">
-          <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider mb-3">Aujourd&apos;hui</h4>
+          <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider mb-3">{t("today")}</h4>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               {todayPnL >= 0 ? <TrendingUp className="w-5 h-5 text-emerald-400" /> : <TrendingDown className="w-5 h-5 text-rose-400" />}
@@ -446,20 +448,20 @@ export default function DashboardPage() {
                 {todayPnL >= 0 ? "+" : ""}{todayPnL.toFixed(2)}
               </span>
             </div>
-            <div className="text-xs text-[--text-muted]">{todayTrades.length} trades -- {todayWins} gagnants</div>
+            <div className="text-xs text-[--text-muted]">{todayTrades.length} trades -- {todayWins} {t("winners")}</div>
             <div className="text-xs text-[--text-muted]">
               WR: {todayWinRate.toFixed(0)}%
             </div>
             {todayBestTrade > 0 && (
               <div className="flex items-center gap-1 text-xs">
                 <Trophy className="w-3 h-3 text-emerald-400" />
-                <span className="text-emerald-400 font-semibold">Meilleur: +{todayBestTrade.toFixed(2)}</span>
+                <span className="text-emerald-400 font-semibold">{t("bestLabel")} +{todayBestTrade.toFixed(2)}</span>
               </div>
             )}
             <div className="flex items-center gap-1 text-xs">
               <AlertTriangle className={`w-3 h-3 ${todayRiskPercent <= 1 ? "text-emerald-400" : todayRiskPercent <= 3 ? "text-amber-400" : "text-rose-400"}`} />
               <span style={{ color: todayRiskPercent <= 1 ? "#34d399" : todayRiskPercent <= 3 ? "#fbbf24" : "#f87171" }}>
-                Risque: {todayRiskPercent.toFixed(1)}%
+                {t("riskLabel")} {todayRiskPercent.toFixed(1)}%
               </span>
             </div>
           </div>
@@ -491,7 +493,7 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
                   <Trophy className="w-5 h-5 text-emerald-400" />
                 </div>
-                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">Meilleur Trade</h4>
+                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">{t("bestTrade")}</h4>
               </div>
               {bestTrade && bestTrade.result > 0 ? (
                 <>
@@ -499,7 +501,7 @@ export default function DashboardPage() {
                   <div className="text-xs text-[--text-muted] mt-1">{bestTrade.asset} -- {formatDate(bestTrade.date)}</div>
                 </>
               ) : (
-                <div className="text-sm text-[--text-muted]">Aucun trade gagnant</div>
+                <div className="text-sm text-[--text-muted]">{t("noBestTrade")}</div>
               )}
             </div>
 
@@ -509,7 +511,7 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center">
                   <Skull className="w-5 h-5 text-rose-400" />
                 </div>
-                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">Pire Trade</h4>
+                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">{t("worstTrade")}</h4>
               </div>
               {worstTrade && worstTrade.result < 0 ? (
                 <>
@@ -517,7 +519,7 @@ export default function DashboardPage() {
                   <div className="text-xs text-[--text-muted] mt-1">{worstTrade.asset} -- {formatDate(worstTrade.date)}</div>
                 </>
               ) : (
-                <div className="text-sm text-[--text-muted]">Aucun trade perdant</div>
+                <div className="text-sm text-[--text-muted]">{t("noWorstTrade")}</div>
               )}
             </div>
 
@@ -527,17 +529,17 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
                   <Activity className="w-5 h-5 text-cyan-400" />
                 </div>
-                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">Ratios Cles</h4>
+                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">{t("keyRatios")}</h4>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-[--text-muted]">Sharpe Ratio</span>
+                  <span className="text-xs text-[--text-muted]">{t("sharpeRatio")}</span>
                   <span className={`text-lg font-bold mono ${stats.sharpeRatio >= 1 ? "text-emerald-400" : stats.sharpeRatio >= 0 ? "text-amber-400" : "text-rose-400"}`}>
                     {stats.sharpeRatio.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-[--text-muted]">Profit Factor</span>
+                  <span className="text-xs text-[--text-muted]">{t("profitFactor")}</span>
                   <span className={`text-lg font-bold mono ${stats.profitFactor >= 1.5 ? "text-emerald-400" : stats.profitFactor >= 1 ? "text-amber-400" : "text-rose-400"}`}>
                     {stats.profitFactor === Infinity ? "inf" : stats.profitFactor.toFixed(2)}
                   </span>
@@ -551,13 +553,13 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
                   <Percent className="w-5 h-5 text-amber-400" />
                 </div>
-                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">Risque / Trade</h4>
+                <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider">{t("riskPerTrade")}</h4>
               </div>
               <div className="text-2xl font-bold mono" style={{ color: avgRisk <= 1 ? "#34d399" : avgRisk <= 2 ? "#fbbf24" : "#f87171" }}>
                 {avgRisk.toFixed(2)}%
               </div>
               <div className="text-xs text-[--text-muted] mt-1">
-                {avgRisk <= 1 ? "Conservateur" : avgRisk <= 2 ? "Modéré" : "Agressif"} -- moy. sur {trades.length} trades
+                {avgRisk <= 1 ? t("conservative") : avgRisk <= 2 ? t("moderate") : t("aggressive")} -- {trades.length} trades
               </div>
             </div>
           </div>
@@ -580,7 +582,7 @@ export default function DashboardPage() {
           <div className="glass rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <PieChart className="w-5 h-5 text-purple-400" />
-              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Répartition par Actif</h3>
+              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>{t("assetBreakdown")}</h3>
             </div>
             <div className="space-y-3">
               {assetEntries.map(([asset, data]) => {
@@ -649,7 +651,7 @@ export default function DashboardPage() {
           <div className="glass rounded-2xl p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="w-5 h-5 text-cyan-400" />
-              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Comparaison Hebdomadaire</h3>
+              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>{t("weeklyComparison")}</h3>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {metrics.map(({ label, current, previous, format }) => {
@@ -664,7 +666,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-1 mt-1">
                       {improved ? <ArrowUpRight className="w-3 h-3 text-emerald-400" /> : <ArrowDownRight className="w-3 h-3 text-rose-400" />}
                       <span className={`text-xs font-medium ${improved ? "text-emerald-400" : "text-rose-400"}`}>
-                        {Math.abs(delta).toFixed(0)}% vs sem. prec.
+                        {Math.abs(delta).toFixed(0)}% {t("vsPrevWeek")}
                       </span>
                     </div>
                   </div>
@@ -677,29 +679,29 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Courbe d&apos;Équité</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("equityCurve")}</h3>
           <EquityChart trades={trades} startingBalance={user?.balance ?? 25000} />
         </div>
         <div className="glass rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Répartition par Stratégie</h3>
+          <h3 className="text-lg font-semibold mb-4">{t("strategyBreakdown")}</h3>
           <StrategyChart trades={trades} />
         </div>
       </div>
 
       <div className="glass rounded-2xl p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold">Trades Récents</h3>
+          <h3 className="text-lg font-semibold">{t("recentTrades")}</h3>
           <div className="flex items-center gap-3">
             <Link
               href="/journal"
               className="text-sm text-blue-400 hover:text-blue-300 transition flex items-center gap-1"
             >
-              Voir tout
+              {t("viewAll")}
               <ChevronRight className="w-4 h-4" />
             </Link>
             <button onClick={() => setShowForm(true)} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center">
               <Plus className="w-4 h-4 mr-2" />
-              Nouveau Trade
+              {t("newTrade")}
             </button>
           </div>
         </div>
@@ -711,17 +713,17 @@ export default function DashboardPage() {
               <TrendingUp className="w-8 h-8 text-blue-400" />
             </div>
             <h4 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-              Commencez votre journal de trading
+              {t("startJournal")}
             </h4>
             <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: "var(--text-muted)" }}>
-              Enregistrez votre premier trade pour commencer à suivre vos performances et améliorer votre discipline.
+              {t("startJournalDesc")}
             </p>
             <button
               onClick={() => setShowForm(true)}
               className="btn-primary px-6 py-3 rounded-xl text-white font-medium inline-flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
-              Ajouter mon premier trade
+              {t("addFirstTrade")}
             </button>
           </div>
         ) : (
@@ -729,15 +731,15 @@ export default function DashboardPage() {
             <table className="w-full">
               <thead>
                 <tr className="text-left text-[--text-muted] text-sm border-b border-[--border]">
-                  <th className="pb-3 font-medium">Date</th>
-                  <th className="pb-3 font-medium">Actif</th>
-                  <th className="pb-3 font-medium">Type</th>
-                  <th className="pb-3 font-medium">Entree</th>
-                  <th className="pb-3 font-medium">Sortie</th>
-                  <th className="pb-3 font-medium">Screenshots</th>
-                  <th className="pb-3 font-medium">R:R</th>
+                  <th className="pb-3 font-medium">{t("dateCol")}</th>
+                  <th className="pb-3 font-medium">{t("assetCol")}</th>
+                  <th className="pb-3 font-medium">{t("type")}</th>
+                  <th className="pb-3 font-medium">{t("entry")}</th>
+                  <th className="pb-3 font-medium">{t("exit")}</th>
+                  <th className="pb-3 font-medium">{t("screenshotsCol")}</th>
+                  <th className="pb-3 font-medium">{t("rrCol")}</th>
                   <th className="pb-3 font-medium">P&L</th>
-                  <th className="pb-3 font-medium">Actions</th>
+                  <th className="pb-3 font-medium">{t("actionsCol")}</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
@@ -793,8 +795,8 @@ export default function DashboardPage() {
       {showBalanceModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-lg font-bold mb-4">Modifier la Balance</h3>
-            <p className="text-sm text-[--text-muted] mb-4">Entrez votre capital initial en euros.</p>
+            <h3 className="text-lg font-bold mb-4">{t("editBalance")}</h3>
+            <p className="text-sm text-[--text-muted] mb-4">{t("editBalanceDesc")}</p>
             <input
               type="number"
               step="0.01"
@@ -807,10 +809,10 @@ export default function DashboardPage() {
             />
             <div className="flex gap-3">
               <button onClick={() => setShowBalanceModal(false)} className="flex-1 py-2 rounded-lg border border-[--border] hover:bg-[--bg-hover] transition">
-                Annuler
+                {t("cancel")}
               </button>
               <button onClick={saveBalance} className="flex-1 py-2 rounded-lg btn-primary text-white font-medium">
-                Enregistrer
+                {t("save")}
               </button>
             </div>
           </div>
@@ -821,8 +823,8 @@ export default function DashboardPage() {
       {showGoalModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-lg font-bold mb-4">Objectif Mensuel</h3>
-            <p className="text-sm text-[--text-muted] mb-4">Definissez votre objectif de profit mensuel en euros.</p>
+            <h3 className="text-lg font-bold mb-4">{t("monthlyGoalTitle")}</h3>
+            <p className="text-sm text-[--text-muted] mb-4">{t("monthlyGoalDesc")}</p>
             <input
               type="number"
               step="0.01"
@@ -835,14 +837,14 @@ export default function DashboardPage() {
               onKeyDown={(e) => e.key === "Enter" && saveGoal()}
             />
             {goalInput !== "" && (isNaN(parseFloat(goalInput)) || parseFloat(goalInput) <= 0) && (
-              <p className="text-xs text-rose-400 mb-3">Veuillez entrer un nombre positif valide.</p>
+              <p className="text-xs text-rose-400 mb-3">{t("enterValidNumber")}</p>
             )}
             <div className="flex gap-3">
               <button onClick={() => setShowGoalModal(false)} className="flex-1 py-2 rounded-lg border border-[--border] hover:bg-[--bg-hover] transition">
-                Annuler
+                {t("cancel")}
               </button>
               <button onClick={saveGoal} className="flex-1 py-2 rounded-lg btn-primary text-white font-medium">
-                Enregistrer
+                {t("save")}
               </button>
             </div>
           </div>

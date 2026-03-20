@@ -5,6 +5,7 @@ import { Chart, registerables } from "chart.js";
 import { fetchCotData, type CotParsed } from "@/lib/market/cot";
 import { COT_CONTRACTS, COT_CATEGORIES } from "@/lib/market/constants";
 import { RefreshCw, Search, TrendingUp, TrendingDown, ArrowLeft } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 Chart.register(...registerables);
 
@@ -19,12 +20,13 @@ interface CotOverviewRow {
   shortPct: number;
   netPosition: number;
   prevNet: number;
-  sentiment: "Haussier" | "Baissier";
+  sentiment: "bullish" | "bearish";
   sentimentTrend: "up" | "down" | "flat";
   change: number;
 }
 
 export default function CotPage() {
+  const { t } = useTranslation();
   const [view, setView] = useState<ViewMode>("overview");
   const [asset, setAsset] = useState("EUR");
   const [category, setCategory] = useState<string>("Tous");
@@ -67,7 +69,7 @@ export default function CotPage() {
         const netPosition = last.nonCommNet;
         const prevNet = prev?.nonCommNet ?? netPosition;
         const changeNet = netPosition - prevNet;
-        const sentiment = netPosition >= 0 ? "Haussier" : "Baissier";
+        const sentiment: "bullish" | "bearish" = netPosition >= 0 ? "bullish" : "bearish";
         const sentimentTrend = changeNet > 0 ? "up" : changeNet < 0 ? "down" : "flat";
 
         rows.push({
@@ -86,7 +88,7 @@ export default function CotPage() {
       }
       setOverviewData(rows);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur de chargement");
+      setError(e instanceof Error ? e.message : t("loading"));
     } finally {
       setLoading(false);
     }
@@ -218,7 +220,7 @@ export default function CotPage() {
                       <p className={`text-xl font-bold mono ${m.color}`}>{m.value.toLocaleString()}</p>
                       {chg !== 0 && (
                         <p className={`text-xs mono mt-1 ${chg > 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                          {chg > 0 ? "+" : ""}{chg.toLocaleString()} vs préc.
+                          {chg > 0 ? "+" : ""}{chg.toLocaleString()} {t("previous")}
                         </p>
                       )}
                     </div>
@@ -229,17 +231,17 @@ export default function CotPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="glass rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4">Net Positioning (52 semaines)</h3>
+                <h3 className="text-lg font-semibold mb-4">{t("cotNetPositioning52w")}</h3>
                 <div className="chart-container"><canvas ref={netChartRef} /></div>
               </div>
               <div className="glass rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4">Long vs Short (dernière semaine)</h3>
+                <h3 className="text-lg font-semibold mb-4">{t("cotLongVsShortLastWeek")}</h3>
                 <div className="chart-container"><canvas ref={barChartRef} /></div>
               </div>
             </div>
 
             <div className="glass rounded-2xl p-6">
-              <h3 className="text-lg font-semibold mb-4">Données brutes (10 dernières semaines)</h3>
+              <h3 className="text-lg font-semibold mb-4">{t("cotRawDataLast10Weeks")}</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -275,10 +277,10 @@ export default function CotPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Rapport COT</h1>
-          <p className="text-sm text-[--text-secondary] mt-1">Analyse des positions des traders engagés</p>
+          <h1 className="text-2xl font-bold">{t("cotReportTitle")}</h1>
+          <p className="text-sm text-[--text-secondary] mt-1">{t("cotReportSubtitle")}</p>
         </div>
-        <button onClick={loadOverview} className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition" title="Rafraîchir">
+        <button onClick={loadOverview} className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition" title={t("refresh")}>
           <RefreshCw className={`w-5 h-5 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
@@ -299,7 +301,7 @@ export default function CotPage() {
         </div>
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--text-muted]" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher des symboles, des noms ou des secteurs..."
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("searchSymbols")}
             className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg pl-10 pr-4 py-2 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:border-cyan-500/50 focus:outline-none transition" />
         </div>
       </div>
@@ -320,16 +322,16 @@ export default function CotPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[--text-secondary] border-b border-[--border] text-xs uppercase tracking-wider">
-                  <th className="px-4 py-3">Symbole</th>
-                  <th className="px-4 py-3">Nom</th>
-                  <th className="px-4 py-3">Catégorie</th>
-                  <th className="px-4 py-3">Sentiment</th>
+                  <th className="px-4 py-3">{t("symbol")}</th>
+                  <th className="px-4 py-3">{t("cotName")}</th>
+                  <th className="px-4 py-3">{t("cotCategory")}</th>
+                  <th className="px-4 py-3">{t("sentiment")}</th>
                   <th className="px-4 py-3">Long%</th>
-                  <th className="px-4 py-3">Préc. Long%</th>
-                  <th className="px-4 py-3">Court%</th>
-                  <th className="px-4 py-3 text-right">Positif net</th>
-                  <th className="px-4 py-3 text-right">Préc. Net</th>
-                  <th className="px-4 py-3 text-right">Changement</th>
+                  <th className="px-4 py-3">{t("cotPrevLong")}</th>
+                  <th className="px-4 py-3">{t("cotShort")}</th>
+                  <th className="px-4 py-3 text-right">{t("cotNetPos")}</th>
+                  <th className="px-4 py-3 text-right">{t("cotPrevNet")}</th>
+                  <th className="px-4 py-3 text-right">{t("change")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -346,11 +348,11 @@ export default function CotPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-medium px-2.5 py-1 rounded-md ${
-                          r.sentiment === "Haussier"
+                          r.sentiment === "bullish"
                             ? "bg-emerald-500/15 text-emerald-400"
                             : "bg-rose-500/15 text-rose-400"
                         }`}>
-                          {r.sentiment}
+                          {t(r.sentiment)}
                         </span>
                         {r.sentimentTrend !== "flat" && (
                           <span className="ml-1.5">
@@ -396,7 +398,7 @@ export default function CotPage() {
             </table>
           </div>
           {filteredRows.length === 0 && (
-            <div className="p-8 text-center text-[--text-muted]">Aucun résultat avec ces filtres</div>
+            <div className="p-8 text-center text-[--text-muted]">{t("noResultsWithFilters")}</div>
           )}
         </div>
       )}

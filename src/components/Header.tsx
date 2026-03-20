@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { NotificationCenter } from "./NotificationCenter";
 import { NewsTicker } from "./NewsTicker";
 import { useTrades } from "@/hooks/useTrades";
+import { useTranslation } from "@/i18n/context";
 import type { Locale } from "@/i18n/types";
 
 const LOCALE_FLAGS: Record<Locale, { flag: string; label: string }> = {
@@ -23,6 +24,7 @@ export function Header() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { trades } = useTrades();
+  const { t } = useTranslation();
   const [langOpen, setLangOpen] = useState(false);
   const [locale, setLocaleState] = useState<Locale>("fr");
   const langRef = useRef<HTMLDivElement>(null);
@@ -80,7 +82,7 @@ export function Header() {
             else setTheme("dark");
           }}
           className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-          title={mounted ? `Thème: ${theme === "oled" ? "OLED" : theme === "dark" ? "Sombre" : "Clair"}` : "Thème"}
+          title={mounted ? `${t("theme")}: ${theme === "oled" ? t("themeOled") : theme === "dark" ? t("themeDark") : t("themeLight")}` : t("theme")}
         >
           {mounted && (theme === "dark" ? (
             <Sun className="w-[18px] h-[18px] text-yellow-500" />
@@ -100,7 +102,7 @@ export function Header() {
             onClick={() => setLangOpen(!langOpen)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition text-sm"
             style={{ color: "var(--text-secondary)" }}
-            title="Langue"
+            title={t("language")}
           >
             <span className="text-base leading-none">{current.flag}</span>
             <ChevronDown className={`w-3 h-3 transition-transform ${langOpen ? "rotate-180" : ""}`} />
@@ -139,7 +141,7 @@ export function Header() {
           className="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition text-sm border border-rose-200 dark:border-rose-500/30 flex items-center gap-1.5"
         >
           <LogOut className="w-4 h-4" />
-          <span className="hidden sm:inline">Déconnexion</span>
+          <span className="hidden sm:inline">{t("logout")}</span>
         </button>
       </div>
     </header>

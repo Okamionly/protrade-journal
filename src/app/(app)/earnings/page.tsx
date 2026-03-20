@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useTrades } from "@/hooks/useTrades";
 import { Calendar, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, Clock, Loader2, RefreshCw } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 interface EarningsEvent {
   symbol: string;
@@ -20,12 +21,6 @@ interface EarningsResponse {
   lastUpdated: string;
 }
 
-const TIME_LABELS: Record<string, { label: string; color: string }> = {
-  bmo: { label: "Avant Ouverture", color: "text-amber-400 bg-amber-500/20" },
-  amc: { label: "Après Clôture", color: "text-violet-400 bg-violet-500/20" },
-  dmh: { label: "En Session", color: "text-cyan-400 bg-cyan-500/20" },
-};
-
 function formatRevenue(value: number | null): string {
   if (value == null) return "—";
   if (value >= 1e9) return `${(value / 1e9).toFixed(1)}B`;
@@ -34,6 +29,7 @@ function formatRevenue(value: number | null): string {
 }
 
 export default function EarningsCalendarPage() {
+  const { t } = useTranslation();
   const { trades } = useTrades();
   const [weekOffset, setWeekOffset] = useState(0);
   const [view, setView] = useState<"calendar" | "list">("calendar");
@@ -41,6 +37,12 @@ export default function EarningsCalendarPage() {
   const [dataSource, setDataSource] = useState<"live" | "fallback">("fallback");
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>("");
+
+  const TIME_LABELS: Record<string, { label: string; color: string }> = {
+    bmo: { label: t("beforeOpen"), color: "text-amber-400 bg-amber-500/20" },
+    amc: { label: t("afterClose"), color: "text-violet-400 bg-violet-500/20" },
+    dmh: { label: t("duringSession"), color: "text-cyan-400 bg-cyan-500/20" },
+  };
 
   const fetchEarnings = useCallback(async () => {
     setLoading(true);
@@ -75,7 +77,7 @@ export default function EarningsCalendarPage() {
   const weekLabel = `${weekDays[0].toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} — ${weekDays[4].toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`;
 
   // Check if user trades any of the earnings symbols
-  const tradedSymbols = new Set(trades.map((t) => t.asset.toUpperCase()));
+  const tradedSymbols = new Set(trades.map((tr) => tr.asset.toUpperCase()));
 
   const earningsByDate = useMemo(() => {
     const map: Record<string, EarningsEvent[]> = {};
@@ -100,7 +102,7 @@ export default function EarningsCalendarPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-        <p className="text-sm text-[--text-secondary]">Chargement des earnings...</p>
+        <p className="text-sm text-[--text-secondary]">{t("loading")}</p>
       </div>
     );
   }
@@ -111,7 +113,7 @@ export default function EarningsCalendarPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-[--text-primary]">Earnings Calendar</h1>
+            <h1 className="text-2xl font-bold text-[--text-primary]">{t("earningsCalendar")}</h1>
             {dataSource === "live" ? (
               <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                 Live
@@ -122,14 +124,14 @@ export default function EarningsCalendarPage() {
               </span>
             )}
           </div>
-          <p className="text-sm text-[--text-secondary]">Résultats d&apos;entreprises à venir et impact sur vos trades</p>
+          <p className="text-sm text-[--text-secondary]">{t("earningsDesc")}</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={fetchEarnings}
             disabled={loading}
             className="p-2 rounded-xl glass text-[--text-secondary] hover:text-[--text-primary] disabled:opacity-50"
-            title="Rafraîchir"
+            title={t("refresh")}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
@@ -137,13 +139,13 @@ export default function EarningsCalendarPage() {
             onClick={() => setView("calendar")}
             className={`px-4 py-2 rounded-xl text-sm font-medium ${view === "calendar" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary]"}`}
           >
-            Calendrier
+            {t("calendar")}
           </button>
           <button
             onClick={() => setView("list")}
             className={`px-4 py-2 rounded-xl text-sm font-medium ${view === "list" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary]"}`}
           >
-            Liste
+            {t("list")}
           </button>
         </div>
       </div>
@@ -153,7 +155,7 @@ export default function EarningsCalendarPage() {
         <div className="glass rounded-2xl p-5 border-2 border-amber-500/30">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-5 h-5 text-amber-400" />
-            <h3 className="font-semibold text-amber-400">Attention — Earnings sur vos instruments</h3>
+            <h3 className="font-semibold text-amber-400">{t("attentionEarnings")}</h3>
           </div>
           <div className="space-y-2">
             {alertEarnings.map((e, idx) => (
@@ -176,19 +178,19 @@ export default function EarningsCalendarPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted]">Cette Semaine</p>
+          <p className="text-xs text-[--text-muted]">{t("thisWeek")}</p>
           <p className="text-2xl font-bold text-cyan-400">{thisWeekEarnings.length}</p>
         </div>
         <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted]">Avant Ouverture</p>
+          <p className="text-xs text-[--text-muted]">{t("beforeOpen")}</p>
           <p className="text-2xl font-bold text-amber-400">{thisWeekEarnings.filter((e) => e.hour === "bmo").length}</p>
         </div>
         <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted]">Après Clôture</p>
+          <p className="text-xs text-[--text-muted]">{t("afterClose")}</p>
           <p className="text-2xl font-bold text-violet-400">{thisWeekEarnings.filter((e) => e.hour === "amc").length}</p>
         </div>
         <div className="metric-card rounded-xl p-4 text-center">
-          <p className="text-xs text-[--text-muted]">Vos Instruments</p>
+          <p className="text-xs text-[--text-muted]">{t("yourInstruments")}</p>
           <p className="text-2xl font-bold text-rose-400">{alertEarnings.length}</p>
         </div>
       </div>
@@ -203,7 +205,7 @@ export default function EarningsCalendarPage() {
                 <h3 className="text-lg font-semibold text-[--text-primary]">{weekLabel}</h3>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setWeekOffset(0)} className="text-xs px-3 py-1.5 rounded-lg glass text-[--text-secondary] hover:text-[--text-primary]">Cette semaine</button>
+                <button onClick={() => setWeekOffset(0)} className="text-xs px-3 py-1.5 rounded-lg glass text-[--text-secondary] hover:text-[--text-primary]">{t("thisWeek")}</button>
                 <button onClick={() => setWeekOffset((p) => p - 1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronLeft className="w-5 h-5 text-[--text-secondary]" /></button>
                 <button onClick={() => setWeekOffset((p) => p + 1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronRight className="w-5 h-5 text-[--text-secondary]" /></button>
               </div>
@@ -222,10 +224,10 @@ export default function EarningsCalendarPage() {
                       <p className={`text-sm font-semibold ${isToday ? "text-cyan-400" : "text-[--text-primary]"}`}>
                         {day.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}
                       </p>
-                      <span className="text-xs text-[--text-muted]">{dayEarnings.length} résultat{dayEarnings.length !== 1 ? "s" : ""}</span>
+                      <span className="text-xs text-[--text-muted]">{dayEarnings.length} {dayEarnings.length !== 1 ? t("results") : t("result")}</span>
                     </div>
                     {dayEarnings.length === 0 ? (
-                      <p className="text-xs text-[--text-muted] py-2">Aucun earnings ce jour</p>
+                      <p className="text-xs text-[--text-muted] py-2">{t("noEarningsThisDay")}</p>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                         {dayEarnings.map((e, idx) => {
@@ -265,9 +267,9 @@ export default function EarningsCalendarPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[--border-subtle]">
-                <th className="text-left text-xs font-semibold text-[--text-muted] p-4">Symbole</th>
-                <th className="text-left text-xs font-semibold text-[--text-muted] p-4">Date</th>
-                <th className="text-center text-xs font-semibold text-[--text-muted] p-4">Timing</th>
+                <th className="text-left text-xs font-semibold text-[--text-muted] p-4">{t("symbol")}</th>
+                <th className="text-left text-xs font-semibold text-[--text-muted] p-4">{t("date")}</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4">{t("timing")}</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">EPS Est.</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">EPS Actual</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Revenue Est.</th>
@@ -320,22 +322,22 @@ export default function EarningsCalendarPage() {
         <div className="flex flex-wrap items-center justify-center gap-4">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-400" />
-            <span className="text-xs text-[--text-muted]">BMO = Avant l&apos;ouverture</span>
+            <span className="text-xs text-[--text-muted]">BMO = {t("bmoLabel")}</span>
           </div>
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-violet-400" />
-            <span className="text-xs text-[--text-muted]">AMC = Après la clôture</span>
+            <span className="text-xs text-[--text-muted]">AMC = {t("amcLabel")}</span>
           </div>
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-400" />
-            <span className="text-xs text-[--text-muted]">= Vous tradez cet instrument</span>
+            <span className="text-xs text-[--text-muted]">= {t("youTradeThis")}</span>
           </div>
         </div>
         <div className="flex items-center justify-center mt-3 pt-3 border-t border-[--border-subtle]">
           <span className="text-[10px] text-[--text-muted] tracking-wide">
             Powered by <a href="https://finnhub.io" target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:text-cyan-400 underline underline-offset-2">Finnhub</a>
             {lastUpdated && (
-              <> &middot; Mis à jour {new Date(lastUpdated).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</>
+              <> &middot; {t("updatedAt")} {new Date(lastUpdated).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</>
             )}
           </span>
         </div>

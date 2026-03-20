@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, AlertTriangle, X, Clock, Flame, BellRing, History, Newspaper, Link2 } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 interface WatchItem {
   symbol: string;
@@ -80,6 +81,7 @@ const POPULAR_SYMBOLS = [
 ];
 
 export default function WatchlistPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<WatchItem[]>([]);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [loading, setLoading] = useState(false);
@@ -189,7 +191,7 @@ export default function WatchlistPage() {
           }, 5000);
         });
       } else {
-        setError("Impossible de charger les cotations. Vérifiez votre connexion.");
+        setError(t("quotesLoadError"));
         setRetrying(false);
         setRetryCount(0);
         setLoading(false);
@@ -264,11 +266,11 @@ export default function WatchlistPage() {
   const setAlert = (symbol: string) => {
     const price = parseFloat(alertPrice);
     if (isNaN(price)) {
-      setAlertError("Veuillez entrer un prix valide.");
+      setAlertError(t("alertPriceInvalid"));
       return;
     }
     if (price <= 0) {
-      setAlertError("Le prix doit etre strictement positif.");
+      setAlertError(t("alertPriceMustBePositive"));
       return;
     }
     setAlertError(null);
@@ -306,9 +308,9 @@ export default function WatchlistPage() {
             });
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
               const msg = item.alertDirection === "above"
-                ? `${item.symbol} a atteint $${q.last.toFixed(2)} (alerte: au-dessus de $${item.alertPrice})`
-                : `${item.symbol} est tombe a $${q.last.toFixed(2)} (alerte: en-dessous de $${item.alertPrice})`;
-              new Notification(`Alerte Prix: ${item.symbol}`, { body: msg });
+                ? t("alertNotifAbove", { symbol: item.symbol, price: q.last.toFixed(2), alertPrice: item.alertPrice })
+                : t("alertNotifBelow", { symbol: item.symbol, price: q.last.toFixed(2), alertPrice: item.alertPrice });
+              new Notification(t("alertNotifTitle", { symbol: item.symbol }), { body: msg });
             }
           }
         }
@@ -410,11 +412,11 @@ export default function WatchlistPage() {
           <div className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4 animate-spin flex-shrink-0" />
             <span className="text-sm font-medium">
-              Reconnexion... (tentative {retryCount + 1}/3)
+              {t("reconnecting", { attempt: retryCount + 1 })}
             </span>
           </div>
           <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-medium transition">
-            Annuler et r&eacute;essayer
+            {t("cancelAndRetry")}
           </button>
         </div>
       )}
@@ -427,7 +429,7 @@ export default function WatchlistPage() {
             <span className="text-sm font-medium">{error}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">R&eacute;essayer</button>
+            <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">{t("retry")}</button>
             <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
           </div>
         </div>
@@ -438,22 +440,22 @@ export default function WatchlistPage() {
         <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm">Donn&eacute;es obsoletes — derniere mise a jour il y a plus de 2 minutes</span>
+            <span className="text-sm">{t("staleData")}</span>
           </div>
-          <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-medium transition">Rafra&icirc;chir</button>
+          <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-medium transition">{t("refresh")}</button>
         </div>
       )}
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[--text-primary]">Watchlist</h1>
+          <h1 className="text-2xl font-bold text-[--text-primary]">{t("watchlistTitle")}</h1>
           <p className="text-sm text-[--text-secondary]">
-            Suivez vos instruments en temps r&eacute;el
+            {t("watchlistSubtitle")}
             {lastUpdated && (
               <span className="ml-2 text-[--text-muted]">
                 <Clock className="w-3 h-3 inline mr-1" />
-                Derni&egrave;re mise &agrave; jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                {t("lastUpdated")}: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </p>
@@ -464,16 +466,16 @@ export default function WatchlistPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-xl glass text-sm ${alertHistory.length > 0 ? "text-amber-400" : "text-[--text-secondary]"}`}
           >
             <History className="w-4 h-4" />
-            <span className="hidden sm:inline">Historique</span>
+            <span className="hidden sm:inline">{t("history")}</span>
             {alertHistory.length > 0 && (
               <span className="text-xs bg-amber-500/20 px-1.5 py-0.5 rounded-full">{alertHistory.length}</span>
             )}
           </button>
           <button onClick={fetchQuotes} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] hover:text-[--text-primary] text-sm">
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Rafra&icirc;chir
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> {t("refresh")}
           </button>
           <button onClick={() => setShowAdd(!showAdd)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-sm font-medium">
-            <Plus className="w-4 h-4" /> Ajouter
+            <Plus className="w-4 h-4" /> {t("addSymbol")}
           </button>
         </div>
       </div>
@@ -484,14 +486,14 @@ export default function WatchlistPage() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-[--text-primary] flex items-center gap-2">
               <BellRing className="w-4 h-4 text-amber-400" />
-              Historique des alertes
+              {t("alertHistory")}
             </h3>
             {alertHistory.length > 0 && (
               <button
                 onClick={() => saveAlertHistory([])}
                 className="text-xs text-[--text-muted] hover:text-rose-400 transition"
               >
-                Effacer tout
+                {t("clearAll")}
               </button>
             )}
           </div>

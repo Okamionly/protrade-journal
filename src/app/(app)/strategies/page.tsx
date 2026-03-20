@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useStrategies, Strategy } from "@/hooks/useStrategies";
+import { useTranslation } from "@/i18n/context";
 import { useTrades } from "@/hooks/useTrades";
 import { Plus, Pencil, Trash2, X, Check } from "lucide-react";
 
@@ -11,6 +12,7 @@ const PRESET_COLORS = [
 ];
 
 export default function StrategiesPage() {
+  const { t } = useTranslation();
   const { strategies, loading, addStrategy, updateStrategy, deleteStrategy } = useStrategies();
   const { trades } = useTrades();
   const [showForm, setShowForm] = useState(false);
@@ -49,7 +51,7 @@ export default function StrategiesPage() {
       }
       resetForm();
     } catch (err: unknown) {
-      setError((err as Error).message || "Erreur");
+      setError((err as Error).message || t("error"));
     }
   };
 
@@ -77,16 +79,16 @@ export default function StrategiesPage() {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Stratégies</h1>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{t("strategies")}</h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            Gérez vos stratégies de trading et suivez leurs performances.
+            {t("manageStrategiesDesc")}
           </p>
         </div>
         <button
           onClick={() => { resetForm(); setShowForm(true); }}
           className="btn-primary text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-medium"
         >
-          <Plus className="w-4 h-4" /> Nouvelle stratégie
+          <Plus className="w-4 h-4" /> {t("newStrategy")}
         </button>
       </div>
 
@@ -96,7 +98,7 @@ export default function StrategiesPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                {editingId ? "Modifier la stratégie" : "Nouvelle stratégie"}
+                {editingId ? t("editStrategy") : t("newStrategy")}
               </h3>
               <button type="button" onClick={resetForm}>
                 <X className="w-5 h-5" style={{ color: "var(--text-muted)" }} />
@@ -109,7 +111,7 @@ export default function StrategiesPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Nom</label>
+                <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("name")}</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -119,7 +121,7 @@ export default function StrategiesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Couleur</label>
+                <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("color")}</label>
                 <div className="flex gap-2 flex-wrap">
                   {PRESET_COLORS.map((c) => (
                     <button
@@ -137,22 +139,22 @@ export default function StrategiesPage() {
             </div>
 
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Description (optionnel)</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("descriptionOptional")}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="input-field"
                 rows={2}
-                placeholder="Règles d'entrée, conditions, timeframe..."
+                placeholder={t("strategyDescriptionPlaceholder")}
               />
             </div>
 
             <div className="flex gap-3">
               <button type="button" onClick={resetForm} className="px-4 py-2 rounded-xl text-sm" style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}>
-                Annuler
+                {t("cancel")}
               </button>
               <button type="submit" className="btn-primary text-white px-6 py-2 rounded-xl text-sm font-medium">
-                {editingId ? "Sauvegarder" : "Créer"}
+                {editingId ? t("save") : t("create")}
               </button>
             </div>
           </form>
@@ -162,9 +164,9 @@ export default function StrategiesPage() {
       {/* List */}
       {strategies.length === 0 && !showForm ? (
         <div className="metric-card rounded-2xl p-12 text-center">
-          <p className="text-lg font-medium" style={{ color: "var(--text-secondary)" }}>Aucune stratégie</p>
+          <p className="text-lg font-medium" style={{ color: "var(--text-secondary)" }}>{t("noStrategies")}</p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            Créez votre première stratégie pour commencer à catégoriser vos trades.
+            {t("noStrategiesDesc")}
           </p>
         </div>
       ) : (

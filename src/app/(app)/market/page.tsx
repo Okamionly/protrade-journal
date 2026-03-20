@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "@/i18n/context";
 import {
   TrendingUp,
   TrendingDown,
@@ -59,6 +60,7 @@ const INDEX_NAMES: Record<string, string> = {
 };
 
 export default function MarketPage() {
+  const { t } = useTranslation();
   const [indicesData, setIndicesData] = useState<QuoteData[]>([]);
   const [stocksData, setStocksData] = useState<QuoteData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +113,7 @@ export default function MarketPage() {
       setStocksData(stocks);
       setLastUpdated(new Date());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur de chargement");
+      setError(e instanceof Error ? e.message : t("loadError"));
     } finally {
       setLoading(false);
     }
@@ -136,10 +138,10 @@ export default function MarketPage() {
         setSearchResult(quotes[0]);
         await loadCandles(quotes[0].symbol);
       } else {
-        setSearchError("Aucun résultat trouvé pour ce symbole.");
+        setSearchError(t("noResultsForSymbol"));
       }
     } catch {
-      setSearchError("Symbole introuvable. Vérifiez et réessayez.");
+      setSearchError(t("symbolNotFound"));
     } finally {
       setSearchLoading(false);
     }
@@ -193,11 +195,11 @@ export default function MarketPage() {
             <Activity className="w-6 h-6 text-cyan-400" /> Market Overview
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            Données temps réel via MarketData.app — Stocks, Indices &amp; Options
+            {t("marketDataDesc")}
             {lastUpdated && (
               <span className="ml-2" style={{ color: "var(--text-muted)" }}>
                 <Clock className="w-3 h-3 inline mr-1" />
-                Dernière mise à jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                {t("lastUpdatedAt")} {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </p>
@@ -208,7 +210,7 @@ export default function MarketPage() {
           style={{ background: "var(--bg-hover)", color: "var(--text-secondary)" }}
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-          Rafraîchir
+          {t("refresh")}
         </button>
       </div>
 
@@ -220,7 +222,7 @@ export default function MarketPage() {
             <span className="text-sm font-medium">{error}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handleRefresh} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Réessayer</button>
+            <button onClick={handleRefresh} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">{t("retry")}</button>
             <button onClick={() => setError("")} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
           </div>
         </div>
@@ -233,7 +235,7 @@ export default function MarketPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "var(--text-muted)" }} />
             <input
               type="text"
-              placeholder="Rechercher un symbole (ex: AAPL, TSLA, NVDA)..."
+              placeholder={t("searchSymbolPlaceholder")}
               value={searchSymbol}
               onChange={(e) => setSearchSymbol(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -242,7 +244,7 @@ export default function MarketPage() {
             />
           </div>
           <button onClick={handleSearch} className="px-6 py-2 rounded-xl bg-cyan-500 text-white font-medium text-sm hover:bg-cyan-600 transition">
-            {searchLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Rechercher"}
+            {searchLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : t("search")}
           </button>
         </div>
 
@@ -257,14 +259,14 @@ export default function MarketPage() {
         {searchResult && (
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
-              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Symbole</div>
+              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("symbol")}</div>
               <div className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>{searchResult.symbol}</div>
               <div className="text-2xl font-bold mono mt-1" style={{ color: "var(--text-primary)" }}>
                 ${formatPrice(searchResult.last)}
               </div>
             </div>
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
-              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Variation</div>
+              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("variation")}</div>
               <div className={`text-xl font-bold mono ${searchResult.change >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                 {searchResult.change >= 0 ? "+" : ""}{formatPrice(searchResult.change)}
               </div>
@@ -273,14 +275,14 @@ export default function MarketPage() {
               </div>
             </div>
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
-              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Volume</div>
+              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("volume")}</div>
               <div className="text-xl font-bold mono" style={{ color: "var(--text-primary)" }}>{formatVol(searchResult.volume)}</div>
               <div className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
                 Bid: ${formatPrice(searchResult.bid)} / Ask: ${formatPrice(searchResult.ask)}
               </div>
             </div>
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
-              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>52 Semaines</div>
+              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("fiftyTwoWeeks")}</div>
               <div className="text-sm">
                 <span className="text-emerald-400 mono">H: ${formatPrice(searchResult.high52)}</span>
               </div>
@@ -299,7 +301,7 @@ export default function MarketPage() {
       {/* Indices */}
       <div>
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <BarChart3 className="w-5 h-5 text-cyan-400" /> Indices Majeurs
+          <BarChart3 className="w-5 h-5 text-cyan-400" /> {t("majorIndices")}
         </h2>
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -342,7 +344,7 @@ export default function MarketPage() {
       {candles && candleSymbol && (
         <div className="metric-card rounded-2xl p-6">
           <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-            <Activity className="w-4 h-4 text-cyan-400" /> {candleSymbol} — 30 derniers jours
+            <Activity className="w-4 h-4 text-cyan-400" /> {candleSymbol} — {t("last30Days")}
           </h3>
           <div className="flex items-end gap-[2px] h-40">
             {candles.c.map((close, i) => {
@@ -393,20 +395,20 @@ export default function MarketPage() {
         ) : stocksData.length === 0 ? (
           <div className="metric-card rounded-2xl p-8 text-center">
             <AlertTriangle className="w-10 h-10 mx-auto mb-3 text-amber-400 opacity-50" />
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucune donnée disponible. Vérifiez la clé API MarketData.</p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noDataCheckApiKey")}</p>
           </div>
         ) : (
           <div className="metric-card rounded-2xl overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr style={{ background: "var(--bg-hover)" }}>
-                  <th className="text-left px-4 py-3 text-xs font-bold uppercase" style={{ color: "var(--text-muted)" }}>Symbole</th>
-                  <th className="text-right px-4 py-3 text-xs font-bold uppercase" style={{ color: "var(--text-muted)" }}>Prix</th>
-                  <th className="text-right px-4 py-3 text-xs font-bold uppercase" style={{ color: "var(--text-muted)" }}>Variation</th>
-                  <th className="text-right px-4 py-3 text-xs font-bold uppercase hidden md:table-cell" style={{ color: "var(--text-muted)" }}>Volume</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold uppercase" style={{ color: "var(--text-muted)" }}>{t("symbol")}</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold uppercase" style={{ color: "var(--text-muted)" }}>{t("price")}</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold uppercase" style={{ color: "var(--text-muted)" }}>{t("variation")}</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold uppercase hidden md:table-cell" style={{ color: "var(--text-muted)" }}>{t("volume")}</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase hidden lg:table-cell" style={{ color: "var(--text-muted)" }}>52w High</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase hidden lg:table-cell" style={{ color: "var(--text-muted)" }}>52w Low</th>
-                  <th className="text-center px-4 py-3 text-xs font-bold uppercase" style={{ color: "var(--text-muted)" }}>Actions</th>
+                  <th className="text-center px-4 py-3 text-xs font-bold uppercase" style={{ color: "var(--text-muted)" }}>{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -506,7 +508,7 @@ export default function MarketPage() {
               </table>
             </div>
           ) : (
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucune donnée d&apos;options disponible.</p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noOptionsData")}</p>
           )}
         </div>
       )}

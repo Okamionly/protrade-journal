@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useTranslation } from "@/i18n/context";
 import {
   RefreshCw,
   ExternalLink,
@@ -32,13 +33,13 @@ interface NewsItem {
 // --------------- Constants ---------------
 
 const CATEGORY_TABS = [
-  { key: "all", label: "Tous" },
-  { key: "marchés", label: "Marchés" },
-  { key: "crypto", label: "Crypto" },
-  { key: "forex", label: "Forex" },
-  { key: "actions", label: "Actions" },
-  { key: "macro", label: "Macro" },
-  { key: "commodities", label: "Commodities" },
+  { key: "all", labelKey: "all" },
+  { key: "marchés", labelKey: "markets" },
+  { key: "crypto", labelKey: "crypto" },
+  { key: "forex", labelKey: "forex" },
+  { key: "actions", labelKey: "stocks" },
+  { key: "macro", labelKey: "macro" },
+  { key: "commodities", labelKey: "commodities" },
 ] as const;
 
 const SOURCE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -286,7 +287,8 @@ function SourceDropdown({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const activeLabel = sourceFilter === "all" ? "Toutes les sources" : sourceFilter;
+  const { t: tInner } = useTranslation();
+  const activeLabel = sourceFilter === "all" ? tInner("allSources") : sourceFilter;
 
   return (
     <div className="relative" ref={ref}>
@@ -309,7 +311,7 @@ function SourceDropdown({
                 : "text-[--text-secondary] hover:bg-[var(--bg-hover)]"
             }`}
           >
-            Toutes les sources
+            {tInner("allSources")}
           </button>
           {sources.map((src) => {
             const c = getSourceColor(src);
@@ -341,6 +343,7 @@ function SourceDropdown({
 // --------------- Main Page ---------------
 
 export default function NewsPage() {
+  const { t } = useTranslation();
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -364,15 +367,15 @@ export default function NewsPage() {
           setNews(data);
           setLastUpdated(new Date());
         } else if (Array.isArray(data) && data.length === 0) {
-          setError("Aucune actualité disponible.");
+          setError(t("noNewsAvailable"));
         } else {
-          setError("Format de réponse inattendu de l\u2019API.");
+          setError(t("unexpectedApiFormat"));
         }
       } else {
-        setError("Impossible de charger les actualités. Réessayez.");
+        setError(t("cannotLoadNews"));
       }
     } catch {
-      setError("Impossible de charger les actualités. Vérifiez votre connexion.");
+      setError(t("cannotLoadNewsCheckConnection"));
     } finally {
       setLoading(false);
     }
@@ -436,7 +439,7 @@ export default function NewsPage() {
               onClick={load}
               className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition"
             >
-              Réessayer
+              {t("retry")}
             </button>
             <button
               onClick={() => setError(null)}
@@ -452,7 +455,7 @@ export default function NewsPage() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Newspaper className="w-5 h-5 text-cyan-400" />
-          <h1 className="text-lg font-bold">Fil d&apos;Actualités</h1>
+          <h1 className="text-lg font-bold">{t("newsFeed")}</h1>
           {lastUpdatedText && (
             <span className="text-[10px] text-[--text-muted] hidden sm:inline">
               &mdash; {lastUpdatedText}
@@ -466,7 +469,7 @@ export default function NewsPage() {
           <button
             onClick={load}
             className="p-1.5 rounded-lg hover:bg-[var(--bg-hover)] transition"
-            title="Rafraîchir"
+            title={t("refresh")}
           >
             <RefreshCw className={`w-4 h-4 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
           </button>
@@ -497,7 +500,7 @@ export default function NewsPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Rechercher..."
+            placeholder={t("search")}
             className="input-field pl-9 pr-8 w-full text-xs py-1.5"
           />
           {searchQuery && (
@@ -526,7 +529,7 @@ export default function NewsPage() {
                   : "text-[--text-secondary] hover:text-[--text-primary] border border-[--border] hover:border-[--text-muted]"
               }`}
             >
-              {tab.label} ({count})
+              {t(tab.labelKey)} ({count})
             </button>
           );
         })}
@@ -542,10 +545,10 @@ export default function NewsPage() {
       ) : filtered.length === 0 ? (
         <div className="glass rounded-xl p-8 text-center text-[--text-muted]">
           <Newspaper className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-medium">Aucune actualité trouvée</p>
+          <p className="text-sm font-medium">{t("noNewsFound")}</p>
           {searchQuery && (
             <p className="text-xs mt-1">
-              Essayez un autre mot-clé ou supprimez le filtre de recherche.
+              {t("tryOtherKeyword")}
             </p>
           )}
           <button
@@ -556,7 +559,7 @@ export default function NewsPage() {
             }}
             className="mt-3 px-4 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 text-xs font-medium hover:bg-cyan-500/30 transition"
           >
-            Réinitialiser les filtres
+            {t("reset")}
           </button>
         </div>
       ) : (
@@ -573,7 +576,7 @@ export default function NewsPage() {
                   }}
                   className="ml-2 text-cyan-400 hover:underline"
                 >
-                  Effacer les filtres
+                  {t("clearFilters")}
                 </button>
               )}
             </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef } from "react";
+import { useTranslation } from "@/i18n/context";
 import {
   Upload,
   FileText,
@@ -131,21 +132,21 @@ const PLATFORMS: PlatformDef[] = [
   },
 ];
 
-const TARGET_FIELDS = [
-  { key: "date", label: "Date", required: true },
-  { key: "asset", label: "Actif", required: true },
-  { key: "direction", label: "Direction", required: true },
-  { key: "entry", label: "Prix d'entrée", required: false },
-  { key: "exit", label: "Prix de sortie", required: false },
-  { key: "sl", label: "Stop Loss", required: false },
-  { key: "tp", label: "Take Profit", required: false },
-  { key: "lots", label: "Lots / Volume", required: false },
-  { key: "result", label: "Résultat (P&L)", required: false },
-  { key: "commission", label: "Commission", required: false },
-  { key: "swap", label: "Swap", required: false },
-  { key: "strategy", label: "Stratégie", required: false },
-  { key: "tags", label: "Tags", required: false },
-  { key: "exitDate", label: "Date de sortie", required: false },
+const TARGET_FIELD_KEYS = [
+  { key: "date", labelKey: "fieldDate", required: true },
+  { key: "asset", labelKey: "fieldAsset", required: true },
+  { key: "direction", labelKey: "fieldDirection", required: true },
+  { key: "entry", labelKey: "fieldEntry", required: false },
+  { key: "exit", labelKey: "fieldExit", required: false },
+  { key: "sl", labelKey: "fieldSl", required: false },
+  { key: "tp", labelKey: "fieldTp", required: false },
+  { key: "lots", labelKey: "fieldLots", required: false },
+  { key: "result", labelKey: "fieldResult", required: false },
+  { key: "commission", labelKey: "fieldCommission", required: false },
+  { key: "swap", labelKey: "fieldSwap", required: false },
+  { key: "strategy", labelKey: "fieldStrategy", required: false },
+  { key: "tags", labelKey: "fieldTags", required: false },
+  { key: "exitDate", labelKey: "fieldExitDate", required: false },
 ];
 
 /* ─── Platform Detection ─── */
@@ -182,6 +183,8 @@ function parseNum(val: unknown): number {
 
 /* ─── Component ─── */
 export default function ImportPage() {
+  const { t } = useTranslation();
+  const TARGET_FIELDS = TARGET_FIELD_KEYS.map((f) => ({ ...f, label: t(f.labelKey) }));
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [rawData, setRawData] = useState<Record<string, string>[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -341,11 +344,11 @@ export default function ImportPage() {
 
   /* ─── Step indicator ─── */
   const steps = [
-    { num: 1, label: "Fichier" },
-    { num: 2, label: "Détection" },
-    { num: 3, label: "Mapping" },
-    { num: 4, label: "Aperçu" },
-    { num: 5, label: "Résultat" },
+    { num: 1, label: t("stepFile") },
+    { num: 2, label: t("stepDetection") },
+    { num: 3, label: t("stepMapping") },
+    { num: 4, label: t("stepPreview") },
+    { num: 5, label: t("stepResult") },
   ];
 
   return (
@@ -353,10 +356,10 @@ export default function ImportPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-          Import CSV
+          {t("importCsv")}
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          Importez vos trades depuis n&apos;importe quelle plateforme. Détection automatique du format.
+          {t("importCsvDesc")}
         </p>
       </div>
 
@@ -395,7 +398,7 @@ export default function ImportPage() {
           <span className="inline-flex items-center justify-center w-6 h-6 rounded-md text-[10px] font-bold text-white bg-gray-500">
             ?
           </span>
-          Personnalisé
+          {t("custom")}
         </div>
       </div>
 
@@ -468,20 +471,20 @@ export default function ImportPage() {
             <Upload className="w-10 h-10" style={{ color: "#0ea5e9" }} />
           </div>
           <p className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
-            Glissez votre fichier CSV ici
+            {t("dropCsvHere")}
           </p>
           <p className="text-sm mt-2" style={{ color: "var(--text-muted)" }}>
-            ou cliquez pour sélectionner un fichier
+            {t("orClickToSelect")}
           </p>
           <div className="flex items-center justify-center gap-4 mt-6">
             <span className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
               <FileSpreadsheet className="w-3.5 h-3.5" /> CSV, TSV
             </span>
             <span className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
-              <Zap className="w-3.5 h-3.5" /> Détection automatique
+              <Zap className="w-3.5 h-3.5" /> {t("autoDetection")}
             </span>
             <span className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
-              <Shield className="w-3.5 h-3.5" /> Max 5 000 trades
+              <Shield className="w-3.5 h-3.5" /> {t("maxTrades")}
             </span>
           </div>
         </div>
@@ -506,7 +509,7 @@ export default function ImportPage() {
                   {fileName}
                 </p>
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  {rawData.length} lignes &middot; {headers.length} colonnes
+                  {rawData.length} {t("rows")} &middot; {headers.length} {t("columns")}
                 </p>
               </div>
             </div>
@@ -532,7 +535,7 @@ export default function ImportPage() {
                 <div>
                   <div className="flex items-center justify-center gap-2">
                     <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>
-                      {detection.platform.name} détecté
+                      {detection.platform.name} {t("detected")}
                     </h3>
                     <span
                       className="px-2 py-0.5 rounded-full text-xs font-bold"
@@ -544,12 +547,11 @@ export default function ImportPage() {
                         color: detection.confidence >= 0.8 ? "#10b981" : "#f59e0b",
                       }}
                     >
-                      {Math.round(detection.confidence * 100)}% confiance
+                      {Math.round(detection.confidence * 100)}% {t("confidence")}
                     </span>
                   </div>
                   <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-                    {detection.matchedHeaders.length} / {detection.platform.requiredHeaders.length} colonnes
-                    reconnues
+                    {detection.matchedHeaders.length} / {detection.platform.requiredHeaders.length} {t("columnsRecognized")}
                   </p>
                 </div>
 
@@ -576,8 +578,7 @@ export default function ImportPage() {
                 </div>
 
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  Le mapping des colonnes a été configuré automatiquement.
-                  Vous pourrez l&apos;ajuster à l&apos;étape suivante.
+                  {t("mappingAutoConfigured")}
                 </p>
               </div>
             ) : (
@@ -590,10 +591,10 @@ export default function ImportPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>
-                    Format non reconnu
+                    {t("formatNotRecognized")}
                   </h3>
                   <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-                    Sélectionnez votre plateforme ou configurez le mapping manuellement.
+                    {t("selectPlatformOrManual")}
                   </p>
                 </div>
 
@@ -631,13 +632,13 @@ export default function ImportPage() {
                 style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
               >
                 <ArrowLeft className="w-4 h-4" />
-                Retour
+                {t("back")}
               </button>
               <button
                 onClick={() => setStep(3)}
                 className="btn-primary text-white px-6 py-2 rounded-xl text-sm font-medium flex items-center gap-2"
               >
-                Configurer le mapping
+                {t("configureMapping")}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -670,10 +671,10 @@ export default function ImportPage() {
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <Table2 className="w-5 h-5" style={{ color: "#0ea5e9" }} />
-                Mapper les colonnes
+                {t("mapColumns")}
               </h3>
               <span className="text-xs px-3 py-1 rounded-full" style={{ background: "var(--bg-secondary)", color: "var(--text-muted)" }}>
-                {rawData.length} lignes
+                {rawData.length} {t("rows")}
               </span>
             </div>
 
@@ -702,7 +703,7 @@ export default function ImportPage() {
                       className="input-field text-xs appearance-none pr-7 w-full"
                       style={{ paddingTop: "6px", paddingBottom: "6px" }}
                     >
-                      <option value="">-- Ignorer --</option>
+                      <option value="">-- {t("ignore")} --</option>
                       {TARGET_FIELDS.map((f) => (
                         <option key={f.key} value={f.key}>
                           {f.label} {f.required ? "*" : ""}
@@ -724,7 +725,7 @@ export default function ImportPage() {
             {/* Mapped fields summary */}
             <div className="mt-5 pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
               <p className="text-xs font-medium mb-2" style={{ color: "var(--text-muted)" }}>
-                Champs mappés :
+                {t("mappedFields")} :
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {TARGET_FIELDS.map((f) => {
@@ -754,14 +755,14 @@ export default function ImportPage() {
                 style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
               >
                 <ArrowLeft className="w-4 h-4" />
-                Retour
+                {t("back")}
               </button>
               <button
                 onClick={() => setStep(4)}
                 disabled={!requiredMapped}
                 className="btn-primary text-white px-6 py-2 rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Prévisualiser
+                {t("preview")}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -776,10 +777,10 @@ export default function ImportPage() {
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <FileText className="w-5 h-5" style={{ color: "#0ea5e9" }} />
-                Aperçu des 5 premiers trades
+                {t("previewFirst5Trades")}
               </h3>
               <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: "rgba(14, 165, 233, 0.1)", color: "#0ea5e9" }}>
-                {rawData.length} trades au total
+                {rawData.length} {t("tradesTotal")}
               </span>
             </div>
 
@@ -791,7 +792,7 @@ export default function ImportPage() {
                       .filter(Boolean)
                       .filter((v, i, a) => a.indexOf(v) === i)
                       .map((f) => {
-                        const field = TARGET_FIELDS.find((t) => t.key === f);
+                        const field = TARGET_FIELDS.find((tf) => tf.key === f);
                         return (
                           <th
                             key={f}

@@ -6,6 +6,7 @@ import {
   AlertTriangle, X, BarChart3, Shield, Gauge, Zap, Heart,
   Thermometer, Eye, ArrowUpCircle, ArrowDownCircle,
 } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -41,16 +42,16 @@ interface LivePricesData {
 
 function classifyScore(v: number): {
   key: string;
-  label: string;
+  i18nKey: string;
   color: string;
   bg: string;
   border: string;
 } {
-  if (v <= 24) return { key: "extreme-fear", label: "Peur Extrême", color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30" };
-  if (v <= 44) return { key: "fear", label: "Peur", color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30" };
-  if (v <= 55) return { key: "neutral", label: "Neutre", color: "text-[--text-secondary]", bg: "bg-gray-500/10", border: "border-gray-500/30" };
-  if (v <= 74) return { key: "greed", label: "Avidité", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" };
-  return { key: "extreme-greed", label: "Avidité Extrême", color: "text-emerald-300", bg: "bg-emerald-500/15", border: "border-emerald-400/30" };
+  if (v <= 24) return { key: "extreme-fear", i18nKey: "extremeFear", color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30" };
+  if (v <= 44) return { key: "fear", i18nKey: "fear", color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30" };
+  if (v <= 55) return { key: "neutral", i18nKey: "neutral", color: "text-[--text-secondary]", bg: "bg-gray-500/10", border: "border-gray-500/30" };
+  if (v <= 74) return { key: "greed", i18nKey: "greed", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" };
+  return { key: "extreme-greed", i18nKey: "extremeGreed", color: "text-emerald-300", bg: "bg-emerald-500/15", border: "border-emerald-400/30" };
 }
 
 type RangeOption = 30 | 90 | 365;
@@ -106,6 +107,7 @@ function GaugeChart({ value }: { value: number }) {
 /* ------------------------------------------------------------------ */
 
 function ManualSentimentGauge() {
+  const { t } = useTranslation();
   const [manualValue, setManualValue] = useState(50);
   const cls = classifyScore(manualValue);
 
@@ -113,13 +115,13 @@ function ManualSentimentGauge() {
     <div className="metric-card rounded-2xl p-6 text-center">
       <div className="flex items-center justify-center gap-2 mb-4">
         <Gauge className="w-5 h-5 text-amber-400" />
-        <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Sentiment Manuel</h3>
+        <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>{t("manualSentiment")}</h3>
       </div>
       <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
-        L&apos;API Fear &amp; Greed est indisponible. Utilisez ce curseur pour enregistrer votre propre évaluation du sentiment.
+        {t("manualSentiment")} — Fear &amp; Greed
       </p>
       <GaugeChart value={manualValue} />
-      <p className={`text-lg font-bold mt-2 ${cls.color}`}>{cls.label}</p>
+      <p className={`text-lg font-bold mt-2 ${cls.color}`}>{t(cls.i18nKey)}</p>
       <input
         type="range"
         min={0}
@@ -129,8 +131,8 @@ function ManualSentimentGauge() {
         className="w-full mt-4 accent-cyan-500"
       />
       <div className="flex justify-between text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-        <span>Peur Extrême</span>
-        <span>Avidité Extrême</span>
+        <span>{t("extremeFear")}</span>
+        <span>{t("extremeGreed")}</span>
       </div>
     </div>
   );
@@ -149,6 +151,7 @@ function MarketPulseCards({
   vixData: VixApiData | null;
   spyChange: number | null;
 }) {
+  const { t } = useTranslation();
   const vix = vixData?.vix?.current ?? null;
   const fngCls = classifyScore(fngValue);
 
@@ -158,11 +161,11 @@ function MarketPulseCards({
   let trendBg: string;
   let TrendIcon: typeof TrendingUp;
   if (spyChange !== null && spyChange > 0.3 && fngValue > 50) {
-    trendLabel = "Haussier"; trendColor = "text-emerald-400"; trendBg = "bg-emerald-500/10"; TrendIcon = ArrowUpCircle;
+    trendLabel = t("bullish"); trendColor = "text-emerald-400"; trendBg = "bg-emerald-500/10"; TrendIcon = ArrowUpCircle;
   } else if (spyChange !== null && spyChange < -0.3 && fngValue < 50) {
-    trendLabel = "Baissier"; trendColor = "text-rose-400"; trendBg = "bg-rose-500/10"; TrendIcon = ArrowDownCircle;
+    trendLabel = t("bearish"); trendColor = "text-rose-400"; trendBg = "bg-rose-500/10"; TrendIcon = ArrowDownCircle;
   } else {
-    trendLabel = "Neutre"; trendColor = "text-amber-400"; trendBg = "bg-amber-500/10"; TrendIcon = Minus;
+    trendLabel = t("neutral"); trendColor = "text-amber-400"; trendBg = "bg-amber-500/10"; TrendIcon = Minus;
   }
 
   // Volatility regime from VIX
@@ -170,11 +173,11 @@ function MarketPulseCards({
   let volColor: string;
   let volBg: string;
   if (vix !== null) {
-    if (vix < 15) { volLabel = "Faible"; volColor = "text-emerald-400"; volBg = "bg-emerald-500/10"; }
-    else if (vix < 20) { volLabel = "Normal"; volColor = "text-cyan-400"; volBg = "bg-cyan-500/10"; }
-    else if (vix < 25) { volLabel = "Élevé"; volColor = "text-amber-400"; volBg = "bg-amber-500/10"; }
-    else if (vix < 30) { volLabel = "Très Élevé"; volColor = "text-orange-400"; volBg = "bg-orange-500/10"; }
-    else { volLabel = "Panique"; volColor = "text-rose-400"; volBg = "bg-rose-500/10"; }
+    if (vix < 15) { volLabel = t("volLow"); volColor = "text-emerald-400"; volBg = "bg-emerald-500/10"; }
+    else if (vix < 20) { volLabel = t("volNormal"); volColor = "text-cyan-400"; volBg = "bg-cyan-500/10"; }
+    else if (vix < 25) { volLabel = t("volHigh"); volColor = "text-amber-400"; volBg = "bg-amber-500/10"; }
+    else if (vix < 30) { volLabel = t("volVeryHigh"); volColor = "text-orange-400"; volBg = "bg-orange-500/10"; }
+    else { volLabel = t("volPanic"); volColor = "text-rose-400"; volBg = "bg-rose-500/10"; }
   } else {
     volLabel = "N/A"; volColor = "text-gray-400"; volBg = "bg-gray-500/10";
   }
@@ -185,7 +188,7 @@ function MarketPulseCards({
       iconColor: fngCls.color,
       label: "Fear & Greed",
       value: String(fngValue),
-      sub: fngCls.label,
+      sub: t(fngCls.i18nKey),
       bg: fngCls.bg,
       border: fngCls.border,
       valueColor: fngCls.color,
@@ -195,7 +198,7 @@ function MarketPulseCards({
       iconColor: vix !== null ? (vix < 20 ? "text-emerald-400" : vix < 25 ? "text-amber-400" : "text-rose-400") : "text-gray-400",
       label: "VIX",
       value: vix !== null ? vix.toFixed(1) : "N/A",
-      sub: vix !== null ? `${vixData!.vix.changePct >= 0 ? "+" : ""}${vixData!.vix.changePct.toFixed(2)}%` : "Indisponible",
+      sub: vix !== null ? `${vixData!.vix.changePct >= 0 ? "+" : ""}${vixData!.vix.changePct.toFixed(2)}%` : t("noData"),
       bg: vix !== null ? (vix < 20 ? "bg-emerald-500/10" : vix < 25 ? "bg-amber-500/10" : "bg-rose-500/10") : "bg-gray-500/10",
       border: vix !== null ? (vix < 20 ? "border-emerald-500/30" : vix < 25 ? "border-amber-500/30" : "border-rose-500/30") : "border-gray-500/30",
       valueColor: vix !== null ? (vix < 20 ? "text-emerald-400" : vix < 25 ? "text-amber-400" : "text-rose-400") : "text-gray-400",
@@ -203,9 +206,9 @@ function MarketPulseCards({
     {
       icon: <TrendIcon className="w-5 h-5" />,
       iconColor: trendColor,
-      label: "Tendance",
+      label: t("trend"),
       value: trendLabel,
-      sub: spyChange !== null ? `SPY ${spyChange >= 0 ? "+" : ""}${spyChange.toFixed(2)}%` : "Pas de données",
+      sub: spyChange !== null ? `SPY ${spyChange >= 0 ? "+" : ""}${spyChange.toFixed(2)}%` : t("noData"),
       bg: trendBg,
       border: trendColor.replace("text-", "border-").replace("400", "500/30"),
       valueColor: trendColor,
@@ -213,7 +216,7 @@ function MarketPulseCards({
     {
       icon: <Eye className="w-5 h-5" />,
       iconColor: volColor,
-      label: "Régime Volatilité",
+      label: t("volRegime"),
       value: volLabel,
       sub: vix !== null ? `VIX: ${vix.toFixed(1)}` : "",
       bg: volBg,
@@ -254,33 +257,34 @@ function MarketPulseSection({
   vixValue: number | null;
   fngClassification: string;
 }) {
+  const { t } = useTranslation();
   const fngCls = classifyScore(fngValue);
 
   // Risk factors
   const riskFactors: { text: string; severity: "danger" | "warning" | "info" | "safe" }[] = [];
 
   if (vixValue !== null) {
-    if (vixValue >= 30) riskFactors.push({ text: `VIX extrêmement élevé (${vixValue.toFixed(1)}) — volatilité de panique`, severity: "danger" });
-    else if (vixValue >= 25) riskFactors.push({ text: `VIX élevé (${vixValue.toFixed(1)}) — stress du marché`, severity: "danger" });
-    else if (vixValue >= 20) riskFactors.push({ text: `VIX au-dessus de la moyenne (${vixValue.toFixed(1)}) — prudence`, severity: "warning" });
-    else if (vixValue < 13) riskFactors.push({ text: `VIX très bas (${vixValue.toFixed(1)}) — complaisance possible`, severity: "warning" });
-    else riskFactors.push({ text: `VIX normal (${vixValue.toFixed(1)}) — volatilité contenue`, severity: "safe" });
+    if (vixValue >= 30) riskFactors.push({ text: `VIX ${t("volPanic")} (${vixValue.toFixed(1)})`, severity: "danger" });
+    else if (vixValue >= 25) riskFactors.push({ text: `VIX ${t("volVeryHigh")} (${vixValue.toFixed(1)})`, severity: "danger" });
+    else if (vixValue >= 20) riskFactors.push({ text: `VIX ${t("volHigh")} (${vixValue.toFixed(1)})`, severity: "warning" });
+    else if (vixValue < 13) riskFactors.push({ text: `VIX ${t("volLow")} (${vixValue.toFixed(1)})`, severity: "warning" });
+    else riskFactors.push({ text: `VIX ${t("volNormal")} (${vixValue.toFixed(1)})`, severity: "safe" });
   }
 
-  if (fngValue <= 20) riskFactors.push({ text: "Sentiment crypto en peur extrême — possibilité de capitulation", severity: "danger" });
-  else if (fngValue <= 35) riskFactors.push({ text: "Sentiment crypto négatif — marché sous pression", severity: "warning" });
-  else if (fngValue >= 80) riskFactors.push({ text: "Sentiment crypto en euphorie — risque de correction", severity: "warning" });
-  else if (fngValue >= 65) riskFactors.push({ text: "Sentiment crypto positif — tendance haussière", severity: "safe" });
-  else riskFactors.push({ text: "Sentiment crypto neutre — pas de signal fort", severity: "info" });
+  if (fngValue <= 20) riskFactors.push({ text: `${t("extremeFear")} — capitulation`, severity: "danger" });
+  else if (fngValue <= 35) riskFactors.push({ text: `${t("fear")} — ${t("bearish")}`, severity: "warning" });
+  else if (fngValue >= 80) riskFactors.push({ text: `${t("extremeGreed")} — ${t("risk")}`, severity: "warning" });
+  else if (fngValue >= 65) riskFactors.push({ text: `${t("greed")} — ${t("bullish")}`, severity: "safe" });
+  else riskFactors.push({ text: t("neutral"), severity: "info" });
 
   // Signal
   let signal: { text: string; color: string; bg: string; border: string };
   if (fngValue <= 25 || (vixValue !== null && vixValue >= 28)) {
-    signal = { text: "RISK OFF", color: "text-rose-400", bg: "bg-rose-500/15", border: "border-rose-500/40" };
+    signal = { text: t("riskOff"), color: "text-rose-400", bg: "bg-rose-500/15", border: "border-rose-500/40" };
   } else if (fngValue >= 60 && (vixValue === null || vixValue < 22)) {
-    signal = { text: "RISK ON", color: "text-emerald-400", bg: "bg-emerald-500/15", border: "border-emerald-500/40" };
+    signal = { text: t("riskOn"), color: "text-emerald-400", bg: "bg-emerald-500/15", border: "border-emerald-500/40" };
   } else {
-    signal = { text: "NEUTRE", color: "text-gray-400", bg: "bg-gray-500/15", border: "border-gray-500/40" };
+    signal = { text: t("neutral"), color: "text-gray-400", bg: "bg-gray-500/15", border: "border-gray-500/40" };
   }
 
   const severityStyles = {
@@ -303,14 +307,14 @@ function MarketPulseSection({
     <div className="metric-card rounded-2xl p-6">
       <div className="flex items-center gap-2 mb-5">
         <Heart className="w-5 h-5 text-rose-400" />
-        <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Pouls du Marché</h3>
+        <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>{t("marketPulse")}</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Mood */}
         <div className="text-center">
           <div className={`text-5xl font-black mono ${fngCls.color}`}>{fngValue}</div>
-          <p className={`text-lg font-bold mt-1 ${fngCls.color}`}>{fngCls.label}</p>
+          <p className={`text-lg font-bold mt-1 ${fngCls.color}`}>{t(fngCls.i18nKey)}</p>
           <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
             Fear &amp; Greed Index
           </p>
@@ -319,7 +323,7 @@ function MarketPulseSection({
         {/* Risk Factors */}
         <div>
           <p className="text-xs font-semibold mb-3 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-            Facteurs de Risque
+            {t("riskFactors")}
           </p>
           <div className="space-y-2">
             {riskFactors.map((rf, i) => (
@@ -336,7 +340,7 @@ function MarketPulseSection({
           <div className={`${signal.bg} border ${signal.border} rounded-2xl px-8 py-5 text-center`}>
             <Zap className={`w-6 h-6 mx-auto mb-2 ${signal.color}`} />
             <p className={`text-2xl font-black tracking-wider ${signal.color}`}>{signal.text}</p>
-            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Signal global</p>
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{t("globalSignal")}</p>
           </div>
         </div>
       </div>
@@ -349,6 +353,7 @@ function MarketPulseSection({
 /* ------------------------------------------------------------------ */
 
 export default function SentimentPage() {
+  const { t } = useTranslation();
   const [data, setData] = useState<FearGreedEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -371,13 +376,13 @@ export default function SentimentPage() {
           setLastUpdated(new Date());
         } else {
           setData([]);
-          setError("Aucune donnée de sentiment disponible.");
+          setError(t("noData"));
         }
       } else {
-        setError("Impossible de charger les données de sentiment. Réessayez.");
+        setError(t("retry"));
       }
     } catch {
-      setError("Impossible de charger les données de sentiment. Vérifiez votre connexion.");
+      setError(t("retry"));
     } finally {
       setLoading(false);
     }
@@ -500,12 +505,12 @@ export default function SentimentPage() {
     if (vixValue !== null && vixValue > 0) {
       let vixLevel: MarketIndicator["level"] = "neutral";
       let vixColor = "text-gray-400";
-      let vixDesc = "Volatilité normale";
-      if (vixValue < 15) { vixLevel = "bullish"; vixColor = "text-emerald-400"; vixDesc = "Très faible volatilité — marché complaisant"; }
-      else if (vixValue < 20) { vixLevel = "bullish"; vixColor = "text-emerald-400"; vixDesc = "Volatilité modérée — marché calme"; }
-      else if (vixValue < 25) { vixLevel = "neutral"; vixColor = "text-amber-400"; vixDesc = "Volatilité élevée — prudence"; }
-      else if (vixValue < 30) { vixLevel = "bearish"; vixColor = "text-orange-400"; vixDesc = "Volatilité forte — stress du marché"; }
-      else { vixLevel = "bearish"; vixColor = "text-rose-400"; vixDesc = "Volatilité extrême — panique"; }
+      let vixDesc = t("volNormal");
+      if (vixValue < 15) { vixLevel = "bullish"; vixColor = "text-emerald-400"; vixDesc = t("volLow"); }
+      else if (vixValue < 20) { vixLevel = "bullish"; vixColor = "text-emerald-400"; vixDesc = t("volNormal"); }
+      else if (vixValue < 25) { vixLevel = "neutral"; vixColor = "text-amber-400"; vixDesc = t("volHigh"); }
+      else if (vixValue < 30) { vixLevel = "bearish"; vixColor = "text-orange-400"; vixDesc = t("volVeryHigh"); }
+      else { vixLevel = "bearish"; vixColor = "text-rose-400"; vixDesc = t("volPanic"); }
       indicators.push({
         label: `VIX: ${vixValue.toFixed(2)}`,
         value: `${vixData!.vix.changePct >= 0 ? "+" : ""}${vixData!.vix.changePct.toFixed(2)}%`,
@@ -524,14 +529,14 @@ export default function SentimentPage() {
 
     let pcrLevel: MarketIndicator["level"] = "neutral";
     let pcrColor = "text-gray-400";
-    let pcrDesc = "Ratio Put/Call neutre";
-    if (pcr < 0.7) { pcrLevel = "bullish"; pcrColor = "text-emerald-400"; pcrDesc = "Sentiment haussier — plus de calls que de puts"; }
-    else if (pcr < 0.95) { pcrLevel = "neutral"; pcrColor = "text-amber-400"; pcrDesc = "Ratio équilibré — sentiment neutre"; }
-    else if (pcr < 1.1) { pcrLevel = "bearish"; pcrColor = "text-orange-400"; pcrDesc = "Sentiment prudent — légère dominance des Puts"; }
-    else { pcrLevel = "bearish"; pcrColor = "text-rose-400"; pcrDesc = "Sentiment baissier — forte dominance des Puts"; }
+    let pcrDesc = t("neutral");
+    if (pcr < 0.7) { pcrLevel = "bullish"; pcrColor = "text-emerald-400"; pcrDesc = t("bullish"); }
+    else if (pcr < 0.95) { pcrLevel = "neutral"; pcrColor = "text-amber-400"; pcrDesc = t("neutral"); }
+    else if (pcr < 1.1) { pcrLevel = "bearish"; pcrColor = "text-orange-400"; pcrDesc = t("bearish"); }
+    else { pcrLevel = "bearish"; pcrColor = "text-rose-400"; pcrDesc = t("bearish"); }
     indicators.push({
       label: `Put/Call: ${pcr.toFixed(2)}`,
-      value: pcr < 0.95 ? "Haussier" : pcr < 1.1 ? "Neutre" : "Baissier",
+      value: pcr < 0.95 ? t("bullish") : pcr < 1.1 ? t("neutral") : t("bearish"),
       description: pcrDesc,
       color: pcrColor,
       level: pcrLevel,
@@ -562,14 +567,14 @@ export default function SentimentPage() {
 
     let breadthLevel: MarketIndicator["level"] = "neutral";
     let breadthColor = "text-gray-400";
-    let breadthDesc = "Breadth neutre";
-    if (advPct > 65) { breadthLevel = "bullish"; breadthColor = "text-emerald-400"; breadthDesc = "Large participation haussière"; }
-    else if (advPct > 50) { breadthLevel = "neutral"; breadthColor = "text-amber-400"; breadthDesc = "Participation modérée"; }
-    else if (advPct > 40) { breadthLevel = "neutral"; breadthColor = "text-amber-400"; breadthDesc = "Participation faible"; }
-    else { breadthLevel = "bearish"; breadthColor = "text-rose-400"; breadthDesc = "Majorité de titres en baisse"; }
+    let breadthDesc = t("neutral");
+    if (advPct > 65) { breadthLevel = "bullish"; breadthColor = "text-emerald-400"; breadthDesc = t("bullish"); }
+    else if (advPct > 50) { breadthLevel = "neutral"; breadthColor = "text-amber-400"; breadthDesc = t("neutral"); }
+    else if (advPct > 40) { breadthLevel = "neutral"; breadthColor = "text-amber-400"; breadthDesc = t("neutral"); }
+    else { breadthLevel = "bearish"; breadthColor = "text-rose-400"; breadthDesc = t("bearish"); }
     indicators.push({
       label: `Breadth: ${advPct}%`,
-      value: advPct > 50 ? `${advPct}% hausse` : `${100 - advPct}% baisse`,
+      value: advPct > 50 ? `${advPct}% ${t("bullish")}` : `${100 - advPct}% ${t("bearish")}`,
       description: breadthDesc,
       color: breadthColor,
       level: breadthLevel,
@@ -581,16 +586,16 @@ export default function SentimentPage() {
 
       let bbLevel: MarketIndicator["level"] = "neutral";
       let bbColor = "text-gray-400";
-      let bbDesc = "Tendance neutre par rapport à la semaine";
-      if (ratio > 1.15) { bbLevel = "bullish"; bbColor = "text-emerald-400"; bbDesc = "Forte amélioration du sentiment vs 7j"; }
-      else if (ratio > 1.02) { bbLevel = "bullish"; bbColor = "text-emerald-400"; bbDesc = "Léger biais haussier vs 7j"; }
-      else if (ratio < 0.85) { bbLevel = "bearish"; bbColor = "text-rose-400"; bbDesc = "Forte dégradation du sentiment vs 7j"; }
-      else if (ratio < 0.98) { bbLevel = "bearish"; bbColor = "text-orange-400"; bbDesc = "Léger biais baissier vs 7j"; }
-      else { bbDesc = "Sentiment stable par rapport aux 7 derniers jours"; }
+      let bbDesc = t("neutral");
+      if (ratio > 1.15) { bbLevel = "bullish"; bbColor = "text-emerald-400"; bbDesc = t("bullish"); }
+      else if (ratio > 1.02) { bbLevel = "bullish"; bbColor = "text-emerald-400"; bbDesc = t("bullish"); }
+      else if (ratio < 0.85) { bbLevel = "bearish"; bbColor = "text-rose-400"; bbDesc = t("bearish"); }
+      else if (ratio < 0.98) { bbLevel = "bearish"; bbColor = "text-orange-400"; bbDesc = t("bearish"); }
+      else { bbDesc = t("neutral"); }
 
       indicators.push({
         label: `Bull/Bear: ${ratio.toFixed(2)}`,
-        value: ratio > 1.02 ? "Haussier" : ratio < 0.98 ? "Baissier" : "Neutre",
+        value: ratio > 1.02 ? t("bullish") : ratio < 0.98 ? t("bearish") : t("neutral"),
         description: bbDesc,
         color: bbColor,
         level: bbLevel,
@@ -598,7 +603,7 @@ export default function SentimentPage() {
     }
 
     return indicators;
-  }, [vixData, currentVal, weekAvg, spyChange, btcChange]);
+  }, [vixData, currentVal, weekAvg, spyChange, btcChange, t]);
 
   const hasData = data && data.length > 0;
 
@@ -612,7 +617,7 @@ export default function SentimentPage() {
             <span className="text-sm font-medium">{error}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => load(range)} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">Réessayer</button>
+            <button onClick={() => load(range)} className="px-3 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-medium transition">{t("retry")}</button>
             <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 transition"><X className="w-4 h-4" /></button>
           </div>
         </div>
@@ -620,12 +625,12 @@ export default function SentimentPage() {
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Sentiment du Marché</h1>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{t("marketSentiment")}</h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
             Fear &amp; Greed Index — Crypto Market
             {lastUpdated && (
               <span className="ml-2" style={{ color: "var(--text-muted)" }}>
-                — Dernière mise à jour: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                — {t("updatedAt")}: {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </p>
@@ -639,11 +644,11 @@ export default function SentimentPage() {
                 className={`px-3 py-1.5 text-sm font-medium transition ${range === r ? "bg-cyan-500/20 text-cyan-400" : ""}`}
                 style={range !== r ? { color: "var(--text-secondary)" } : {}}
               >
-                {r}j
+                {r}{t("days")}
               </button>
             ))}
           </div>
-          <button onClick={() => { load(range); loadVix(); loadLivePrices(); }} className="p-2 rounded-lg transition" style={{ color: "var(--text-muted)" }} title="Rafraîchir">
+          <button onClick={() => { load(range); loadVix(); loadLivePrices(); }} className="p-2 rounded-lg transition" style={{ color: "var(--text-muted)" }} title={t("refresh")}>
             <RefreshCw className={`w-5 h-5 ${loading || vixLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
@@ -690,7 +695,7 @@ export default function SentimentPage() {
               <GaugeChart value={currentVal} />
               <div className="text-center mt-4">
                 <span className={`px-4 py-2 rounded-full text-sm font-bold ${config.bg} ${config.color} border ${config.border}`}>
-                  {config.label}
+                  {t(config.i18nKey)}
                 </span>
               </div>
             </div>
@@ -718,9 +723,9 @@ export default function SentimentPage() {
           {hasData && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label: "Hier", entry: yesterday },
-                { label: "Il y a 7 jours", entry: weekAgo },
-                { label: "Il y a 30 jours", entry: monthAgo },
+                { label: t("yesterday"), entry: yesterday },
+                { label: t("sevenDaysAgo"), entry: weekAgo },
+                { label: t("thirtyDaysAgo"), entry: monthAgo },
               ].map(({ label, entry }) => {
                 const delta = getDelta(entry);
                 const val = entry ? parseInt(entry.value) : null;
@@ -733,7 +738,7 @@ export default function SentimentPage() {
                         <span className={`text-2xl font-bold mono ${cls.color}`}>{val !== null && !isNaN(val) ? val : "\u2014"}</span>
                         {entry && (
                           <p className={`text-xs mt-1 ${cls.color}`}>
-                            {classifyScore(parseInt(entry.value) || 50).label}
+                            {t(classifyScore(parseInt(entry.value) || 50).i18nKey)}
                           </p>
                         )}
                       </div>
@@ -756,15 +761,15 @@ export default function SentimentPage() {
           {histStats && (
             <div className="grid grid-cols-3 gap-4">
               <div className="metric-card rounded-2xl p-4 text-center">
-                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Moyenne {range}j</div>
+                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("average")} {range}{t("days")}</div>
                 <div className="text-xl font-bold mono" style={{ color: "var(--text-primary)" }}>{histStats.avg}</div>
               </div>
               <div className="metric-card rounded-2xl p-4 text-center">
-                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Min {range}j</div>
+                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("low")} {range}{t("days")}</div>
                 <div className="text-xl font-bold mono text-rose-400">{histStats.min}</div>
               </div>
               <div className="metric-card rounded-2xl p-4 text-center">
-                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Max {range}j</div>
+                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("high")} {range}{t("days")}</div>
                 <div className="text-xl font-bold mono text-emerald-400">{histStats.max}</div>
               </div>
             </div>
@@ -775,7 +780,7 @@ export default function SentimentPage() {
             <div className="metric-card rounded-2xl p-6">
               <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <Activity className="w-4 h-4 text-cyan-400" />
-                Historique {range} jours
+                {t("historicalChart")} {range} {t("days")}
               </h3>
               <div className="flex items-end gap-[1px] h-40">
                 {chartData.map((entry, i) => {
@@ -786,15 +791,15 @@ export default function SentimentPage() {
                       <div
                         className="w-full rounded-t transition-all hover:opacity-80 cursor-default"
                         style={{ height: `${(safeVal / 100) * 160}px`, background: getBarColor(safeVal) }}
-                        title={`${safeVal} - ${classifyScore(safeVal).label}`}
+                        title={`${safeVal} - ${t(classifyScore(safeVal).i18nKey)}`}
                       />
                     </div>
                   );
                 })}
               </div>
               <div className="flex justify-between text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-                <span>{range}j</span>
-                <span>Aujourd&apos;hui</span>
+                <span>{range}{t("days")}</span>
+                <span>{t("today")}</span>
               </div>
             </div>
           )}

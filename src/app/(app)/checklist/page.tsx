@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "@/i18n/context";
 import { CheckSquare, Plus, Trash2, GripVertical, Shield, AlertTriangle, Save, RotateCcw, TrendingUp, Brain, Loader2 } from "lucide-react";
 
 interface Rule {
@@ -17,10 +18,10 @@ interface ChecklistEntry {
 }
 
 const CATEGORIES = {
-  risk: { label: "Gestion du Risque", icon: Shield, color: "text-amber-400" },
-  setup: { label: "Setup & Entrée", icon: TrendingUp, color: "text-cyan-400" },
-  mental: { label: "Mental & Discipline", icon: Brain, color: "text-violet-400" },
-  exit: { label: "Sortie & Gestion", icon: AlertTriangle, color: "text-rose-400" },
+  risk: { labelKey: "riskManagement", icon: Shield, color: "text-amber-400" },
+  setup: { labelKey: "setupAndEntry", icon: TrendingUp, color: "text-cyan-400" },
+  mental: { labelKey: "mentalAndDiscipline", icon: Brain, color: "text-violet-400" },
+  exit: { labelKey: "exitAndManagement", icon: AlertTriangle, color: "text-rose-400" },
 };
 
 const DEFAULT_RULES: Rule[] = [
@@ -38,6 +39,7 @@ const DEFAULT_RULES: Rule[] = [
 ];
 
 export default function ChecklistPage() {
+  const { t } = useTranslation();
   const [rules, setRules] = useState<Rule[]>([]);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
@@ -56,7 +58,7 @@ export default function ChecklistPage() {
       setError(null);
       const res = await fetch("/api/trading-rules");
       if (!res.ok) {
-        throw new Error("Erreur lors du chargement des règles");
+        throw new Error(t("loadRulesError"));
       }
       const data = await res.json();
       if (data.length === 0) {
@@ -73,7 +75,7 @@ export default function ChecklistPage() {
       }
     } catch (err) {
       console.error("Failed to fetch rules:", err);
-      setError("Impossible de charger les règles. Vérifiez votre connexion.");
+      setError(t("cannotLoadRules"));
     } finally {
       setLoading(false);
     }
@@ -97,7 +99,7 @@ export default function ChecklistPage() {
       setRules(created);
     } catch (err) {
       console.error("Failed to seed default rules:", err);
-      setError("Impossible de créer les règles par défaut.");
+      setError(t("cannotCreateDefaultRules"));
     }
   };
 
@@ -134,10 +136,10 @@ export default function ChecklistPage() {
   };
 
   const getScoreLabel = (s: number) => {
-    if (s >= 90) return "Excellent — Tradez !";
-    if (s >= 80) return "Bon — OK pour trader";
-    if (s >= 60) return "Attention — Risque élevé";
-    return "STOP — Ne tradez pas";
+    if (s >= 90) return t("scoreLabelExcellent");
+    if (s >= 80) return t("scoreLabelGood");
+    if (s >= 60) return t("scoreLabelWarning");
+    return t("scoreLabelStop");
   };
 
   const saveEntry = () => {
@@ -164,7 +166,7 @@ export default function ChecklistPage() {
         body: JSON.stringify({ text: newRule.trim(), category: newCategory }),
       });
       if (!res.ok) {
-        throw new Error("Erreur lors de la création de la règle");
+        throw new Error(t("createRuleError"));
       }
       const data = await res.json();
       setRules((prev) => [...prev, { id: data.id, text: data.text, category: data.category || newCategory }]);
@@ -172,7 +174,7 @@ export default function ChecklistPage() {
       setShowAddRule(false);
     } catch (err) {
       console.error("Failed to add rule:", err);
-      setError("Impossible d'ajouter la règle.");
+      setError(t("cannotAddRule"));
     } finally {
       setSaving(false);
     }
@@ -183,19 +185,21 @@ export default function ChecklistPage() {
     try {
       const res = await fetch(`/api/trading-rules/${id}`, { method: "DELETE" });
       if (!res.ok) {
-        throw new Error("Erreur lors de la suppression");
+        throw new Error(t("deleteError"));
       }
       setRules((prev) => prev.filter((r) => r.id !== id));
     } catch (err) {
       console.error("Failed to delete rule:", err);
-      setError("Impossible de supprimer la règle.");
+      setError(t("cannotDeleteRule"));
     }
   };
 
   // Group rules by category
   const grouped = Object.entries(CATEGORIES).map(([key, cat]) => ({
     key: key as Rule["category"],
-    ...cat,
+    label: t(cat.labelKey),
+    icon: cat.icon,
+    color: cat.color,
     rules: rules.filter((r) => r.category === key),
   }));
 
@@ -208,7 +212,7 @@ export default function ChecklistPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-          <p className="text-sm text-[--text-secondary]">Chargement des règles...</p>
+          <p className="text-sm text-[--text-secondary]">{t("loadingRules")}</p>
         </div>
       </div>
     );
@@ -219,15 +223,15 @@ export default function ChecklistPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[--text-primary]">Checklist Pré-Trade</h1>
-          <p className="text-sm text-[--text-secondary]">Vérifiez vos règles avant chaque session de trading</p>
+          <h1 className="text-2xl font-bold text-[--text-primary]">{t("preTradeChecklist")}</h1>
+          <p className="text-sm text-[--text-secondary]">{t("preTradeChecklistDesc")}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={resetChecks} className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] hover:text-[--text-primary] text-sm">
             <RotateCcw className="w-4 h-4" /> Reset
           </button>
           <button onClick={saveEntry} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-sm font-medium">
-            <Save className="w-4 h-4" /> Sauvegarder
+            <Save className="w-4 h-4" /> {t("save")}
           </button>
         </div>
       </div>
@@ -243,12 +247,12 @@ export default function ChecklistPage() {
       <div className={`glass rounded-2xl p-6 border-2 transition-all ${canTrade ? "border-emerald-500/30" : score >= 60 ? "border-amber-500/30" : "border-rose-500/30"}`}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-[--text-muted]">Score de Discipline</p>
+            <p className="text-sm text-[--text-muted]">{t("disciplineScore")}</p>
             <p className={`text-5xl font-bold mono mt-2 ${getScoreColor(score)}`}>{score}%</p>
             <p className={`text-sm font-medium mt-2 ${getScoreColor(score)}`}>{getScoreLabel(score)}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-[--text-muted]">{checkedCount}/{rules.length} règles</p>
+            <p className="text-sm text-[--text-muted]">{checkedCount}/{rules.length} {t("rules")}</p>
             {/* Circular progress */}
             <div className="relative w-24 h-24 mt-2">
               <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
@@ -311,7 +315,7 @@ export default function ChecklistPage() {
                 </div>
               ))}
               {catRules.length === 0 && (
-                <p className="text-sm text-[--text-muted] text-center py-2">Aucune règle dans cette catégorie</p>
+                <p className="text-sm text-[--text-muted] text-center py-2">{t("noRulesInCategory")}</p>
               )}
             </div>
           </div>
@@ -320,11 +324,11 @@ export default function ChecklistPage() {
 
       {/* Notes */}
       <div className="glass rounded-2xl p-5">
-        <h3 className="font-semibold text-[--text-primary] mb-3">Notes de Session</h3>
+        <h3 className="font-semibold text-[--text-primary] mb-3">{t("sessionNotes")}</h3>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Notez votre état mental, les conditions de marché, etc..."
+          placeholder={t("sessionNotesPlaceholder")}
           className="input-field h-24 resize-none"
         />
       </div>
@@ -335,27 +339,27 @@ export default function ChecklistPage() {
           onClick={() => setEditMode(!editMode)}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${editMode ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" : "glass text-[--text-secondary] hover:text-[--text-primary]"}`}
         >
-          <GripVertical className="w-4 h-4" /> {editMode ? "Terminer" : "Modifier les règles"}
+          <GripVertical className="w-4 h-4" /> {editMode ? t("done") : t("editRules")}
         </button>
         <button
           onClick={() => setShowAddRule(!showAddRule)}
           className="flex items-center gap-2 px-4 py-2 rounded-xl glass text-[--text-secondary] hover:text-[--text-primary] text-sm"
         >
-          <Plus className="w-4 h-4" /> Ajouter une règle
+          <Plus className="w-4 h-4" /> {t("addRule")}
         </button>
       </div>
 
       {showAddRule && (
         <div className="glass rounded-2xl p-5">
-          <h3 className="font-semibold text-[--text-primary] mb-3">Nouvelle Règle</h3>
+          <h3 className="font-semibold text-[--text-primary] mb-3">{t("newRule")}</h3>
           <div className="flex gap-3">
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as Rule["category"])}
               className="input-field w-48"
             >
-              {Object.entries(CATEGORIES).map(([key, { label }]) => (
-                <option key={key} value={key}>{label}</option>
+              {Object.entries(CATEGORIES).map(([key, { labelKey }]) => (
+                <option key={key} value={key}>{t(labelKey)}</option>
               ))}
             </select>
             <input
@@ -363,7 +367,7 @@ export default function ChecklistPage() {
               value={newRule}
               onChange={(e) => setNewRule(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addRule()}
-              placeholder="Texte de la règle..."
+              placeholder={t("ruleTextPlaceholder")}
               className="input-field flex-1"
             />
             <button
@@ -371,7 +375,7 @@ export default function ChecklistPage() {
               disabled={saving}
               className="px-6 py-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-medium text-sm disabled:opacity-50"
             >
-              {saving ? "..." : "Ajouter"}
+              {saving ? "..." : t("add")}
             </button>
           </div>
         </div>
@@ -379,18 +383,18 @@ export default function ChecklistPage() {
 
       {/* History */}
       <div className="glass rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-[--text-primary] mb-4">Historique de Discipline</h3>
+        <h3 className="text-lg font-semibold text-[--text-primary] mb-4">{t("disciplineHistory")}</h3>
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="metric-card rounded-xl p-4 text-center">
-            <p className="text-xs text-[--text-muted]">Score Moyen</p>
+            <p className="text-xs text-[--text-muted]">{t("averageScore")}</p>
             <p className={`text-2xl font-bold mono ${getScoreColor(avgScore)}`}>{avgScore}%</p>
           </div>
           <div className="metric-card rounded-xl p-4 text-center">
-            <p className="text-xs text-[--text-muted]">Jours Parfaits</p>
+            <p className="text-xs text-[--text-muted]">{t("perfectDays")}</p>
             <p className="text-2xl font-bold text-emerald-400">{perfectDays}</p>
           </div>
           <div className="metric-card rounded-xl p-4 text-center">
-            <p className="text-xs text-[--text-muted]">Sessions Loguées</p>
+            <p className="text-xs text-[--text-muted]">{t("loggedSessions")}</p>
             <p className="text-2xl font-bold text-cyan-400">{history.length}</p>
           </div>
         </div>
@@ -408,7 +412,7 @@ export default function ChecklistPage() {
             />
           ))}
           {history.length === 0 && (
-            <p className="text-sm text-[--text-muted] w-full text-center py-8">Aucun historique — sauvegardez votre première checklist !</p>
+            <p className="text-sm text-[--text-muted] w-full text-center py-8">{t("noHistorySaveFirst")}</p>
           )}
         </div>
       </div>

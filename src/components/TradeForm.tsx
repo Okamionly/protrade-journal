@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, ArrowUp, ArrowDown, Upload, Plus } from "lucide-react";
 import { Trade } from "@/hooks/useTrades";
 import { useStrategies } from "@/hooks/useStrategies";
+import { useTranslation } from "@/i18n/context";
 
 interface TradeFormProps {
   onSubmit: (trade: Record<string, unknown>) => Promise<boolean>;
@@ -13,10 +14,11 @@ interface TradeFormProps {
 
 const ASSETS = ["EUR/USD", "GBP/USD", "USD/JPY", "XAU/USD", "BTC/USD", "USD/CHF", "AUD/USD", "NZD/USD", "USD/CAD", "EUR/GBP", "EUR/JPY", "GBP/JPY"];
 const FALLBACK_STRATEGIES = ["Breakout", "Retracement", "Support/Resistance", "Trend Following", "Scalping"];
-const EMOTIONS = ["Confiant", "Peur", "Gourmand", "Impatient", "Neutre"];
+const EMOTION_KEYS = ["confident", "fear", "greedy", "impatient", "neutralEmotion", "stressed", "frustrated", "euphoric"] as const;
 
 export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
   const { strategies } = useStrategies();
+  const { t } = useTranslation();
   const [direction, setDirection] = useState(editTrade?.direction || "LONG");
   const [loading, setLoading] = useState(false);
   const [screenshots, setScreenshots] = useState<string[]>([]);
@@ -100,7 +102,7 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
       <div className="glass rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="p-6 flex justify-between items-center" style={{ borderBottom: "1px solid var(--border)" }}>
           <h3 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {editTrade ? "Modifier le Trade" : "Nouveau Trade"}
+            {editTrade ? t("editTrade") : t("newTradeTitle")}
           </h3>
           <button onClick={onClose} style={{ color: "var(--text-muted)" }} className="hover:opacity-80">
             <X className="w-6 h-6" />
@@ -109,7 +111,7 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Date & Heure</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("dateTime")}</label>
               <input
                 type="datetime-local"
                 name="date"
@@ -119,7 +121,7 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
               />
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Actif</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("asset")}</label>
               <select name="asset" defaultValue={editTrade?.asset || ASSETS[0]} className="input-field">
                 {ASSETS.map((a) => (
                   <option key={a}>{a}</option>
@@ -130,7 +132,7 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Direction</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("direction")}</label>
               <div className="flex space-x-2">
                 <button
                   type="button"
@@ -159,7 +161,7 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
               </div>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Stratégie</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("strategy")}</label>
               <div className="flex gap-2">
                 <select name="strategy" defaultValue={editTrade?.strategy || strategyNames[0]} className="input-field flex-1">
                   {strategyNames.map((s) => (
@@ -171,7 +173,7 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
                   onClick={() => setShowNewStrategy(!showNewStrategy)}
                   className="p-2 rounded-xl hover:bg-blue-500/10 transition"
                   style={{ border: "1px solid var(--border-input)", color: "var(--text-muted)" }}
-                  title="Nouvelle stratégie"
+                  title={t("newStrategy")}
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -182,7 +184,7 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
                     value={newStratName}
                     onChange={(e) => setNewStratName(e.target.value)}
                     className="input-field flex-1"
-                    placeholder="Nom de la stratégie"
+                    placeholder={t("strategyName")}
                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleCreateStrategy())}
                   />
                   <button type="button" onClick={handleCreateStrategy} className="btn-primary text-white px-3 py-1 rounded-lg text-sm">
@@ -195,30 +197,30 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Prix d&apos;entrée</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("entryPrice")}</label>
               <input type="number" step="0.00001" name="entry" defaultValue={editTrade?.entry} className="input-field mono" required />
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Stop Loss</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("stopLoss")}</label>
               <input type="number" step="0.00001" name="sl" defaultValue={editTrade?.sl} className="input-field mono" required />
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Take Profit</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("takeProfit")}</label>
               <input type="number" step="0.00001" name="tp" defaultValue={editTrade?.tp} className="input-field mono" required />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Taille (Lots)</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("lotSize")}</label>
               <input type="number" step="0.01" name="lots" defaultValue={editTrade?.lots} className="input-field mono" required />
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Prix de sortie</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("exitPrice")}</label>
               <input type="number" step="0.00001" name="exit" defaultValue={editTrade?.exit ?? undefined} className="input-field mono" />
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Résultat (€)</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("resultEur")}</label>
               <input type="number" step="0.01" name="result" defaultValue={editTrade?.result} className="input-field mono" required />
             </div>
           </div>
@@ -226,25 +228,25 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
           {/* Commission, Swap, MAE, MFE */}
           <div className="grid grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Commission (€)</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("commissionEur")}</label>
               <input type="number" step="0.01" name="commission" defaultValue={0} className="input-field mono" />
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Swap (€)</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("swapEur")}</label>
               <input type="number" step="0.01" name="swap" defaultValue={0} className="input-field mono" />
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>MAE (prix)</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("maePrice")}</label>
               <input type="number" step="0.00001" name="maePrice" className="input-field mono" placeholder="Optionnel" />
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>MFE (prix)</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("mfePrice")}</label>
               <input type="number" step="0.00001" name="mfePrice" className="input-field mono" placeholder="Optionnel" />
             </div>
           </div>
 
           <div className="pt-2" style={{ borderTop: "1px solid var(--border)" }}>
-            <label className="block text-sm mb-2" style={{ color: "var(--text-secondary)" }}>Captures d&apos;écran du Setup</label>
+            <label className="block text-sm mb-2" style={{ color: "var(--text-secondary)" }}>{t("setupScreenshots")}</label>
             <div
               className={`screenshot-preview rounded-xl p-8 text-center cursor-pointer ${screenshots.length > 0 ? "has-image" : ""}`}
               onClick={() => document.getElementById("screenshotInput")?.click()}
@@ -253,8 +255,8 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
               {screenshots.length === 0 ? (
                 <div>
                   <Upload className="w-10 h-10 mx-auto mb-3" style={{ color: "var(--text-muted)" }} />
-                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Cliquez pour ajouter des screenshots</p>
-                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>JPG, PNG, WEBP (max 5MB)</p>
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{t("clickToAddScreenshots")}</p>
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{t("imageFormats")}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
@@ -279,31 +281,31 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Setup / Description</label>
-            <textarea name="setup" rows={3} defaultValue={editTrade?.setup || ""} className="input-field" placeholder="Décrivez votre analyse..." />
+            <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("setupDescription")}</label>
+            <textarea name="setup" rows={3} defaultValue={editTrade?.setup || ""} className="input-field" placeholder={t("describeAnalysis")} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Émotion / Psychologie</label>
-              <select name="emotion" defaultValue={editTrade?.emotion || EMOTIONS[0]} className="input-field">
-                {EMOTIONS.map((e) => (
-                  <option key={e}>{e}</option>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("emotionPsychology")}</label>
+              <select name="emotion" defaultValue={editTrade?.emotion || t(EMOTION_KEYS[0])} className="input-field">
+                {EMOTION_KEYS.map((key) => (
+                  <option key={key} value={t(key)}>{t(key)}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Tags</label>
-              <input type="text" name="tags" defaultValue={editTrade?.tags || ""} className="input-field" placeholder="scalp, tendance, news..." />
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("tags")}</label>
+              <input type="text" name="tags" defaultValue={editTrade?.tags || ""} className="input-field" placeholder={t("tagsPlaceholder")} />
             </div>
           </div>
 
           <div className="flex space-x-3 pt-4">
             <button type="button" onClick={onClose} className="flex-1 py-3 rounded-lg transition" style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}>
-              Annuler
+              {t("cancel")}
             </button>
             <button type="submit" disabled={loading} className="flex-1 py-3 rounded-lg btn-primary text-white font-medium disabled:opacity-50">
-              {loading ? "Enregistrement..." : editTrade ? "Sauvegarder les modifications" : "Enregistrer le Trade"}
+              {loading ? t("saving") : editTrade ? t("saveChanges") : t("saveTrade")}
             </button>
           </div>
         </form>

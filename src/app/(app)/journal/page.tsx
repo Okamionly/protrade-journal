@@ -7,10 +7,12 @@ import { useToast } from "@/components/Toast";
 import { calculateRR, formatDate } from "@/lib/utils";
 import { useState, useMemo, useCallback } from "react";
 import { Plus, Search, Camera, Trash2, Pencil, FilterX, ArrowUpDown, Download, X } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 export default function JournalPage() {
   const { trades, loading, addTrade, deleteTrade, bulkDeleteTrades, updateTrade } = useTrades();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [search, setSearch] = useState("");
@@ -99,7 +101,7 @@ export default function JournalPage() {
 
   // CSV Export
   const exportCSV = useCallback(() => {
-    const headers = ["Date", "Actif", "Direction", "Entrée", "Sortie", "Résultat", "Émotion", "Stratégie", "Commission", "Swap"];
+    const headers = [t("dateCol"), t("assetCol"), t("directionCol"), t("entry"), t("exit"), t("resultCol"), t("emotionCol"), t("strategyCol"), "Commission", "Swap"];
     const escapeCSV = (val: string | number | null | undefined) => {
       const str = val == null ? "" : String(val);
       if (str.includes(",") || str.includes('"') || str.includes("\n")) {
@@ -130,8 +132,8 @@ export default function JournalPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast("Export CSV terminé", "success");
-  }, [sorted, toast]);
+    toast(t("csvExported"), "success");
+  }, [sorted, toast, t]);
 
   // Bulk delete
   const handleBulkDelete = async () => {
@@ -139,10 +141,10 @@ export default function JournalPage() {
     const ids = [...selectedIds];
     const ok = await bulkDeleteTrades(ids);
     if (ok) {
-      toast(`${ids.length} trade${ids.length > 1 ? "s" : ""} supprimé${ids.length > 1 ? "s" : ""}`, "success");
+      toast(t("tradeDeleted"), "success");
       setSelectedIds(new Set());
     } else {
-      toast("Erreur lors de la suppression", "error");
+      toast(t("deleteError"), "error");
     }
     setBulkDeleting(false);
     setShowDeleteModal(false);
@@ -150,24 +152,24 @@ export default function JournalPage() {
 
   const handleAddTrade = async (trade: Record<string, unknown>) => {
     const ok = await addTrade(trade);
-    if (ok) toast("Trade créé avec succès", "success");
-    else toast("Erreur lors de la création", "error");
+    if (ok) toast(t("tradeCreated"), "success");
+    else toast(t("tradeCreateError"), "error");
     return ok;
   };
 
   const handleUpdateTrade = async (trade: Record<string, unknown>) => {
     if (!editingTrade) return false;
     const ok = await updateTrade(editingTrade.id, trade);
-    if (ok) toast("Trade modifié avec succès", "success");
-    else toast("Erreur lors de la modification", "error");
+    if (ok) toast(t("tradeEdited"), "success");
+    else toast(t("tradeEditError"), "error");
     return ok;
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Supprimer ce trade ?")) {
+    if (confirm(t("deleteConfirm"))) {
       const ok = await deleteTrade(id);
-      if (ok) toast("Trade supprimé", "success");
-      else toast("Erreur lors de la suppression", "error");
+      if (ok) toast(t("tradeDeleted"), "success");
+      else toast(t("tradeDeleteError"), "error");
     }
   };
 
@@ -177,18 +179,18 @@ export default function JournalPage() {
     <>
       <div className="glass rounded-2xl p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Historique Complet</h3>
+          <h3 className="text-lg font-semibold">{t("fullHistory")}</h3>
           <div className="flex items-center gap-2">
             <button
               onClick={exportCSV}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition"
             >
               <Download className="w-4 h-4" />
-              Exporter CSV
+              {t("exportCsv")}
             </button>
             <button onClick={() => setShowForm(true)} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center">
               <Plus className="w-4 h-4 mr-2" />
-              Nouveau Trade
+              {t("newTrade")}
             </button>
           </div>
         </div>
@@ -199,29 +201,29 @@ export default function JournalPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--text-muted]" />
             <input
               type="text"
-              placeholder="Rechercher..."
+              placeholder={t("search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg pl-10 pr-4 py-2 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:border-cyan-500/50 focus:outline-none transition"
             />
           </div>
           <select value={assetFilter} onChange={(e) => setAssetFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
-            <option value="all">Tous les actifs</option>
+            <option value="all">{t("allAssets")}</option>
             {assets.map((a) => (<option key={a} value={a}>{a}</option>))}
           </select>
           <select value={directionFilter} onChange={(e) => setDirectionFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
-            <option value="all">Toutes directions</option>
+            <option value="all">{t("allDirections")}</option>
             <option value="LONG">LONG</option>
             <option value="SHORT">SHORT</option>
           </select>
           <select value={resultFilter} onChange={(e) => setResultFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
-            <option value="all">Tous résultats</option>
-            <option value="win">Gagnants</option>
-            <option value="loss">Perdants</option>
-            <option value="be">Break-even</option>
+            <option value="all">{t("allResults")}</option>
+            <option value="win">{t("winnersFilter")}</option>
+            <option value="loss">{t("losersFilter")}</option>
+            <option value="be">{t("breakeven")}</option>
           </select>
           <select value={emotionFilter} onChange={(e) => setEmotionFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
-            <option value="all">Toutes émotions</option>
+            <option value="all">{t("allEmotions")}</option>
             {[...new Set(trades.map(t => t.emotion).filter((e): e is string => !!e))].map(e => <option key={e} value={e}>{e}</option>)}
           </select>
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-2 py-2 text-sm" />
@@ -231,18 +233,18 @@ export default function JournalPage() {
           {hasFilters && (
             <button onClick={resetFilters} className="flex items-center gap-1 text-sm text-[--text-secondary] hover:text-[--text-primary] transition">
               <FilterX className="w-4 h-4" />
-              Réinitialiser
+              {t("reset")}
             </button>
           )}
           <div className="flex items-center gap-2 ml-auto">
             <ArrowUpDown className="w-3.5 h-3.5 text-[--text-muted]" />
             <select value={`${sortBy}-${sortDir}`} onChange={(e) => { const [s, d] = e.target.value.split("-"); setSortBy(s as "date" | "result" | "rr"); setSortDir(d as "asc" | "desc"); }} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-2 py-1 text-xs">
-              <option value="date-desc">Date (récent)</option>
-              <option value="date-asc">Date (ancien)</option>
-              <option value="result-desc">P&L (meilleur)</option>
-              <option value="result-asc">P&L (pire)</option>
-              <option value="rr-desc">R:R (meilleur)</option>
-              <option value="rr-asc">R:R (pire)</option>
+              <option value="date-desc">{t("sortByDate")}</option>
+              <option value="date-asc">Date (asc)</option>
+              <option value="result-desc">{t("sortByResult")} ↓</option>
+              <option value="result-asc">{t("sortByResult")} ↑</option>
+              <option value="rr-desc">R:R ↓</option>
+              <option value="rr-asc">R:R ↑</option>
             </select>
           </div>
           <span className="text-sm text-[--text-muted]">{filtered.length} trade{filtered.length !== 1 ? "s" : ""}</span>
@@ -259,27 +261,27 @@ export default function JournalPage() {
                     onChange={toggleSelectAll}
                     disabled={sorted.length === 0}
                     className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
-                    title="Tout sélectionner"
+                    title={t("selectAll")}
                   />
                 </th>
-                <th className="pb-3 font-medium">Date</th>
-                <th className="pb-3 font-medium">Actif</th>
-                <th className="pb-3 font-medium">Direction</th>
-                <th className="pb-3 font-medium">Stratégie</th>
-                <th className="pb-3 font-medium">Setup</th>
-                <th className="pb-3 font-medium">Screenshots</th>
-                <th className="pb-3 font-medium">Entrée/Sortie</th>
-                <th className="pb-3 font-medium">Lots</th>
-                <th className="pb-3 font-medium">R:R</th>
-                <th className="pb-3 font-medium">Résultat</th>
-                <th className="pb-3 font-medium">Émotion</th>
-                <th className="pb-3 font-medium">Actions</th>
+                <th className="pb-3 font-medium">{t("dateCol")}</th>
+                <th className="pb-3 font-medium">{t("assetCol")}</th>
+                <th className="pb-3 font-medium">{t("directionCol")}</th>
+                <th className="pb-3 font-medium">{t("strategyCol")}</th>
+                <th className="pb-3 font-medium">{t("setupCol")}</th>
+                <th className="pb-3 font-medium">{t("screenshotsCol")}</th>
+                <th className="pb-3 font-medium">{t("entryExitCol")}</th>
+                <th className="pb-3 font-medium">{t("lotsCol")}</th>
+                <th className="pb-3 font-medium">{t("rrCol")}</th>
+                <th className="pb-3 font-medium">{t("resultCol")}</th>
+                <th className="pb-3 font-medium">{t("emotionCol")}</th>
+                <th className="pb-3 font-medium">{t("actionsCol")}</th>
               </tr>
             </thead>
             <tbody className="text-sm">
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="py-8 text-center text-[--text-muted]">Aucun trade trouvé</td>
+                  <td colSpan={13} className="py-8 text-center text-[--text-muted]">{t("noTradesFound")}</td>
                 </tr>
               ) : (
                 sorted.map((trade) => {
@@ -314,7 +316,7 @@ export default function JournalPage() {
                           </span>
                         ) : "-"}
                       </td>
-                      <td className="py-4 mono">{trade.entry} → {trade.exit || "Open"}</td>
+                      <td className="py-4 mono">{trade.entry} → {trade.exit || t("open")}</td>
                       <td className="py-4 mono">{trade.lots}</td>
                       <td className="py-4 mono text-[--text-secondary]">1:{rr}</td>
                       <td className={`py-4 mono font-bold ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
@@ -344,19 +346,19 @@ export default function JournalPage() {
       {someSelected && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 glass rounded-xl px-6 py-3 flex items-center gap-4 shadow-2xl border border-[--border] animate-in slide-in-from-bottom-4">
           <span className="text-sm font-medium">
-            {selectedIds.size} trade{selectedIds.size > 1 ? "s" : ""} sélectionné{selectedIds.size > 1 ? "s" : ""}
+            {selectedIds.size} trade{selectedIds.size > 1 ? "s" : ""}
           </span>
           <button
             onClick={() => setShowDeleteModal(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 transition"
           >
             <Trash2 className="w-4 h-4" />
-            Supprimer {selectedIds.size} trade{selectedIds.size > 1 ? "s" : ""}
+            {t("delete")} {selectedIds.size} trade{selectedIds.size > 1 ? "s" : ""}
           </button>
           <button
             onClick={clearSelection}
             className="text-[--text-muted] hover:text-[--text-primary] transition"
-            title="Annuler la sélection"
+            title={t("cancelSelection")}
           >
             <X className="w-4 h-4" />
           </button>
@@ -367,9 +369,9 @@ export default function JournalPage() {
       {showDeleteModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="glass rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-[--border]">
-            <h3 className="text-lg font-semibold mb-3">Confirmer la suppression</h3>
+            <h3 className="text-lg font-semibold mb-3">{t("confirmDeletion")}</h3>
             <p className="text-sm text-[--text-secondary] mb-6">
-              Êtes-vous sûr de vouloir supprimer {selectedIds.size} trade{selectedIds.size > 1 ? "s" : ""} ? Cette action est irréversible.
+              {t("confirmDeleteMsg")}
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -377,14 +379,14 @@ export default function JournalPage() {
                 disabled={bulkDeleting}
                 className="px-4 py-2 rounded-lg text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition"
               >
-                Annuler
+                {t("cancel")}
               </button>
               <button
                 onClick={handleBulkDelete}
                 disabled={bulkDeleting}
                 className="px-4 py-2 rounded-lg text-sm font-medium bg-rose-500 text-white hover:bg-rose-600 transition disabled:opacity-50"
               >
-                {bulkDeleting ? "Suppression..." : `Supprimer ${selectedIds.size} trade${selectedIds.size > 1 ? "s" : ""}`}
+                {bulkDeleting ? t("deleting") : `${t("delete")} ${selectedIds.size} trade${selectedIds.size > 1 ? "s" : ""}`}
               </button>
             </div>
           </div>

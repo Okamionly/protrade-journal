@@ -633,3 +633,43 @@ html:not(.dark):not(.oled) .metric-card {
 .animate-pulse > div {
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
+
+/* ========== MOBILE RESPONSIVE ========== */
+@media (max-width: 767px) {
+  /* Hide sidebar by default on mobile */
+  aside {
+    display: none;
+  }
+
+  /* Show sidebar when parent has translate-x-0 */
+  .translate-x-0 aside {
+    display: flex;
+  }
+
+  /* Reduce header left offset on mobile */
+  header {
+    left: 0 !important;
+    padding-left: 3rem;
+  }
+
+  /* Tables: ensure horizontal scroll */
+  table {
+    font-size: 12px;
+  }
+
+  /* Smaller text for metric cards on mobile */
+  .metric-card h3 {
+    font-size: 1.5rem;
+  }
+
+  /* Glass cards: reduce padding on mobile */
+  .glass {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Modal inputs full width */
+  .modal-input {
+    width: 100%;
+  }
+}

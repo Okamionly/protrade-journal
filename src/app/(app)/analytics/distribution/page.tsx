@@ -4,6 +4,7 @@ import { useTrades } from "@/hooks/useTrades";
 import { useMemo, useState } from "react";
 import { computeHourlyDistribution, computeDayDistribution, computeSessionDistribution, type Trade } from "@/lib/advancedStats";
 import { Clock, Calendar, Globe2, Crosshair, Grid3X3 } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 function BarChart({ data, labelKey, valueKey, colorFn }: { data: Record<string, unknown>[]; labelKey: string; valueKey: string; colorFn: (v: number) => string }) {
   const maxVal = Math.max(...data.map((d) => Math.abs(d[valueKey] as number)), 1);
@@ -113,6 +114,7 @@ function getHeatmapColor(pnl: number, maxPnl: number): string {
 }
 
 export default function DistributionPage() {
+  const { t } = useTranslation();
   const { trades, loading } = useTrades();
 
   const hourly = useMemo(() => computeHourlyDistribution(trades as unknown as Trade[]), [trades]);
@@ -145,9 +147,9 @@ export default function DistributionPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Distribution des Trades</h1>
+        <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{t("distribution")}</h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          Analysez quand vous tradez le mieux — par heure, jour et session.
+          {t("distribution")} — {t("analytics")}
         </p>
       </div>
 
@@ -158,7 +160,7 @@ export default function DistributionPage() {
             <div className="metric-card rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-2">
                 <Clock className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Meilleure heure</span>
+                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("best")} {t("forexSessions")}</span>
               </div>
               <div className="text-2xl font-bold mono" style={{ color: "#10b981" }}>{bestHour.hour}h00</div>
               <div className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
@@ -170,7 +172,7 @@ export default function DistributionPage() {
             <div className="metric-card rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-2">
                 <Calendar className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Meilleur jour</span>
+                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("bestTrade")}</span>
               </div>
               <div className="text-2xl font-bold" style={{ color: "#10b981" }}>{bestDay.dayName}</div>
               <div className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
@@ -182,7 +184,7 @@ export default function DistributionPage() {
             <div className="metric-card rounded-2xl p-5">
               <div className="flex items-center gap-2 mb-2">
                 <Globe2 className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Meilleure session</span>
+                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("session")}</span>
               </div>
               <div className="text-2xl font-bold" style={{ color: bestSession.color }}>{bestSession.session}</div>
               <div className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
@@ -194,7 +196,7 @@ export default function DistributionPage() {
             <div className="metric-card rounded-2xl p-5" style={{ borderLeft: "3px solid #f59e0b" }}>
               <div className="flex items-center gap-2 mb-2">
                 <Crosshair className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Meilleure Fen&ecirc;tre</span>
+                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("best")}</span>
               </div>
               <div className="text-2xl font-bold mono" style={{ color: "#10b981" }}>
                 {heatmapData.bestCell.dayLabel} {heatmapData.bestCell.hour}h
@@ -210,7 +212,7 @@ export default function DistributionPage() {
       {/* Session Distribution */}
       <div className="metric-card rounded-2xl p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <Globe2 className="w-5 h-5 text-cyan-400" /> Performance par Session Forex
+          <Globe2 className="w-5 h-5 text-cyan-400" /> {t("forexSessions")}
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {sessions.map((s) => (
@@ -238,10 +240,10 @@ export default function DistributionPage() {
       {/* Hourly Distribution */}
       <div className="metric-card rounded-2xl p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <Clock className="w-5 h-5 text-cyan-400" /> P&L par Heure
+          <Clock className="w-5 h-5 text-cyan-400" /> P&L / {t("heatmap")}
         </h3>
         {trades.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade pour analyser.</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noData")}</p>
         ) : (
           <div className="flex items-end gap-[2px] h-48">
             {hourly.map((h) => {
@@ -265,10 +267,10 @@ export default function DistributionPage() {
       {/* Day of Week Distribution */}
       <div className="metric-card rounded-2xl p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <Calendar className="w-5 h-5 text-cyan-400" /> P&L par Jour de la Semaine
+          <Calendar className="w-5 h-5 text-cyan-400" /> P&L / {t("weeklyRecap")}
         </h3>
         {trades.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade pour analyser.</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noData")}</p>
         ) : (
           <BarChart
             data={daily.filter((d) => d.day >= 1 && d.day <= 5) as unknown as Record<string, unknown>[]}
@@ -282,10 +284,10 @@ export default function DistributionPage() {
       {/* Hour × Day Heatmap */}
       <div className="metric-card rounded-2xl p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <Grid3X3 className="w-5 h-5 text-cyan-400" /> Heatmap Heure &times; Jour
+          <Grid3X3 className="w-5 h-5 text-cyan-400" /> {t("heatmap")}
         </h3>
         {trades.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun trade pour analyser.</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noData")}</p>
         ) : (
           <div>
             {/* Tooltip on hover */}
@@ -362,7 +364,7 @@ export default function DistributionPage() {
 
             {/* Legend */}
             <div className="flex items-center justify-center gap-2 mt-4 text-[10px]" style={{ color: "var(--text-muted)" }}>
-              <span>Perte</span>
+              <span>{t("bearish")}</span>
               <div className="flex gap-[2px]">
                 <div className="w-4 h-4 rounded-sm" style={{ background: "rgba(239, 68, 68, 0.9)" }} />
                 <div className="w-4 h-4 rounded-sm" style={{ background: "rgba(239, 68, 68, 0.55)" }} />
@@ -372,7 +374,7 @@ export default function DistributionPage() {
                 <div className="w-4 h-4 rounded-sm" style={{ background: "rgba(16, 185, 129, 0.55)" }} />
                 <div className="w-4 h-4 rounded-sm" style={{ background: "rgba(16, 185, 129, 0.9)" }} />
               </div>
-              <span>Profit</span>
+              <span>{t("bullish")}</span>
             </div>
           </div>
         )}

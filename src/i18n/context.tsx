@@ -21,7 +21,7 @@ const dictionaries: Record<Locale, LbmaTranslations> = {
 interface LocaleContextValue {
   locale: Locale;
   setLocale: (l: Locale) => void;
-  t: (key: keyof LbmaTranslations) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
   dir: "ltr" | "rtl";
   dateFmt: string;
 }
@@ -53,8 +53,14 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, l);
   };
 
-  const t = (key: keyof LbmaTranslations): string => {
-    return dictionaries[locale][key] || dictionaries.fr[key] || key;
+  const t = (key: string, params?: Record<string, string | number>): string => {
+    let val = dictionaries[locale][key] || dictionaries.fr[key] || key;
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        val = val.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+      });
+    }
+    return val;
   };
 
   const dir = locale === "ar" ? "rtl" : "ltr";

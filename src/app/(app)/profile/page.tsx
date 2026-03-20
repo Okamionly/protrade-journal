@@ -28,6 +28,7 @@ import {
   Upload,
 } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/i18n/context";
 
 interface UserProfile {
   id: string;
@@ -60,12 +61,13 @@ const TIMEZONES = [
 ];
 
 const THEMES = [
-  { value: "dark", label: "Sombre", icon: Moon },
-  { value: "light", label: "Clair", icon: Sun },
-  { value: "oled", label: "OLED", icon: Monitor },
+  { value: "dark", labelKey: "themeDark", icon: Moon },
+  { value: "light", labelKey: "themeLight", icon: Sun },
+  { value: "oled", labelKey: "themeOled", icon: Monitor },
 ];
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -114,7 +116,7 @@ export default function ProfilePage() {
           setBalance(String(data.balance));
         }
       } catch {
-        toast("Erreur lors du chargement du profil", "error");
+        toast(t("profileLoadError"), "error");
       } finally {
         setLoading(false);
       }
@@ -156,13 +158,13 @@ export default function ProfilePage() {
         // Save preferences to localStorage
         localStorage.setItem("preferred-currency", currency);
         localStorage.setItem("preferred-timezone", timezone);
-        toast("Profil mis à jour avec succès", "success");
+        toast(t("profileUpdated"), "success");
       } else {
         const err = await res.json();
-        toast(err.error || "Erreur lors de la mise à jour", "error");
+        toast(err.error || t("profileUpdateError"), "error");
       }
     } catch {
-      toast("Erreur lors de la mise à jour", "error");
+      toast(t("profileUpdateError"), "error");
     } finally {
       setSavingProfile(false);
     }
@@ -171,11 +173,11 @@ export default function ProfilePage() {
   // Change password
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      toast("Les mots de passe ne correspondent pas", "error");
+      toast(t("passwordMismatch"), "error");
       return;
     }
     if (newPassword.length < 6) {
-      toast("Le mot de passe doit contenir au moins 6 caractères", "error");
+      toast(t("passwordTooShort"), "error");
       return;
     }
 
@@ -188,15 +190,15 @@ export default function ProfilePage() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast("Mot de passe modifié avec succès", "success");
+        toast(t("passwordChanged"), "success");
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
       } else {
-        toast(data.error || "Erreur lors du changement de mot de passe", "error");
+        toast(data.error || t("passwordChangeError"), "error");
       }
     } catch {
-      toast("Erreur lors du changement de mot de passe", "error");
+      toast(t("passwordChangeError"), "error");
     } finally {
       setChangingPassword(false);
     }
@@ -216,31 +218,31 @@ export default function ProfilePage() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast("Données exportées avec succès", "success");
+        toast(t("dataExported"), "success");
       } else {
-        toast("Erreur lors de l'exportation", "error");
+        toast(t("exportError"), "error");
       }
     } catch {
-      toast("Erreur lors de l'exportation", "error");
+      toast(t("exportError"), "error");
     }
   };
 
   // Delete account
   const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== "SUPPRIMER") return;
+    if (deleteConfirmText !== t("deleteConfirmWord")) return;
 
     setDeleting(true);
     try {
       const res = await fetch("/api/user/delete", { method: "POST" });
       if (res.ok) {
-        toast("Compte supprimé", "success");
+        toast(t("accountDeleted"), "success");
         await signOut({ callbackUrl: "/login" });
       } else {
         const data = await res.json();
-        toast(data.error || "Erreur lors de la suppression", "error");
+        toast(data.error || t("deleteError"), "error");
       }
     } catch {
-      toast("Erreur lors de la suppression", "error");
+      toast(t("deleteError"), "error");
     } finally {
       setDeleting(false);
     }
@@ -252,7 +254,7 @@ export default function ProfilePage() {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      toast("L'image ne doit pas dépasser 2 Mo", "error");
+      toast(t("imageTooLarge"), "error");
       return;
     }
 
@@ -261,7 +263,7 @@ export default function ProfilePage() {
       const base64 = reader.result as string;
       setAvatarUrl(base64);
       localStorage.setItem("user-avatar", base64);
-      toast("Photo de profil mise à jour", "success");
+      toast(t("avatarUpdated"), "success");
     };
     reader.readAsDataURL(file);
   };
@@ -285,7 +287,7 @@ export default function ProfilePage() {
     const next = !notifications;
     setNotifications(next);
     localStorage.setItem("notifications", String(next));
-    toast(next ? "Notifications activées" : "Notifications désactivées", "info");
+    toast(next ? t("notificationsEnabled") : t("notificationsDisabled"), "info");
   };
 
   // Get user initials
@@ -311,15 +313,15 @@ export default function ProfilePage() {
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profil & Paramètres</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("profileTitle")}</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Gérez vos informations personnelles, votre sécurité et vos préférences.
+          {t("profileSubtitle")}
         </p>
       </div>
 
       {/* ═══════════════════════════ PHOTO DE PROFIL ═══════════════════════════ */}
       <div className="bg-white/5 dark:bg-white/5 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Photo de Profil</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t("profilePhoto")}</h2>
         <div className="flex items-center gap-6">
           {/* Avatar */}
           <div className="relative group">
@@ -353,7 +355,7 @@ export default function ProfilePage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl px-4 py-2 text-gray-900 dark:text-white text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                  placeholder="Votre nom"
+                  placeholder={t("yourName")}
                   autoFocus
                 />
                 <button
@@ -378,7 +380,7 @@ export default function ProfilePage() {
             ) : (
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold text-gray-900 dark:text-white">
-                  {profile?.name || "Sans nom"}
+                  {profile?.name || t("noName")}
                 </span>
                 <button
                   onClick={() => setEditingName(true)}
@@ -390,7 +392,7 @@ export default function ProfilePage() {
             )}
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{profile?.email}</p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              Membre depuis {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }) : "—"}
+              {t("memberSince")} {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }) : "—"}
             </p>
           </div>
         </div>
@@ -398,17 +400,17 @@ export default function ProfilePage() {
 
       {/* ═══════════════════════════ INFORMATIONS PERSONNELLES ═══════════════════════════ */}
       <div className="bg-white/5 dark:bg-white/5 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Informations Personnelles</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t("personalInfo")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Nom */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">Nom</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">{t("profileName")}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition"
-              placeholder="Votre nom"
+              placeholder={t("yourName")}
             />
           </div>
           {/* Email (readonly) */}
@@ -423,7 +425,7 @@ export default function ProfilePage() {
           </div>
           {/* Balance initiale */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">Balance initiale</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">{t("initialBalance")}</label>
             <input
               type="number"
               value={balance}
@@ -436,7 +438,7 @@ export default function ProfilePage() {
           </div>
           {/* Devise */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">Devise préférée</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">{t("preferredCurrency")}</label>
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
@@ -451,7 +453,7 @@ export default function ProfilePage() {
           </div>
           {/* Fuseau horaire */}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">Fuseau horaire</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">{t("timezone")}</label>
             <select
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
@@ -473,7 +475,7 @@ export default function ProfilePage() {
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-medium hover:from-cyan-400 hover:to-blue-400 transition disabled:opacity-50 shadow-lg shadow-cyan-500/20"
           >
             {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Enregistrer
+            {t("save")}
           </button>
         </div>
       </div>
@@ -482,19 +484,19 @@ export default function ProfilePage() {
       <div className="bg-white/5 dark:bg-white/5 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-6">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Lock className="w-5 h-5 text-cyan-400" />
-          Sécurité
+          {t("security")}
         </h2>
         <div className="space-y-4 max-w-md">
           {/* Current Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">Mot de passe actuel</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">{t("currentPassword")}</label>
             <div className="relative">
               <input
                 type={showCurrentPassword ? "text" : "password"}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl px-4 py-2.5 pr-10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition"
-                placeholder="Votre mot de passe actuel"
+                placeholder={t("currentPasswordPlaceholder")}
               />
               <button
                 type="button"
@@ -507,14 +509,14 @@ export default function ProfilePage() {
           </div>
           {/* New Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">Nouveau mot de passe</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">{t("newPassword")}</label>
             <div className="relative">
               <input
                 type={showNewPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl px-4 py-2.5 pr-10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition"
-                placeholder="Nouveau mot de passe (6+ caractères)"
+                placeholder={t("newPasswordPlaceholder")}
               />
               <button
                 type="button"
@@ -527,16 +529,16 @@ export default function ProfilePage() {
           </div>
           {/* Confirm Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">Confirmer le mot de passe</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">{t("confirmPassword")}</label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition"
-              placeholder="Confirmer le nouveau mot de passe"
+              placeholder={t("confirmPasswordPlaceholder")}
             />
             {confirmPassword && newPassword !== confirmPassword && (
-              <p className="text-xs text-red-400 mt-1">Les mots de passe ne correspondent pas</p>
+              <p className="text-xs text-red-400 mt-1">{t("passwordMismatch")}</p>
             )}
           </div>
           {/* Submit */}
@@ -546,21 +548,21 @@ export default function ProfilePage() {
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-medium hover:from-cyan-400 hover:to-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20"
           >
             {changingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-            Changer le mot de passe
+            {t("changePassword")}
           </button>
         </div>
       </div>
 
       {/* ═══════════════════════════ ABONNEMENT VIP ═══════════════════════════ */}
       <div className="bg-white/5 dark:bg-white/5 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Abonnement</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t("subscription")}</h2>
 
         {profile?.role === "USER" && (
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 dark:text-gray-400">Aucun abonnement actif</p>
+              <p className="text-gray-600 dark:text-gray-400">{t("noActiveSubscription")}</p>
               <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                Passez au VIP pour débloquer toutes les fonctionnalités avancées.
+                {t("upgradeToVip")}
               </p>
             </div>
             <a
@@ -568,7 +570,7 @@ export default function ProfilePage() {
               className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-400 hover:to-orange-400 transition shadow-lg shadow-amber-500/20"
             >
               <Crown className="w-4 h-4" />
-              Devenir VIP
+              {t("becomeVip")}
             </a>
           </div>
         )}
@@ -578,14 +580,14 @@ export default function ProfilePage() {
             <div className="flex items-center gap-3">
               <div className="px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-full text-sm font-semibold flex items-center gap-1.5">
                 <Crown className="w-4 h-4" />
-                Membre VIP
+                {t("vipMember")}
               </div>
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              <p>Date d'expiration : <span className="text-gray-300">--/--/----</span></p>
+              <p>{t("expirationDate")} : <span className="text-gray-300">--/--/----</span></p>
             </div>
             <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-[var(--bg-hover)] transition">
-              Gérer mon abonnement
+              {t("manageSubscription")}
             </button>
           </div>
         )}
@@ -594,35 +596,35 @@ export default function ProfilePage() {
           <div className="flex items-center gap-3">
             <div className="px-3 py-1.5 bg-rose-500/20 text-rose-400 rounded-full text-sm font-semibold flex items-center gap-1.5">
               <Shield className="w-4 h-4" />
-              Administrateur
+              {t("administrator")}
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Accès complet à toutes les fonctionnalités.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t("adminFullAccess")}</p>
           </div>
         )}
       </div>
 
       {/* ═══════════════════════════ PRÉFÉRENCES ═══════════════════════════ */}
       <div className="bg-white/5 dark:bg-white/5 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Préférences</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t("preferences")}</h2>
         <div className="space-y-5">
           {/* Theme */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Thème par défaut</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">{t("defaultTheme")}</label>
             <div className="flex gap-2">
-              {THEMES.map((t) => {
-                const Icon = t.icon;
+              {THEMES.map((themeItem) => {
+                const Icon = themeItem.icon;
                 return (
                   <button
-                    key={t.value}
-                    onClick={() => handleThemeChange(t.value)}
+                    key={themeItem.value}
+                    onClick={() => handleThemeChange(themeItem.value)}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition ${
-                      theme === t.value
+                      theme === themeItem.value
                         ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
                         : "bg-white/5 text-gray-400 border border-white/10 hover:bg-[var(--bg-hover)] hover:text-gray-300"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    {t.label}
+                    {t(themeItem.labelKey)}
                   </button>
                 );
               })}
@@ -631,7 +633,7 @@ export default function ProfilePage() {
 
           {/* Language */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">Langue</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">{t("language")}</label>
             <div className="flex items-center gap-3">
               <select
                 value={language}
@@ -642,7 +644,7 @@ export default function ProfilePage() {
               </select>
               <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500">
                 <Globe className="w-3.5 h-3.5" />
-                D'autres langues seront disponibles prochainement.
+                {t("moreLanguagesSoon")}
               </span>
             </div>
           </div>
@@ -650,8 +652,8 @@ export default function ProfilePage() {
           {/* Notifications */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Notifications</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">Recevoir des alertes et rappels.</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("notifications")}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">{t("notificationsDesc")}</p>
             </div>
             <button
               onClick={handleNotificationsToggle}
@@ -671,14 +673,14 @@ export default function ProfilePage() {
 
       {/* ═══════════════════════════ DONNÉES & CONFIDENTIALITÉ ═══════════════════════════ */}
       <div className="bg-white/5 dark:bg-white/5 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Données & Confidentialité</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t("dataPrivacy")}</h2>
         <div className="space-y-4">
           {/* Export */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Exporter mes données</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("exportMyData")}</p>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                Télécharger un fichier JSON contenant tous vos trades et données.
+                {t("exportMyDataDesc")}
               </p>
             </div>
             <button
@@ -686,7 +688,7 @@ export default function ProfilePage() {
               className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-[var(--bg-hover)] transition"
             >
               <Download className="w-4 h-4" />
-              Exporter
+              {t("export")}
             </button>
           </div>
 
@@ -696,9 +698,9 @@ export default function ProfilePage() {
           {/* Export CSV trades */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Export CSV Trades</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("exportCsvTrades")}</p>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                Télécharger vos trades au format CSV (compatible Excel).
+                {t("exportCsvTradesDesc")}
               </p>
             </div>
             <button
@@ -713,10 +715,10 @@ export default function ProfilePage() {
                     a.download = "marketphase-export.csv";
                     a.click();
                     URL.revokeObjectURL(url);
-                    toast("Trades exportés en CSV", "success");
+                    toast(t("csvExported"), "success");
                   }
                 } catch {
-                  toast("Erreur lors de l'export", "error");
+                  toast(t("exportError"), "error");
                 }
               }}
               className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-[var(--bg-hover)] transition"
@@ -732,9 +734,9 @@ export default function ProfilePage() {
           {/* Import CSV */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Import CSV Trades</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("importCsvTrades")}</p>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                Importer des trades depuis MT4, MT5, cTrader ou TradingView.
+                {t("importCsvTradesDesc")}
               </p>
             </div>
             <Link
@@ -742,7 +744,7 @@ export default function ProfilePage() {
               className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-[var(--bg-hover)] transition"
             >
               <Upload className="w-4 h-4" />
-              Importer
+              {t("importCsv")}
             </Link>
           </div>
 
@@ -752,9 +754,9 @@ export default function ProfilePage() {
           {/* Delete account */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-red-400">Supprimer mon compte</p>
+              <p className="text-sm font-medium text-red-400">{t("deleteMyAccount")}</p>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                Cette action est irréversible. Toutes vos données seront définitivement supprimées.
+                {t("deleteMyAccountDesc")}
               </p>
             </div>
             <button
@@ -762,7 +764,7 @@ export default function ProfilePage() {
               className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm hover:bg-red-500/20 transition"
             >
               <Trash2 className="w-4 h-4" />
-              Supprimer
+              {t("delete")}
             </button>
           </div>
         </div>
@@ -776,22 +778,22 @@ export default function ProfilePage() {
               <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-red-400" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Supprimer votre compte</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t("deleteAccountTitle")}</h3>
             </div>
             <div className="space-y-3 mb-5">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Cette action supprimera définitivement :
+                {t("deleteAccountWillDelete")}
               </p>
               <ul className="text-sm text-gray-500 dark:text-gray-400 space-y-1 list-disc list-inside">
-                <li>Tous vos trades et screenshots</li>
-                <li>Vos stratégies et tags</li>
-                <li>Vos plans quotidiens et objectifs</li>
-                <li>Vos messages dans le chat</li>
-                <li>Toutes vos données personnelles</li>
+                <li>{t("deleteAccountItem1")}</li>
+                <li>{t("deleteAccountItem2")}</li>
+                <li>{t("deleteAccountItem3")}</li>
+                <li>{t("deleteAccountItem4")}</li>
+                <li>{t("deleteAccountItem5")}</li>
               </ul>
               <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
                 <p className="text-xs text-red-400 font-medium">
-                  Tapez SUPPRIMER pour confirmer la suppression de votre compte.
+                  {t("deleteAccountTypeConfirm")}
                 </p>
               </div>
               <input
@@ -799,7 +801,7 @@ export default function ProfilePage() {
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
                 className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                placeholder="Tapez SUPPRIMER"
+                placeholder={t("deleteAccountPlaceholder")}
               />
             </div>
             <div className="flex gap-3 justify-end">
@@ -810,15 +812,15 @@ export default function ProfilePage() {
                 }}
                 className="px-4 py-2 bg-white/5 border border-white/10 text-gray-300 rounded-xl text-sm hover:bg-[var(--bg-hover)] transition"
               >
-                Annuler
+                {t("cancel")}
               </button>
               <button
                 onClick={handleDeleteAccount}
-                disabled={deleteConfirmText !== "SUPPRIMER" || deleting}
+                disabled={deleteConfirmText !== t("deleteConfirmWord") || deleting}
                 className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                Supprimer définitivement
+                {t("deletePermanently")}
               </button>
             </div>
           </div>

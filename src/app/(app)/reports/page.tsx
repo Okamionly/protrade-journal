@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslation } from "@/i18n/context";
 import { useTrades, Trade } from "@/hooks/useTrades";
 import { calculateRR, computeStats, formatCurrency } from "@/lib/utils";
 import {
@@ -30,20 +31,20 @@ interface ReportHistoryEntry {
   to: string;
 }
 
-const PERIOD_LABELS: Record<PeriodKey, string> = {
-  week: "Cette semaine",
-  month: "Ce mois",
-  last_month: "Mois dernier",
-  custom: "Custom range",
+const PERIOD_LABEL_KEYS: Record<PeriodKey, string> = {
+  week: "thisWeek",
+  month: "thisMonth",
+  last_month: "lastMonth",
+  custom: "customRange",
 };
 
-const TYPE_LABELS: Record<ReportType, string> = {
-  summary: "Resume",
-  detailed: "Detaille",
-  prop_audit: "Prop Firm Audit",
+const TYPE_LABEL_KEYS: Record<ReportType, string> = {
+  summary: "reportSummary",
+  detailed: "reportDetailed",
+  prop_audit: "reportPropAudit",
 };
 
-const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+const DAY_NAMES_KEYS = ["daySun", "dayMon", "dayTue", "dayWed", "dayThu", "dayFri", "daySat"];
 
 function getDateRange(period: PeriodKey, customFrom: string, customTo: string): [Date, Date] {
   const now = new Date();
@@ -70,6 +71,7 @@ function formatDateShort(d: Date): string {
 }
 
 export default function ReportsPage() {
+  const { t } = useTranslation();
   const { trades, loading } = useTrades();
   const [period, setPeriod] = useState<PeriodKey>("month");
   const [reportType, setReportType] = useState<ReportType>("summary");
@@ -93,8 +95,8 @@ export default function ReportsPage() {
 
   const filteredTrades = useMemo(() => {
     return trades
-      .filter((t) => {
-        const d = new Date(t.date);
+      .filter((tr) => {
+        const d = new Date(tr.date);
         return d >= rangeStart && d <= rangeEnd;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -104,8 +106,8 @@ export default function ReportsPage() {
 
   const equityPoints = useMemo(() => {
     let cum = 0;
-    return filteredTrades.map((t) => {
-      cum += t.result;
+    return filteredTrades.map((tr) => {
+      cum += tr.result;
       return cum;
     });
   }, [filteredTrades]);
@@ -122,9 +124,9 @@ export default function ReportsPage() {
   const dayPerformance = useMemo(() => {
     const days: Record<number, { pnl: number; count: number }> = {};
     for (let i = 0; i < 7; i++) days[i] = { pnl: 0, count: 0 };
-    filteredTrades.forEach((t) => {
-      const d = new Date(t.date).getDay();
-      days[d].pnl += t.result;
+    filteredTrades.forEach((tr) => {
+      const d = new Date(tr.date).getDay();
+      days[d].pnl += tr.result;
       days[d].count++;
     });
     return days;
@@ -132,12 +134,12 @@ export default function ReportsPage() {
 
   const strategyPerformance = useMemo(() => {
     const map: Record<string, { count: number; wins: number; pnl: number }> = {};
-    filteredTrades.forEach((t) => {
-      const s = t.strategy || "N/A";
+    filteredTrades.forEach((tr) => {
+      const s = tr.strategy || "N/A";
       if (!map[s]) map[s] = { count: 0, wins: 0, pnl: 0 };
       map[s].count++;
-      map[s].pnl += t.result;
-      if (t.result > 0) map[s].wins++;
+      map[s].pnl += tr.result;
+      if (tr.result > 0) map[s].wins++;
     });
     return Object.entries(map)
       .map(([name, d]) => ({ name, ...d, winRate: d.count > 0 ? (d.wins / d.count) * 100 : 0 }))
@@ -146,12 +148,16 @@ export default function ReportsPage() {
 
   const monthlyData = useMemo(() => {
     const map: Record<string, number> = {};
-    filteredTrades.forEach((t) => {
-      const d = new Date(t.date);
+    filteredTrades.forEach((tr) => {
+      const d = new Date(tr.date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      map[key] = (map[key] || 0) + t.result;
+      map[key] = (map[key] || 0) + tr.result;
     });
-    const months = ["Jan", "Fev", "Mar", "Avr", "Mai", "Jun", "Jul", "Aou", "Sep", "Oct", "Nov", "Dec"];
+    const months = [
+      t("monthJan"), t("monthFeb"), t("monthMar"), t("monthApr"),
+      t("monthMay"), t("monthJun"), t("monthJul"), t("monthAug"),
+      t("monthSep"), t("monthOct"), t("monthNov"), t("monthDec"),
+    ];
     return Object.entries(map)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, pnl]) => {
@@ -162,15 +168,15 @@ export default function ReportsPage() {
 
   const insights = useMemo(() => {
     const msgs: string[] = [];
-    if (filteredTrades.length === 0) return ["Aucun trade sur cette période."];
-    if (stats.winRate >= 60) msgs.push(`Win rate solide à ${stats.winRate.toFixed(0)}% - bonne discipline.`);
-    else if (stats.winRate < 40) msgs.push(`Win rate faible (${stats.winRate.toFixed(0)}%) - revoir les critères d'entrée.`);
-    if (stats.profitFactor > 1.5) msgs.push(`Profit factor de ${stats.profitFactor.toFixed(2)} - performance rentable.`);
-    else if (stats.profitFactor < 1) msgs.push(`Profit factor < 1 - les pertes dépassent les gains.`);
+    if (filteredTrades.length === 0) return [t("insightNoTrades")];
+    if (stats.winRate >= 60) msgs.push(t("insightWinRateGood", { rate: stats.winRate.toFixed(0) }));
+    else if (stats.winRate < 40) msgs.push(t("insightWinRateLow", { rate: stats.winRate.toFixed(0) }));
+    if (stats.profitFactor > 1.5) msgs.push(t("insightProfitFactorGood", { pf: stats.profitFactor.toFixed(2) }));
+    else if (stats.profitFactor < 1) msgs.push(t("insightProfitFactorBad"));
     const bestDay = Object.entries(dayPerformance).sort(([, a], [, b]) => b.pnl - a.pnl)[0];
-    if (bestDay && bestDay[1].pnl > 0) msgs.push(`Meilleur jour: ${DAY_NAMES[parseInt(bestDay[0])]} (${formatCurrency(bestDay[1].pnl)}).`);
-    if (stats.maxDrawdown > 0) msgs.push(`Drawdown max de ${formatCurrency(-stats.maxDrawdown)} - gérer le risque.`);
-    if (msgs.length === 0) msgs.push("Période analysée avec succès.");
+    if (bestDay && bestDay[1].pnl > 0) msgs.push(t("insightBestDay", { day: t(DAY_NAMES_KEYS[parseInt(bestDay[0])]), pnl: formatCurrency(bestDay[1].pnl) }));
+    if (stats.maxDrawdown > 0) msgs.push(t("insightMaxDrawdown", { dd: formatCurrency(-stats.maxDrawdown) }));
+    if (msgs.length === 0) msgs.push(t("insightPeriodOk"));
     return msgs;
   }, [filteredTrades, stats, dayPerformance]);
 
@@ -179,7 +185,7 @@ export default function ReportsPage() {
     const entry: ReportHistoryEntry = {
       id: Date.now().toString(),
       date: new Date().toISOString(),
-      period: PERIOD_LABELS[period],
+      period: PERIOD_LABEL_KEYS[period],
       type: reportType,
       from: rangeStart.toISOString(),
       to: rangeEnd.toISOString(),
@@ -193,13 +199,13 @@ export default function ReportsPage() {
 
   const handleCopy = useCallback(() => {
     const text = [
-      `MarketPhase - Rapport ${TYPE_LABELS[reportType]}`,
-      `Période: ${formatDateShort(rangeStart)} - ${formatDateShort(rangeEnd)}`,
+      `MarketPhase - ${t("report")} ${t(TYPE_LABEL_KEYS[reportType])}`,
+      `${t("period")}: ${formatDateShort(rangeStart)} - ${formatDateShort(rangeEnd)}`,
       `P&L: ${formatCurrency(stats.netProfit)}`,
       `Win Rate: ${stats.winRate.toFixed(1)}%`,
       `Profit Factor: ${stats.profitFactor.toFixed(2)}`,
       `Trades: ${stats.totalTrades} (${stats.wins}W / ${stats.losses}L)`,
-      `RR Moyen: ${stats.avgRR}`,
+      `${t("avgRR")}: ${stats.avgRR}`,
       `Max DD: ${formatCurrency(-stats.maxDrawdown)}`,
     ].join("\n");
     navigator.clipboard.writeText(text);
@@ -209,12 +215,12 @@ export default function ReportsPage() {
 
   const handleRegenerate = (entry: ReportHistoryEntry) => {
     setReportType(entry.type);
-    if (entry.period === "Custom range") {
+    if (entry.period === "customRange") {
       setPeriod("custom");
       setCustomFrom(entry.from.split("T")[0]);
       setCustomTo(entry.to.split("T")[0]);
     } else {
-      const key = Object.entries(PERIOD_LABELS).find(([, v]) => v === entry.period)?.[0] as PeriodKey;
+      const key = Object.entries(PERIOD_LABEL_KEYS).find(([, v]) => v === entry.period)?.[0] as PeriodKey;
       if (key) setPeriod(key);
     }
     setGenerated(true);
@@ -255,38 +261,38 @@ export default function ReportsPage() {
               <FileText className="w-5 h-5 text-blue-400" />
             </div>
             <div>
-              <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Rapports & Export</h1>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>Générez des rapports professionnels</p>
+              <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>{t("reportsAndExport")}</h1>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("generateProfessionalReports")}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Period selector */}
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>Période</label>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>{t("period")}</label>
               <select
                 value={period}
                 onChange={(e) => { setPeriod(e.target.value as PeriodKey); setGenerated(false); }}
                 className="w-full glass rounded-lg px-3 py-2 text-sm"
                 style={{ color: "var(--text-primary)", border: "1px solid var(--border)" }}
               >
-                {Object.entries(PERIOD_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
+                {(Object.entries(PERIOD_LABEL_KEYS) as [PeriodKey, string][]).map(([k, labelKey]) => (
+                  <option key={k} value={k}>{t(labelKey)}</option>
                 ))}
               </select>
             </div>
 
             {/* Report type */}
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>Type de rapport</label>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>{t("reportType")}</label>
               <select
                 value={reportType}
                 onChange={(e) => { setReportType(e.target.value as ReportType); setGenerated(false); }}
                 className="w-full glass rounded-lg px-3 py-2 text-sm"
                 style={{ color: "var(--text-primary)", border: "1px solid var(--border)" }}
               >
-                {Object.entries(TYPE_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
+                {(Object.entries(TYPE_LABEL_KEYS) as [ReportType, string][]).map(([k, labelKey]) => (
+                  <option key={k} value={k}>{t(labelKey)}</option>
                 ))}
               </select>
             </div>
@@ -295,7 +301,7 @@ export default function ReportsPage() {
             <div className="flex items-end">
               <button onClick={handleGenerate} className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                Générer le rapport
+                {t("generateReport")}
               </button>
             </div>
           </div>
@@ -304,12 +310,12 @@ export default function ReportsPage() {
           {period === "custom" && (
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>Du</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>{t("from")}</label>
                 <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
                   className="w-full glass rounded-lg px-3 py-2 text-sm" style={{ color: "var(--text-primary)", border: "1px solid var(--border)" }} />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>Au</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>{t("to")}</label>
                 <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
                   className="w-full glass rounded-lg px-3 py-2 text-sm" style={{ color: "var(--text-primary)", border: "1px solid var(--border)" }} />
               </div>
@@ -321,13 +327,13 @@ export default function ReportsPage() {
         {generated && (
           <div className="flex flex-wrap gap-3 no-print">
             <button onClick={handlePrint} className="glass rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2 hover:opacity-80 transition-opacity" style={{ color: "var(--text-primary)" }}>
-              <Printer className="w-4 h-4" /> Telecharger PDF
+              <Printer className="w-4 h-4" /> {t("downloadPdf")}
             </button>
             <button onClick={handleCopy} className="glass rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2 hover:opacity-80 transition-opacity" style={{ color: "var(--text-primary)" }}>
-              <Copy className="w-4 h-4" /> {copied ? "Copie !" : "Copier le resume"}
+              <Copy className="w-4 h-4" /> {copied ? t("copied") : t("copySummary")}
             </button>
             <button className="glass rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2 hover:opacity-80 transition-opacity" style={{ color: "var(--text-muted)" }}>
-              <MessageSquare className="w-4 h-4" /> Partager dans le Chat
+              <MessageSquare className="w-4 h-4" /> {t("shareInChat")}
             </button>
           </div>
         )}
@@ -340,15 +346,15 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>MarketPhase</h2>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Trading Performance Report</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{t("tradingPerformanceReport")}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{TYPE_LABELS[reportType]}</p>
+                  <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{t(TYPE_LABEL_KEYS[reportType])}</p>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                     {formatDateShort(rangeStart)} &mdash; {formatDateShort(rangeEnd)}
                   </p>
                   <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                    Généré le {new Date().toLocaleDateString("fr-FR")}
+                    {t("generatedOn")} {new Date().toLocaleDateString("fr-FR")}
                   </p>
                 </div>
               </div>
@@ -358,7 +364,7 @@ export default function ReportsPage() {
               {/* Section 1: Summary Stats */}
               <section>
                 <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
-                  1. Statistiques Generales
+                  1. {t("generalStats")}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {[
@@ -383,7 +389,7 @@ export default function ReportsPage() {
               {equityPoints.length > 1 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
-                    2. Courbe d&apos;Equity
+                    2. {t("equityCurve")}
                   </h3>
                   <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
                     <svg viewBox="0 0 600 200" className="w-full" preserveAspectRatio="xMidYMid meet">
@@ -412,11 +418,11 @@ export default function ReportsPage() {
               {(reportType === "detailed" || reportType === "prop_audit") && filteredTrades.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
-                    3. Top Trades
+                    3. {t("topTrades")}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <TradeTable title="Top 3 Meilleurs" trades={bestTrades} icon={<TrendingUp className="w-4 h-4 text-emerald-400" />} />
-                    <TradeTable title="Top 3 Pires" trades={worstTrades} icon={<TrendingDown className="w-4 h-4 text-rose-400" />} />
+                    <TradeTable title={t("top3Best")} trades={bestTrades} icon={<TrendingUp className="w-4 h-4 text-emerald-400" />} />
+                    <TradeTable title={t("top3Worst")} trades={worstTrades} icon={<TrendingDown className="w-4 h-4 text-rose-400" />} />
                   </div>
                 </section>
               )}
@@ -424,7 +430,7 @@ export default function ReportsPage() {
               {/* Section 4: Performance by Day */}
               <section>
                 <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
-                  {reportType === "detailed" || reportType === "prop_audit" ? "4" : "3"}. Performance par Jour
+                  {reportType === "detailed" || reportType === "prop_audit" ? "4" : "3"}. {t("performanceByDay")}
                 </h3>
                 <div className="rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
                   <svg viewBox="0 0 600 180" className="w-full" preserveAspectRatio="xMidYMid meet">
@@ -446,7 +452,7 @@ export default function ReportsPage() {
                             opacity={0.8}
                           />
                           <text x={x + 25} y="155" textAnchor="middle" fill="var(--text-muted)" fontSize="11">
-                            {DAY_NAMES[day]}
+                            {t(DAY_NAMES_KEYS[day])}
                           </text>
                           <text x={x + 25} y="170" textAnchor="middle" fill="var(--text-muted)" fontSize="9">
                             {d.count}t
@@ -462,13 +468,13 @@ export default function ReportsPage() {
               {strategyPerformance.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
-                    {reportType === "detailed" || reportType === "prop_audit" ? "5" : "4"}. Performance par Stratégie
+                    {reportType === "detailed" || reportType === "prop_audit" ? "5" : "4"}. {t("performanceByStrategy")}
                   </h3>
                   <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                     <table className="w-full text-sm">
                       <thead>
                         <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                          <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Stratégie</th>
+                          <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>{t("strategy")}</th>
                           <th className="text-right px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Trades</th>
                           <th className="text-right px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Win Rate</th>
                           <th className="text-right px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>P&L</th>
@@ -497,13 +503,13 @@ export default function ReportsPage() {
               {monthlyData.length > 1 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
-                    {reportType === "detailed" || reportType === "prop_audit" ? "6" : "5"}. Comparaison Mensuelle
+                    {reportType === "detailed" || reportType === "prop_audit" ? "6" : "5"}. {t("monthlyComparison")}
                   </h3>
                   <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                     <table className="w-full text-sm">
                       <thead>
                         <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                          <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Mois</th>
+                          <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>{t("month")}</th>
                           <th className="text-right px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>P&L</th>
                         </tr>
                       </thead>
@@ -525,7 +531,7 @@ export default function ReportsPage() {
               {/* Section 7: Key Takeaways */}
               <section>
                 <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
-                  Points Cles
+                  {t("keyPoints")}
                 </h3>
                 <div className="rounded-xl p-5 space-y-2" style={{ border: "1px solid var(--border)" }}>
                   {insights.map((msg, i) => (
@@ -540,7 +546,7 @@ export default function ReportsPage() {
               {/* Footer */}
               <div className="pt-4 text-center" style={{ borderTop: "1px solid var(--border)" }}>
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  MarketPhase &mdash; Rapport genere automatiquement &mdash; {new Date().toLocaleDateString("fr-FR")}
+                  MarketPhase &mdash; {t("autoGeneratedReport")} &mdash; {new Date().toLocaleDateString("fr-FR")}
                 </p>
               </div>
             </div>
@@ -552,7 +558,7 @@ export default function ReportsPage() {
           <div className="glass rounded-2xl p-6 no-print">
             <div className="flex items-center gap-2 mb-4">
               <History className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
-              <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Historique des Rapports</h3>
+              <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{t("reportHistory")}</h3>
             </div>
             <div className="space-y-2">
               {history.map((entry) => (
@@ -566,10 +572,10 @@ export default function ReportsPage() {
                     <Calendar className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
                     <div>
                       <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-                        {TYPE_LABELS[entry.type]} &mdash; {entry.period}
+                        {t(TYPE_LABEL_KEYS[entry.type])} &mdash; {t(entry.period)}
                       </p>
                       <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        {new Date(entry.date).toLocaleDateString("fr-FR")} a {new Date(entry.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        {new Date(entry.date).toLocaleDateString("fr-FR")} {t("at")} {new Date(entry.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     </div>
                   </div>
@@ -586,6 +592,7 @@ export default function ReportsPage() {
 
 /* Mini trade table component */
 function TradeTable({ title, trades, icon }: { title: string; trades: Trade[]; icon: React.ReactNode }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
       <div className="flex items-center gap-2 px-4 py-2.5" style={{ borderBottom: "1px solid var(--border)" }}>
@@ -602,21 +609,21 @@ function TradeTable({ title, trades, icon }: { title: string; trades: Trade[]; i
           </tr>
         </thead>
         <tbody>
-          {trades.map((t) => (
-            <tr key={t.id} style={{ borderBottom: "1px solid var(--border)" }}>
+          {trades.map((tr) => (
+            <tr key={tr.id} style={{ borderBottom: "1px solid var(--border)" }}>
               <td className="px-3 py-2" style={{ color: "var(--text-secondary)" }}>
-                {new Date(t.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                {new Date(tr.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
               </td>
-              <td className="px-3 py-2 font-medium" style={{ color: "var(--text-primary)" }}>{t.asset}</td>
-              <td className="px-3 py-2 text-right mono text-blue-400">{calculateRR(t.entry, t.sl, t.tp)}</td>
-              <td className={`px-3 py-2 text-right mono font-medium ${t.result >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                {formatCurrency(t.result)}
+              <td className="px-3 py-2 font-medium" style={{ color: "var(--text-primary)" }}>{tr.asset}</td>
+              <td className="px-3 py-2 text-right mono text-blue-400">{calculateRR(tr.entry, tr.sl, tr.tp)}</td>
+              <td className={`px-3 py-2 text-right mono font-medium ${tr.result >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                {formatCurrency(tr.result)}
               </td>
             </tr>
           ))}
           {trades.length === 0 && (
             <tr>
-              <td colSpan={4} className="px-3 py-3 text-center" style={{ color: "var(--text-muted)" }}>Aucun trade</td>
+              <td colSpan={4} className="px-3 py-3 text-center" style={{ color: "var(--text-muted)" }}>{t("noTradesFound")}</td>
             </tr>
           )}
         </tbody>

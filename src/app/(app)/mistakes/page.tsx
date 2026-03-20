@@ -4,8 +4,10 @@ import { useMemo } from "react";
 import { useTrades } from "@/hooks/useTrades";
 import { detectMistakes, type Trade } from "@/lib/advancedStats";
 import { AlertOctagon, TrendingDown, Lightbulb } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 export default function MistakesPage() {
+  const { t } = useTranslation();
   const { trades, loading } = useTrades();
   const mistakes = useMemo(() => detectMistakes(trades as unknown as Trade[]), [trades]);
 
@@ -26,40 +28,40 @@ export default function MistakesPage() {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <AlertOctagon className="w-6 h-6 text-rose-400" /> Détection d&apos;Erreurs
+          <AlertOctagon className="w-6 h-6 text-rose-400" /> {t("errorDetection")}
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          Identifiez automatiquement vos mauvaises habitudes de trading et leur impact sur vos résultats.
+          {t("errorDetectionDesc")}
         </p>
       </div>
 
       {trades.length === 0 ? (
         <div className="metric-card rounded-2xl p-12 text-center">
-          <p className="text-lg font-medium" style={{ color: "var(--text-secondary)" }}>Aucun trade à analyser</p>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>Ajoutez des trades pour détecter des patterns d&apos;erreurs.</p>
+          <p className="text-lg font-medium" style={{ color: "var(--text-secondary)" }}>{t("noTradesToAnalyze")}</p>
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{t("addTradesToDetect")}</p>
         </div>
       ) : mistakes.length === 0 ? (
         <div className="metric-card rounded-2xl p-12 text-center">
           <div className="text-5xl mb-4">🏆</div>
-          <p className="text-lg font-bold" style={{ color: "#10b981" }}>Aucune erreur détectée !</p>
-          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>Vous suivez vos règles de trading. Continuez comme ça.</p>
+          <p className="text-lg font-bold" style={{ color: "#10b981" }}>{t("noErrorsDetected")}</p>
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>{t("followingRules")}</p>
         </div>
       ) : (
         <>
           {/* Impact summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="metric-card rounded-2xl p-5">
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}>Erreurs détectées</span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>{t("errorsDetected")}</span>
               <div className="text-3xl font-bold text-rose-400 mt-1">{mistakes.length}</div>
             </div>
             <div className="metric-card rounded-2xl p-5">
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}>Impact total estimé</span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>{t("totalImpact")}</span>
               <div className="text-3xl font-bold mono mt-1" style={{ color: totalImpact >= 0 ? "#f59e0b" : "#ef4444" }}>
                 {totalImpact >= 0 ? "+" : ""}{totalImpact.toFixed(2)}€
               </div>
             </div>
             <div className="metric-card rounded-2xl p-5">
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}>Erreurs critiques</span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>{t("criticalErrors")}</span>
               <div className="text-3xl font-bold mt-1" style={{ color: highSeverity.length > 0 ? "#ef4444" : "#10b981" }}>
                 {highSeverity.length}
               </div>
@@ -80,7 +82,7 @@ export default function MistakesPage() {
                         : m.severity === "medium" ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
                         : "bg-blue-500/15 text-blue-400 border border-blue-500/30"
                       }`}>
-                        {m.severity === "high" ? "Critique" : m.severity === "medium" ? "Modéré" : "Mineur"}
+                        {m.severity === "high" ? t("critical") : m.severity === "medium" ? t("moderate") : t("minor")}
                       </span>
                     </div>
                     <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{m.description}</p>
@@ -92,7 +94,7 @@ export default function MistakesPage() {
                         </span>
                       </div>
                       <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-                        {m.count} occurrence{m.count > 1 ? "s" : ""}
+                        {m.count} {m.count > 1 ? t("occurrences") : t("occurrence")}
                       </span>
                     </div>
                   </div>
@@ -102,12 +104,12 @@ export default function MistakesPage() {
                 <div className="mt-4 rounded-xl p-3 flex items-start gap-2" style={{ background: "var(--bg-hover)" }}>
                   <Lightbulb className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
                   <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                    {m.type === "Revenge Trading" && "Attendez au moins 15 minutes après une perte avant de reprendre un trade. Faites une pause, revenez au plan."}
-                    {m.type === "Overtrading" && "Fixez-vous un nombre maximum de trades par jour (3-5) et respectez cette limite quoi qu'il arrive."}
-                    {m.type === "Stop non respecté" && "Utilisez toujours un stop loss dur. Ne déplacez jamais votre stop dans le sens de la perte."}
-                    {m.type === "Trading en tilt" && "Après 3 pertes consécutives, arrêtez de trader pour la journée. Le marché sera encore là demain."}
-                    {m.type === "Sortie prématurée" && "Laissez courir vos gagnants. Utilisez un trailing stop pour sécuriser les profits sans couper trop tôt."}
-                    {m.type === "Trading weekend" && "Le marché forex est fermé le weekend. Les gaps d'ouverture lundi comportent des risques supplémentaires."}
+                    {m.type === "Revenge Trading" && t("tipRevengTrading")}
+                    {m.type === "Overtrading" && t("tipOvertrading")}
+                    {m.type === "Stop non respecté" && t("tipStopNotRespected")}
+                    {m.type === "Trading en tilt" && t("tipTradingTilt")}
+                    {m.type === "Sortie prématurée" && t("tipEarlyExit")}
+                    {m.type === "Trading weekend" && t("tipWeekendTrading")}
                   </p>
                 </div>
               </div>

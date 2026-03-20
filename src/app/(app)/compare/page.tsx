@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslation } from "@/i18n/context";
 import { useTrades, Trade } from "@/hooks/useTrades";
 import {
   GitCompare,
@@ -59,31 +60,31 @@ function computeStats(trades: Trade[]): PeriodStats {
     };
   }
 
-  const wins = trades.filter((t) => t.result > 0);
-  const losses = trades.filter((t) => t.result < 0);
-  const totalPnL = trades.reduce((s, t) => s + t.result, 0);
+  const wins = trades.filter((tr) => tr.result > 0);
+  const losses = trades.filter((tr) => tr.result < 0);
+  const totalPnL = trades.reduce((s, tr) => s + tr.result, 0);
   const winRate = (wins.length / trades.length) * 100;
   const avgPnL = totalPnL / trades.length;
-  const bestTrade = Math.max(...trades.map((t) => t.result));
-  const worstTrade = Math.min(...trades.map((t) => t.result));
-  const grossWin = wins.reduce((s, t) => s + t.result, 0);
-  const grossLoss = Math.abs(losses.reduce((s, t) => s + t.result, 0));
+  const bestTrade = Math.max(...trades.map((tr) => tr.result));
+  const worstTrade = Math.min(...trades.map((tr) => tr.result));
+  const grossWin = wins.reduce((s, tr) => s + tr.result, 0);
+  const grossLoss = Math.abs(losses.reduce((s, tr) => s + tr.result, 0));
   const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? Infinity : 0;
 
   let maxConsWins = 0, maxConsLosses = 0, cw = 0, cl = 0;
-  for (const t of trades) {
-    if (t.result > 0) { cw++; cl = 0; maxConsWins = Math.max(maxConsWins, cw); }
-    else if (t.result < 0) { cl++; cw = 0; maxConsLosses = Math.max(maxConsLosses, cl); }
+  for (const tr of trades) {
+    if (tr.result > 0) { cw++; cl = 0; maxConsWins = Math.max(maxConsWins, cw); }
+    else if (tr.result < 0) { cl++; cw = 0; maxConsLosses = Math.max(maxConsLosses, cl); }
     else { cw = 0; cl = 0; }
   }
 
   const assetCount: Record<string, number> = {};
   const stratCount: Record<string, number> = {};
   const dailyPnL: Record<string, number> = {};
-  for (const t of trades) {
-    assetCount[t.asset] = (assetCount[t.asset] || 0) + 1;
-    if (t.strategy) stratCount[t.strategy] = (stratCount[t.strategy] || 0) + 1;
-    dailyPnL[t.date] = (dailyPnL[t.date] || 0) + t.result;
+  for (const tr of trades) {
+    assetCount[tr.asset] = (assetCount[tr.asset] || 0) + 1;
+    if (tr.strategy) stratCount[tr.strategy] = (stratCount[tr.strategy] || 0) + 1;
+    dailyPnL[tr.date] = (dailyPnL[tr.date] || 0) + tr.result;
   }
 
   const mostTradedAsset = Object.entries(assetCount).sort((a, b) => b[1] - a[1])[0]?.[0] || "-";
@@ -145,10 +146,10 @@ function StatRow({ label, valueA, valueB, format = "number", invert = false }: {
   );
 }
 
-function BarChart({ dailyA, dailyB }: { dailyA: Record<string, number>; dailyB: Record<string, number> }) {
+function BarChart({ dailyA, dailyB, noDataLabel }: { dailyA: Record<string, number>; dailyB: Record<string, number>; noDataLabel: string }) {
   const allDates = [...new Set([...Object.keys(dailyA), ...Object.keys(dailyB)])].sort();
   if (allDates.length === 0) {
-    return <p className="text-center py-8 text-sm" style={{ color: "var(--text-muted)" }}>Aucune donnée</p>;
+    return <p className="text-center py-8 text-sm" style={{ color: "var(--text-muted)" }}>{noDataLabel}</p>;
   }
   const allVals = [...Object.values(dailyA), ...Object.values(dailyB)];
   const maxAbs = Math.max(...allVals.map(Math.abs), 1);
@@ -191,16 +192,16 @@ function BarChart({ dailyA, dailyB }: { dailyA: Record<string, number>; dailyB: 
   );
 }
 
-function generateTakeaways(a: PeriodStats, b: PeriodStats): string[] {
+function generateTakeaways(a: PeriodStats, b: PeriodStats, t: (key: string, params?: Record<string, string | number>) => string): string[] {
   const tips: string[] = [];
-  if (a.tradeCount === 0 && b.tradeCount === 0) return ["Aucune donnée pour comparer."];
+  if (a.tradeCount === 0 && b.tradeCount === 0) return [t("noDataToCompare")];
 
   if (a.winRate > 0 || b.winRate > 0) {
     const diff = b.winRate - a.winRate;
     if (Math.abs(diff) > 1) {
       tips.push(diff > 0
-        ? `Ton win rate a augmenté de ${diff.toFixed(1)}%`
-        : `Ton win rate a baissé de ${Math.abs(diff).toFixed(1)}%`);
+        ? t("winRateIncreased", { pct: diff.toFixed(1) })
+        : t("winRateDecreased", { pct: Math.abs(diff).toFixed(1) }));
     }
   }
 
@@ -208,31 +209,32 @@ function generateTakeaways(a: PeriodStats, b: PeriodStats): string[] {
     const pct = ((b.tradeCount - a.tradeCount) / a.tradeCount * 100);
     if (Math.abs(pct) > 5) {
       tips.push(pct > 0
-        ? `Tu as tradé ${pct.toFixed(0)}% de plus cette période`
-        : `Tu as tradé ${Math.abs(pct).toFixed(0)}% de moins cette période`);
+        ? t("tradedMoreThisPeriod", { pct: pct.toFixed(0) })
+        : t("tradedLessThisPeriod", { pct: Math.abs(pct).toFixed(0) }));
     }
   }
 
   if (a.worstTrade < 0 && b.worstTrade < 0) {
     const improvePct = ((Math.abs(b.worstTrade) - Math.abs(a.worstTrade)) / Math.abs(a.worstTrade) * 100);
     if (improvePct < -10) {
-      tips.push(`Meilleure gestion des pertes (${improvePct.toFixed(0)}% de perte max)`);
+      tips.push(t("betterLossManagement", { pct: improvePct.toFixed(0) }));
     }
   }
 
   if (b.profitFactor > a.profitFactor && a.profitFactor > 0) {
-    tips.push(`Profit factor amélioré : ${a.profitFactor.toFixed(2)} → ${b.profitFactor.toFixed(2)}`);
+    tips.push(t("profitFactorImproved", { from: a.profitFactor.toFixed(2), to: b.profitFactor.toFixed(2) }));
   }
 
   if (b.avgPnL > a.avgPnL) {
-    tips.push(`P&L moyen par trade en hausse : ${a.avgPnL.toFixed(2)} → ${b.avgPnL.toFixed(2)} $`);
+    tips.push(t("avgPnlIncreased", { from: a.avgPnL.toFixed(2), to: b.avgPnL.toFixed(2) }));
   }
 
-  if (tips.length === 0) tips.push("Pas de changement significatif entre les deux périodes.");
+  if (tips.length === 0) tips.push(t("noSignificantChange"));
   return tips;
 }
 
 export default function ComparePage() {
+  const { t } = useTranslation();
   const { trades, loading } = useTrades();
 
   const thisWeek = getWeekRange(0);
@@ -254,21 +256,21 @@ export default function ComparePage() {
   };
 
   const tradesA = useMemo(() =>
-    trades.filter((t) => t.date >= periodA.start && t.date <= periodA.end)
+    trades.filter((tr) => tr.date >= periodA.start && tr.date <= periodA.end)
       .sort((a, b) => a.date.localeCompare(b.date)),
     [trades, periodA]);
 
   const tradesB = useMemo(() =>
-    trades.filter((t) => t.date >= periodB.start && t.date <= periodB.end)
+    trades.filter((tr) => tr.date >= periodB.start && tr.date <= periodB.end)
       .sort((a, b) => a.date.localeCompare(b.date)),
     [trades, periodB]);
 
   const statsA = useMemo(() => computeStats(tradesA), [tradesA]);
   const statsB = useMemo(() => computeStats(tradesB), [tradesB]);
-  const takeaways = useMemo(() => generateTakeaways(statsA, statsB), [statsA, statsB]);
+  const takeaways = useMemo(() => generateTakeaways(statsA, statsB, t), [statsA, statsB, t]);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-muted)" }}>Chargement...</div>;
+    return <div className="flex items-center justify-center h-64" style={{ color: "var(--text-muted)" }}>{t("loading")}</div>;
   }
 
   return (
@@ -277,8 +279,8 @@ export default function ComparePage() {
       <div className="flex items-center gap-3">
         <GitCompare size={28} style={{ color: "#06b6d4" }} />
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Comparaison de Périodes</h1>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Compare tes performances entre deux périodes</p>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{t("comparison")}</h1>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{t("compareTwoPeriodsDesc")}</p>
         </div>
       </div>
 
@@ -286,15 +288,15 @@ export default function ComparePage() {
       <div className="glass rounded-xl p-5 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Calendar size={16} style={{ color: "var(--text-muted)" }} />
-          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Sélection des périodes</span>
+          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("periodSelection")}</span>
         </div>
 
         {/* Presets */}
         <div className="flex gap-2 flex-wrap">
           {[
-            { key: "week", label: "Cette semaine vs la dernière" },
-            { key: "month", label: "Ce mois vs le dernier" },
-            { key: "custom", label: "Custom" },
+            { key: "week", label: t("thisWeekVsLast") },
+            { key: "month", label: t("thisMonthVsLast") },
+            { key: "custom", label: t("custom") },
           ].map((p) => (
             <button
               key={p.key}
@@ -315,7 +317,7 @@ export default function ComparePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#06b6d4" }}>
-              Période A
+              {t("periodA")}
             </span>
             <div className="flex gap-2">
               <input type="date" className="input-field flex-1" value={periodA.start}
@@ -326,7 +328,7 @@ export default function ComparePage() {
           </div>
           <div className="space-y-2">
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#8b5cf6" }}>
-              Période B
+              {t("periodB")}
             </span>
             <div className="flex gap-2">
               <input type="date" className="input-field flex-1" value={periodB.start}
@@ -342,33 +344,33 @@ export default function ComparePage() {
       <div className="glass rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <Target size={16} style={{ color: "var(--text-muted)" }} />
-          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Comparaison détaillée</span>
+          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("detailedComparison")}</span>
         </div>
 
         {/* Column headers */}
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 pb-3 mb-2" style={{ borderBottom: "2px solid var(--border)" }}>
           <div className="text-right">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#06b6d4" }}>Période A</span>
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#06b6d4" }}>{t("periodA")}</span>
           </div>
           <div className="min-w-[80px] text-center">
             <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Delta</span>
           </div>
           <div className="text-left">
-            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#8b5cf6" }}>Période B</span>
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#8b5cf6" }}>{t("periodB")}</span>
           </div>
         </div>
 
-        <StatRow label="P&L Total" valueA={statsA.totalPnL} valueB={statsB.totalPnL} format="currency" />
-        <StatRow label="Nb. Trades" valueA={statsA.tradeCount} valueB={statsB.tradeCount} />
-        <StatRow label="Win Rate" valueA={statsA.winRate} valueB={statsB.winRate} format="percent" />
-        <StatRow label="P&L Moyen" valueA={statsA.avgPnL} valueB={statsB.avgPnL} format="currency" />
-        <StatRow label="Meilleur Trade" valueA={statsA.bestTrade} valueB={statsB.bestTrade} format="currency" />
-        <StatRow label="Pire Trade" valueA={statsA.worstTrade} valueB={statsB.worstTrade} format="currency" invert />
-        <StatRow label="Profit Factor" valueA={statsA.profitFactor} valueB={statsB.profitFactor} format="ratio" />
-        <StatRow label="Gains consécutifs" valueA={statsA.maxConsWins} valueB={statsB.maxConsWins} />
-        <StatRow label="Pertes consécutives" valueA={statsA.maxConsLosses} valueB={statsB.maxConsLosses} invert />
-        <StatRow label="Actif principal" valueA={statsA.mostTradedAsset} valueB={statsB.mostTradedAsset} />
-        <StatRow label="Stratégie principale" valueA={statsA.mostUsedStrategy} valueB={statsB.mostUsedStrategy} />
+        <StatRow label={t("totalPnl")} valueA={statsA.totalPnL} valueB={statsB.totalPnL} format="currency" />
+        <StatRow label={t("tradesCount")} valueA={statsA.tradeCount} valueB={statsB.tradeCount} />
+        <StatRow label={t("winRate")} valueA={statsA.winRate} valueB={statsB.winRate} format="percent" />
+        <StatRow label={t("avgPnl")} valueA={statsA.avgPnL} valueB={statsB.avgPnL} format="currency" />
+        <StatRow label={t("bestTrade")} valueA={statsA.bestTrade} valueB={statsB.bestTrade} format="currency" />
+        <StatRow label={t("worstTrade")} valueA={statsA.worstTrade} valueB={statsB.worstTrade} format="currency" invert />
+        <StatRow label={t("profitFactor")} valueA={statsA.profitFactor} valueB={statsB.profitFactor} format="ratio" />
+        <StatRow label={t("consecutiveWins")} valueA={statsA.maxConsWins} valueB={statsB.maxConsWins} />
+        <StatRow label={t("consecutiveLosses")} valueA={statsA.maxConsLosses} valueB={statsB.maxConsLosses} invert />
+        <StatRow label={t("mainAsset")} valueA={statsA.mostTradedAsset} valueB={statsB.mostTradedAsset} />
+        <StatRow label={t("mainStrategy")} valueA={statsA.mostUsedStrategy} valueB={statsB.mostUsedStrategy} />
       </div>
 
       {/* Overlapping Equity Curves */}
@@ -376,27 +378,27 @@ export default function ComparePage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <BarChart3 size={16} style={{ color: "var(--text-muted)" }} />
-            <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>P&L Journalier</span>
+            <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("dailyPnl")}</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-sm" style={{ background: "#06b6d4" }} />
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}>Période A</span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>{t("periodA")}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-sm" style={{ background: "#8b5cf6" }} />
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}>Période B</span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>{t("periodB")}</span>
             </div>
           </div>
         </div>
-        <BarChart dailyA={statsA.dailyPnL} dailyB={statsB.dailyPnL} />
+        <BarChart dailyA={statsA.dailyPnL} dailyB={statsB.dailyPnL} noDataLabel={t("noData")} />
       </div>
 
       {/* Key Takeaways */}
       <div className="glass rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp size={16} style={{ color: "#10b981" }} />
-          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Points Clés</span>
+          <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("keyTakeaways")}</span>
         </div>
         <div className="space-y-2">
           {takeaways.map((tip, i) => {
