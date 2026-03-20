@@ -39,6 +39,7 @@ import {
   Palette,
   Maximize2,
   Minimize2,
+  Upload,
 } from "lucide-react";
 
 interface VipPost {
@@ -452,6 +453,43 @@ export default function VipContentPage() {
   const [scriptCode, setScriptCode] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [published, setPublished] = useState(false);
+  const mdFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleMdUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      if (!text) return;
+
+      // Try to extract title from first # heading
+      const titleMatch = text.match(/^#\s+(.+)$/m);
+      if (titleMatch && !title.trim()) {
+        setTitle(titleMatch[1].trim());
+      }
+
+      // Try to detect type from content
+      if (!editingPost) {
+        const lower = text.toLowerCase();
+        if (lower.includes("pine script") || lower.includes("indicator")) setType("indicator");
+        else if (lower.includes("macro") || lower.includes("fomc") || lower.includes("fed")) setType("macro");
+        else if (lower.includes("options") || lower.includes("call") || lower.includes("put")) setType("options");
+        else if (lower.includes("futures") || lower.includes("contrat")) setType("futures");
+      }
+
+      // Extract Pine Script code blocks if present
+      const codeMatch = text.match(/```(?:pine|pinescript)?\n([\s\S]*?)```/);
+      if (codeMatch && !scriptCode.trim()) {
+        setScriptCode(codeMatch[1].trim());
+      }
+
+      setContent(text);
+    };
+    reader.readAsText(file);
+    // Reset so same file can be re-uploaded
+    if (mdFileInputRef.current) mdFileInputRef.current.value = "";
+  };
 
   useEffect(() => {
     fetch("/api/user/role")
@@ -705,6 +743,31 @@ export default function VipContentPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Upload .md file */}
+            <div>
+              <input
+                ref={mdFileInputRef}
+                type="file"
+                accept=".md,.markdown,.txt"
+                className="hidden"
+                onChange={handleMdUpload}
+              />
+              <button
+                type="button"
+                onClick={() => mdFileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-sm font-medium transition hover:opacity-80"
+                style={{
+                  border: "2px dashed var(--border)",
+                  background: "var(--bg-secondary)",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                <Upload className="w-5 h-5" />
+                <span>Importer un fichier .md</span>
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>(remplit le titre, type, contenu et code automatiquement)</span>
+              </button>
             </div>
 
             {/* Content — Rich Markdown Editor */}
