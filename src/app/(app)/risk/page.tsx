@@ -12,7 +12,7 @@ export default function RiskPage() {
 
   const DAYS_FR_SHORT = [t("daySun"), t("dayMon"), t("dayTue"), t("dayWed"), t("dayThu"), t("dayFri"), t("daySat")];
   const { user } = useUser();
-  const balance = user?.balance || 10000;
+  const balance = user?.balance ?? 10000;
 
   // Position sizing calculator state
   const [calcEntry, setCalcEntry] = useState(1.085);
@@ -25,7 +25,7 @@ export default function RiskPage() {
   const kellyRaw = useMemo(() => computeKellyRaw(trades as unknown as Trade[]), [trades]);
   const posSize = useMemo(() => calculatePositionSize(balance, calcRisk, calcEntry, calcSl, 10, assetType), [balance, calcRisk, calcEntry, calcSl, assetType]);
 
-  const maxDDPoint = drawdown.reduce((max, p) => p.drawdownPercent > max.drawdownPercent ? p : max, drawdown[0] || { drawdownPercent: 0 });
+  const maxDDPoint = drawdown.length > 0 ? drawdown.reduce((max, p) => p.drawdownPercent > max.drawdownPercent ? p : max, drawdown[0]) : { drawdownPercent: 0 };
 
   // VaR calculation
   const varMetrics = useMemo(() => {

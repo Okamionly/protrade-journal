@@ -590,7 +590,7 @@ export default function AnalyticsPage() {
                 <th className="pb-3 font-medium">{t("trades")}</th>
                 <th className="pb-3 font-medium">{t("winRate")}</th>
                 <th className="pb-3 font-medium">{t("netProfit")}</th>
-                <th className="pb-3 font-medium">{t("avgRR")}</th>
+                <th className="pb-3 font-medium">Moy. P&L</th>
               </tr>
             </thead>
             <tbody>
@@ -633,7 +633,7 @@ export default function AnalyticsPage() {
                 <th className="pb-3 font-medium">{t("trades")}</th>
                 <th className="pb-3 font-medium">{t("winRate")}</th>
                 <th className="pb-3 font-medium">{t("netProfit")}</th>
-                <th className="pb-3 font-medium">{t("avgRR")}</th>
+                <th className="pb-3 font-medium">Moy. P&L</th>
               </tr>
             </thead>
             <tbody>
@@ -676,7 +676,7 @@ export default function AnalyticsPage() {
                 <th className="pb-3 font-medium">{t("trades")}</th>
                 <th className="pb-3 font-medium">{t("winRate")}</th>
                 <th className="pb-3 font-medium">{t("netProfit")}</th>
-                <th className="pb-3 font-medium">{t("avgRR")}</th>
+                <th className="pb-3 font-medium">Moy. P&L</th>
               </tr>
             </thead>
             <tbody>

@@ -209,7 +209,7 @@ export default function StrategiesPage() {
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => deleteStrategy(s.id)}
+                      onClick={() => { if (confirm("Supprimer cette stratégie ?")) deleteStrategy(s.id); }}
                       className="p-2 rounded-lg hover:bg-rose-500/10 transition text-rose-400"
                     >
                       <Trash2 className="w-4 h-4" />
