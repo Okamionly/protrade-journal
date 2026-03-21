@@ -122,13 +122,13 @@ const navItems = [
   // MY SPACE
   { divider: true, labelKey: "sidebarSecMySpace" },
   { href: "/profile", labelKey: "sidebarProfile", icon: User },
-  { href: "/community", labelKey: "sidebarCommunity", icon: Users },
   { href: "/pricing", labelKey: "sidebarPricing", icon: CreditCard },
   // PREMIUM
   { divider: true, labelKey: "sidebarSecPremium" },
   { href: "/vip", labelKey: "sidebarVip", icon: Crown, isVip: true },
   { href: "/vip/indicateurs", labelKey: "sidebarIndicators", icon: Crosshair, isVip: true },
   { href: "/vip/analyses", labelKey: "sidebarMacroAnalyses", icon: Globe, isVip: true },
+  { href: "/community", labelKey: "sidebarCommunity", icon: Users, isVip: true },
   { href: "/chat", labelKey: "sidebarChat", icon: MessageCircle, isVip: true },
   { href: "/daily-bias", labelKey: "sidebarDailyBias", icon: Target, isVip: true },
   { href: "/challenges", labelKey: "sidebarChallenges", icon: Swords, isVip: true },
