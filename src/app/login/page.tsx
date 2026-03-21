@@ -87,7 +87,8 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-field w-full pl-11"
+                  className="input-field w-full"
+                  style={{ paddingLeft: "2.75rem" }}
                   placeholder="email@exemple.com"
                   required
                 />
@@ -104,7 +105,8 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input-field w-full pl-11 pr-11"
+                  className="input-field w-full"
+                  style={{ paddingLeft: "2.75rem", paddingRight: "2.75rem" }}
                   placeholder="••••••••"
                   required
                 />
