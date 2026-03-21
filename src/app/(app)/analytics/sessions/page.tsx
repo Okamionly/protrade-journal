@@ -45,9 +45,10 @@ function computeSessionStats(
 
   for (const trade of trades) {
     const sessions = getTradingSession(trade.date);
+    if (sessions.length === 0) continue;
     // Assign to primary session
     const primary = sessions[0];
-    map[primary].results.push(trade.result);
+    if (map[primary]) map[primary].results.push(trade.result);
   }
 
   return SESSIONS.map((session) => {
@@ -204,7 +205,7 @@ function HeatmapGrid({ data }: { data: number[][] }) {
   }, [data]);
 
   const getColor = (val: number) => {
-    if (val === 0) return "bg-gray-800/30";
+    if (val === 0) return "bg-[--bg-secondary]";
     const intensity = Math.min(Math.abs(val) / maxAbs, 1);
     if (val > 0) {
       const alpha = (0.15 + intensity * 0.7).toFixed(2);
@@ -244,7 +245,7 @@ function HeatmapGrid({ data }: { data: number[][] }) {
                 style={{ opacity: getOpacity(val) }}
                 title={`${WEEKDAYS[ri]} ${ci}:00 UTC — ${val >= 0 ? "+" : ""}${val.toFixed(1)}`}
               >
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded bg-gray-900 text-white text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10" style={{ background: "var(--bg-card-solid)", color: "var(--text-primary)", border: "1px solid var(--border)", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
                   {val >= 0 ? "+" : ""}{val.toFixed(1)}
                 </div>
               </div>

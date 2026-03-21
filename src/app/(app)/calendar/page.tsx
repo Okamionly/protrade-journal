@@ -22,12 +22,13 @@ export default function PnLCalendarPage() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startOffset = firstDay === 0 ? 6 : firstDay - 1;
 
-  // Group trades by day for current month
-  const tradesByDay: Record<number, typeof trades> = {};
-  const monthTrades = trades.filter((t) => {
+  // Group trades by day for current month (memoized)
+  const monthTrades = useMemo(() => trades.filter((t) => {
     const d = new Date(t.date);
     return d.getFullYear() === year && d.getMonth() === month;
-  });
+  }), [trades, year, month]);
+
+  const tradesByDay: Record<number, typeof trades> = {};
   monthTrades.forEach((t) => {
     const day = new Date(t.date).getDate();
     if (!tradesByDay[day]) tradesByDay[day] = [];
@@ -52,7 +53,7 @@ export default function PnLCalendarPage() {
     // Streak calculation
     let currentStreak = 0;
     let maxStreak = 0;
-    const sortedDays = dayEntries.sort((a, b) => +a[0] - +b[0]);
+    const sortedDays = [...dayEntries].sort((a, b) => +a[0] - +b[0]);
     for (const [, pnl] of sortedDays) {
       if (+pnl > 0) { currentStreak++; maxStreak = Math.max(maxStreak, currentStreak); }
       else currentStreak = 0;

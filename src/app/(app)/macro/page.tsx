@@ -221,7 +221,7 @@ export default function MacroPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadFred();

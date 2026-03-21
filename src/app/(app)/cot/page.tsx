@@ -90,11 +90,11 @@ export default function CotPage() {
       }
       setOverviewData(rows);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("loading"));
+      setError(e instanceof Error ? e.message : t("retry"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const loadDetail = useCallback(async (key: string) => {
     setDetailLoading(true);

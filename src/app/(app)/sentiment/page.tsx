@@ -387,7 +387,7 @@ export default function SentimentPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const loadVix = useCallback(async () => {
     setVixLoading(true);
