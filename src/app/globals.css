@@ -510,7 +510,10 @@ html:not(.dark):not(.oled) .metric-card {
   background: var(--bg-input);
   border: 1px solid var(--border-input);
   border-radius: 0.75rem;
-  padding: 0.625rem 0.875rem;
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+  padding-left: 0.875rem;
+  padding-right: 0.875rem;
   color: var(--text-primary);
   font-size: 0.875rem;
   width: 100%;
