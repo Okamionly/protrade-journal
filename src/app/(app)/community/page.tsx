@@ -963,7 +963,7 @@ export default function CommunityPage() {
   const { likes, toggleLike } = useLikes();
   const { bookmarks, toggleBookmark } = useBookmarks();
 
-  type TabId = "foryou" | "following";
+  type TabId = "foryou" | "following" | "classement" | "defis" | "discussions" | "bestof" | "mentorat" | "comparer";
   const [activeTab, setActiveTab] = useState<TabId>("foryou");
   const [messages, setMessages] = useState<FeedMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1210,46 +1210,39 @@ export default function CommunityPage() {
               </h1>
             </div>
 
-            {/* Tabs: Pour toi / Suivis */}
-            <div className="flex">
-              <button
-                onClick={() => setActiveTab("foryou")}
-                className="flex-1 py-3 text-center relative transition-colors"
-                style={{
-                  color: activeTab === "foryou" ? "var(--text-primary)" : "var(--text-muted)",
-                  fontWeight: activeTab === "foryou" ? 700 : 500,
-                  fontSize: "15px",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                Pour toi
-                {activeTab === "foryou" && (
-                  <div
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[4px] rounded-full"
-                    style={{ width: "56px", background: "#06b6d4" }}
-                  />
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab("following")}
-                className="flex-1 py-3 text-center relative transition-colors"
-                style={{
-                  color: activeTab === "following" ? "var(--text-primary)" : "var(--text-muted)",
-                  fontWeight: activeTab === "following" ? 700 : 500,
-                  fontSize: "15px",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                Suivis
-                {activeTab === "following" && (
-                  <div
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[4px] rounded-full"
-                    style={{ width: "42px", background: "#06b6d4" }}
-                  />
-                )}
-              </button>
+            {/* Tabs */}
+            <div className="flex overflow-x-auto scrollbar-thin" style={{ borderBottom: "1px solid var(--border)" }}>
+              {([
+                { id: "foryou" as TabId, label: "Pour toi" },
+                { id: "following" as TabId, label: "Suivis" },
+                { id: "classement" as TabId, label: "Classement" },
+                { id: "defis" as TabId, label: "Défis" },
+                { id: "discussions" as TabId, label: "Discussions" },
+                { id: "bestof" as TabId, label: "Best Of" },
+                { id: "mentorat" as TabId, label: "Mentorat" },
+                { id: "comparer" as TabId, label: "Comparer" },
+              ]).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="px-4 py-3 text-center relative transition-colors whitespace-nowrap"
+                  style={{
+                    color: activeTab === tab.id ? "var(--text-primary)" : "var(--text-muted)",
+                    fontWeight: activeTab === tab.id ? 700 : 500,
+                    fontSize: "14px",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  {tab.label}
+                  {activeTab === tab.id && (
+                    <div
+                      className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[4px] rounded-full"
+                      style={{ width: "80%", maxWidth: "56px", background: "#06b6d4" }}
+                    />
+                  )}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -1364,22 +1357,31 @@ export default function CommunityPage() {
               )}
             </div>
           ) : (
-            /* Following tab — coming soon */
+            /* Other tabs — coming soon placeholders */
             <div className="py-20 text-center px-8">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ background: "rgba(6,182,212,0.1)" }}
+                style={{ background: activeTab === "classement" ? "rgba(234,179,8,0.1)" : activeTab === "defis" ? "rgba(239,68,68,0.1)" : activeTab === "discussions" ? "rgba(59,130,246,0.1)" : activeTab === "bestof" ? "rgba(168,85,247,0.1)" : activeTab === "mentorat" ? "rgba(16,185,129,0.1)" : activeTab === "comparer" ? "rgba(236,72,153,0.1)" : "rgba(6,182,212,0.1)" }}
               >
-                <Users className="w-8 h-8" style={{ color: "#06b6d4" }} />
+                {activeTab === "classement" && <BarChart3 className="w-8 h-8" style={{ color: "#eab308" }} />}
+                {activeTab === "defis" && <BarChart2 className="w-8 h-8" style={{ color: "#ef4444" }} />}
+                {activeTab === "discussions" && <MessageCircle className="w-8 h-8" style={{ color: "#3b82f6" }} />}
+                {activeTab === "bestof" && <Heart className="w-8 h-8" style={{ color: "#a855f7" }} />}
+                {activeTab === "mentorat" && <Users className="w-8 h-8" style={{ color: "#10b981" }} />}
+                {activeTab === "comparer" && <BarChart3 className="w-8 h-8" style={{ color: "#ec4899" }} />}
+                {activeTab === "following" && <Users className="w-8 h-8" style={{ color: "#06b6d4" }} />}
               </div>
               <h2
                 className="text-xl font-extrabold mb-2"
                 style={{ color: "var(--text-primary)" }}
               >
-                Disponible prochainement
+                {activeTab === "following" ? "Suivis" : activeTab === "classement" ? "Classement des Traders" : activeTab === "defis" ? "Défis Trading" : activeTab === "discussions" ? "Discussions" : activeTab === "bestof" ? "Best Of" : activeTab === "mentorat" ? "Mentorat" : "Comparer"}
               </h2>
-              <p className="text-[15px]" style={{ color: "var(--text-secondary)" }}>
-                Suivez d&apos;autres traders pour voir leurs posts ici.
+              <p className="text-[15px] mb-1" style={{ color: "var(--text-secondary)" }}>
+                {activeTab === "following" ? "Suivez d'autres traders pour voir leurs posts ici." : activeTab === "classement" ? "Classement communautaire des meilleurs traders par performance." : activeTab === "defis" ? "Participez à des défis hebdomadaires et mensuels entre traders." : activeTab === "discussions" ? "Espaces de discussion thématiques sur les marchés." : activeTab === "bestof" ? "Les meilleurs trades et analyses de la communauté." : activeTab === "mentorat" ? "Trouvez un mentor ou partagez votre expérience." : "Comparez vos performances avec d'autres traders."}
+              </p>
+              <p className="text-sm font-medium mt-4" style={{ color: "#06b6d4" }}>
+                Disponible prochainement
               </p>
             </div>
           )}
