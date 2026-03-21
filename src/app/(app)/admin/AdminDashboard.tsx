@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
+import { VipContentManager } from "./VipContentManager";
 import {
   Users,
   BarChart3,
@@ -62,6 +62,9 @@ interface UsersResponse {
 
 export function AdminDashboard() {
   const { t } = useTranslation();
+
+  // Tabs
+  const [activeTab, setActiveTab] = useState<"dashboard" | "vip">("dashboard");
 
   // Stats
   const [stats, setStats] = useState<Stats | null>(null);
@@ -300,22 +303,66 @@ export function AdminDashboard() {
             </p>
           </div>
         </div>
+        {activeTab === "dashboard" && (
+          <button
+            onClick={() => {
+              fetchStats();
+              fetchUsers();
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105 active:scale-95"
+            style={{
+              background: "var(--bg-secondary)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <RefreshCw className="w-4 h-4" />
+            {t("adminRefresh")}
+          </button>
+        )}
+      </div>
+
+      {/* ─── Tabs ─── */}
+      <div className="flex items-center gap-2">
         <button
-          onClick={() => {
-            fetchStats();
-            fetchUsers();
-          }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105 active:scale-95"
+          onClick={() => setActiveTab("dashboard")}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
           style={{
-            background: "var(--bg-secondary)",
-            color: "var(--text-primary)",
-            border: "1px solid var(--border)",
+            background: activeTab === "dashboard"
+              ? "linear-gradient(135deg, rgba(6,182,212,0.15), rgba(59,130,246,0.15))"
+              : "var(--bg-secondary)",
+            color: activeTab === "dashboard" ? "rgb(6,182,212)" : "var(--text-muted)",
+            border: activeTab === "dashboard"
+              ? "1px solid rgba(6,182,212,0.3)"
+              : "1px solid var(--border)",
           }}
         >
-          <RefreshCw className="w-4 h-4" />
-          {t("adminRefresh")}
+          <BarChart3 className="w-4 h-4" />
+          Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab("vip")}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+          style={{
+            background: activeTab === "vip"
+              ? "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(234,88,12,0.15))"
+              : "var(--bg-secondary)",
+            color: activeTab === "vip" ? "rgb(245,158,11)" : "var(--text-muted)",
+            border: activeTab === "vip"
+              ? "1px solid rgba(245,158,11,0.3)"
+              : "1px solid var(--border)",
+          }}
+        >
+          <Crown className="w-4 h-4" />
+          Contenu VIP
         </button>
       </div>
+
+      {/* ─── VIP Content Tab ─── */}
+      {activeTab === "vip" && <VipContentManager />}
+
+      {/* ─── Dashboard Tab ─── */}
+      {activeTab === "dashboard" && <>
 
       {/* ─── Stats Cards ─── */}
       {statsLoading ? (
@@ -827,41 +874,8 @@ export function AdminDashboard() {
               </button>
             </div>
 
-            {/* VIP Content + Seed */}
+            {/* Seed */}
             <div className="space-y-4">
-              {/* VIP Content */}
-              <div
-                className="rounded-xl p-4 border"
-                style={{
-                  borderColor: "var(--border)",
-                  background: "var(--bg-hover)",
-                }}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                    <Crown className="w-5 h-5 text-amber-400" />
-                  </div>
-                  <div>
-                    <h3
-                      className="font-semibold text-sm"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {t("adminVipContent")}
-                    </h3>
-                  </div>
-                </div>
-                <Link
-                  href="/admin/vip-content"
-                  className="block w-full py-2 rounded-lg text-sm font-medium text-white transition hover:opacity-90 text-center"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, rgb(245,158,11), rgb(234,88,12))",
-                  }}
-                >
-                  {t("adminManageVipContent")}
-                </Link>
-              </div>
-
               {/* Seed */}
               <div
                 className="rounded-xl p-4 border"
@@ -966,6 +980,8 @@ export function AdminDashboard() {
           </div>
         )}
       </div>
+
+      </>}
     </div>
   );
 }
