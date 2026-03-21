@@ -56,6 +56,7 @@ import {
   Heart,
   Flame,
   AlertCircle,
+  Lock,
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────
@@ -1345,6 +1346,7 @@ export default function ChatPage() {
   const [showTradeModal, setShowTradeModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isBanned, setIsBanned] = useState(false);
+  const [isVip, setIsVip] = useState<boolean | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -1387,9 +1389,10 @@ export default function ChatPage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.role === "ADMIN") setIsAdmin(true);
+        setIsVip(data?.role === "VIP" || data?.role === "ADMIN");
         if (data?.banned) setIsBanned(true);
       })
-      .catch(() => {});
+      .catch(() => setIsVip(false));
   }, []);
 
   const { messages, loading: msgsLoading, sending, sendMessage, deleteMessage, pinMessage, toggleReaction, banUser } = useChat(activeRoomId);
@@ -1796,6 +1799,69 @@ export default function ChatPage() {
   const totalRoomUnreads = useMemo(() => {
     return Object.values(roomUnreads).reduce((sum, n) => sum + n, 0);
   }, [roomUnreads]);
+
+  // VIP loading state
+  if (isVip === null) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // VIP gate
+  if (!isVip) {
+    return (
+      <div className="relative min-h-[70vh] flex items-center justify-center">
+        {/* Blurred background preview */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl opacity-30 blur-sm pointer-events-none">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--border)" }}>
+              <MessageCircle className="w-5 h-5 text-cyan-400" />
+              <span className="font-bold" style={{ color: "var(--text-primary)" }}>Chat Communautaire</span>
+              <div className="flex items-center gap-1 ml-2"><div className="w-2 h-2 rounded-full bg-emerald-400" /><span className="text-xs text-emerald-500">Live</span></div>
+            </div>
+            <div className="flex-1 p-4 space-y-3">
+              {[1,2,3,4,5].map(i => (
+                <div key={i} className="flex gap-3"><div className="w-8 h-8 rounded-full" style={{ background: "var(--border)" }} /><div className="space-y-1 flex-1"><div className="h-3 rounded" style={{ background: "var(--border)", width: `${40 + i * 10}%` }} /><div className="h-3 rounded" style={{ background: "var(--border)", width: `${20 + i * 8}%` }} /></div></div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* VIP overlay */}
+        <div className="relative z-10 glass rounded-2xl p-8 md:p-12 max-w-lg mx-4 text-center" style={{ border: "1px solid rgba(6,182,212,0.2)", background: "rgba(var(--bg-card-rgb, 15,15,20), 0.85)", backdropFilter: "blur(20px)" }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" }}>
+            <Lock className="w-8 h-8 text-cyan-400" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalite VIP</h2>
+          <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
+            Echangez en temps reel avec la communaute de traders MarketPhase
+          </p>
+          <div className="space-y-3 text-left mb-8">
+            {[
+              "Acces au chat communautaire en temps reel",
+              "Partagez vos analyses et trades",
+              "Echangez avec des traders experimentes",
+            ].map((b, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(6,182,212,0.15)" }}>
+                  <Check className="w-3 h-3 text-cyan-400" />
+                </div>
+                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{b}</span>
+              </div>
+            ))}
+          </div>
+          <a href="/vip" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
+            <Crown className="w-4 h-4" />
+            Devenir VIP
+          </a>
+          <div className="mt-4">
+            <a href="/vip" className="text-xs hover:underline" style={{ color: "var(--text-muted)" }}>Voir les offres</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (roomsLoading) {
     return (

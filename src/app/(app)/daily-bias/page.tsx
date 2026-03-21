@@ -5,7 +5,7 @@ import {
   Save, ChevronLeft, ChevronRight, Crosshair, TrendingUp, TrendingDown,
   Minus, Plus, Trash2, CheckSquare, Square, Clock, Globe, MessageSquare,
   BarChart3, Upload, X, Share2, Calendar, Copy, Eye, Target, Award,
-  ChevronDown, ChevronUp, ZoomIn
+  ChevronDown, ChevronUp, ZoomIn, Lock, Crown, Check,
 } from "lucide-react";
 import { useTradingRules } from "@/hooks/useTradingRules";
 import { useTranslation } from "@/i18n/context";
@@ -610,6 +610,14 @@ export default function DailyBiasPage() {
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [sharing, setSharing] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [isVip, setIsVip] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/user/role")
+      .then(r => r.json())
+      .then(d => setIsVip(d.role === "VIP" || d.role === "ADMIN"))
+      .catch(() => setIsVip(false));
+  }, []);
 
   // History state
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -800,6 +808,71 @@ export default function DailyBiasPage() {
     checkedRules.size > 0;
 
   const executionQuality = rules.length > 0 ? Math.round((checkedRules.size / rules.length) * 100) : null;
+
+  // VIP loading state
+  if (isVip === null) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // VIP gate
+  if (!isVip) {
+    return (
+      <div className="relative min-h-[70vh] flex items-center justify-center">
+        {/* Blurred background preview */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl opacity-30 blur-sm pointer-events-none">
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-2"><Crosshair className="w-6 h-6 text-cyan-400" /><span className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Daily Bias</span></div>
+            <div className="grid grid-cols-3 gap-3">
+              {["Bullish","Bearish","Neutre"].map(b => (
+                <div key={b} className="rounded-xl p-4 text-center" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+                  <div className="h-3 rounded mb-2" style={{ background: "var(--border)", width: "60%" }} />
+                  <div className="h-2 rounded" style={{ background: "var(--border)", width: "40%" }} />
+                </div>
+              ))}
+            </div>
+            <div className="rounded-xl p-6" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+              <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-3 rounded" style={{ background: "var(--border)", width: `${50 + i * 12}%` }} />)}</div>
+            </div>
+          </div>
+        </div>
+        {/* VIP overlay */}
+        <div className="relative z-10 glass rounded-2xl p-8 md:p-12 max-w-lg mx-4 text-center" style={{ border: "1px solid rgba(6,182,212,0.2)", background: "rgba(var(--bg-card-rgb, 15,15,20), 0.85)", backdropFilter: "blur(20px)" }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" }}>
+            <Lock className="w-8 h-8 text-cyan-400" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalite VIP</h2>
+          <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
+            Definissez votre biais quotidien et suivez votre discipline directionnelle
+          </p>
+          <div className="space-y-3 text-left mb-8">
+            {[
+              "Planifiez votre biais directionnel chaque jour",
+              "Suivez vos regles de trading et votre discipline",
+              "Historique complet et statistiques de vos biais",
+            ].map((b, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(6,182,212,0.15)" }}>
+                  <Check className="w-3 h-3 text-cyan-400" />
+                </div>
+                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{b}</span>
+              </div>
+            ))}
+          </div>
+          <a href="/vip" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
+            <Crown className="w-4 h-4" />
+            Devenir VIP
+          </a>
+          <div className="mt-4">
+            <a href="/vip" className="text-xs hover:underline" style={{ color: "var(--text-muted)" }}>Voir les offres</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
