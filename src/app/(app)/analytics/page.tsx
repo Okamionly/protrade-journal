@@ -969,7 +969,7 @@ export default function AnalyticsPage() {
                                 background: getCellColor(winRate),
                                 color: getCellTextColor(winRate),
                               }}
-                              title={`${asset} a ${String(h).padStart(2, "0")}:00 UTC: ${winRate.toFixed(0)}% win rate, ${cell.count} trade${cell.count > 1 ? "s" : ""}, avg ${avgPnl >= 0 ? "+" : ""}${avgPnl.toFixed(2)}\u20AC`}
+                              title={`${asset} a ${String(h).padStart(2, "0")}:00 UTC: ${winRate.toFixed(0)}% win rate, ${cell.count} trade${cell.count > 1 ? "s" : ""}, avg ${avgPnl >= 0 ? "+" : ""}${avgPnl.toFixed(2)}€`}
                             >
                               {winRate.toFixed(0)}%
                             </td>

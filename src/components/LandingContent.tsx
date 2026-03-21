@@ -497,7 +497,7 @@ export default function LandingContent() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
               {[
                 { value: "35+", label: t("landing_statTools"), sub: t("landing_statToolsSub") },
-                { value: "0\u20AC", label: t("landing_statFree"), sub: t("landing_statFreeSub") },
+                { value: "0€", label: t("landing_statFree"), sub: t("landing_statFreeSub") },
                 { value: "1.2K+", label: t("landing_statTraders"), sub: t("landing_statTradersSub") },
                 { value: "24/7", label: t("landing_statMarket"), sub: t("landing_statMarketSub") },
               ].map((s) => (

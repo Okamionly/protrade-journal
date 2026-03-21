@@ -395,7 +395,7 @@ export default function ChallengesPage() {
       {
         id: "consistance",
         title: "Consistance",
-        description: "Max 50\u20AC de perte par jour pendant 2 semaines",
+        description: "Max 50€ de perte par jour pendant 2 semaines",
         icon: <Shield size={20} />,
         iconName: "Shield",
         current: Math.min(consistentDays, 14),
@@ -427,7 +427,7 @@ export default function ChallengesPage() {
       {
         id: "profit-target",
         title: "Profit Target",
-        description: "500\u20AC de profit ce mois",
+        description: "500€ de profit ce mois",
         icon: <Gem size={20} />,
         iconName: "Gem",
         current: Math.min(Math.max(monthProfit, 0), 500),
@@ -545,8 +545,8 @@ export default function ChallengesPage() {
       { id: "winrate-60", title: "Win Rate > 60%", description: "Atteindre 60% de win rate", icon: <TrendingUp size={20} />, unlocked: winRate > 60 && sorted.length >= 10, color: "#10b981" },
       { id: "pf-2", title: "Profit Factor > 2", description: "Profit factor superieur a 2", icon: <Gem size={20} />, unlocked: pf > 2 && sorted.length >= 10, color: "#ec4899" },
       { id: "diamond", title: "Diamant", description: "PF > 2 et Win Rate > 55%", icon: <Sparkles size={20} />, unlocked: diamondScore && sorted.length >= 20, color: "#a855f7" },
-      { id: "1000-profit", title: "1000\u20AC Profit", description: "Accumuler 1000\u20AC de profit", icon: <Award size={20} />, unlocked: totalPnL >= 1000, color: "#f59e0b" },
-      { id: "best-month", title: "Mois Record", description: "Mois avec 500\u20AC+ de profit", icon: <Medal size={20} />, unlocked: bestMonth >= 500, color: "#ef4444" },
+      { id: "1000-profit", title: "1000€ Profit", description: "Accumuler 1000€ de profit", icon: <Award size={20} />, unlocked: totalPnL >= 1000, color: "#f59e0b" },
+      { id: "best-month", title: "Mois Record", description: "Mois avec 500€+ de profit", icon: <Medal size={20} />, unlocked: bestMonth >= 500, color: "#ef4444" },
       ...challengeBadges,
     ];
   }, [sorted, completedChallenges]);
@@ -1350,7 +1350,7 @@ export default function ChallengesPage() {
           {[
             { label: "Trades", current: monthly.trades, target: 30, last: monthly.lastTrades, format: (v: number) => `${v}`, color: "#3b82f6" },
             { label: "Win Rate", current: monthly.winRate, target: 100, last: monthly.lastWinRate, format: (v: number) => `${v.toFixed(1)}%`, color: "#10b981" },
-            { label: "P&L", current: monthly.pnl, target: 500, last: monthly.lastPnl, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}\u20AC`, color: monthly.pnl >= 0 ? "#10b981" : "#ef4444" },
+            { label: "P&L", current: monthly.pnl, target: 500, last: monthly.lastPnl, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}€`, color: monthly.pnl >= 0 ? "#10b981" : "#ef4444" },
           ].map((m) => {
             const diff = m.current - m.last;
             const pctDiff = m.last > 0 ? ((diff / m.last) * 100) : 0;

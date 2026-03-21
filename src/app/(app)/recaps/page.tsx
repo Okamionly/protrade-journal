@@ -89,7 +89,7 @@ export default function RecapsPage() {
     return d;
   }, [period, offset]);
 
-  const range = period === "week" ? getWeekRange(currentDate) : getMonthRange(currentDate);
+  const range = useMemo(() => period === "week" ? getWeekRange(currentDate) : getMonthRange(currentDate), [period, currentDate]);
   const pKey = periodKey(period, range);
 
   // localStorage state for lessons & plan
@@ -124,7 +124,8 @@ export default function RecapsPage() {
     } catch {
       // ignore localStorage errors
     }
-  }, [pKey, range.start]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pKey]);
 
   const saveLessons = useCallback((v: string) => {
     setLessons(v);
@@ -296,12 +297,12 @@ export default function RecapsPage() {
   // Trade distribution histogram
   const histogram = useMemo(() => {
     const bins = [
-      { label: "<-100\u20AC", min: -Infinity, max: -100, count: 0 },
+      { label: "<-100€", min: -Infinity, max: -100, count: 0 },
       { label: "-100/-50", min: -100, max: -50, count: 0 },
       { label: "-50/0", min: -50, max: 0, count: 0 },
       { label: "0/50", min: 0, max: 50, count: 0 },
       { label: "50/100", min: 50, max: 100, count: 0 },
-      { label: ">100\u20AC", min: 100, max: Infinity, count: 0 },
+      { label: ">100€", min: 100, max: Infinity, count: 0 },
     ];
     periodTrades.forEach((t) => {
       const net = getNetPnl(t);
@@ -327,26 +328,26 @@ export default function RecapsPage() {
       `=== RECAP ${period === "week" ? "SEMAINE" : "MOIS"} ===`,
       `${formatDateFr(range.start)} - ${formatDateFr(range.end)}`,
       "",
-      `P&L: ${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}\u20AC`,
+      `P&L: ${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}€`,
       `Trades: ${stats.total} (${stats.wins}W / ${stats.losses}L)`,
       `Win Rate: ${stats.winRate.toFixed(1)}%`,
       `Profit Factor: ${stats.profitFactor === Infinity ? "\u221E" : stats.profitFactor.toFixed(2)}`,
       stats.avgRR !== null ? `R:R Moyen: ${stats.avgRR.toFixed(2)}` : "",
       "",
       `--- Comparaison vs pr\u00E9c\u00E9dent ---`,
-      `P&L delta: ${pnlDelta >= 0 ? "+" : ""}${pnlDelta.toFixed(2)}\u20AC`,
+      `P&L delta: ${pnlDelta >= 0 ? "+" : ""}${pnlDelta.toFixed(2)}€`,
       `Win rate delta: ${wrDelta >= 0 ? "+" : ""}${wrDelta.toFixed(1)}pp`,
       "",
     ];
 
     if (stats.top3.length > 0) {
       lines.push("--- Top 3 trades ---");
-      stats.top3.forEach((t, i) => lines.push(`#${i + 1} ${t.asset} (${t.strategy}): +${getNetPnl(t).toFixed(2)}\u20AC`));
+      stats.top3.forEach((t, i) => lines.push(`#${i + 1} ${t.asset} (${t.strategy}): +${getNetPnl(t).toFixed(2)}€`));
       lines.push("");
     }
     if (stats.worst3.length > 0) {
       lines.push("--- Pires 3 trades ---");
-      stats.worst3.forEach((t, i) => lines.push(`#${i + 1} ${t.asset} (${t.strategy}): ${getNetPnl(t).toFixed(2)}\u20AC`));
+      stats.worst3.forEach((t, i) => lines.push(`#${i + 1} ${t.asset} (${t.strategy}): ${getNetPnl(t).toFixed(2)}€`));
       lines.push("");
     }
 
@@ -356,7 +357,7 @@ export default function RecapsPage() {
         .sort(([, a], [, b]) => b.pnl - a.pnl)
         .forEach(([name, data]) => {
           const wr = data.count > 0 ? ((data.wins / data.count) * 100).toFixed(0) : "0";
-          lines.push(`${name}: ${data.pnl >= 0 ? "+" : ""}${data.pnl.toFixed(2)}\u20AC (${data.count} trades, ${wr}% WR)`);
+          lines.push(`${name}: ${data.pnl >= 0 ? "+" : ""}${data.pnl.toFixed(2)}€ (${data.count} trades, ${wr}% WR)`);
         });
       lines.push("");
     }
@@ -364,7 +365,7 @@ export default function RecapsPage() {
     if (sessionStats.length > 0) {
       lines.push("--- Par session ---");
       sessionStats.forEach(s => {
-        lines.push(`${s.session}: ${s.totalPnl >= 0 ? "+" : ""}${s.totalPnl.toFixed(2)}\u20AC (${s.count} trades, ${s.winRate.toFixed(0)}% WR)`);
+        lines.push(`${s.session}: ${s.totalPnl >= 0 ? "+" : ""}${s.totalPnl.toFixed(2)}€ (${s.count} trades, ${s.winRate.toFixed(0)}% WR)`);
       });
       lines.push("");
     }
@@ -462,9 +463,9 @@ export default function RecapsPage() {
         {[
           {
             label: "P&L",
-            value: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}\u20AC`,
+            value: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}€`,
             delta: pnlDelta,
-            deltaFmt: `${pnlDelta >= 0 ? "+" : ""}${pnlDelta.toFixed(2)}\u20AC`,
+            deltaFmt: `${pnlDelta >= 0 ? "+" : ""}${pnlDelta.toFixed(2)}€`,
             color: stats.pnl >= 0 ? "#10b981" : "#ef4444",
           },
           {
@@ -497,7 +498,7 @@ export default function RecapsPage() {
           },
           {
             label: t("avgGain"),
-            value: `${stats.avgWin.toFixed(2)}\u20AC`,
+            value: `${stats.avgWin.toFixed(2)}€`,
             delta: null,
             deltaFmt: null,
             color: "#10b981",
@@ -536,7 +537,7 @@ export default function RecapsPage() {
             </thead>
             <tbody>
               {[
-                { label: "P&L", prev: `${stats.prevPnl >= 0 ? "+" : ""}${stats.prevPnl.toFixed(2)}\u20AC`, curr: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}\u20AC`, delta: pnlDelta, deltaStr: `${pnlDelta >= 0 ? "+" : ""}${pnlDelta.toFixed(2)}\u20AC` },
+                { label: "P&L", prev: `${stats.prevPnl >= 0 ? "+" : ""}${stats.prevPnl.toFixed(2)}€`, curr: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}€`, delta: pnlDelta, deltaStr: `${pnlDelta >= 0 ? "+" : ""}${pnlDelta.toFixed(2)}€` },
                 { label: "Trades", prev: String(stats.prevTotal), curr: String(stats.total), delta: stats.total - stats.prevTotal, deltaStr: `${stats.total - stats.prevTotal >= 0 ? "+" : ""}${stats.total - stats.prevTotal}` },
                 { label: "Win Rate", prev: `${stats.prevWinRate.toFixed(1)}%`, curr: `${stats.winRate.toFixed(1)}%`, delta: wrDelta, deltaStr: `${wrDelta >= 0 ? "+" : ""}${wrDelta.toFixed(1)}pp` },
                 { label: "Profit Factor", prev: stats.prevPF === Infinity ? "\u221E" : stats.prevPF.toFixed(2), curr: stats.profitFactor === Infinity ? "\u221E" : stats.profitFactor.toFixed(2), delta: pfDelta ?? 0, deltaStr: pfDelta !== null ? `${pfDelta >= 0 ? "+" : ""}${pfDelta.toFixed(2)}` : "-" },
@@ -585,7 +586,7 @@ export default function RecapsPage() {
                       fill={isPositive ? "#10b981" : "#ef4444"}
                       opacity="0.75"
                     >
-                      <title>{`${d.date}: ${d.pnl >= 0 ? "+" : ""}${d.pnl.toFixed(2)}\u20AC`}</title>
+                      <title>{`${d.date}: ${d.pnl >= 0 ? "+" : ""}${d.pnl.toFixed(2)}€`}</title>
                     </rect>
                     <text
                       x={x + barWidth / 2}
@@ -595,7 +596,7 @@ export default function RecapsPage() {
                       fill={isPositive ? "#10b981" : "#ef4444"}
                       fontFamily="monospace"
                     >
-                      {d.pnl >= 0 ? "+" : ""}{d.pnl.toFixed(0)}\u20AC
+                      {d.pnl >= 0 ? "+" : ""}{d.pnl.toFixed(0)}€
                     </text>
                     <text
                       x={x + barWidth / 2}
@@ -638,7 +639,7 @@ export default function RecapsPage() {
                       <span className="text-xs" style={{ color: "var(--text-muted)" }}>{new Date(tr.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
                     </div>
                   </div>
-                  <span className="font-bold mono" style={{ color: "#10b981" }}>+{getNetPnl(tr).toFixed(2)}\u20AC</span>
+                  <span className="font-bold mono" style={{ color: "#10b981" }}>+{getNetPnl(tr).toFixed(2)}€</span>
                 </div>
               ))}
             </div>
@@ -667,7 +668,7 @@ export default function RecapsPage() {
                       <span className="text-xs" style={{ color: "var(--text-muted)" }}>{new Date(tr.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
                     </div>
                   </div>
-                  <span className="font-bold mono" style={{ color: "#ef4444" }}>{getNetPnl(tr).toFixed(2)}\u20AC</span>
+                  <span className="font-bold mono" style={{ color: "#ef4444" }}>{getNetPnl(tr).toFixed(2)}€</span>
                 </div>
               ))}
             </div>
@@ -704,7 +705,7 @@ export default function RecapsPage() {
                         <td className="p-2 text-center mono" style={{ color: "var(--text-secondary)" }}>{data.count}</td>
                         <td className="p-2 text-center mono" style={{ color: wr >= 50 ? "#10b981" : "#f59e0b" }}>{wr.toFixed(0)}%</td>
                         <td className="p-2 text-right mono font-bold" style={{ color: data.pnl >= 0 ? "#10b981" : "#ef4444" }}>
-                          {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(2)}\u20AC
+                          {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(2)}€
                         </td>
                       </tr>
                     );
@@ -739,13 +740,13 @@ export default function RecapsPage() {
                   <div>
                     <div style={{ color: "var(--text-muted)" }}>P&L</div>
                     <div className="font-bold mono" style={{ color: s.totalPnl >= 0 ? "#10b981" : "#ef4444" }}>
-                      {s.totalPnl >= 0 ? "+" : ""}{s.totalPnl.toFixed(2)}\u20AC
+                      {s.totalPnl >= 0 ? "+" : ""}{s.totalPnl.toFixed(2)}€
                     </div>
                   </div>
                   <div>
                     <div style={{ color: "var(--text-muted)" }}>Moy.</div>
                     <div className="font-bold mono" style={{ color: s.avgPnl >= 0 ? "#10b981" : "#ef4444" }}>
-                      {s.avgPnl >= 0 ? "+" : ""}{s.avgPnl.toFixed(2)}\u20AC
+                      {s.avgPnl >= 0 ? "+" : ""}{s.avgPnl.toFixed(2)}€
                     </div>
                   </div>
                 </div>
@@ -783,10 +784,10 @@ export default function RecapsPage() {
                       {d.count > 0 ? `${d.winRate.toFixed(0)}%` : "-"}
                     </td>
                     <td className="p-2 text-center mono font-bold" style={{ color: d.avgPnl >= 0 ? "#10b981" : "#ef4444" }}>
-                      {d.count > 0 ? `${d.avgPnl >= 0 ? "+" : ""}${d.avgPnl.toFixed(2)}\u20AC` : "-"}
+                      {d.count > 0 ? `${d.avgPnl >= 0 ? "+" : ""}${d.avgPnl.toFixed(2)}€` : "-"}
                     </td>
                     <td className="p-2 text-right mono font-bold" style={{ color: d.totalPnl >= 0 ? "#10b981" : "#ef4444" }}>
-                      {d.count > 0 ? `${d.totalPnl >= 0 ? "+" : ""}${d.totalPnl.toFixed(2)}\u20AC` : "-"}
+                      {d.count > 0 ? `${d.totalPnl >= 0 ? "+" : ""}${d.totalPnl.toFixed(2)}€` : "-"}
                     </td>
                   </tr>
                 ))}
@@ -923,7 +924,7 @@ export default function RecapsPage() {
                   label={t("recapGoalMonthlyPnl")}
                   current={stats.pnl}
                   target={goals.pnl}
-                  unit="\u20AC"
+                  unit="€"
                   isCurrency
                 />
               )}
