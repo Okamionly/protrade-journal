@@ -112,7 +112,11 @@ export default function CommunityPage() {
       const data = await res.json();
       if (after) {
         if (data.messages?.length > 0) {
-          setMessages((prev) => [...prev, ...data.messages]);
+          setMessages((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const newMsgs = data.messages.filter((m: FeedMessage) => !existingIds.has(m.id));
+            return newMsgs.length > 0 ? [...prev, ...newMsgs] : prev;
+          });
         }
       } else {
         setMessages(data.messages || []);

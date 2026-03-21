@@ -126,9 +126,15 @@ function VipPage() {
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", { method: "POST" });
+      if (!res.ok) {
+        setLoading(false);
+        return;
+      }
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        setLoading(false);
       }
     } catch {
       setLoading(false);
@@ -277,7 +283,7 @@ function VipPage() {
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  S&apos;abonner - 9.99&euro;/mois
+                  S&apos;abonner - 9&euro;/mois
                 </>
               )}
             </button>
@@ -704,7 +710,7 @@ function VipPage() {
                   className="text-4xl font-bold"
                   style={{ color: "var(--text-primary, #e5e7eb)" }}
                 >
-                  9.99&euro;
+                  9&euro;
                 </span>
                 <span
                   className="text-sm"

@@ -132,7 +132,7 @@ function MessageBubble({
   const { t } = useTranslation();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showActions, setShowActions] = useState(false);
-  const initial = (msg.user.name || msg.user.email)[0].toUpperCase();
+  const initial = (msg.user.name || msg.user.email || "?")[0].toUpperCase();
   const reactions = getReactionGroups(msg, currentUserId);
 
   return (

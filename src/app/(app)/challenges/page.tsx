@@ -118,7 +118,8 @@ export default function ChallengesPage() {
     const last10 = sorted.slice(-10);
     const riskOk = last10.filter((t) => {
       const rr = parseFloat(calculateRR(t.entry, t.sl, t.tp));
-      return isNaN(rr) || t.result >= 0 || Math.abs(t.result) / Math.abs(t.entry - t.sl) <= 2;
+      const risk = Math.abs(t.entry - t.sl);
+      return isNaN(rr) || t.result >= 0 || risk === 0 || Math.abs(t.result) / risk <= 2;
     }).length;
 
     // Win streak
