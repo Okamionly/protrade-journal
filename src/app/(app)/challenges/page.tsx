@@ -585,25 +585,8 @@ export default function ChallengesPage() {
     };
   }, [sorted]);
 
-  /* ── leaderboard (simulated) ── */
-  const leaderboard = useMemo(() => {
-    const names = [
-      "TraderPro_FR", "AlphaVortex", "SwingKing", "ScalpMaster42",
-      "ZenTrader", "FxWolf", "PipHunter", "TrendRider",
-      "RiskManager", "MomentumX", "PatientTrader", "LevelUpFX",
-    ];
-    return challenges.map((c) => ({
-      challengeId: c.id,
-      challengeName: c.title,
-      entries: names.map((name, i) => ({
-        rank: i + 1,
-        name,
-        progress: Math.max(0, Math.min(100, 100 - i * 8 + Math.floor(Math.random() * 10))),
-        isYou: i === 2,
-      })).sort((a, b) => b.progress - a.progress).map((e, i) => ({ ...e, rank: i + 1 })),
-    }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [challenges.length]);
+  /* ── leaderboard (real data not available yet) ── */
+  const leaderboard: { challengeId: string; challengeName: string; entries: { rank: number; name: string; progress: number; isYou: boolean }[] }[] = [];
 
   /* ── custom challenge creation ── */
   const [newChallenge, setNewChallenge] = useState({
@@ -1087,52 +1070,11 @@ export default function ChallengesPage() {
             <Crown size={20} className="text-amber-500" />
             Classement par Challenge
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {leaderboard.slice(0, 6).map((lb) => (
-              <div key={lb.challengeId} className="glass rounded-xl p-5" style={{ border: "1px solid var(--border)" }}>
-                <h3 className="font-semibold text-sm mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-                  <Trophy size={16} className="text-amber-500" />
-                  {lb.challengeName}
-                </h3>
-                <div className="space-y-2.5">
-                  {lb.entries.slice(0, 5).map((entry) => (
-                    <div
-                      key={entry.name}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                        entry.isYou ? "ring-1 ring-amber-500/30" : ""
-                      }`}
-                      style={{
-                        backgroundColor: entry.isYou ? "var(--bg-primary)" : "transparent",
-                      }}
-                    >
-                      <span
-                        className="mono text-xs font-bold w-6 text-center"
-                        style={{
-                          color: entry.rank === 1 ? "#f59e0b" : entry.rank === 2 ? "#94a3b8" : entry.rank === 3 ? "#cd7f32" : "var(--text-muted)",
-                        }}
-                      >
-                        {entry.rank === 1 ? "🥇" : entry.rank === 2 ? "🥈" : entry.rank === 3 ? "🥉" : `#${entry.rank}`}
-                      </span>
-                      <span className="text-sm flex-1" style={{ color: entry.isYou ? "#f59e0b" : "var(--text-primary)" }}>
-                        {entry.isYou ? "Vous" : entry.name}
-                      </span>
-                      <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-primary)" }}>
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${entry.progress}%`,
-                            backgroundColor: entry.isYou ? "#f59e0b" : entry.rank <= 3 ? "#10b981" : "var(--text-muted)",
-                          }}
-                        />
-                      </div>
-                      <span className="mono text-xs font-medium w-10 text-right" style={{ color: "var(--text-muted)" }}>
-                        {entry.progress}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="glass rounded-xl p-8 text-center" style={{ border: "1px solid var(--border)" }}>
+            <Crown size={40} className="text-amber-500/40 mx-auto mb-3" />
+            <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+              Classement communautaire disponible prochainement
+            </p>
           </div>
         </section>
       )}

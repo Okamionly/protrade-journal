@@ -96,8 +96,8 @@ interface UserProfile {
   name: string;
   email: string;
   role: string;
-  winRate: number;
-  totalTrades: number;
+  winRate: number | null;
+  totalTrades: number | null;
   memberSince: string;
   isOnline: boolean;
 }
@@ -432,13 +432,13 @@ function UserProfileCard({ profile, position }: { profile: UserProfile; position
         <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
           <div className="text-center">
             <p className="text-xs font-bold mono" style={{ color: "var(--text-primary)" }}>
-              {profile.winRate}%
+              {profile.winRate !== null ? `${profile.winRate}%` : "-"}
             </p>
             <p className="text-[10px] text-[--text-muted]">Win Rate</p>
           </div>
           <div className="text-center">
             <p className="text-xs font-bold mono" style={{ color: "var(--text-primary)" }}>
-              {profile.totalTrades}
+              {profile.totalTrades !== null ? profile.totalTrades : "-"}
             </p>
             <p className="text-[10px] text-[--text-muted]">Trades</p>
           </div>
@@ -1398,34 +1398,11 @@ export default function ChatPage() {
     prevMessageCount.current = messages.length;
   }, [messages.length]);
 
-  // Simulated typing indicator
-  useEffect(() => {
-    const names = ["Marc", "Sophie", "Alex"];
-    const interval = setInterval(() => {
-      const rand = Math.random();
-      if (rand < 0.1) {
-        const randomUser = names[Math.floor(Math.random() * names.length)];
-        setTypingUsers([randomUser]);
-        setTimeout(() => setTypingUsers([]), 3000);
-      }
-    }, 8000);
-    return () => clearInterval(interval);
-  }, []);
+  // Real typing indicator - only show when there are actual typing events
+  // (no simulated typing)
 
-  // Simulate room unread badges
-  useEffect(() => {
-    if (rooms.length === 0) return;
-    const interval = setInterval(() => {
-      const randomRoom = rooms[Math.floor(Math.random() * rooms.length)];
-      if (randomRoom.id !== activeRoomId) {
-        setRoomUnreads((prev) => ({
-          ...prev,
-          [randomRoom.id]: (prev[randomRoom.id] || 0) + Math.floor(Math.random() * 3) + 1,
-        }));
-      }
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [rooms, activeRoomId]);
+  // Room unread badges - based on real new messages only
+  // (no simulated unread counts)
 
   // Clear unread when switching rooms
   useEffect(() => {
@@ -1625,8 +1602,8 @@ export default function ChatPage() {
       name: msg.user.name || msg.user.email.split("@")[0],
       email: msg.user.email,
       role: msg.user.role || "USER",
-      winRate: Math.floor(Math.random() * 30) + 50, // Simulated
-      totalTrades: Math.floor(Math.random() * 200) + 10, // Simulated
+      winRate: null,
+      totalTrades: null,
       memberSince: "2024",
       isOnline: true,
     };
