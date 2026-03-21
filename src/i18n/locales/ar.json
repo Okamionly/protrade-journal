@@ -1121,5 +1121,9 @@
   "recapWorstTrades": "أسوأ 3 صفقات",
   "recapPrevPeriod": "الفترة السابقة",
   "recapCurrentPeriod": "الفترة الحالية",
-  "recapDelta": "الفرق"
+  "recapDelta": "الفرق",
+  "marketDataDesc": "بيانات السوق في الوقت الفعلي",
+  "searchSymbolPlaceholder": "ابحث عن رمز...",
+  "majorIndices": "المؤشرات الرئيسية",
+  "manageStrategiesDesc": "إدارة استراتيجيات التداول الخاصة بك وتحليل أدائها"
 }

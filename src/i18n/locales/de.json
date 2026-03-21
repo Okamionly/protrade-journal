@@ -1121,5 +1121,9 @@
   "recapWorstTrades": "Schlechteste 3 Trades",
   "recapPrevPeriod": "Vorh. Zeitraum",
   "recapCurrentPeriod": "Aktueller Zeitraum",
-  "recapDelta": "Delta"
+  "recapDelta": "Delta",
+  "marketDataDesc": "Echtzeit-Marktdaten",
+  "searchSymbolPlaceholder": "Symbol suchen...",
+  "majorIndices": "Wichtige Indizes",
+  "manageStrategiesDesc": "Verwalten Sie Ihre Handelsstrategien und analysieren Sie deren Performance"
 }

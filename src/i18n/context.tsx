@@ -122,6 +122,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     let val = dictionaries[locale][key] || dictionaries.fr[key] || key;
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
+        val = val.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), String(v));
         val = val.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
       });
     }

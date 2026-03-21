@@ -1192,14 +1192,19 @@ export default function ReplayPage() {
     if (!selected || !stats) return null;
     const isLong = selected.direction === "LONG";
     const riskPips = stats.riskPips;
-    const lotMultiplier = selected.lots * 100000;
+    const exitPrice = selected.exit ?? selected.entry;
+    const priceDiff = isLong
+      ? exitPrice - selected.entry
+      : selected.entry - exitPrice;
+    // Derive monetary value per price unit from actual result to avoid hardcoded multipliers
+    const moneyPerUnit = priceDiff !== 0 ? selected.result / priceDiff : 0;
 
     const oneRTarget = isLong
       ? selected.entry + riskPips
       : selected.entry - riskPips;
-    const oneRPL = riskPips * lotMultiplier;
+    const oneRPL = riskPips * moneyPerUnit;
     const tpPips = Math.abs(selected.tp - selected.entry);
-    const tpPL = tpPips * lotMultiplier;
+    const tpPL = tpPips * moneyPerUnit;
     const doublePL = selected.result * 2;
 
     return {
@@ -1328,7 +1333,7 @@ export default function ReplayPage() {
                   {t.asset} {t.direction === "LONG" ? "\u25B2" : "\u25BC"}{" "}
                   {t.direction} &mdash;{" "}
                   {t.result >= 0 ? "+" : ""}
-                  {t.result.toFixed(2)}\u20AC
+                  {t.result.toFixed(2)}€
                   {t.strategy ? ` \u2014 ${t.strategy}` : ""}
                 </option>
               ))}
@@ -1619,7 +1624,7 @@ export default function ReplayPage() {
                   },
                   {
                     label: t("result"),
-                    value: `${selected.result >= 0 ? "+" : ""}${selected.result.toFixed(2)}\u20AC`,
+                    value: `${selected.result >= 0 ? "+" : ""}${selected.result.toFixed(2)}€`,
                     color:
                       selected.result >= 0 ? "#10b981" : "#f43f5e",
                     mono: true,
@@ -2125,7 +2130,7 @@ export default function ReplayPage() {
                         }}
                       >
                         {alternatives.cutAt1R.pl >= 0 ? "+" : ""}
-                        {alternatives.cutAt1R.pl.toFixed(2)}\u20AC
+                        {alternatives.cutAt1R.pl.toFixed(2)}€
                       </p>
                       <p
                         className="text-[10px] mono mt-1"
@@ -2150,7 +2155,7 @@ export default function ReplayPage() {
                           {(
                             alternatives.cutAt1R.pl - selected.result
                           ).toFixed(2)}
-                          \u20AC {t("replayVsReal")}
+                          € {t("replayVsReal")}
                         </span>
                       </div>
                     </div>
@@ -2179,7 +2184,7 @@ export default function ReplayPage() {
                         }}
                       >
                         {alternatives.letRunToTP.pl >= 0 ? "+" : ""}
-                        {alternatives.letRunToTP.pl.toFixed(2)}\u20AC
+                        {alternatives.letRunToTP.pl.toFixed(2)}€
                       </p>
                       <p
                         className="text-[10px] mono mt-1"
@@ -2205,7 +2210,7 @@ export default function ReplayPage() {
                           {(
                             alternatives.letRunToTP.pl - selected.result
                           ).toFixed(2)}
-                          \u20AC {t("replayVsReal")}
+                          € {t("replayVsReal")}
                         </span>
                       </div>
                     </div>
@@ -2234,7 +2239,7 @@ export default function ReplayPage() {
                         }}
                       >
                         {alternatives.doublePosition.pl >= 0 ? "+" : ""}
-                        {alternatives.doublePosition.pl.toFixed(2)}\u20AC
+                        {alternatives.doublePosition.pl.toFixed(2)}€
                       </p>
                       <p
                         className="text-[10px] mono mt-1"
@@ -2264,7 +2269,7 @@ export default function ReplayPage() {
                           {(
                             alternatives.doublePosition.pl - selected.result
                           ).toFixed(2)}
-                          \u20AC {t("replayVsReal")}
+                          € {t("replayVsReal")}
                         </span>
                       </div>
                     </div>
@@ -2298,7 +2303,7 @@ export default function ReplayPage() {
                       }}
                     >
                       {selected.result >= 0 ? "+" : ""}
-                      {selected.result.toFixed(2)}\u20AC
+                      {selected.result.toFixed(2)}€
                     </span>
                   </div>
                 </div>
@@ -2475,7 +2480,7 @@ export default function ReplayPage() {
                 }}
               >
                 {selected.result >= 0 ? "+" : ""}
-                {selected.result.toFixed(2)}\u20AC
+                {selected.result.toFixed(2)}€
               </span>
             </div>
             <button

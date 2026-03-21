@@ -110,11 +110,11 @@ function getLevel(xp: number) {
 
 /* ─── Daily quests pool ─── */
 const QUEST_POOL = [
-  { id: "log3", title: "Log 3 trades today", icon: "pencil" },
-  { id: "bias", title: "Fill your daily bias", icon: "target" },
-  { id: "review", title: "Review 1 past trade", icon: "eye" },
-  { id: "chat", title: "Send a message in chat", icon: "message" },
-  { id: "cot", title: "Check the COT report", icon: "trending" },
+  { id: "log3", title: "Enregistrer 3 trades aujourd'hui", icon: "pencil" },
+  { id: "bias", title: "Remplir votre biais quotidien", icon: "target" },
+  { id: "review", title: "Revoir 1 trade passe", icon: "eye" },
+  { id: "chat", title: "Envoyer un message dans le chat", icon: "message" },
+  { id: "cot", title: "Consulter le rapport COT", icon: "trending" },
 ];
 
 function getDailyQuests(dateStr: string): typeof QUEST_POOL {

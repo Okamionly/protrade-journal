@@ -306,7 +306,7 @@ export default function PerformancePage() {
 
     const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.result, 0) / wins.length : 0;
     const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.result, 0) / losses.length) : 0;
-    const profitFactor = avgLoss > 0 ? (avgWin * wins.length) / (avgLoss * losses.length) : 0;
+    const profitFactor = avgLoss > 0 ? (avgWin * wins.length) / (avgLoss * losses.length) : wins.length > 0 ? Infinity : 0;
     const expectancy = trades.length > 0 ? trades.reduce((s, t) => s + t.result, 0) / trades.length : 0;
 
     const rrs = trades.map((tr) => {
@@ -384,7 +384,7 @@ export default function PerformancePage() {
     // Profit factor (35%), win rate (35%), avg R:R (30%)
     const winRateScore = Math.min(winRate * 1.5, 100);
     const rrScore = Math.min(avgRR > 0 ? avgRR * 30 : 0, 100);
-    const pfScore = Math.min(profitFactor * 25, 100);
+    const pfScore = Math.min(profitFactor === Infinity ? 100 : profitFactor * 25, 100);
     const profitabilityScore = Math.round(
       pfScore * 0.35 + winRateScore * 0.35 + rrScore * 0.30
     );
@@ -572,7 +572,7 @@ export default function PerformancePage() {
       currentPeriod, previousPeriod,
       winRateScore: Math.round(Math.min(winRate * 1.5, 100)),
       rrScore: Math.round(Math.min(avgRR > 0 ? avgRR * 30 : 0, 100)),
-      pfScore: Math.round(Math.min(profitFactor * 25, 100)),
+      pfScore: Math.round(Math.min(profitFactor === Infinity ? 100 : profitFactor * 25, 100)),
       ddScore: Math.round(maxDD > 0 ? Math.max(0, 100 - (maxDD / Math.max(peak, 1)) * 100) : 80),
     };
   }, [trades, t]);
@@ -603,8 +603,8 @@ export default function PerformancePage() {
   const stats = [
     { icon: Target, label: "Win Rate", value: `${winRate.toFixed(1)}%`, color: winRate >= 50 ? "text-emerald-400" : "text-rose-400" },
     { icon: TrendingUp, label: t("perfAvgWin"), value: `+€${avgWin.toFixed(2)}`, color: "text-emerald-400" },
-    { icon: TrendingDown, label: t("perfAvgLoss"), value: `-€${avgLoss.toFixed(2)}`, color: "text-rose-400" },
-    { icon: Zap, label: "Profit Factor", value: profitFactor.toFixed(2), color: profitFactor >= 1.5 ? "text-emerald-400" : profitFactor >= 1 ? "text-amber-400" : "text-rose-400" },
+    { icon: TrendingDown, label: t("perfAvgLoss"), value: avgLoss > 0 ? `-€${avgLoss.toFixed(2)}` : "€0.00", color: avgLoss > 0 ? "text-rose-400" : "text-gray-400" },
+    { icon: Zap, label: "Profit Factor", value: profitFactor === Infinity ? "∞" : profitFactor.toFixed(2), color: profitFactor >= 1.5 ? "text-emerald-400" : profitFactor >= 1 ? "text-amber-400" : "text-rose-400" },
     { icon: BarChart3, label: t("perfExpectancy"), value: `€${expectancy.toFixed(2)}`, color: expectancy >= 0 ? "text-emerald-400" : "text-rose-400" },
     { icon: Shield, label: "Max Drawdown", value: `€${maxDD.toFixed(2)}`, color: "text-rose-400" },
     { icon: Clock, label: t("perfTotalTrades"), value: String(trades.length), color: "text-cyan-400" },

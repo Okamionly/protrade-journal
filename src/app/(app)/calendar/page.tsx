@@ -100,7 +100,7 @@ export default function PnLCalendarPage() {
     const lossTrades = monthTrades.filter(t => t.result <= 0);
     const avgWin = winTrades.length > 0 ? winTrades.reduce((s, t) => s + t.result, 0) / winTrades.length : 0;
     const avgLoss = lossTrades.length > 0 ? lossTrades.reduce((s, t) => s + t.result, 0) / lossTrades.length : 0;
-    const profitFactor = Math.abs(avgLoss) > 0 ? avgWin / Math.abs(avgLoss) : 0;
+    const profitFactor = Math.abs(avgLoss) > 0 ? avgWin / Math.abs(avgLoss) : avgWin > 0 ? Infinity : 0;
 
     // Cumulative P&L by day
     const cumulativePnl: { day: number; pnl: number; cumulative: number }[] = [];
@@ -229,7 +229,7 @@ export default function PnLCalendarPage() {
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
           <p className="text-[10px] text-[--text-muted] mb-1 truncate">Profit Factor</p>
           <p className={`text-lg font-bold mono ${stats.profitFactor >= 1 ? "text-emerald-400" : "text-rose-400"}`}>
-            {stats.profitFactor.toFixed(2)}
+            {stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)}
           </p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
