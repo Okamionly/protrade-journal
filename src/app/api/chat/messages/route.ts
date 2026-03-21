@@ -29,6 +29,8 @@ const messageInclude = {
       strategy: true,
       entry: true,
       exit: true,
+      sl: true,
+      tp: true,
       lots: true,
       result: true,
       date: true,

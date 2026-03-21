@@ -292,7 +292,13 @@ function usePollVotes() {
 function InlineTradeCard({ trade }: { trade: SharedTrade }) {
   const isBuy = trade.direction?.toUpperCase() === "BUY" || trade.direction?.toUpperCase() === "LONG";
   const pnl = trade.result;
-  const rr = trade.sl && trade.tp ? calculateRR(trade.entry, trade.sl, trade.tp) : null;
+  let rr: string | null = trade.sl && trade.tp ? calculateRR(trade.entry, trade.sl, trade.tp) : null;
+  // Fallback: calculate realized R:R if we have entry, exit, and sl
+  if (!rr && trade.exit && trade.sl && trade.sl !== trade.entry) {
+    const risk = Math.abs(trade.entry - trade.sl);
+    const reward = Math.abs(trade.exit - trade.entry);
+    rr = (reward / risk).toFixed(1);
+  }
 
   return (
     <div
@@ -1715,7 +1721,7 @@ export default function CommunityPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex overflow-x-auto scrollbar-thin" style={{ borderBottom: "1px solid var(--border)" }}>
+            <div className="flex overflow-x-auto hide-scrollbar" style={{ borderBottom: "1px solid var(--border)" }}>
               {([
                 { id: "foryou" as TabId, label: "Pour toi" },
                 { id: "following" as TabId, label: "Suivis" },
