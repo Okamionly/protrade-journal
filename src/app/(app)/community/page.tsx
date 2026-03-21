@@ -24,6 +24,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   X,
+  Plus,
+  Trash2,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────── */
@@ -70,6 +74,58 @@ interface FeedMessage {
 /* ─── Constants ─────────────────────────────────────────── */
 
 const MAX_POST_LENGTH = 280;
+
+const POLL_PREFIX = "[POLL]";
+
+interface PollData {
+  question: string;
+  options: string[];
+  duration: string;
+  createdAt: string;
+}
+
+interface PollDraft {
+  question: string;
+  options: string[];
+  duration: string;
+}
+
+const POLL_DURATIONS = [
+  { label: "1h", ms: 3600000 },
+  { label: "6h", ms: 21600000 },
+  { label: "12h", ms: 43200000 },
+  { label: "24h", ms: 86400000 },
+  { label: "3j", ms: 259200000 },
+  { label: "7j", ms: 604800000 },
+];
+
+function parsePollFromContent(content: string): { poll: PollData; text: string } | null {
+  if (!content.startsWith(POLL_PREFIX)) return null;
+  try {
+    const jsonStr = content.slice(POLL_PREFIX.length);
+    const newlineIdx = jsonStr.indexOf("\n");
+    const pollJson = newlineIdx >= 0 ? jsonStr.slice(0, newlineIdx) : jsonStr;
+    const text = newlineIdx >= 0 ? jsonStr.slice(newlineIdx + 1).trim() : "";
+    const poll = JSON.parse(pollJson) as PollData;
+    return { poll, text };
+  } catch {
+    return null;
+  }
+}
+
+function getPollRemainingTime(poll: PollData): string | null {
+  const dur = POLL_DURATIONS.find((d) => d.label === poll.duration);
+  if (!dur) return null;
+  const end = new Date(poll.createdAt).getTime() + dur.ms;
+  const now = Date.now();
+  if (now >= end) return null;
+  const remaining = end - now;
+  const hours = Math.floor(remaining / 3600000);
+  const minutes = Math.floor((remaining % 3600000) / 60000);
+  if (hours >= 24) return `${Math.floor(hours / 24)}j restant${Math.floor(hours / 24) > 1 ? "s" : ""}`;
+  if (hours >= 1) return `${hours}h restante${hours > 1 ? "s" : ""}`;
+  return `${minutes}min restante${minutes > 1 ? "s" : ""}`;
+}
 
 /* ─── Helpers ───────────────────────────────────────────── */
 
@@ -187,6 +243,50 @@ function useBookmarks() {
   return { bookmarks, toggleBookmark };
 }
 
+/* ─── Poll votes hook (localStorage) ─────────────────────── */
+
+function usePollVotes() {
+  const [votes, setVotes] = useState<Record<string, { optionIndex: number; counts: Record<number, number> }>>(
+    {}
+  );
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("community-poll-votes");
+      if (stored) setVotes(JSON.parse(stored));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const vote = useCallback((messageId: string, optionIndex: number, totalOptions: number) => {
+    setVotes((prev) => {
+      if (prev[messageId]) return prev; // already voted
+      const counts: Record<number, number> = {};
+      for (let i = 0; i < totalOptions; i++) {
+        counts[i] = 0;
+      }
+      counts[optionIndex] = 1;
+      const next = { ...prev, [messageId]: { optionIndex, counts } };
+      try {
+        localStorage.setItem("community-poll-votes", JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  const getVoteData = useCallback(
+    (messageId: string) => {
+      return votes[messageId] || null;
+    },
+    [votes]
+  );
+
+  return { vote, getVoteData };
+}
+
 /* ─── Inline Trade Card (embedded in tweet) ─────────────── */
 
 function InlineTradeCard({ trade }: { trade: SharedTrade }) {
@@ -268,6 +368,161 @@ function InlineTradeCard({ trade }: { trade: SharedTrade }) {
   );
 }
 
+/* ─── Poll Display Component ─────────────────────────────── */
+
+function PollDisplay({
+  poll,
+  messageId,
+  voteData,
+  onVote,
+}: {
+  poll: PollData;
+  messageId: string;
+  voteData: { optionIndex: number; counts: Record<number, number> } | null;
+  onVote: (messageId: string, optionIndex: number, totalOptions: number) => void;
+}) {
+  const hasVoted = voteData !== null;
+  const remaining = getPollRemainingTime(poll);
+  const isExpired = remaining === null;
+
+  // Generate pseudo-random base vote counts from messageId for display
+  const baseCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (let i = 0; i < poll.options.length; i++) {
+      const seed = messageId + "-opt-" + i;
+      counts[i] = pseudoRandom(seed) % 80 + 5;
+    }
+    return counts;
+  }, [messageId, poll.options.length]);
+
+  const totalVotes = useMemo(() => {
+    let total = 0;
+    for (let i = 0; i < poll.options.length; i++) {
+      total += baseCounts[i] + (voteData?.counts[i] || 0);
+    }
+    return total;
+  }, [baseCounts, voteData, poll.options.length]);
+
+  const getPercentage = (idx: number) => {
+    const count = baseCounts[idx] + (voteData?.counts[idx] || 0);
+    return totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+  };
+
+  return (
+    <div className="mt-3 space-y-2">
+      {/* Question */}
+      <p className="font-bold text-[15px]" style={{ color: "var(--text-primary)" }}>
+        {poll.question}
+      </p>
+
+      {/* Options */}
+      <div className="space-y-2">
+        {poll.options.map((option, idx) => {
+          const pct = getPercentage(idx);
+          const isSelected = voteData?.optionIndex === idx;
+
+          if (hasVoted || isExpired) {
+            // Show results
+            return (
+              <div key={idx} className="relative rounded-xl overflow-hidden" style={{ height: "40px" }}>
+                {/* Background bar */}
+                <div
+                  className="absolute inset-0 rounded-xl transition-all duration-500"
+                  style={{
+                    background: isSelected
+                      ? "rgba(6,182,212,0.2)"
+                      : "rgba(255,255,255,0.05)",
+                    border: isSelected
+                      ? "1px solid rgba(6,182,212,0.4)"
+                      : "1px solid var(--border)",
+                  }}
+                />
+                {/* Fill bar */}
+                <div
+                  className="absolute top-0 left-0 h-full rounded-xl transition-all duration-700"
+                  style={{
+                    width: `${pct}%`,
+                    background: isSelected
+                      ? "rgba(6,182,212,0.25)"
+                      : "rgba(255,255,255,0.05)",
+                  }}
+                />
+                {/* Text */}
+                <div className="relative flex items-center justify-between px-3 h-full">
+                  <div className="flex items-center gap-2">
+                    {isSelected && <CheckCircle2 className="w-4 h-4" style={{ color: "#06b6d4" }} />}
+                    <span
+                      className="text-sm"
+                      style={{
+                        color: isSelected ? "#06b6d4" : "var(--text-primary)",
+                        fontWeight: isSelected ? 700 : 400,
+                      }}
+                    >
+                      {option}
+                    </span>
+                  </div>
+                  <span
+                    className="text-sm font-bold"
+                    style={{ color: isSelected ? "#06b6d4" : "var(--text-secondary)" }}
+                  >
+                    {pct}%
+                  </span>
+                </div>
+              </div>
+            );
+          }
+
+          // Voting buttons
+          return (
+            <button
+              key={idx}
+              onClick={() => onVote(messageId, idx, poll.options.length)}
+              className="w-full rounded-xl text-sm font-bold py-2.5 transition-all"
+              style={{
+                border: "1px solid rgba(6,182,212,0.4)",
+                color: "#06b6d4",
+                background: "transparent",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(6,182,212,0.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              {option}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Footer: total votes + time remaining */}
+      <div className="flex items-center gap-2 pt-1">
+        <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+          {totalVotes.toLocaleString("fr-FR")} vote{totalVotes > 1 ? "s" : ""}
+        </span>
+        {remaining && (
+          <>
+            <span style={{ color: "var(--text-muted)" }}>·</span>
+            <span className="text-[13px] flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
+              <Clock className="w-3.5 h-3.5" />
+              {remaining}
+            </span>
+          </>
+        )}
+        {isExpired && (
+          <>
+            <span style={{ color: "var(--text-muted)" }}>·</span>
+            <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+              Termine
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Tweet Post Component ──────────────────────────────── */
 
 function TweetPost({
@@ -279,6 +534,8 @@ function TweetPost({
   onReply,
   likeCount,
   replyCount,
+  pollVoteData,
+  onPollVote,
 }: {
   msg: FeedMessage;
   isLiked: boolean;
@@ -288,6 +545,8 @@ function TweetPost({
   onReply: (messageId: string) => void;
   likeCount: number;
   replyCount: number;
+  pollVoteData: { optionIndex: number; counts: Record<number, number> } | null;
+  onPollVote: (messageId: string, optionIndex: number, totalOptions: number) => void;
 }) {
   const [showMore, setShowMore] = useState(false);
   const [likeAnim, setLikeAnim] = useState(false);
@@ -407,18 +666,47 @@ function TweetPost({
           </div>
 
           {/* Post content */}
-          <div className="mt-0.5">
-            <p
-              className="whitespace-pre-wrap break-words"
-              style={{
-                color: "var(--text-primary)",
-                fontSize: "15px",
-                lineHeight: "1.5",
-              }}
-            >
-              {msg.content}
-            </p>
-          </div>
+          {(() => {
+            const pollParsed = parsePollFromContent(msg.content);
+            if (pollParsed) {
+              return (
+                <div className="mt-0.5">
+                  {pollParsed.text && (
+                    <p
+                      className="whitespace-pre-wrap break-words mb-1"
+                      style={{
+                        color: "var(--text-primary)",
+                        fontSize: "15px",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      {pollParsed.text}
+                    </p>
+                  )}
+                  <PollDisplay
+                    poll={pollParsed.poll}
+                    messageId={msg.id}
+                    voteData={pollVoteData}
+                    onVote={onPollVote}
+                  />
+                </div>
+              );
+            }
+            return (
+              <div className="mt-0.5">
+                <p
+                  className="whitespace-pre-wrap break-words"
+                  style={{
+                    color: "var(--text-primary)",
+                    fontSize: "15px",
+                    lineHeight: "1.5",
+                  }}
+                >
+                  {msg.content}
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Trade card if attached */}
           {msg.trade && <InlineTradeCard trade={msg.trade} />}
@@ -572,6 +860,10 @@ function PostComposer({
   onSend,
   onShareTrade,
   userName,
+  imagePreview,
+  setImagePreview,
+  pollDraft,
+  setPollDraft,
 }: {
   input: string;
   setInput: (v: string) => void;
@@ -579,6 +871,10 @@ function PostComposer({
   onSend: () => void;
   onShareTrade: () => void;
   userName: string | null;
+  imagePreview: string | null;
+  setImagePreview: (v: string | null) => void;
+  pollDraft: PollDraft | null;
+  setPollDraft: (v: PollDraft | null) => void;
 }) {
   const gradient = getAvatarGradient(userName);
   const charCount = input.length;
@@ -587,6 +883,37 @@ function PostComposer({
   const progress = Math.min(1, charCount / MAX_POST_LENGTH);
   const circumference = 2 * Math.PI * 10;
   const strokeColor = isOverLimit ? "#ef4444" : remaining <= 20 ? "#ef4444" : remaining <= 40 ? "#f59e0b" : "#06b6d4";
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const canPost = sending
+    ? false
+    : pollDraft
+      ? pollDraft.question.trim().length > 0 && pollDraft.options.filter((o) => o.trim()).length >= 2
+      : input.trim().length > 0 && !isOverLimit;
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image trop volumineuse (max 5 Mo)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImagePreview(reader.result as string);
+      // Remove poll if image is added
+      if (pollDraft) setPollDraft(null);
+    };
+    reader.readAsDataURL(file);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleStartPoll = () => {
+    setPollDraft({ question: "", options: ["", ""], duration: "24h" });
+    // Remove image if poll is started
+    if (imagePreview) setImagePreview(null);
+  };
 
   return (
     <div
@@ -608,12 +935,12 @@ function PostComposer({
             value={input}
             onChange={(e) => setInput(e.target.value.slice(0, MAX_POST_LENGTH + 20))}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !isOverLimit && input.trim()) {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && canPost) {
                 e.preventDefault();
                 onSend();
               }
             }}
-            placeholder="Quoi de neuf sur les marches ?"
+            placeholder={pollDraft ? "Ajoutez un commentaire (optionnel)..." : "Quoi de neuf sur les marches ?"}
             rows={2}
             className="w-full bg-transparent resize-none focus:outline-none"
             style={{
@@ -624,6 +951,166 @@ function PostComposer({
             }}
           />
 
+          {/* Image preview */}
+          {imagePreview && (
+            <div className="relative mt-2 mb-2 inline-block">
+              <img
+                src={imagePreview}
+                alt="Apercu"
+                className="rounded-2xl object-cover"
+                style={{
+                  maxHeight: "200px",
+                  maxWidth: "100%",
+                  border: "1px solid var(--border)",
+                }}
+              />
+              <button
+                onClick={() => setImagePreview(null)}
+                className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
+                style={{
+                  background: "rgba(0,0,0,0.7)",
+                  color: "#fff",
+                  backdropFilter: "blur(4px)",
+                }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Poll draft form */}
+          {pollDraft && (
+            <div
+              className="mt-2 mb-2 rounded-2xl p-4 space-y-3"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid var(--border)",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              {/* Question */}
+              <input
+                type="text"
+                value={pollDraft.question}
+                onChange={(e) =>
+                  setPollDraft({ ...pollDraft, question: e.target.value.slice(0, 120) })
+                }
+                placeholder="Posez votre question..."
+                className="w-full bg-transparent text-[15px] font-bold focus:outline-none"
+                style={{
+                  color: "var(--text-primary)",
+                  caretColor: "#06b6d4",
+                }}
+              />
+
+              {/* Options */}
+              <div className="space-y-2">
+                {pollDraft.options.map((opt, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...pollDraft.options];
+                        newOpts[idx] = e.target.value.slice(0, 50);
+                        setPollDraft({ ...pollDraft, options: newOpts });
+                      }}
+                      placeholder={`Option ${idx + 1}`}
+                      className="flex-1 bg-transparent text-sm py-2 px-3 rounded-xl focus:outline-none transition-all"
+                      style={{
+                        border: "1px solid var(--border)",
+                        color: "var(--text-primary)",
+                        caretColor: "#06b6d4",
+                      }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = "#06b6d4")}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                    />
+                    {pollDraft.options.length > 2 && (
+                      <button
+                        onClick={() => {
+                          const newOpts = pollDraft.options.filter((_, i) => i !== idx);
+                          setPollDraft({ ...pollDraft, options: newOpts });
+                        }}
+                        className="p-1.5 rounded-full transition-colors"
+                        style={{ color: "var(--text-muted)" }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = "#ef4444";
+                          e.currentTarget.style.background = "rgba(239,68,68,0.1)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = "var(--text-muted)";
+                          e.currentTarget.style.background = "transparent";
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Add option button */}
+              {pollDraft.options.length < 4 && (
+                <button
+                  onClick={() => setPollDraft({ ...pollDraft, options: [...pollDraft.options, ""] })}
+                  className="flex items-center gap-1.5 text-sm font-medium py-1.5 transition-colors"
+                  style={{ color: "#06b6d4" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                >
+                  <Plus className="w-4 h-4" />
+                  Ajouter une option
+                </button>
+              )}
+
+              {/* Duration selector */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+                  Duree :
+                </span>
+                {POLL_DURATIONS.map((d) => (
+                  <button
+                    key={d.label}
+                    onClick={() => setPollDraft({ ...pollDraft, duration: d.label })}
+                    className="px-2.5 py-1 rounded-full text-[12px] font-medium transition-all"
+                    style={{
+                      background:
+                        pollDraft.duration === d.label ? "rgba(6,182,212,0.2)" : "transparent",
+                      color: pollDraft.duration === d.label ? "#06b6d4" : "var(--text-muted)",
+                      border:
+                        pollDraft.duration === d.label
+                          ? "1px solid rgba(6,182,212,0.4)"
+                          : "1px solid var(--border)",
+                    }}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Remove poll */}
+              <button
+                onClick={() => setPollDraft(null)}
+                className="flex items-center gap-1.5 text-sm font-medium py-1 transition-colors"
+                style={{ color: "#ef4444" }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Retirer le sondage
+              </button>
+            </div>
+          )}
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageSelect}
+          />
+
           {/* Divider */}
           <div style={{ height: "1px", background: "var(--border)", margin: "12px 0" }} />
 
@@ -632,9 +1119,15 @@ function PostComposer({
             {/* Action icons */}
             <div className="flex items-center gap-0.5">
               <button
+                onClick={() => fileInputRef.current?.click()}
                 className="p-2 rounded-full transition-all"
-                style={{ color: "#06b6d4", opacity: 0.5 }}
-                title="Image (bientot)"
+                style={{ color: "#06b6d4", opacity: pollDraft ? 0.3 : 1 }}
+                disabled={!!pollDraft}
+                onMouseEnter={(e) => {
+                  if (!pollDraft) e.currentTarget.style.background = "rgba(6,182,212,0.1)";
+                }}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                title="Ajouter une image"
               >
                 <ImageIcon className="w-5 h-5" />
               </button>
@@ -663,9 +1156,15 @@ function PostComposer({
                 <Smile className="w-5 h-5" />
               </button>
               <button
+                onClick={handleStartPoll}
                 className="p-2 rounded-full transition-all"
-                style={{ color: "#06b6d4", opacity: 0.5 }}
-                title="Sondage (bientot)"
+                style={{ color: "#06b6d4", opacity: imagePreview ? 0.3 : 1 }}
+                disabled={!!imagePreview}
+                onMouseEnter={(e) => {
+                  if (!imagePreview) e.currentTarget.style.background = "rgba(6,182,212,0.1)";
+                }}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                title="Creer un sondage"
               >
                 <BarChart2 className="w-5 h-5" />
               </button>
@@ -673,7 +1172,7 @@ function PostComposer({
 
             {/* Character counter + Post button */}
             <div className="flex items-center gap-3">
-              {charCount > 0 && (
+              {charCount > 0 && !pollDraft && (
                 <div className="flex items-center gap-2">
                   {/* Circular progress */}
                   <div className="relative w-[28px] h-[28px]">
@@ -718,21 +1217,21 @@ function PostComposer({
 
               <button
                 onClick={onSend}
-                disabled={sending || !input.trim() || isOverLimit}
+                disabled={!canPost}
                 className="px-5 py-2 rounded-full font-bold text-sm transition-all"
                 style={{
-                  background: sending || !input.trim() || isOverLimit ? "rgba(6,182,212,0.4)" : "#06b6d4",
+                  background: !canPost ? "rgba(6,182,212,0.4)" : "#06b6d4",
                   color: "#fff",
-                  cursor: sending || !input.trim() || isOverLimit ? "not-allowed" : "pointer",
-                  opacity: sending || !input.trim() || isOverLimit ? 0.5 : 1,
+                  cursor: !canPost ? "not-allowed" : "pointer",
+                  opacity: !canPost ? 0.5 : 1,
                 }}
                 onMouseEnter={(e) => {
-                  if (!sending && input.trim() && !isOverLimit) {
+                  if (canPost) {
                     e.currentTarget.style.background = "#22d3ee";
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!sending && input.trim() && !isOverLimit) {
+                  if (canPost) {
                     e.currentTarget.style.background = "#06b6d4";
                   }
                 }}
@@ -962,6 +1461,7 @@ export default function CommunityPage() {
   const { data: gamData } = useGamification();
   const { likes, toggleLike } = useLikes();
   const { bookmarks, toggleBookmark } = useBookmarks();
+  const { vote: pollVote, getVoteData: getPollVoteData } = usePollVotes();
 
   type TabId = "foryou" | "following" | "classement" | "defis" | "discussions" | "bestof" | "mentorat" | "comparer";
   const [activeTab, setActiveTab] = useState<TabId>("foryou");
@@ -975,6 +1475,8 @@ export default function CommunityPage() {
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
   const [newPostCount, setNewPostCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [pollDraft, setPollDraft] = useState<PollDraft | null>(null);
 
   const feedRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1121,6 +1623,8 @@ export default function CommunityPage() {
         const msg = await res.json();
         setMessages((prev) => [...prev, msg]);
         setInput("");
+        setImagePreview(null);
+        setPollDraft(null);
       }
     } catch (error) {
       console.error("Send message error:", error);
@@ -1272,9 +1776,27 @@ export default function CommunityPage() {
                   input={input}
                   setInput={setInput}
                   sending={sending}
-                  onSend={() => sendMessage(input)}
+                  onSend={() => {
+                    if (pollDraft) {
+                      // Build poll content
+                      const pollData: PollData = {
+                        question: pollDraft.question.trim(),
+                        options: pollDraft.options.filter((o) => o.trim()),
+                        duration: pollDraft.duration,
+                        createdAt: new Date().toISOString(),
+                      };
+                      const pollContent = `${POLL_PREFIX}${JSON.stringify(pollData)}${input.trim() ? "\n" + input.trim() : ""}`;
+                      sendMessage(pollContent);
+                    } else {
+                      sendMessage(input, undefined, imagePreview || undefined);
+                    }
+                  }}
                   onShareTrade={() => setShowShareModal(true)}
                   userName={currentUserName}
+                  imagePreview={imagePreview}
+                  setImagePreview={setImagePreview}
+                  pollDraft={pollDraft}
+                  setPollDraft={setPollDraft}
                 />
               )}
 
@@ -1350,6 +1872,8 @@ export default function CommunityPage() {
                       onReply={handleReply}
                       likeCount={getLikeCount(msg)}
                       replyCount={msg.reactions?.length || 0}
+                      pollVoteData={getPollVoteData(msg.id)}
+                      onPollVote={pollVote}
                     />
                   ))}
                   <div className="h-20" />

@@ -65,7 +65,7 @@ function detectBrowserLocale(): Locale {
       if (SUPPORTED.includes(primary)) return primary;
     }
   } catch { /* SSR */ }
-  return "en";
+  return "fr";
 }
 
 const TOTAL_SLIDES = 10;
