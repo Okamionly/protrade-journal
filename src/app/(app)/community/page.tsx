@@ -953,11 +953,16 @@ export default function CommunityPage() {
       const res = await fetch("/api/chat/rooms");
       if (!res.ok) return;
       const rooms = await res.json();
-      const community = rooms.find((r: { name: string }) => r.name === "Communaute" || r.name === "community");
-      if (community) setCommunityRoomId(community.id);
-      else setCommunityRoomId(null);
+      const community = rooms.find((r: { name: string }) => r.name === "Communaute" || r.name === "community" || r.name === "Communauté");
+      if (community) {
+        setCommunityRoomId(community.id);
+      } else {
+        setCommunityRoomId(null);
+        setLoading(false);
+      }
     } catch (error) {
       console.error("Init room error:", error);
+      setLoading(false);
     }
   }, []);
 

@@ -86,9 +86,6 @@ const navItems = [
   { href: "/performance/grading", labelKey: "sidebarGrading", icon: Award },
   { href: "/calendar", labelKey: "sidebarPlCalendar", icon: CalendarDays },
   { href: "/heatmap", labelKey: "sidebarHeatmap", icon: Grid3x3 },
-  { href: "/daily-bias", labelKey: "sidebarDailyBias", icon: Target },
-  { href: "/challenges", labelKey: "sidebarChallenges", icon: Swords },
-  { href: "/leaderboard", labelKey: "sidebarLeaderboard", icon: Medal },
   { href: "/badges", labelKey: "sidebarBadges", icon: Award },
   { href: "/analytics/sessions", labelKey: "sidebarSessions", icon: Clock },
   // MARKET
@@ -122,7 +119,6 @@ const navItems = [
   { href: "/reports", labelKey: "sidebarPdfReports", icon: FileText },
   { href: "/recaps", labelKey: "sidebarRecaps", icon: FileBarChart },
   { href: "/screenshots", labelKey: "sidebarScreenshots", icon: Camera },
-  { href: "/chat", labelKey: "sidebarChat", icon: MessageCircle },
   // MY SPACE
   { divider: true, labelKey: "sidebarSecMySpace" },
   { href: "/profile", labelKey: "sidebarProfile", icon: User },
@@ -133,6 +129,10 @@ const navItems = [
   { href: "/vip", labelKey: "sidebarVip", icon: Crown, isVip: true },
   { href: "/vip/indicateurs", labelKey: "sidebarIndicators", icon: Crosshair, isVip: true },
   { href: "/vip/analyses", labelKey: "sidebarMacroAnalyses", icon: Globe, isVip: true },
+  { href: "/chat", labelKey: "sidebarChat", icon: MessageCircle, isVip: true },
+  { href: "/daily-bias", labelKey: "sidebarDailyBias", icon: Target, isVip: true },
+  { href: "/challenges", labelKey: "sidebarChallenges", icon: Swords, isVip: true },
+  { href: "/leaderboard", labelKey: "sidebarLeaderboard", icon: Medal, isVip: true },
 ] as const;
 
 export function Sidebar() {
