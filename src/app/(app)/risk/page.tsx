@@ -198,6 +198,96 @@ export default function RiskPage() {
         )}
       </div>
 
+      {/* Risk Distribution Histogram */}
+      <div className="metric-card rounded-2xl p-6">
+        <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+          <BarChart3 className="w-5 h-5 text-cyan-400" /> Distribution du Risque par Trade
+        </h3>
+        {trades.length < 3 ? (
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Minimum 3 trades requis.</p>
+        ) : (() => {
+          const typedTrades = trades as unknown as Trade[];
+          // Compute risk % per trade
+          const riskPcts = typedTrades.map(t => {
+            if (!t.entry || !t.sl || t.sl === t.entry) return null;
+            const slDist = Math.abs(t.entry - t.sl);
+            const riskAmt = slDist * (t.lots || 0.01) * (t.asset?.includes("JPY") ? 1000 : 100000);
+            return balance > 0 ? (riskAmt / balance) * 100 : 0;
+          }).filter((v): v is number => v !== null && v > 0 && v < 20);
+
+          if (riskPcts.length === 0) return <p className="text-sm" style={{ color: "var(--text-muted)" }}>Données SL requises pour calculer la distribution.</p>;
+
+          // Bucket into ranges: 0-0.5, 0.5-1, 1-1.5, 1.5-2, 2-3, 3-5, 5+
+          const buckets = [
+            { label: "0-0.5%", min: 0, max: 0.5, color: "#10b981", zone: "safe" },
+            { label: "0.5-1%", min: 0.5, max: 1, color: "#10b981", zone: "safe" },
+            { label: "1-1.5%", min: 1, max: 1.5, color: "#22c55e", zone: "safe" },
+            { label: "1.5-2%", min: 1.5, max: 2, color: "#f59e0b", zone: "moderate" },
+            { label: "2-3%", min: 2, max: 3, color: "#f97316", zone: "aggressive" },
+            { label: "3-5%", min: 3, max: 5, color: "#ef4444", zone: "danger" },
+            { label: "5%+", min: 5, max: 100, color: "#dc2626", zone: "danger" },
+          ];
+
+          const counts = buckets.map(b => ({
+            ...b,
+            count: riskPcts.filter(r => r >= b.min && r < b.max).length,
+          }));
+          const maxCount = Math.max(...counts.map(c => c.count), 1);
+          const safeCount = counts.filter(c => c.zone === "safe").reduce((s, c) => s + c.count, 0);
+          const safePct = riskPcts.length > 0 ? Math.round((safeCount / riskPcts.length) * 100) : 0;
+
+          return (
+            <>
+              {/* Summary badge */}
+              <div className="flex items-center gap-3 mb-4">
+                <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${safePct >= 80 ? "bg-emerald-500/15 text-emerald-400" : safePct >= 50 ? "bg-amber-500/15 text-amber-400" : "bg-rose-500/15 text-rose-400"}`}>
+                  {safePct}% de vos trades sont dans la zone sûre (0-2%)
+                </span>
+                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                  {riskPcts.length} trades analysés
+                </span>
+              </div>
+
+              {/* Histogram bars */}
+              <div className="flex items-end gap-2 h-32">
+                {counts.map((b) => (
+                  <div key={b.label} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-[9px] mono font-bold" style={{ color: b.count > 0 ? b.color : "var(--text-muted)" }}>
+                      {b.count}
+                    </span>
+                    <div
+                      className="w-full rounded-t transition-all"
+                      style={{
+                        height: `${Math.max((b.count / maxCount) * 100, b.count > 0 ? 8 : 2)}%`,
+                        background: b.color,
+                        opacity: b.count > 0 ? 0.7 : 0.15,
+                      }}
+                    />
+                    <span className="text-[8px] text-center" style={{ color: "var(--text-muted)" }}>{b.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Zone labels */}
+              <div className="flex items-center gap-4 mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded" style={{ background: "#10b981" }} />
+                  <span>Zone sûre (0-2%)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded" style={{ background: "#f59e0b" }} />
+                  <span>Modéré (2-3%)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded" style={{ background: "#ef4444" }} />
+                  <span>Danger (3%+)</span>
+                </div>
+              </div>
+            </>
+          );
+        })()}
+      </div>
+
       {/* Drawdown Curve */}
       <div className="metric-card rounded-2xl p-6">
         <div className="flex items-center justify-between mb-4">

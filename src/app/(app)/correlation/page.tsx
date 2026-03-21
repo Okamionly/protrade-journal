@@ -17,7 +17,27 @@ import {
   Activity,
   Target,
   Zap,
+  Clock,
 } from "lucide-react";
+
+// ─── Period Filter ──────────────────────────────────────────────────
+
+type PeriodKey = "7d" | "30d" | "90d" | "all";
+
+const PERIOD_OPTIONS: { key: PeriodKey; label: string; days: number | null }[] = [
+  { key: "7d", label: "7 jours", days: 7 },
+  { key: "30d", label: "30 jours", days: 30 },
+  { key: "90d", label: "90 jours", days: 90 },
+  { key: "all", label: "Tout", days: null },
+];
+
+function filterDatesByPeriod(dates: string[], days: number | null): string[] {
+  if (days === null || dates.length === 0) return dates;
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  return dates.filter((d) => d >= cutoffStr);
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -92,6 +112,7 @@ export default function CorrelationPage() {
   const [selectedPair, setSelectedPair] = useState<PairDetail | null>(null);
   const [chartPairA, setChartPairA] = useState<string>("");
   const [chartPairB, setChartPairB] = useState<string>("");
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>("all");
 
   const assets = useMemo(
     () => [...new Set(trades.map((t) => t.asset))].sort(),
@@ -127,6 +148,13 @@ export default function CorrelationPage() {
     [trades]
   );
 
+  // Dates filtered by the selected period
+  const periodDays = PERIOD_OPTIONS.find((p) => p.key === selectedPeriod)?.days ?? null;
+  const filteredDates = useMemo(
+    () => filterDatesByPeriod(allDates, periodDays),
+    [allDates, periodDays]
+  );
+
   // Trades grouped by date
   const tradesByDate = useMemo(() => {
     const map: Record<string, Trade[]> = {};
@@ -139,23 +167,59 @@ export default function CorrelationPage() {
     return map;
   }, [trades]);
 
-  // Correlation matrix
-  const corrMatrix = useMemo(() => {
-    const matrix: Record<string, Record<string, number>> = {};
-    for (const a of assets) {
-      matrix[a] = {};
-      for (const b of assets) {
-        if (a === b) {
-          matrix[a][b] = 1;
-          continue;
+  // Helper to compute a correlation matrix from a given set of dates
+  const computeCorrMatrix = useCallback(
+    (dates: string[]) => {
+      const matrix: Record<string, Record<string, number>> = {};
+      for (const a of assets) {
+        matrix[a] = {};
+        for (const b of assets) {
+          if (a === b) {
+            matrix[a][b] = 1;
+            continue;
+          }
+          const xa = dates.map((d) => dailyPnl[a]?.[d] || 0);
+          const xb = dates.map((d) => dailyPnl[b]?.[d] || 0);
+          matrix[a][b] = pearsonCorrelation(xa, xb);
         }
-        const xa = allDates.map((d) => dailyPnl[a]?.[d] || 0);
-        const xb = allDates.map((d) => dailyPnl[b]?.[d] || 0);
-        matrix[a][b] = pearsonCorrelation(xa, xb);
       }
-    }
-    return matrix;
-  }, [assets, allDates, dailyPnl]);
+      return matrix;
+    },
+    [assets, dailyPnl]
+  );
+
+  // Correlation matrix for selected period
+  const corrMatrix = useMemo(
+    () => computeCorrMatrix(filteredDates),
+    [computeCorrMatrix, filteredDates]
+  );
+
+  // Full-period correlation matrix (for divergence detection)
+  const fullCorrMatrix = useMemo(
+    () => computeCorrMatrix(allDates),
+    [computeCorrMatrix, allDates]
+  );
+
+  // 90-day correlation matrix (for divergence comparison with short periods)
+  const ninetyDayDates = useMemo(
+    () => filterDatesByPeriod(allDates, 90),
+    [allDates]
+  );
+  const ninetyDayCorrMatrix = useMemo(
+    () => computeCorrMatrix(ninetyDayDates),
+    [computeCorrMatrix, ninetyDayDates]
+  );
+
+  // Detect divergence: current period vs 90-day correlation
+  const hasDivergence = useCallback(
+    (assetA: string, assetB: string): boolean => {
+      if (selectedPeriod === "all" || selectedPeriod === "90d") return false;
+      const current = corrMatrix[assetA]?.[assetB] ?? 0;
+      const baseline = ninetyDayCorrMatrix[assetA]?.[assetB] ?? 0;
+      return Math.abs(current - baseline) > 0.3;
+    },
+    [corrMatrix, ninetyDayCorrMatrix, selectedPeriod]
+  );
 
   // Diversification score based on average absolute correlation
   const divScore = useMemo(() => {
@@ -545,17 +609,56 @@ export default function CorrelationPage() {
 
       {/* ── Correlation Heatmap Matrix ───────────────────────────── */}
       <div className="glass rounded-2xl p-6">
-        <h3
-          className="font-semibold mb-4 flex items-center gap-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          <Grid3x3 className="w-5 h-5 text-cyan-400" /> Matrice de Corrélation
-        </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h3
+            className="font-semibold flex items-center gap-2"
+            style={{ color: "var(--text-primary)" }}
+          >
+            <Grid3x3 className="w-5 h-5 text-cyan-400" /> Matrice de Corrélation
+          </h3>
+
+          {/* Period selector tabs */}
+          <div
+            className="flex items-center gap-1 rounded-xl p-1"
+            style={{ background: "rgba(255,255,255,0.04)" }}
+          >
+            <Clock className="w-3.5 h-3.5 ml-2 shrink-0" style={{ color: "var(--text-muted)" }} />
+            {PERIOD_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setSelectedPeriod(opt.key)}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
+                style={{
+                  background:
+                    selectedPeriod === opt.key
+                      ? "rgba(6,182,212,0.2)"
+                      : "transparent",
+                  color:
+                    selectedPeriod === opt.key
+                      ? "#06b6d4"
+                      : "var(--text-muted)",
+                  border:
+                    selectedPeriod === opt.key
+                      ? "1px solid rgba(6,182,212,0.3)"
+                      : "1px solid transparent",
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <p
           className="text-xs mb-4"
           style={{ color: "var(--text-muted)" }}
         >
           Cliquez sur une cellule pour analyser la paire en détail.
+          {selectedPeriod !== "all" && (
+            <span className="ml-2">
+              ({filteredDates.length} jour{filteredDates.length > 1 ? "s" : ""} de données)
+            </span>
+          )}
         </p>
         {assets.length < 2 ? (
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -593,10 +696,11 @@ export default function CorrelationPage() {
                     {assets.map((col) => {
                       const v = corrMatrix[row]?.[col] ?? 0;
                       const isDiag = row === col;
+                      const divergent = !isDiag && hasDivergence(row, col);
                       return (
                         <td
                           key={col}
-                          className={`p-2 text-center font-bold rounded transition-all ${
+                          className={`p-2 text-center font-bold rounded transition-all relative ${
                             isDiag
                               ? ""
                               : "cursor-pointer hover:ring-2 hover:ring-cyan-400/50"
@@ -613,10 +717,25 @@ export default function CorrelationPage() {
                           title={
                             isDiag
                               ? row
+                              : divergent
+                              ? `${row} / ${col}: ${v.toFixed(2)} — Divergence vs 90j (${(ninetyDayCorrMatrix[row]?.[col] ?? 0).toFixed(2)})`
                               : `${row} / ${col}: ${v.toFixed(2)}`
                           }
                         >
-                          {v.toFixed(2)}
+                          <span>{v.toFixed(2)}</span>
+                          {divergent && (
+                            <span
+                              className="absolute -top-1 -right-1 text-[8px] leading-none px-1 py-0.5 rounded-full font-medium"
+                              style={{
+                                background: "rgba(245,158,11,0.25)",
+                                color: "#f59e0b",
+                                border: "1px solid rgba(245,158,11,0.4)",
+                              }}
+                              title={`Divergence: ${selectedPeriod} = ${v.toFixed(2)} vs 90j = ${(ninetyDayCorrMatrix[row]?.[col] ?? 0).toFixed(2)}`}
+                            >
+                              ⚠️
+                            </span>
+                          )}
                         </td>
                       );
                     })}
@@ -645,6 +764,24 @@ export default function CorrelationPage() {
               </div>
               <span className="text-emerald-400">+1.00</span>
             </div>
+            {(selectedPeriod === "7d" || selectedPeriod === "30d") && (
+              <div
+                className="flex items-center justify-center gap-1.5 mt-2 text-[10px]"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <span
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: "rgba(245,158,11,0.15)",
+                    color: "#f59e0b",
+                    border: "1px solid rgba(245,158,11,0.3)",
+                  }}
+                >
+                  ⚠️ Divergence
+                </span>
+                <span>= écart &gt; 0.30 entre la période sélectionnée et 90 jours</span>
+              </div>
+            )}
           </div>
         )}
       </div>

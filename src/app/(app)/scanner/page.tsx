@@ -1,67 +1,870 @@
 "use client";
 
-import { Search, Zap, TrendingUp, BarChart3, Bell, Radio } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import {
+  Search, RefreshCw, TrendingUp, TrendingDown, Minus,
+  ArrowUpDown, Filter, ChevronDown, ChevronUp, X,
+  Zap, BarChart3, Clock, Radio, Activity, Eye,
+} from "lucide-react";
 
-const FEATURES = [
-  { icon: Search, title: "Scan Multi-Marchés", desc: "Forex, Crypto, Indices, Actions — tous les marchés en un seul endroit" },
-  { icon: TrendingUp, title: "Signaux Techniques", desc: "RSI, MACD, Bollinger Bands, breakouts, divergences automatiques" },
-  { icon: BarChart3, title: "Volume Profile", desc: "Détection de pics de volume et activité institutionnelle" },
-  { icon: Bell, title: "Alertes Personnalisées", desc: "Notifications en temps réel sur vos critères de scan" },
-  { icon: Radio, title: "Données Temps Réel", desc: "Prix live et signaux mis à jour en continu" },
-  { icon: Zap, title: "Filtres Avancés", desc: "Par asset, timeframe, type de signal et force du signal" },
-];
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+interface PriceItem {
+  symbol: string;
+  price: number;
+  change: number; // percent
+}
+
+interface LivePricesResponse {
+  forex: PriceItem[];
+  crypto: PriceItem[];
+  commodities: PriceItem[];
+  indices: PriceItem[];
+  timestamp: number;
+}
+
+interface CurrencyStrengthResponse {
+  strengths: Record<string, number>;
+  pairs: { pair: string; direction: "LONG" | "SHORT"; reason: string; delta: number }[];
+  timestamp: number;
+}
+
+type InstrumentType = "all" | "forex" | "crypto" | "commodities" | "indices";
+type SignalType = "all" | "buy" | "sell" | "neutral";
+type SortKey = "symbol" | "price" | "change" | "signal" | "strength";
+type SortDir = "asc" | "desc";
+
+interface ScannerRow {
+  symbol: string;
+  price: number;
+  change: number;
+  type: InstrumentType;
+  signal: "buy" | "sell" | "neutral";
+  strength: number; // 0-100
+  volumeLevel: "high" | "medium" | "low";
+}
+
+// ─── Signal Generation Helpers ──────────────────────────────────────────────
+
+function computeSignal(change: number, strength: number): "buy" | "sell" | "neutral" {
+  if (strength >= 65 && change > 0.05) return "buy";
+  if (strength <= 35 && change < -0.05) return "sell";
+  if (change > 0.3 && strength >= 55) return "buy";
+  if (change < -0.3 && strength <= 45) return "sell";
+  return "neutral";
+}
+
+function computeStrength(
+  change: number,
+  currencyStrengths: Record<string, number>,
+  symbol: string,
+  type: string
+): number {
+  // Base strength from change momentum
+  let base = 50 + change * 8;
+
+  // Incorporate currency strength data for forex pairs
+  if (type === "forex") {
+    const parts = symbol.split("/");
+    if (parts.length === 2) {
+      const baseStr = currencyStrengths[parts[0]] ?? 50;
+      const quoteStr = currencyStrengths[parts[1]] ?? 50;
+      const delta = baseStr - quoteStr;
+      base = 50 + delta * 0.5 + change * 5;
+    }
+  }
+
+  // Clamp
+  return Math.round(Math.max(0, Math.min(100, base)));
+}
+
+function computeVolume(change: number): "high" | "medium" | "low" {
+  const absChange = Math.abs(change);
+  if (absChange > 1.5) return "high";
+  if (absChange > 0.4) return "medium";
+  return "low";
+}
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 export default function ScannerPage() {
-  return (
-    <div className="space-y-8 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="text-center pt-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mb-4"
-          style={{ background: "rgba(245,158,11,0.15)", color: "rgb(245,158,11)", border: "1px solid rgba(245,158,11,0.3)" }}>
-          BIENTÔT DISPONIBLE
+  const [rows, setRows] = useState<ScannerRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Filters
+  const [typeFilter, setTypeFilter] = useState<InstrumentType>("all");
+  const [signalFilter, setSignalFilter] = useState<SignalType>("all");
+  const [minStrength, setMinStrength] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Sort
+  const [sortKey, setSortKey] = useState<SortKey>("strength");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // Detail panel
+  const [selectedRow, setSelectedRow] = useState<ScannerRow | null>(null);
+
+  // Auto-refresh
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ─── Fetch data ───────────────────────────────────────────────────────────
+
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError(null);
+
+    try {
+      const [pricesRes, strengthRes] = await Promise.all([
+        fetch("/api/live-prices"),
+        fetch("/api/currency-strength"),
+      ]);
+
+      if (!pricesRes.ok) throw new Error("Erreur lors du chargement des prix");
+
+      const prices: LivePricesResponse = await pricesRes.json();
+      const strengths: CurrencyStrengthResponse = strengthRes.ok
+        ? await strengthRes.json()
+        : { strengths: {}, pairs: [], timestamp: Date.now() };
+
+      const newRows: ScannerRow[] = [];
+
+      // Process forex
+      for (const item of prices.forex) {
+        const str = computeStrength(item.change, strengths.strengths, item.symbol, "forex");
+        newRows.push({
+          symbol: item.symbol,
+          price: item.price,
+          change: item.change,
+          type: "forex",
+          signal: computeSignal(item.change, str),
+          strength: str,
+          volumeLevel: computeVolume(item.change),
+        });
+      }
+
+      // Process crypto
+      for (const item of prices.crypto) {
+        const str = computeStrength(item.change, strengths.strengths, item.symbol, "crypto");
+        newRows.push({
+          symbol: item.symbol,
+          price: item.price,
+          change: item.change,
+          type: "crypto",
+          signal: computeSignal(item.change, str),
+          strength: str,
+          volumeLevel: computeVolume(item.change),
+        });
+      }
+
+      // Process commodities
+      for (const item of prices.commodities) {
+        const str = computeStrength(item.change, strengths.strengths, item.symbol, "commodities");
+        newRows.push({
+          symbol: item.symbol,
+          price: item.price,
+          change: item.change,
+          type: "commodities",
+          signal: computeSignal(item.change, str),
+          strength: str,
+          volumeLevel: computeVolume(item.change),
+        });
+      }
+
+      // Process indices
+      for (const item of prices.indices) {
+        const str = computeStrength(item.change, strengths.strengths, item.symbol, "indices");
+        newRows.push({
+          symbol: item.symbol,
+          price: item.price,
+          change: item.change,
+          type: "indices",
+          signal: computeSignal(item.change, str),
+          strength: str,
+          volumeLevel: computeVolume(item.change),
+        });
+      }
+
+      // Incorporate currency strength pair suggestions as additional signal boost
+      for (const suggestion of strengths.pairs) {
+        const matchingRow = newRows.find((r) => r.symbol === suggestion.pair || r.symbol.replace("/", "") === suggestion.pair.replace("/", ""));
+        if (matchingRow) {
+          if (suggestion.direction === "LONG" && suggestion.delta > 15) {
+            matchingRow.signal = "buy";
+            matchingRow.strength = Math.min(100, matchingRow.strength + 10);
+          } else if (suggestion.direction === "SHORT" && suggestion.delta > 15) {
+            matchingRow.signal = "sell";
+            matchingRow.strength = Math.min(100, matchingRow.strength + 10);
+          }
+        }
+      }
+
+      setRows(newRows);
+      setLastUpdated(new Date());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur inconnue");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    intervalRef.current = setInterval(() => fetchData(true), 30_000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [fetchData]);
+
+  // ─── Sort & Filter ────────────────────────────────────────────────────────
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "symbol" ? "asc" : "desc");
+    }
+  };
+
+  const filteredRows = useMemo(() => {
+    let result = rows;
+
+    if (typeFilter !== "all") {
+      result = result.filter((r) => r.type === typeFilter);
+    }
+    if (signalFilter !== "all") {
+      result = result.filter((r) => r.signal === signalFilter);
+    }
+    if (minStrength > 0) {
+      result = result.filter((r) => r.strength >= minStrength);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((r) => r.symbol.toLowerCase().includes(q));
+    }
+
+    result = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "symbol":
+          cmp = a.symbol.localeCompare(b.symbol);
+          break;
+        case "price":
+          cmp = a.price - b.price;
+          break;
+        case "change":
+          cmp = a.change - b.change;
+          break;
+        case "signal": {
+          const order = { buy: 2, neutral: 1, sell: 0 };
+          cmp = order[a.signal] - order[b.signal];
+          break;
+        }
+        case "strength":
+          cmp = a.strength - b.strength;
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return result;
+  }, [rows, typeFilter, signalFilter, minStrength, searchQuery, sortKey, sortDir]);
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
+  const signalLabel = (s: "buy" | "sell" | "neutral") => {
+    switch (s) {
+      case "buy": return "ACHAT";
+      case "sell": return "VENTE";
+      case "neutral": return "NEUTRE";
+    }
+  };
+
+  const signalColor = (s: "buy" | "sell" | "neutral") => {
+    switch (s) {
+      case "buy": return "rgb(16,185,129)";
+      case "sell": return "rgb(239,68,68)";
+      case "neutral": return "rgb(245,158,11)";
+    }
+  };
+
+  const signalBg = (s: "buy" | "sell" | "neutral") => {
+    switch (s) {
+      case "buy": return "rgba(16,185,129,0.12)";
+      case "sell": return "rgba(239,68,68,0.12)";
+      case "neutral": return "rgba(245,158,11,0.12)";
+    }
+  };
+
+  const SignalIcon = ({ signal }: { signal: "buy" | "sell" | "neutral" }) => {
+    if (signal === "buy") return <TrendingUp size={14} style={{ color: signalColor(signal) }} />;
+    if (signal === "sell") return <TrendingDown size={14} style={{ color: signalColor(signal) }} />;
+    return <Minus size={14} style={{ color: signalColor(signal) }} />;
+  };
+
+  const typeLabel = (t: InstrumentType) => {
+    switch (t) {
+      case "forex": return "Forex";
+      case "crypto": return "Crypto";
+      case "commodities": return "Matières";
+      case "indices": return "Indices";
+      default: return "Tous";
+    }
+  };
+
+  const volumeIcon = (v: "high" | "medium" | "low") => {
+    const colors = { high: "rgb(16,185,129)", medium: "rgb(245,158,11)", low: "var(--text-muted)" };
+    return (
+      <div className="flex items-center gap-1">
+        <div style={{ width: 4, height: v === "low" ? 6 : v === "medium" ? 10 : 14, background: colors[v], borderRadius: 2 }} />
+        <div style={{ width: 4, height: v === "low" ? 6 : v === "medium" ? 10 : 14, background: colors[v], borderRadius: 2, opacity: v === "low" ? 0.3 : 1 }} />
+        <div style={{ width: 4, height: v === "low" ? 6 : 14, background: colors[v], borderRadius: 2, opacity: v === "high" ? 1 : 0.3 }} />
+      </div>
+    );
+  };
+
+  const strengthBar = (value: number) => {
+    const color = value >= 65 ? "rgb(16,185,129)" : value <= 35 ? "rgb(239,68,68)" : "rgb(245,158,11)";
+    return (
+      <div className="flex items-center gap-2">
+        <div style={{ width: 48, height: 6, borderRadius: 3, background: "var(--bg-secondary)" }}>
+          <div style={{ width: `${value}%`, height: "100%", borderRadius: 3, background: color, transition: "width 0.3s" }} />
         </div>
-        <h1 className="text-3xl font-bold flex items-center justify-center gap-3">
-          <Search className="w-8 h-8 text-cyan-400" />
-          Scanner de Marché
-        </h1>
-        <p className="text-[--text-secondary] mt-2 max-w-lg mx-auto">
-          Un scanner professionnel en temps réel pour détecter les meilleures opportunités sur tous les marchés. Actuellement en développement.
-        </p>
+        <span className="text-xs tabular-nums" style={{ color, minWidth: 24 }}>{value}</span>
+      </div>
+    );
+  };
+
+  const formatPrice = (price: number, symbol: string) => {
+    if (symbol.includes("JPY") || symbol.includes("S&P") || symbol.includes("DXY")) {
+      return price.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    if (symbol.includes("BTC") || symbol.includes("ETH") || symbol.includes("XAU")) {
+      return price.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    }
+    return price.toLocaleString("fr-FR", { minimumFractionDigits: 4, maximumFractionDigits: 5 });
+  };
+
+  // Active filter count
+  const activeFilterCount = [
+    typeFilter !== "all",
+    signalFilter !== "all",
+    minStrength > 0,
+  ].filter(Boolean).length;
+
+  // ─── Stats ────────────────────────────────────────────────────────────────
+
+  const stats = useMemo(() => {
+    const buyCount = rows.filter((r) => r.signal === "buy").length;
+    const sellCount = rows.filter((r) => r.signal === "sell").length;
+    const avgStrength = rows.length > 0 ? Math.round(rows.reduce((s, r) => s + r.strength, 0) / rows.length) : 0;
+    return { total: rows.length, buyCount, sellCount, avgStrength };
+  }, [rows]);
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+
+  const SortHeader = ({ label, sortKeyName, className = "" }: { label: string; sortKeyName: SortKey; className?: string }) => (
+    <th
+      className={`text-left text-xs font-semibold cursor-pointer select-none ${className}`}
+      style={{ color: "var(--text-secondary)", padding: "10px 12px" }}
+      onClick={() => handleSort(sortKeyName)}
+    >
+      <div className="flex items-center gap-1">
+        {label}
+        {sortKey === sortKeyName ? (
+          sortDir === "asc" ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+        ) : (
+          <ArrowUpDown size={10} style={{ opacity: 0.3 }} />
+        )}
+      </div>
+    </th>
+  );
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: "var(--text-primary)" }}>
+            <Search className="w-7 h-7 text-cyan-400" />
+            Scanner de Marche
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+            Analyse en temps reel de tous les instruments
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <span className="text-xs flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
+              <Clock size={12} />
+              {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </span>
+          )}
+          <button
+            onClick={() => fetchData()}
+            disabled={loading}
+            className="glass rounded-lg px-3 py-2 text-xs font-medium flex items-center gap-2 hover:opacity-80 transition-opacity"
+            style={{ color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Actualiser
+          </button>
+        </div>
       </div>
 
-      {/* Features grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {FEATURES.map((f) => (
-          <div key={f.title} className="glass rounded-2xl p-5 flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "rgba(6,182,212,0.1)" }}>
-              <f.icon className="w-5 h-5 text-cyan-400" />
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <Radio size={14} className="text-cyan-400" />
+            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Instruments</span>
+          </div>
+          <div className="text-xl font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{stats.total}</div>
+        </div>
+        <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp size={14} style={{ color: "rgb(16,185,129)" }} />
+            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Signaux Achat</span>
+          </div>
+          <div className="text-xl font-bold tabular-nums" style={{ color: "rgb(16,185,129)" }}>{stats.buyCount}</div>
+        </div>
+        <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingDown size={14} style={{ color: "rgb(239,68,68)" }} />
+            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Signaux Vente</span>
+          </div>
+          <div className="text-xl font-bold tabular-nums" style={{ color: "rgb(239,68,68)" }}>{stats.sellCount}</div>
+        </div>
+        <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <Activity size={14} className="text-amber-400" />
+            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Force Moyenne</span>
+          </div>
+          <div className="text-xl font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{stats.avgStrength}</div>
+        </div>
+      </div>
+
+      {/* Signal Distribution Visual */}
+      {rows.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Buy/Sell/Neutral bar */}
+          <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <BarChart3 size={14} className="text-cyan-400" />
+              <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>Distribution des Signaux</span>
             </div>
-            <div>
-              <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{f.title}</h3>
-              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{f.desc}</p>
+            <div className="w-full h-6 rounded-full overflow-hidden flex" style={{ background: "var(--bg-secondary)" }}>
+              {stats.buyCount > 0 && (
+                <div
+                  className="h-full flex items-center justify-center text-[10px] font-bold text-white transition-all duration-500"
+                  style={{ width: `${(stats.buyCount / stats.total) * 100}%`, background: "rgb(16,185,129)" }}
+                >
+                  {stats.buyCount}
+                </div>
+              )}
+              {(stats.total - stats.buyCount - stats.sellCount) > 0 && (
+                <div
+                  className="h-full flex items-center justify-center text-[10px] font-bold transition-all duration-500"
+                  style={{ width: `${((stats.total - stats.buyCount - stats.sellCount) / stats.total) * 100}%`, background: "rgba(148,163,184,0.3)", color: "var(--text-muted)" }}
+                >
+                  {stats.total - stats.buyCount - stats.sellCount}
+                </div>
+              )}
+              {stats.sellCount > 0 && (
+                <div
+                  className="h-full flex items-center justify-center text-[10px] font-bold text-white transition-all duration-500"
+                  style={{ width: `${(stats.sellCount / stats.total) * 100}%`, background: "rgb(239,68,68)" }}
+                >
+                  {stats.sellCount}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between mt-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
+              <span style={{ color: "rgb(16,185,129)" }}>● Achat ({Math.round((stats.buyCount / stats.total) * 100)}%)</span>
+              <span>● Neutre ({Math.round(((stats.total - stats.buyCount - stats.sellCount) / stats.total) * 100)}%)</span>
+              <span style={{ color: "rgb(239,68,68)" }}>● Vente ({Math.round((stats.sellCount / stats.total) * 100)}%)</span>
             </div>
           </div>
-        ))}
+
+          {/* Top signals strength ranking */}
+          <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Zap size={14} className="text-amber-400" />
+              <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>Top Signaux par Force</span>
+            </div>
+            <div className="space-y-2">
+              {filteredRows
+                .filter((r) => r.signal !== "neutral")
+                .sort((a, b) => b.strength - a.strength)
+                .slice(0, 5)
+                .map((r, i) => (
+                  <div key={r.symbol} className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold w-4" style={{ color: "var(--text-muted)" }}>#{i + 1}</span>
+                    <SignalIcon signal={r.signal} />
+                    <span className="text-xs font-bold flex-shrink-0 w-16" style={{ color: "var(--text-primary)" }}>{r.symbol}</span>
+                    <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${r.strength}%`,
+                          background: r.signal === "buy"
+                            ? "linear-gradient(90deg, rgb(16,185,129), rgb(52,211,153))"
+                            : "linear-gradient(90deg, rgb(239,68,68), rgb(248,113,113))",
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-mono font-bold w-8 text-right" style={{ color: signalColor(r.signal) }}>
+                      {r.strength}
+                    </span>
+                  </div>
+                ))}
+              {filteredRows.filter((r) => r.signal !== "neutral").length === 0 && (
+                <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>Aucun signal actif</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search & Filters bar */}
+      <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher un symbole..."
+              className="w-full rounded-lg pl-9 pr-3 py-2 text-sm"
+              style={{
+                background: "var(--bg-secondary)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--border)",
+                outline: "none",
+              }}
+            />
+          </div>
+
+          {/* Filter toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="glass rounded-lg px-4 py-2 text-xs font-medium flex items-center gap-2 hover:opacity-80 transition-opacity"
+            style={{
+              color: activeFilterCount > 0 ? "rgb(6,182,212)" : "var(--text-secondary)",
+              border: activeFilterCount > 0 ? "1px solid rgba(6,182,212,0.3)" : "1px solid var(--border)",
+              background: activeFilterCount > 0 ? "rgba(6,182,212,0.08)" : undefined,
+            }}
+          >
+            <Filter size={14} />
+            Filtres
+            {activeFilterCount > 0 && (
+              <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                style={{ background: "rgba(6,182,212,0.2)", color: "rgb(6,182,212)" }}>
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Expanded filters */}
+        {showFilters && (
+          <div className="mt-3 pt-3 flex flex-wrap gap-4" style={{ borderTop: "1px solid var(--border)" }}>
+            {/* Type filter */}
+            <div>
+              <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: "var(--text-muted)" }}>
+                Type
+              </label>
+              <div className="flex gap-1.5">
+                {(["all", "forex", "crypto", "commodities", "indices"] as InstrumentType[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTypeFilter(t)}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                    style={{
+                      background: typeFilter === t ? "rgba(6,182,212,0.15)" : "var(--bg-secondary)",
+                      color: typeFilter === t ? "rgb(6,182,212)" : "var(--text-secondary)",
+                      border: typeFilter === t ? "1px solid rgba(6,182,212,0.3)" : "1px solid transparent",
+                    }}
+                  >
+                    {typeLabel(t)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Signal filter */}
+            <div>
+              <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: "var(--text-muted)" }}>
+                Signal
+              </label>
+              <div className="flex gap-1.5">
+                {(["all", "buy", "sell", "neutral"] as SignalType[]).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSignalFilter(s)}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium transition-all"
+                    style={{
+                      background: signalFilter === s
+                        ? s === "buy" ? "rgba(16,185,129,0.12)"
+                          : s === "sell" ? "rgba(239,68,68,0.12)"
+                          : s === "neutral" ? "rgba(245,158,11,0.12)"
+                          : "rgba(6,182,212,0.15)"
+                        : "var(--bg-secondary)",
+                      color: signalFilter === s
+                        ? s === "buy" ? "rgb(16,185,129)"
+                          : s === "sell" ? "rgb(239,68,68)"
+                          : s === "neutral" ? "rgb(245,158,11)"
+                          : "rgb(6,182,212)"
+                        : "var(--text-secondary)",
+                      border: signalFilter === s ? `1px solid ${signalColor(s === "all" ? "neutral" : s)}33` : "1px solid transparent",
+                    }}
+                  >
+                    {s === "all" ? "Tous" : signalLabel(s as "buy" | "sell" | "neutral")}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Min strength */}
+            <div>
+              <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1.5" style={{ color: "var(--text-muted)" }}>
+                Force min: {minStrength}
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={80}
+                step={5}
+                value={minStrength}
+                onChange={(e) => setMinStrength(Number(e.target.value))}
+                className="w-32 accent-cyan-400"
+              />
+            </div>
+
+            {/* Reset */}
+            {activeFilterCount > 0 && (
+              <button
+                onClick={() => {
+                  setTypeFilter("all");
+                  setSignalFilter("all");
+                  setMinStrength(0);
+                }}
+                className="self-end text-xs flex items-center gap-1 hover:opacity-80"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <X size={12} /> Reinitialiser
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Preview mockup */}
-      <div className="glass rounded-2xl p-8 text-center">
-        <div className="flex items-center justify-center gap-3 mb-4 opacity-30">
-          <div className="w-20 h-3 rounded-full bg-emerald-500/50" />
-          <div className="w-14 h-3 rounded-full bg-amber-500/50" />
-          <div className="w-24 h-3 rounded-full bg-rose-500/50" />
-          <div className="w-16 h-3 rounded-full bg-cyan-500/50" />
+      {/* Error */}
+      {error && (
+        <div className="glass rounded-xl p-4 flex items-center gap-3"
+          style={{ border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.06)" }}>
+          <Zap size={16} style={{ color: "rgb(239,68,68)" }} />
+          <span className="text-sm" style={{ color: "rgb(239,68,68)" }}>{error}</span>
+          <button onClick={() => fetchData()} className="ml-auto text-xs underline" style={{ color: "rgb(239,68,68)" }}>
+            Reessayer
+          </button>
         </div>
-        <div className="space-y-2 opacity-20">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-10 rounded-lg" style={{ background: "var(--bg-secondary)" }} />
-          ))}
-        </div>
-        <p className="text-sm font-medium mt-6" style={{ color: "var(--text-muted)" }}>
-          Intégration avec données temps réel en cours de développement
-        </p>
+      )}
+
+      {/* Main table */}
+      <div className="glass rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+        {loading && rows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <RefreshCw size={24} className="animate-spin text-cyan-400" />
+            <span className="text-sm" style={{ color: "var(--text-muted)" }}>Chargement des donnees...</span>
+          </div>
+        ) : filteredRows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Search size={24} style={{ color: "var(--text-muted)" }} />
+            <span className="text-sm" style={{ color: "var(--text-muted)" }}>Aucun instrument ne correspond aux filtres</span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                  <SortHeader label="Symbole" sortKeyName="symbol" />
+                  <SortHeader label="Prix" sortKeyName="price" className="text-right" />
+                  <SortHeader label="Variation %" sortKeyName="change" className="text-right" />
+                  <th className="text-left text-xs font-semibold px-3 py-2.5" style={{ color: "var(--text-secondary)", padding: "10px 12px" }}>Volume</th>
+                  <SortHeader label="Signal" sortKeyName="signal" />
+                  <SortHeader label="Force" sortKeyName="strength" />
+                  <th className="text-xs font-semibold" style={{ color: "var(--text-secondary)", padding: "10px 12px", width: 40 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row) => (
+                  <tr
+                    key={row.symbol}
+                    className="cursor-pointer transition-colors"
+                    onClick={() => setSelectedRow(selectedRow?.symbol === row.symbol ? null : row)}
+                    style={{
+                      borderBottom: "1px solid var(--border)",
+                      background: selectedRow?.symbol === row.symbol ? "rgba(6,182,212,0.04)" : "transparent",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedRow?.symbol !== row.symbol) {
+                        e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = selectedRow?.symbol === row.symbol ? "rgba(6,182,212,0.04)" : "transparent";
+                    }}
+                  >
+                    <td style={{ padding: "10px 12px" }}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-medium rounded px-1.5 py-0.5"
+                          style={{
+                            background: "var(--bg-secondary)",
+                            color: "var(--text-muted)",
+                          }}>
+                          {typeLabel(row.type).slice(0, 3).toUpperCase()}
+                        </span>
+                        <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{row.symbol}</span>
+                      </div>
+                    </td>
+                    <td className="text-right tabular-nums font-medium" style={{ padding: "10px 12px", color: "var(--text-primary)" }}>
+                      {formatPrice(row.price, row.symbol)}
+                    </td>
+                    <td className="text-right tabular-nums font-semibold" style={{
+                      padding: "10px 12px",
+                      color: row.change > 0 ? "rgb(16,185,129)" : row.change < 0 ? "rgb(239,68,68)" : "var(--text-muted)",
+                    }}>
+                      {row.change > 0 ? "+" : ""}{row.change.toFixed(2)}%
+                    </td>
+                    <td style={{ padding: "10px 12px" }}>
+                      {volumeIcon(row.volumeLevel)}
+                    </td>
+                    <td style={{ padding: "10px 12px" }}>
+                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
+                        style={{
+                          background: signalBg(row.signal),
+                          color: signalColor(row.signal),
+                        }}>
+                        <SignalIcon signal={row.signal} />
+                        {signalLabel(row.signal)}
+                      </span>
+                    </td>
+                    <td style={{ padding: "10px 12px" }}>
+                      {strengthBar(row.strength)}
+                    </td>
+                    <td style={{ padding: "10px 12px" }}>
+                      <Eye size={14} style={{ color: "var(--text-muted)", opacity: 0.5 }} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Row count */}
+        {filteredRows.length > 0 && (
+          <div className="px-4 py-2 text-xs flex items-center justify-between"
+            style={{ borderTop: "1px solid var(--border)", color: "var(--text-muted)" }}>
+            <span>{filteredRows.length} instrument{filteredRows.length > 1 ? "s" : ""} affiche{filteredRows.length > 1 ? "s" : ""}</span>
+            <span className="flex items-center gap-1">
+              <RefreshCw size={10} />
+              Actualisation auto toutes les 30s
+            </span>
+          </div>
+        )}
       </div>
+
+      {/* Detail panel */}
+      {selectedRow && (
+        <div className="glass rounded-xl p-5" style={{ border: "1px solid var(--border)" }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+              <BarChart3 size={18} className="text-cyan-400" />
+              {selectedRow.symbol}
+            </h2>
+            <button onClick={() => setSelectedRow(null)} className="hover:opacity-70">
+              <X size={18} style={{ color: "var(--text-muted)" }} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>Prix actuel</span>
+              <span className="text-lg font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>
+                {formatPrice(selectedRow.price, selectedRow.symbol)}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>Variation</span>
+              <span className="text-lg font-bold tabular-nums" style={{
+                color: selectedRow.change > 0 ? "rgb(16,185,129)" : selectedRow.change < 0 ? "rgb(239,68,68)" : "var(--text-muted)",
+              }}>
+                {selectedRow.change > 0 ? "+" : ""}{selectedRow.change.toFixed(2)}%
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>Signal</span>
+              <span className="inline-flex items-center gap-1.5 text-sm font-bold"
+                style={{ color: signalColor(selectedRow.signal) }}>
+                <SignalIcon signal={selectedRow.signal} />
+                {signalLabel(selectedRow.signal)}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>Force</span>
+              {strengthBar(selectedRow.strength)}
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg p-3" style={{ background: "var(--bg-secondary)" }}>
+                <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>Type</span>
+                <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{typeLabel(selectedRow.type)}</span>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "var(--bg-secondary)" }}>
+                <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>Volume</span>
+                <div className="flex items-center gap-2">
+                  {volumeIcon(selectedRow.volumeLevel)}
+                  <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                    {selectedRow.volumeLevel === "high" ? "Eleve" : selectedRow.volumeLevel === "medium" ? "Moyen" : "Faible"}
+                  </span>
+                </div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "var(--bg-secondary)" }}>
+                <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>Recommandation</span>
+                <span className="text-sm font-medium" style={{ color: signalColor(selectedRow.signal) }}>
+                  {selectedRow.signal === "buy" && selectedRow.strength >= 65
+                    ? "Opportunite forte a l'achat"
+                    : selectedRow.signal === "sell" && selectedRow.strength >= 65
+                    ? "Pression vendeuse elevee"
+                    : selectedRow.signal === "buy"
+                    ? "Biais haussier moderee"
+                    : selectedRow.signal === "sell"
+                    ? "Biais baissier moderee"
+                    : "Pas de direction claire"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-refresh indicator */}
+      {loading && rows.length > 0 && (
+        <div className="fixed bottom-4 right-4 glass rounded-full px-3 py-1.5 flex items-center gap-2 text-xs"
+          style={{ border: "1px solid var(--border)", color: "var(--text-muted)", zIndex: 50 }}>
+          <RefreshCw size={12} className="animate-spin text-cyan-400" />
+          Mise a jour...
+        </div>
+      )}
     </div>
   );
 }

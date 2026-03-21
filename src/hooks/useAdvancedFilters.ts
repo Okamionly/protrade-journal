@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import type { Trade } from "./useTrades";
+import { calculateRR } from "@/lib/utils";
 
 export type TradingSession = "Tokyo" | "London" | "New York" | "Sydney";
 
@@ -17,9 +18,20 @@ export interface AdvancedFilters {
   tags: string[];
   minPnl: string;
   maxPnl: string;
+  minRR: string;
+  maxRR: string;
   session: string;         // "ALL" | TradingSession
   search: string;
 }
+
+export interface FilterPreset {
+  id: string;
+  name: string;
+  filters: AdvancedFilters;
+  createdAt: string;
+}
+
+const PRESETS_STORAGE_KEY = "protrade-filter-presets";
 
 const DEFAULT_FILTERS: AdvancedFilters = {
   dateFrom: "",
@@ -32,6 +44,8 @@ const DEFAULT_FILTERS: AdvancedFilters = {
   tags: [],
   minPnl: "",
   maxPnl: "",
+  minRR: "",
+  maxRR: "",
   session: "ALL",
   search: "",
 };
@@ -86,6 +100,72 @@ export function useAdvancedFilters() {
   const router = useRouter();
   const pathname = usePathname();
 
+  // Presets state
+  const [presets, setPresets] = useState<FilterPreset[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(PRESETS_STORAGE_KEY);
+      if (stored) setPresets(JSON.parse(stored));
+    } catch { /* ignore */ }
+  }, []);
+
+  const savePreset = useCallback((name: string) => {
+    const currentFilters: AdvancedFilters = {
+      dateFrom: searchParams.get("dateFrom") || "",
+      dateTo: searchParams.get("dateTo") || "",
+      assets: parseArrayParam(searchParams.get("assets")),
+      direction: searchParams.get("direction") || "ALL",
+      result: searchParams.get("result") || "ALL",
+      strategies: parseArrayParam(searchParams.get("strategies")),
+      emotions: parseArrayParam(searchParams.get("emotions")),
+      tags: parseArrayParam(searchParams.get("tags")),
+      minPnl: searchParams.get("minPnl") || "",
+      maxPnl: searchParams.get("maxPnl") || "",
+      minRR: searchParams.get("minRR") || "",
+      maxRR: searchParams.get("maxRR") || "",
+      session: searchParams.get("session") || "ALL",
+      search: searchParams.get("search") || "",
+    };
+    const preset: FilterPreset = {
+      id: crypto.randomUUID(),
+      name,
+      filters: currentFilters,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...presets, preset];
+    setPresets(updated);
+    try { localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(updated)); } catch { /* ignore */ }
+    return preset;
+  }, [searchParams, presets]);
+
+  const deletePreset = useCallback((id: string) => {
+    const updated = presets.filter((p) => p.id !== id);
+    setPresets(updated);
+    try { localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(updated)); } catch { /* ignore */ }
+  }, [presets]);
+
+  const loadPreset = useCallback((preset: FilterPreset) => {
+    const params = new URLSearchParams();
+    const f = preset.filters;
+    if (f.dateFrom) params.set("dateFrom", f.dateFrom);
+    if (f.dateTo) params.set("dateTo", f.dateTo);
+    if (f.assets.length > 0) params.set("assets", f.assets.join(","));
+    if (f.direction !== "ALL") params.set("direction", f.direction);
+    if (f.result !== "ALL") params.set("result", f.result);
+    if (f.strategies.length > 0) params.set("strategies", f.strategies.join(","));
+    if (f.emotions.length > 0) params.set("emotions", f.emotions.join(","));
+    if (f.tags.length > 0) params.set("tags", f.tags.join(","));
+    if (f.minPnl) params.set("minPnl", f.minPnl);
+    if (f.maxPnl) params.set("maxPnl", f.maxPnl);
+    if (f.minRR) params.set("minRR", f.minRR);
+    if (f.maxRR) params.set("maxRR", f.maxRR);
+    if (f.session !== "ALL") params.set("session", f.session);
+    if (f.search) params.set("search", f.search);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [router, pathname]);
+
   const filters: AdvancedFilters = useMemo(() => ({
     dateFrom: searchParams.get("dateFrom") || "",
     dateTo: searchParams.get("dateTo") || "",
@@ -97,6 +177,8 @@ export function useAdvancedFilters() {
     tags: parseArrayParam(searchParams.get("tags")),
     minPnl: searchParams.get("minPnl") || "",
     maxPnl: searchParams.get("maxPnl") || "",
+    minRR: searchParams.get("minRR") || "",
+    maxRR: searchParams.get("maxRR") || "",
     session: searchParams.get("session") || "ALL",
     search: searchParams.get("search") || "",
   }), [searchParams]);
@@ -130,6 +212,8 @@ export function useAdvancedFilters() {
     if (filters.tags.length > 0) count++;
     if (filters.minPnl) count++;
     if (filters.maxPnl) count++;
+    if (filters.minRR) count++;
+    if (filters.maxRR) count++;
     if (filters.session !== "ALL") count++;
     if (filters.search) count++;
     return count;
@@ -187,6 +271,14 @@ export function useAdvancedFilters() {
       if (filters.minPnl && trade.result < parseFloat(filters.minPnl)) return false;
       if (filters.maxPnl && trade.result > parseFloat(filters.maxPnl)) return false;
 
+      // Min/Max RR
+      if (filters.minRR || filters.maxRR) {
+        const rrStr = calculateRR(trade.entry, trade.sl, trade.tp);
+        const rr = rrStr === "-" ? 0 : parseFloat(rrStr);
+        if (filters.minRR && rr < parseFloat(filters.minRR)) return false;
+        if (filters.maxRR && rr > parseFloat(filters.maxRR)) return false;
+      }
+
       // Session
       if (filters.session !== "ALL") {
         const sessions = getTradingSession(trade.date);
@@ -205,5 +297,9 @@ export function useAdvancedFilters() {
     applyFilters,
     EMOTION_OPTIONS,
     DEFAULT_FILTERS,
+    presets,
+    savePreset,
+    deletePreset,
+    loadPreset,
   };
 }

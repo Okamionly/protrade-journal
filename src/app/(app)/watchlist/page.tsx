@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, AlertTriangle, X, Clock, Flame, BellRing, History, Newspaper, Link2 } from "lucide-react";
+import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, AlertTriangle, X, Clock, Flame, BellRing, History, Newspaper, Link2, ArrowUpDown, Trophy, ThumbsDown } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 
 interface WatchItem {
@@ -102,6 +102,7 @@ export default function WatchlistPage() {
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
+  const [sortBy, setSortBy] = useState<"name" | "change" | "relStrength">("name");
 
   // Load items and alert history from localStorage
   useEffect(() => {
@@ -339,6 +340,37 @@ export default function WatchlistPage() {
 
   const filtered = search ? items.filter((i) => i.symbol.includes(search.toUpperCase()) || i.name.toLowerCase().includes(search.toLowerCase())) : items;
 
+  // ─── Relative Strength computation ────────────────────────────────────────
+  const quotedItems = items.filter((i) => quotes[i.symbol]?.last > 0);
+  const avgChangePct = quotedItems.length > 0
+    ? quotedItems.reduce((sum, i) => sum + (quotes[i.symbol]?.changepct || 0), 0) / quotedItems.length
+    : 0;
+
+  const getRelStrengthBps = (symbol: string): number => {
+    const q = quotes[symbol];
+    if (!q || q.last <= 0) return 0;
+    return Math.round((q.changepct - avgChangePct) * 100); // basis points
+  };
+
+  // Sort filtered items
+  const sortedFiltered = [...filtered].sort((a, b) => {
+    if (sortBy === "name") return a.symbol.localeCompare(b.symbol);
+    if (sortBy === "change") {
+      const aPct = quotes[a.symbol]?.changepct || 0;
+      const bPct = quotes[b.symbol]?.changepct || 0;
+      return bPct - aPct;
+    }
+    // relStrength
+    return getRelStrengthBps(b.symbol) - getRelStrengthBps(a.symbol);
+  });
+
+  // Top / Worst performers (by relative strength in bps)
+  const rankedByRelStrength = quotedItems
+    .map((i) => ({ ...i, bps: getRelStrengthBps(i.symbol) }))
+    .sort((a, b) => b.bps - a.bps);
+  const topPerformers = rankedByRelStrength.slice(0, 3);
+  const worstPerformers = rankedByRelStrength.slice(-3).reverse();
+
   const formatVolume = (v: number) => {
     if (v >= 1e9) return (v / 1e9).toFixed(1) + "B";
     if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
@@ -551,16 +583,93 @@ export default function WatchlistPage() {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--text-muted]" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("searchSymbol")}
-          className="input-field pl-10"
-        />
+      {/* Top / Worst Performers Summary */}
+      {rankedByRelStrength.length >= 3 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Top Performers */}
+          <div className="glass rounded-2xl p-4">
+            <h3 className="font-semibold text-[--text-primary] flex items-center gap-2 mb-3 text-sm">
+              <Trophy className="w-4 h-4 text-emerald-400" />
+              {t("topPerformers")}
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {topPerformers.map((item) => {
+                const q = quotes[item.symbol];
+                return (
+                  <div
+                    key={item.symbol}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20"
+                  >
+                    <span className="text-xs font-bold text-emerald-400">{item.symbol}</span>
+                    <span className="text-[10px] font-medium text-emerald-300 mono">
+                      {q ? `${q.changepct >= 0 ? "+" : ""}${q.changepct.toFixed(2)}%` : "—"}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium mono">
+                      +{item.bps} {t("bpsVsAvg")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {/* Worst Performers */}
+          <div className="glass rounded-2xl p-4">
+            <h3 className="font-semibold text-[--text-primary] flex items-center gap-2 mb-3 text-sm">
+              <ThumbsDown className="w-4 h-4 text-rose-400" />
+              {t("worstPerformers")}
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {worstPerformers.map((item) => {
+                const q = quotes[item.symbol];
+                return (
+                  <div
+                    key={item.symbol}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20"
+                  >
+                    <span className="text-xs font-bold text-rose-400">{item.symbol}</span>
+                    <span className="text-[10px] font-medium text-rose-300 mono">
+                      {q ? `${q.changepct >= 0 ? "+" : ""}${q.changepct.toFixed(2)}%` : "—"}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-medium mono">
+                      {item.bps} {t("bpsVsAvg")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search + Sort Controls */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--text-muted]" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("searchSymbol")}
+            className="input-field pl-10"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <ArrowUpDown className="w-4 h-4 text-[--text-muted]" />
+          <span className="text-xs text-[--text-muted] whitespace-nowrap">{t("sortBy")}:</span>
+          {(["name", "change", "relStrength"] as const).map((option) => (
+            <button
+              key={option}
+              onClick={() => setSortBy(option)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                sortBy === option
+                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                  : "glass text-[--text-secondary] hover:text-[--text-primary]"
+              }`}
+            >
+              {option === "name" ? t("sortByName") : option === "change" ? t("sortByChange") : t("sortByRelStrength")}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Add Symbol */}
@@ -613,14 +722,22 @@ export default function WatchlistPage() {
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">{t("volume")}</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">Bid/Ask</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">52W Range</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4 hidden md:table-cell">{t("relativeStrength")}</th>
                 <th className="text-center text-xs font-semibold text-[--text-muted] p-4">{t("actions")}</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((item) => {
+              {sortedFiltered.map((item) => {
                 const q = quotes[item.symbol];
                 const isUp = q ? q.change >= 0 : true;
                 const correlations = getCorrelations(item.symbol);
+                const relBps = getRelStrengthBps(item.symbol);
+                const maxAbsBps = Math.max(
+                  ...items.map((i) => Math.abs(getRelStrengthBps(i.symbol))),
+                  1
+                );
+                const barWidthPct = Math.min(Math.abs(relBps) / maxAbsBps * 100, 100);
+                const isOutperforming = relBps >= 0;
                 return (
                   <tr key={item.symbol} className="border-b border-[--border-subtle] hover:bg-[--bg-hover] transition-colors">
                     <td className="p-4">
@@ -673,6 +790,35 @@ export default function WatchlistPage() {
                     <td className="p-4 text-right hidden xl:table-cell">
                       <span className="text-xs text-[--text-secondary] mono">{q ? `${q.low52.toFixed(0)} \u2014 ${q.high52.toFixed(0)}` : "\u2014"}</span>
                     </td>
+                    {/* Relative Strength Bar */}
+                    <td className="p-4 hidden md:table-cell">
+                      {q && q.last > 0 ? (
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="w-full flex items-center gap-1">
+                            <div className="flex-1 h-2 rounded-full bg-[--bg-secondary]/40 overflow-hidden relative">
+                              <div
+                                className={`absolute top-0 h-full rounded-full transition-all ${
+                                  isOutperforming ? "bg-emerald-400 right-1/2" : "bg-rose-400 left-1/2"
+                                }`}
+                                style={{
+                                  width: `${barWidthPct / 2}%`,
+                                  ...(isOutperforming
+                                    ? { right: "50%", left: `${50 - barWidthPct / 2}%` }
+                                    : { left: "50%", right: `${50 - barWidthPct / 2}%` }),
+                                }}
+                              />
+                              {/* Center line */}
+                              <div className="absolute top-0 left-1/2 w-px h-full bg-[--text-muted]/30" />
+                            </div>
+                          </div>
+                          <span className={`text-[10px] font-medium mono ${isOutperforming ? "text-emerald-400" : "text-rose-400"}`}>
+                            {relBps >= 0 ? "+" : ""}{relBps} {t("bpsVsAvg")}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-[--text-muted]">{"\u2014"}</span>
+                      )}
+                    </td>
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
@@ -701,7 +847,7 @@ export default function WatchlistPage() {
               })}
             </tbody>
           </table>
-          {filtered.length === 0 && (
+          {sortedFiltered.length === 0 && (
             <div className="text-center py-12 text-[--text-muted]">
               <Eye className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p>{t("watchlistEmpty")}</p>

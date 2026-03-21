@@ -2,7 +2,7 @@
 
 import { useTrades } from "@/hooks/useTrades";
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock, Target, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock, Target, ArrowRight, ArrowUpRight, ArrowDownRight, Zap, Award } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 
 export default function PnLCalendarPage() {
@@ -28,6 +28,16 @@ export default function PnLCalendarPage() {
     return d.getFullYear() === year && d.getMonth() === month;
   }), [trades, year, month]);
 
+  // Previous month trades for comparison
+  const prevMonthTrades = useMemo(() => {
+    const pm = month === 0 ? 11 : month - 1;
+    const py = month === 0 ? year - 1 : year;
+    return trades.filter((t) => {
+      const d = new Date(t.date);
+      return d.getFullYear() === py && d.getMonth() === pm;
+    });
+  }, [trades, year, month]);
+
   const tradesByDay: Record<number, typeof trades> = {};
   monthTrades.forEach((t) => {
     const day = new Date(t.date).getDate();
@@ -38,6 +48,7 @@ export default function PnLCalendarPage() {
   // Monthly stats
   const stats = useMemo(() => {
     const totalPnl = monthTrades.reduce((s, t) => s + t.result, 0);
+    const prevPnl = prevMonthTrades.reduce((s, t) => s + t.result, 0);
     const dayPnls: Record<number, number> = {};
     monthTrades.forEach((t) => {
       const day = new Date(t.date).getDate();
@@ -53,10 +64,12 @@ export default function PnLCalendarPage() {
     // Streak calculation
     let currentStreak = 0;
     let maxStreak = 0;
+    let currentLossStreak = 0;
+    let maxLossStreak = 0;
     const sortedDays = [...dayEntries].sort((a, b) => +a[0] - +b[0]);
     for (const [, pnl] of sortedDays) {
-      if (+pnl > 0) { currentStreak++; maxStreak = Math.max(maxStreak, currentStreak); }
-      else currentStreak = 0;
+      if (+pnl > 0) { currentStreak++; maxStreak = Math.max(maxStreak, currentStreak); currentLossStreak = 0; }
+      else { currentLossStreak++; maxLossStreak = Math.max(maxLossStreak, currentLossStreak); currentStreak = 0; }
     }
 
     // Day of week breakdown
@@ -64,7 +77,7 @@ export default function PnLCalendarPage() {
     const dowCount: number[] = [0, 0, 0, 0, 0, 0, 0];
     monthTrades.forEach((t) => {
       const d = new Date(t.date);
-      const dow = d.getDay() === 0 ? 6 : d.getDay() - 1; // Mon=0 .. Sun=6
+      const dow = d.getDay() === 0 ? 6 : d.getDay() - 1;
       dowPnl[dow] += t.result;
       dowCount[dow]++;
     });
@@ -78,8 +91,55 @@ export default function PnLCalendarPage() {
       hourCount[h] = (hourCount[h] || 0) + 1;
     });
 
-    return { totalPnl, winDays, lossDays, bestDay, worstDay, maxAbs, maxStreak, dowPnl, dowCount, hourPnl, hourCount, tradingDays: dayEntries.length };
-  }, [monthTrades]);
+    // Win rate
+    const wins = monthTrades.filter(t => t.result > 0).length;
+    const winRate = monthTrades.length > 0 ? (wins / monthTrades.length) * 100 : 0;
+
+    // Avg win / avg loss
+    const winTrades = monthTrades.filter(t => t.result > 0);
+    const lossTrades = monthTrades.filter(t => t.result <= 0);
+    const avgWin = winTrades.length > 0 ? winTrades.reduce((s, t) => s + t.result, 0) / winTrades.length : 0;
+    const avgLoss = lossTrades.length > 0 ? lossTrades.reduce((s, t) => s + t.result, 0) / lossTrades.length : 0;
+    const profitFactor = Math.abs(avgLoss) > 0 ? avgWin / Math.abs(avgLoss) : 0;
+
+    // Cumulative P&L by day
+    const cumulativePnl: { day: number; pnl: number; cumulative: number }[] = [];
+    let runningTotal = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dayP = dayPnls[d] || 0;
+      if (dayPnls[d] !== undefined) {
+        runningTotal += dayP;
+        cumulativePnl.push({ day: d, pnl: dayP, cumulative: runningTotal });
+      }
+    }
+
+    // Weekly breakdown
+    const weeks: { weekNum: number; pnl: number; trades: number; wins: number }[] = [];
+    let weekStart = 1;
+    while (weekStart <= daysInMonth) {
+      const weekStartDate = new Date(year, month, weekStart);
+      const dayOfWeek = weekStartDate.getDay() === 0 ? 7 : weekStartDate.getDay();
+      const weekEnd = Math.min(weekStart + (7 - dayOfWeek), daysInMonth);
+      let weekPnl = 0;
+      let weekTradesCount = 0;
+      let weekWins = 0;
+      for (let d = weekStart; d <= weekEnd; d++) {
+        const dt = tradesByDay[d] || [];
+        weekPnl += dt.reduce((s, t) => s + t.result, 0);
+        weekTradesCount += dt.length;
+        weekWins += dt.filter(t => t.result > 0).length;
+      }
+      weeks.push({ weekNum: weeks.length + 1, pnl: weekPnl, trades: weekTradesCount, wins: weekWins });
+      weekStart = weekEnd + 1;
+    }
+
+    return {
+      totalPnl, prevPnl, winDays, lossDays, bestDay, worstDay, maxAbs,
+      maxStreak, maxLossStreak, dowPnl, dowCount, hourPnl, hourCount,
+      tradingDays: dayEntries.length, winRate, avgWin, avgLoss, profitFactor,
+      cumulativePnl, weeks,
+    };
+  }, [monthTrades, prevMonthTrades, daysInMonth, year, month, tradesByDay]);
 
   // Year view data
   const yearData = useMemo(() => {
@@ -90,7 +150,8 @@ export default function PnLCalendarPage() {
         return d.getFullYear() === year && d.getMonth() === m;
       });
       const pnl = mt.reduce((s, t) => s + t.result, 0);
-      return { month: m, pnl, count: mt.length };
+      const wins = mt.filter(t => t.result > 0).length;
+      return { month: m, pnl, count: mt.length, winRate: mt.length > 0 ? (wins / mt.length) * 100 : 0 };
     });
   }, [trades, year, view]);
 
@@ -104,6 +165,9 @@ export default function PnLCalendarPage() {
       ? `rgba(16, 185, 129, ${opacity})`
       : `rgba(239, 68, 68, ${opacity})`;
   };
+
+  // Comparison vs previous month
+  const pnlDelta = stats.totalPnl - stats.prevPnl;
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">{t("loading")}</div></div>;
@@ -133,26 +197,40 @@ export default function PnLCalendarPage() {
         </div>
       </div>
 
-      {/* Monthly Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-        <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
+      {/* Monthly Stats Cards — Enhanced */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+        <div className="metric-card rounded-xl p-3 text-center overflow-hidden col-span-2 sm:col-span-1">
           <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("pnlMonth")}</p>
-          <p className={`text-base font-bold mono truncate ${stats.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+          <p className={`text-lg font-bold mono truncate ${stats.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
             {stats.totalPnl >= 0 ? "+" : ""}{stats.totalPnl.toFixed(0)}€
           </p>
+          {stats.prevPnl !== 0 && (
+            <p className={`text-[9px] font-medium flex items-center justify-center gap-0.5 ${pnlDelta >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+              {pnlDelta >= 0 ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
+              vs M-1
+            </p>
+          )}
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
           <p className="text-[10px] text-[--text-muted] mb-1 truncate">Trades</p>
-          <p className="text-base font-bold text-cyan-400">{monthTrades.length}</p>
-          <p className="text-[10px] text-[--text-muted]">{monthTrades.filter(t => t.result > 0).length}W / {monthTrades.filter(t => t.result <= 0).length}L</p>
+          <p className="text-lg font-bold text-cyan-400">{monthTrades.length}</p>
+          <p className="text-[9px] text-[--text-muted]">
+            <span className="text-emerald-400">{monthTrades.filter(t => t.result > 0).length}W</span>
+            {" / "}
+            <span className="text-rose-400">{monthTrades.filter(t => t.result <= 0).length}L</span>
+          </p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
-          <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("winDays")}</p>
-          <p className="text-base font-bold text-emerald-400">{stats.winDays}</p>
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Win Rate</p>
+          <p className={`text-lg font-bold mono ${stats.winRate >= 50 ? "text-emerald-400" : "text-rose-400"}`}>
+            {stats.winRate.toFixed(0)}%
+          </p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
-          <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("lossDays")}</p>
-          <p className="text-base font-bold text-rose-400">{stats.lossDays}</p>
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Profit Factor</p>
+          <p className={`text-lg font-bold mono ${stats.profitFactor >= 1 ? "text-emerald-400" : "text-rose-400"}`}>
+            {stats.profitFactor.toFixed(2)}
+          </p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
           <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("bestDay")}</p>
@@ -172,10 +250,94 @@ export default function PnLCalendarPage() {
             <Flame className="w-4 h-4" /> {stats.maxStreak}
           </p>
         </div>
+        <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
+          <p className="text-[10px] text-[--text-muted] mb-1 truncate">Avg W/L</p>
+          <p className="text-[11px] font-bold mono truncate">
+            <span className="text-emerald-400">{stats.avgWin.toFixed(0)}€</span>
+            <span className="text-[--text-muted] mx-0.5">/</span>
+            <span className="text-rose-400">{stats.avgLoss.toFixed(0)}€</span>
+          </p>
+        </div>
       </div>
 
       {view === "month" ? (
         <>
+          {/* Cumulative P&L Mini Chart */}
+          {stats.cumulativePnl.length > 1 && (
+            <div className="glass rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-lg font-semibold text-[--text-primary]">Equity Curve du mois</h3>
+              </div>
+              <div className="relative h-32">
+                <svg viewBox={`0 0 ${stats.cumulativePnl.length * 40} 120`} className="w-full h-full" preserveAspectRatio="none">
+                  {/* Zero line */}
+                  {(() => {
+                    const vals = stats.cumulativePnl.map(p => p.cumulative);
+                    const maxVal = Math.max(...vals.map(Math.abs), 1);
+                    const zeroY = 60;
+                    const points = stats.cumulativePnl.map((p, i) => {
+                      const x = i * 40 + 20;
+                      const y = zeroY - (p.cumulative / maxVal) * 50;
+                      return `${x},${y}`;
+                    }).join(" ");
+                    const fillPoints = `${20},${zeroY} ${points} ${(stats.cumulativePnl.length - 1) * 40 + 20},${zeroY}`;
+                    const finalPnl = stats.cumulativePnl[stats.cumulativePnl.length - 1].cumulative;
+                    const color = finalPnl >= 0 ? "#10b981" : "#ef4444";
+
+                    return (
+                      <>
+                        <line x1="0" y1={zeroY} x2={stats.cumulativePnl.length * 40} y2={zeroY} stroke="var(--border)" strokeWidth="1" strokeDasharray="4,4" />
+                        <polygon points={fillPoints} fill={color} opacity="0.1" />
+                        <polyline points={points} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        {stats.cumulativePnl.map((p, i) => {
+                          const x = i * 40 + 20;
+                          const y = zeroY - (p.cumulative / maxVal) * 50;
+                          return (
+                            <circle key={i} cx={x} cy={y} r="3" fill={p.cumulative >= 0 ? "#10b981" : "#ef4444"} stroke="var(--bg-card-solid)" strokeWidth="1.5" />
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
+                </svg>
+                {/* Day labels */}
+                <div className="flex justify-between mt-1">
+                  {stats.cumulativePnl.map((p) => (
+                    <span key={p.day} className="text-[8px] mono text-[--text-muted]" style={{ width: 40, textAlign: "center" }}>
+                      {p.day}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Weekly Breakdown */}
+          {stats.weeks.length > 0 && stats.weeks.some(w => w.trades > 0) && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              {stats.weeks.map((w) => {
+                const wr = w.trades > 0 ? (w.wins / w.trades) * 100 : 0;
+                return (
+                  <div key={w.weekNum} className="metric-card rounded-xl p-3">
+                    <p className="text-[10px] text-[--text-muted] mb-1">Semaine {w.weekNum}</p>
+                    <p className={`text-lg font-bold mono ${w.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {w.pnl >= 0 ? "+" : ""}{w.pnl.toFixed(0)}€
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[9px] text-[--text-muted]">{w.trades} trades</span>
+                      {w.trades > 0 && (
+                        <span className={`text-[9px] font-medium ${wr >= 50 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {wr.toFixed(0)}% WR
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Calendar Grid */}
           <div className="glass rounded-2xl p-6">
             <div className="flex justify-between items-center mb-6">
@@ -210,28 +372,37 @@ export default function PnLCalendarPage() {
                 const hasTrade = dayTrades.length > 0;
                 const dayPnl = dayTrades.reduce((s, t) => s + t.result, 0);
                 const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
+                const wins = dayTrades.filter(t => t.result > 0).length;
+                const losses = dayTrades.length - wins;
 
                 return (
                   <div
                     key={day}
                     onClick={() => setSelectedDay({ day, trades: dayTrades })}
-                    className={`calendar-day aspect-square rounded-xl border p-2 flex flex-col justify-between cursor-pointer transition-all hover:scale-105 ${
+                    className={`calendar-day aspect-square rounded-xl border p-1.5 sm:p-2 flex flex-col justify-between cursor-pointer transition-all hover:scale-105 ${
                       isToday ? "ring-2 ring-cyan-400/50" : ""
                     } ${hasTrade ? "border-transparent" : "border-[--border-subtle] bg-[--bg-secondary]/20"}`}
                     style={hasTrade ? { background: getPnlIntensity(dayPnl), borderColor: dayPnl >= 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)" } : undefined}
                   >
-                    <span className={`text-sm font-medium ${isToday ? "text-cyan-400" : hasTrade ? (dayPnl >= 0 ? "text-emerald-300" : "text-rose-300") : "text-[--text-muted]"}`}>
-                      {day}
-                    </span>
+                    <div className="flex items-start justify-between">
+                      <span className={`text-xs sm:text-sm font-medium ${isToday ? "text-cyan-400" : hasTrade ? (dayPnl >= 0 ? "text-emerald-300" : "text-rose-300") : "text-[--text-muted]"}`}>
+                        {day}
+                      </span>
+                      {hasTrade && (
+                        <span className="text-[8px] mono" style={{ color: "var(--text-muted)" }}>
+                          {dayTrades.length}t
+                        </span>
+                      )}
+                    </div>
                     {hasTrade && (
                       <div className="text-right">
-                        <p className={`text-xs font-bold mono ${dayPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        <p className={`text-[10px] sm:text-xs font-bold mono ${dayPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                           {dayPnl >= 0 ? "+" : ""}{dayPnl.toFixed(0)}€
                         </p>
-                        <p className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>
-                          <span className="text-emerald-400">{dayTrades.filter(t => t.result > 0).length}W</span>
+                        <p className="text-[8px] sm:text-[10px] mono" style={{ color: "var(--text-muted)" }}>
+                          <span className="text-emerald-400">{wins}W</span>
                           <span className="mx-0.5">/</span>
-                          <span className="text-rose-400">{dayTrades.filter(t => t.result <= 0).length}L</span>
+                          <span className="text-rose-400">{losses}L</span>
                         </p>
                       </div>
                     )}
@@ -254,10 +425,13 @@ export default function PnLCalendarPage() {
                 <div className="w-4 h-4 rounded ring-2 ring-cyan-400/50 bg-[--bg-secondary]/20" />
                 <span className="text-xs text-[--text-muted]">{t("todayBtn")}</span>
               </div>
+              <div className="flex items-center gap-2 text-xs text-[--text-muted]">
+                Intensité = amplitude du P&L
+              </div>
             </div>
           </div>
 
-          {/* Day of Week Performance */}
+          {/* Day of Week + Hour Performance */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="glass rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -330,7 +504,10 @@ export default function PnLCalendarPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {stats.bestDay && (
                 <div className="metric-card rounded-xl p-4 border-l-4 border-emerald-400">
-                  <p className="text-xs text-[--text-muted]">{t("bestDayOfMonth")}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Award className="w-4 h-4 text-emerald-400" />
+                    <p className="text-xs text-[--text-muted]">{t("bestDayOfMonth")}</p>
+                  </div>
                   <p className="text-lg font-bold text-emerald-400 mono">+{(+stats.bestDay[1]).toFixed(2)}€</p>
                   <p className="text-xs text-[--text-secondary]">
                     {new Date(year, month, +stats.bestDay[0]).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
@@ -339,7 +516,10 @@ export default function PnLCalendarPage() {
               )}
               {stats.worstDay && (
                 <div className="metric-card rounded-xl p-4 border-l-4 border-rose-400">
-                  <p className="text-xs text-[--text-muted]">{t("worstDayOfMonth")}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Zap className="w-4 h-4 text-rose-400" />
+                    <p className="text-xs text-[--text-muted]">{t("worstDayOfMonth")}</p>
+                  </div>
                   <p className="text-lg font-bold text-rose-400 mono">{(+stats.worstDay[1]).toFixed(2)}€</p>
                   <p className="text-xs text-[--text-secondary]">
                     {new Date(year, month, +stats.worstDay[0]).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
@@ -360,7 +540,7 @@ export default function PnLCalendarPage() {
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {yearData.map(({ month: m, pnl, count }) => {
+            {yearData.map(({ month: m, pnl, count, winRate }) => {
               const maxYearPnl = Math.max(...yearData.map((d) => Math.abs(d.pnl)), 1);
               const intensity = count > 0 ? 0.1 + (Math.abs(pnl) / maxYearPnl) * 0.5 : 0;
               return (
@@ -377,7 +557,14 @@ export default function PnLCalendarPage() {
                   <p className={`text-lg font-bold mono mt-1 ${count > 0 ? (pnl >= 0 ? "text-emerald-400" : "text-rose-400") : "text-[--text-muted]"}`}>
                     {count > 0 ? `${pnl >= 0 ? "+" : ""}${pnl.toFixed(0)}€` : "—"}
                   </p>
-                  <p className="text-xs text-[--text-muted] mt-1">{count} trade{count !== 1 ? "s" : ""}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-xs text-[--text-muted]">{count} trade{count !== 1 ? "s" : ""}</p>
+                    {count > 0 && (
+                      <p className={`text-[10px] font-bold ${winRate >= 50 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {winRate.toFixed(0)}%
+                      </p>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -405,6 +592,13 @@ export default function PnLCalendarPage() {
           }
           return s;
         }, 0) / dt.length : 0;
+
+        // Mini equity curve for the day
+        let cumPnl = 0;
+        const dayEquity = sorted.map(t => {
+          cumPnl += t.result;
+          return cumPnl;
+        });
 
         return (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedDay(null)}>
@@ -454,6 +648,28 @@ export default function PnLCalendarPage() {
                     </div>
                   </div>
 
+                  {/* Mini day equity curve */}
+                  {dayEquity.length > 1 && (
+                    <div className="mb-5 p-3 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
+                      <p className="text-[10px] font-medium mb-2 text-[--text-muted]">Progression intraday</p>
+                      <div className="h-16">
+                        <svg viewBox={`0 0 ${dayEquity.length * 30} 60`} className="w-full h-full" preserveAspectRatio="none">
+                          {(() => {
+                            const maxE = Math.max(...dayEquity.map(Math.abs), 1);
+                            const pts = dayEquity.map((v, i) => `${i * 30 + 15},${30 - (v / maxE) * 25}`).join(" ");
+                            const color = totalPnl >= 0 ? "#10b981" : "#ef4444";
+                            return (
+                              <>
+                                <line x1="0" y1="30" x2={dayEquity.length * 30} y2="30" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="3,3" />
+                                <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" />
+                              </>
+                            );
+                          })()}
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Trade List */}
                   <div className="space-y-2.5">
                     {sorted.map((trade) => {
@@ -464,7 +680,6 @@ export default function PnLCalendarPage() {
                         : null;
                       return (
                         <div key={trade.id} className={`p-4 rounded-xl border ${isWin ? "border-emerald-500/20 bg-emerald-500/[0.07]" : "border-rose-500/20 bg-rose-500/[0.07]"}`}>
-                          {/* Row 1: Asset, Direction, Time, Result */}
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
                               <span className="text-xs mono text-[--text-muted] w-12">{time}</span>
@@ -480,8 +695,6 @@ export default function PnLCalendarPage() {
                               {isWin ? "+" : ""}{trade.result.toFixed(2)}€
                             </span>
                           </div>
-
-                          {/* Row 2: Entry → Exit, SL, TP, R:R, Lots */}
                           <div className="flex items-center gap-4 mt-2 text-xs">
                             {trade.entry && (
                               <span className="flex items-center gap-1 text-[--text-secondary]">
@@ -490,12 +703,8 @@ export default function PnLCalendarPage() {
                                 <span className="mono">{trade.exit}</span>
                               </span>
                             )}
-                            {trade.sl && (
-                              <span className="text-rose-400/70 mono">SL {trade.sl}</span>
-                            )}
-                            {trade.tp && (
-                              <span className="text-emerald-400/70 mono">TP {trade.tp}</span>
-                            )}
+                            {trade.sl && <span className="text-rose-400/70 mono">SL {trade.sl}</span>}
+                            {trade.tp && <span className="text-emerald-400/70 mono">TP {trade.tp}</span>}
                             {rr !== null && (
                               <span className="flex items-center gap-1 text-cyan-400">
                                 <Target className="w-3 h-3" />
@@ -504,8 +713,6 @@ export default function PnLCalendarPage() {
                             )}
                             <span className="text-[--text-muted] mono">{trade.lots} lots</span>
                           </div>
-
-                          {/* Row 3: Emotion */}
                           {trade.emotion && (
                             <div className="mt-2 text-xs">
                               <span className="px-2 py-0.5 rounded-full bg-[--bg-hover] text-[--text-secondary]">{trade.emotion}</span>

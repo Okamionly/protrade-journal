@@ -871,6 +871,18 @@ export default function DailyBiasPage() {
 
         {/* Center column: Main form */}
         <div className="space-y-4">
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px]" style={{ background: plan.bias ? "rgba(16,185,129,0.2)" : "var(--bg-secondary)", color: plan.bias ? "#10b981" : "var(--text-muted)" }}>1</span>
+            Bias
+            <span className="flex-1 h-px" style={{ background: "var(--border)" }} />
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px]" style={{ background: plan.pairs ? "rgba(16,185,129,0.2)" : "var(--bg-secondary)", color: plan.pairs ? "#10b981" : "var(--text-muted)" }}>2</span>
+            Setup
+            <span className="flex-1 h-px" style={{ background: "var(--border)" }} />
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px]" style={{ background: plan.notes ? "rgba(16,185,129,0.2)" : "var(--bg-secondary)", color: plan.notes ? "#10b981" : "var(--text-muted)" }}>3</span>
+            Notes
+          </div>
+
           {/* Bias directionnel - Hero card */}
           <div
             className="metric-card rounded-2xl p-6"
@@ -1027,6 +1039,18 @@ export default function DailyBiasPage() {
 
         {/* Right column: Checklist + Review + Grade + Actions */}
         <div className="space-y-4">
+          {/* Step indicator for right column */}
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px]" style={{ background: allChecked ? "rgba(16,185,129,0.2)" : "var(--bg-secondary)", color: allChecked ? "#10b981" : "var(--text-muted)" }}>4</span>
+            Checklist
+            <span className="flex-1 h-px" style={{ background: "var(--border)" }} />
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px]" style={{ background: plan.review ? "rgba(16,185,129,0.2)" : "var(--bg-secondary)", color: plan.review ? "#10b981" : "var(--text-muted)" }}>5</span>
+            Review
+            <span className="flex-1 h-px" style={{ background: "var(--border)" }} />
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px]" style={{ background: plan.grade ? "rgba(16,185,129,0.2)" : "var(--bg-secondary)", color: plan.grade ? "#10b981" : "var(--text-muted)" }}>6</span>
+            Note
+          </div>
+
           {/* Checklist pre-trade */}
           <div className="metric-card rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">

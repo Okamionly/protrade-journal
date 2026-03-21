@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { LiveTicker } from "./LiveTicker";
+import { QuickTradeButton } from "./QuickTradeButton";
 import { LocaleProvider } from "@/i18n/context";
 import { Menu, X } from "lucide-react";
 
@@ -90,6 +91,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </main>
+
+        <QuickTradeButton />
       </SidebarContext.Provider>
     </LocaleProvider>
   );

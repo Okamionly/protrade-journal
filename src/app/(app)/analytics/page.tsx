@@ -870,6 +870,134 @@ export default function AnalyticsPage() {
           );
         })()}
       </div>
+
+      {/* Heatmap Heure × Asset */}
+      <div className="glass rounded-2xl p-6 col-span-full">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="w-5 h-5 text-[--text-secondary]" />
+          <h3 className="text-lg font-semibold">Heatmap Heure × Asset</h3>
+        </div>
+        {(() => {
+          // Build heatmap data: { [asset]: { [hour]: { count, wins, totalPnl } } }
+          const heatmap: Record<string, Record<number, { count: number; wins: number; totalPnl: number }>> = {};
+          const assetTotalCount: Record<string, number> = {};
+
+          trades.forEach((tr) => {
+            const d = new Date(tr.date);
+            const hour = d.getUTCHours();
+            const asset = tr.asset;
+            if (!heatmap[asset]) heatmap[asset] = {};
+            if (!heatmap[asset][hour]) heatmap[asset][hour] = { count: 0, wins: 0, totalPnl: 0 };
+            heatmap[asset][hour].count++;
+            heatmap[asset][hour].totalPnl += getPnl(tr);
+            if (tr.result > 0) heatmap[asset][hour].wins++;
+            assetTotalCount[asset] = (assetTotalCount[asset] || 0) + 1;
+          });
+
+          // Filter: only assets with 3+ trades
+          const filteredAssets = Object.keys(heatmap)
+            .filter((a) => assetTotalCount[a] >= 3)
+            .sort((a, b) => assetTotalCount[b] - assetTotalCount[a]);
+
+          if (filteredAssets.length === 0) {
+            return <p className="text-[--text-muted] text-sm text-center py-8">Pas assez de trades pour afficher la heatmap (3 minimum par asset).</p>;
+          }
+
+          // Collect hours that have at least 1 trade across all filtered assets
+          const activeHoursSet = new Set<number>();
+          filteredAssets.forEach((asset) => {
+            Object.keys(heatmap[asset]).forEach((h) => {
+              if (heatmap[asset][Number(h)].count > 0) activeHoursSet.add(Number(h));
+            });
+          });
+          const activeHours = Array.from(activeHoursSet).sort((a, b) => a - b);
+
+          if (activeHours.length === 0) {
+            return <p className="text-[--text-muted] text-sm text-center py-8">Aucune donnée horaire disponible.</p>;
+          }
+
+          const getCellColor = (winRate: number): string => {
+            if (winRate > 55) return "rgba(16, 185, 129, 0.5)";   // green
+            if (winRate >= 45) return "rgba(245, 158, 11, 0.4)";  // amber
+            return "rgba(239, 68, 68, 0.45)";                      // red
+          };
+
+          const getCellTextColor = (winRate: number): string => {
+            if (winRate > 55) return "#6ee7b7";
+            if (winRate >= 45) return "#fcd34d";
+            return "#fca5a5";
+          };
+
+          return (
+            <div className="space-y-3">
+              <p className="text-xs text-[--text-muted]">Win rate par asset et heure UTC. Survolez une cellule pour les details.</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse" style={{ minWidth: `${activeHours.length * 44 + 100}px` }}>
+                  <thead>
+                    <tr>
+                      <th className="text-left py-2 px-2 font-medium text-[--text-secondary] sticky left-0 z-10" style={{ background: "var(--bg-primary)" }}>Asset</th>
+                      {activeHours.map((h) => (
+                        <th key={h} className="py-2 px-1 font-medium text-[--text-muted] text-center" style={{ minWidth: "40px" }}>
+                          {String(h).padStart(2, "0")}h
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAssets.map((asset) => (
+                      <tr key={asset} className="border-t border-[--border-subtle]">
+                        <td className="py-1.5 px-2 font-medium text-[--text-primary] sticky left-0 z-10 whitespace-nowrap" style={{ background: "var(--bg-primary)" }}>
+                          {asset}
+                          <span className="ml-1 text-[--text-muted]">({assetTotalCount[asset]})</span>
+                        </td>
+                        {activeHours.map((h) => {
+                          const cell = heatmap[asset][h];
+                          if (!cell || cell.count === 0) {
+                            return (
+                              <td key={h} className="py-1.5 px-1 text-center text-[--text-muted]">
+                                -
+                              </td>
+                            );
+                          }
+                          const winRate = (cell.wins / cell.count) * 100;
+                          const avgPnl = cell.totalPnl / cell.count;
+                          return (
+                            <td
+                              key={h}
+                              className="py-1.5 px-1 text-center mono font-semibold rounded-sm cursor-default transition-transform hover:scale-110"
+                              style={{
+                                background: getCellColor(winRate),
+                                color: getCellTextColor(winRate),
+                              }}
+                              title={`${asset} a ${String(h).padStart(2, "0")}:00 UTC: ${winRate.toFixed(0)}% win rate, ${cell.count} trade${cell.count > 1 ? "s" : ""}, avg ${avgPnl >= 0 ? "+" : ""}${avgPnl.toFixed(2)}\u20AC`}
+                            >
+                              {winRate.toFixed(0)}%
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-center gap-4 text-xs text-[--text-muted] mt-2">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(239, 68, 68, 0.45)" }} />
+                  <span>&lt;45%</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(245, 158, 11, 0.4)" }} />
+                  <span>45-55%</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(16, 185, 129, 0.5)" }} />
+                  <span>&gt;55%</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 }

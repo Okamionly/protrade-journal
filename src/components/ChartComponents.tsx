@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { Chart, registerables, Filler } from "chart.js";
 import { Trade } from "@/hooks/useTrades";
 import { useTheme } from "next-themes";
@@ -421,9 +421,51 @@ export function AdvancedEquityChart({ trades }: { trades: any[] }) {
     };
   }, [trades, theme]);
 
+  // Compute drawdown milestones
+  const ddMilestones = useMemo(() => {
+    if (trades.length === 0) return [];
+    const sorted = [...trades].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const eq: number[] = [];
+    sorted.forEach((t: any, i: number) => { eq.push((i > 0 ? eq[i - 1] : 0) + (t.result ?? 0)); });
+    let pk = 0, pkI = 0, inD = false, dS = 0, bt = 0, bI = 0;
+    const dds: { dd: number; pct: number; from: string; to: string; rec: string | null }[] = [];
+    eq.forEach((v, i) => {
+      if (v > pk) {
+        if (inD && pk > 0 && (pk - bt) / pk > 0.03) {
+          dds.push({ dd: pk - bt, pct: ((pk - bt) / pk) * 100, from: new Date(sorted[dS]?.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }), to: new Date(sorted[bI]?.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }), rec: `${i - bI} trades` });
+        }
+        pk = v; pkI = i; inD = false; bt = v; bI = i;
+      } else { if (!inD) { inD = true; dS = pkI; bt = v; bI = i; } if (v < bt) { bt = v; bI = i; } }
+    });
+    if (inD && pk > 0 && (pk - bt) / pk > 0.03) dds.push({ dd: pk - bt, pct: ((pk - bt) / pk) * 100, from: new Date(sorted[dS]?.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }), to: new Date(sorted[bI]?.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }), rec: null });
+    return dds.sort((a, b) => b.dd - a.dd).slice(0, 3);
+  }, [trades]);
+
   return (
-    <div className="chart-container">
-      <canvas ref={canvasRef} />
+    <div>
+      <div className="chart-container">
+        <canvas ref={canvasRef} />
+      </div>
+      {ddMilestones.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Drawdowns majeurs</h4>
+          {ddMilestones.map((dd, i) => (
+            <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg text-xs" style={{ background: "var(--bg-hover)" }}>
+              <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold bg-rose-500/15 text-rose-400">{i + 1}</span>
+              <div className="flex-1">
+                <span className="font-bold mono text-rose-400">-{dd.dd.toFixed(0)}€</span>
+                <span className="mx-1.5" style={{ color: "var(--text-muted)" }}>({dd.pct.toFixed(1)}%)</span>
+                <span style={{ color: "var(--text-secondary)" }}>{dd.from} → {dd.to}</span>
+              </div>
+              {dd.rec ? (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-medium">Recovery: {dd.rec}</span>
+              ) : (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-medium">En cours</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

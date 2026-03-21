@@ -243,6 +243,66 @@ function StatRow({ label, actual, simulated, format, inverse }: {
   );
 }
 
+// --- Confidence Score ---
+function getConfidenceInfo(tradeCount: number): { label: string; pct: number; color: string; bgColor: string } {
+  if (tradeCount >= 100) return { label: "Excellent", pct: 95, color: "#22c55e", bgColor: "rgba(34,197,94,0.12)" };
+  if (tradeCount >= 50) return { label: "Bon", pct: 82, color: "#16a34a", bgColor: "rgba(22,163,74,0.10)" };
+  if (tradeCount >= 30) return { label: "Modéré", pct: 68, color: "#f59e0b", bgColor: "rgba(245,158,11,0.10)" };
+  if (tradeCount >= 10) return { label: "Faible", pct: 40 + (tradeCount - 10) * (20 / 20), color: "#f97316", bgColor: "rgba(249,115,22,0.10)" };
+  return { label: "Très faible", pct: Math.max(5, tradeCount * 2), color: "#ef4444", bgColor: "rgba(239,68,68,0.10)" };
+}
+
+function ConfidenceScore({ tradeCount }: { tradeCount: number }) {
+  const { label, pct, color, bgColor } = getConfidenceInfo(tradeCount);
+  const showWarning = tradeCount < 30;
+
+  return (
+    <div className="glass p-4 rounded-xl space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+          <ShieldCheck className="w-4 h-4" style={{ color }} /> Score de Confiance
+        </h3>
+        <span
+          className="text-xs font-bold px-2.5 py-0.5 rounded-full"
+          style={{ color, background: bgColor }}
+        >
+          {label} — {Math.round(pct)}%
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, background: color }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          Basé sur {tradeCount} trade{tradeCount !== 1 ? "s" : ""} simulé{tradeCount !== 1 ? "s" : ""}
+        </span>
+        <span className="text-xs mono" style={{ color: "var(--text-muted)" }}>
+          {Math.round(pct)}% / 100%
+        </span>
+      </div>
+
+      {showWarning && (
+        <div
+          className="flex items-start gap-2 text-xs p-2.5 rounded-lg leading-relaxed"
+          style={{ background: bgColor, color }}
+        >
+          <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <span>
+            Attention : résultats basés sur seulement {tradeCount} trade{tradeCount !== 1 ? "s" : ""}.
+            Augmentez l&apos;échantillon pour des résultats fiables.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Generate Insights ---
 function generateInsights(actual: Stats, simulated: Stats, config: SimConfig): string[] {
   const insights: string[] = [];
@@ -466,6 +526,9 @@ export default function BacktestPage() {
               </span>
             </div>
           </div>
+
+          {/* Confidence Score */}
+          <ConfidenceScore tradeCount={simStats.totalTrades} />
 
           {/* Equity Curve */}
           <EquityChart actual={actualEquity} simulated={simEquity} />

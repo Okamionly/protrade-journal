@@ -27,7 +27,33 @@ import {
   Clock,
   BarChart3,
   Activity,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Crosshair,
+  Flag,
+  SkipBack,
+  SkipForward,
 } from "lucide-react";
+
+/* ─── Types ─── */
+
+interface PricePoint {
+  t: number; // 0..1 normalized time
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+interface KeyMoment {
+  t: number;
+  price: number;
+  type: "entry" | "mae" | "mfe" | "exit";
+  label: string;
+  color: string;
+  icon: "entry" | "down" | "up" | "exit";
+}
 
 /* ─── Helpers ─── */
 
@@ -62,268 +88,666 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
 
-/* ─── Animated Price Chart ─── */
+/** Seeded PRNG for deterministic per-trade randomness */
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
 
-function AnimatedPriceChart({
+function hashString(str: string): number {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+/* ─── Price Data Generation ─── */
+
+function generateCandleData(trade: Trade): {
+  candles: PricePoint[];
+  keyMoments: KeyMoment[];
+} {
+  const isLong = trade.direction === "LONG";
+  const exitPrice = trade.exit ?? trade.entry;
+  const seed = hashString(trade.id);
+  const rng = seededRandom(seed);
+
+  const entryPrice = trade.entry;
+  const slPrice = trade.sl;
+  const tpPrice = trade.tp;
+
+  const riskDistance = Math.abs(entryPrice - slPrice);
+  const totalRange =
+    Math.max(entryPrice, slPrice, tpPrice, exitPrice) -
+    Math.min(entryPrice, slPrice, tpPrice, exitPrice);
+  const volatility = totalRange * 0.08;
+
+  const totalCandles = 80;
+  const entryCandle = Math.floor(totalCandles * 0.15); // Entry at ~15%
+  const exitCandle = Math.floor(totalCandles * 0.85); // Exit at ~85%
+
+  // MAE / MFE from trade data or simulate
+  const maePrice =
+    trade.maePrice ??
+    (isLong
+      ? entryPrice - riskDistance * (0.3 + rng() * 0.5)
+      : entryPrice + riskDistance * (0.3 + rng() * 0.5));
+  const mfePrice =
+    trade.mfePrice ??
+    (isLong
+      ? entryPrice + Math.abs(tpPrice - entryPrice) * (0.5 + rng() * 0.4)
+      : entryPrice - Math.abs(entryPrice - tpPrice) * (0.5 + rng() * 0.4));
+
+  // Determine when MAE and MFE occur
+  const isWin = trade.result >= 0;
+  const maeCandle = isWin
+    ? entryCandle + Math.floor((exitCandle - entryCandle) * (0.15 + rng() * 0.25))
+    : entryCandle + Math.floor((exitCandle - entryCandle) * (0.5 + rng() * 0.3));
+  const mfeCandle = isWin
+    ? entryCandle + Math.floor((exitCandle - entryCandle) * (0.55 + rng() * 0.3))
+    : entryCandle + Math.floor((exitCandle - entryCandle) * (0.2 + rng() * 0.2));
+
+  const candles: PricePoint[] = [];
+  let currentPrice = entryPrice + (rng() - 0.5) * volatility * 2;
+
+  for (let i = 0; i < totalCandles; i++) {
+    const t = i / (totalCandles - 1);
+
+    // Determine target price based on phase
+    let targetPrice: number;
+    if (i < entryCandle) {
+      // Pre-entry: meander near entry
+      const preT = i / entryCandle;
+      targetPrice =
+        entryPrice +
+        (rng() - 0.5) * riskDistance * 0.4 +
+        Math.sin(preT * Math.PI * 2) * volatility;
+    } else if (i === entryCandle) {
+      targetPrice = entryPrice;
+    } else if (i <= maeCandle && i <= mfeCandle) {
+      // Between entry and first key moment
+      const firstMoment = Math.min(maeCandle, mfeCandle);
+      const firstPrice = firstMoment === maeCandle ? maePrice : mfePrice;
+      const localT = (i - entryCandle) / (firstMoment - entryCandle || 1);
+      targetPrice =
+        entryPrice + (firstPrice - entryPrice) * localT + (rng() - 0.5) * volatility;
+    } else if (i <= Math.max(maeCandle, mfeCandle)) {
+      const secondMoment = Math.max(maeCandle, mfeCandle);
+      const firstMoment = Math.min(maeCandle, mfeCandle);
+      const firstPrice = firstMoment === maeCandle ? maePrice : mfePrice;
+      const secondPrice = secondMoment === maeCandle ? maePrice : mfePrice;
+      const localT = (i - firstMoment) / (secondMoment - firstMoment || 1);
+      targetPrice =
+        firstPrice +
+        (secondPrice - firstPrice) * localT +
+        (rng() - 0.5) * volatility;
+    } else if (i <= exitCandle) {
+      const lastKeyMoment = Math.max(maeCandle, mfeCandle);
+      const lastPrice = lastKeyMoment === maeCandle ? maePrice : mfePrice;
+      const localT = (i - lastKeyMoment) / (exitCandle - lastKeyMoment || 1);
+      targetPrice =
+        lastPrice +
+        (exitPrice - lastPrice) * localT +
+        (rng() - 0.5) * volatility * 0.8;
+    } else if (i === exitCandle) {
+      targetPrice = exitPrice;
+    } else {
+      // Post-exit drift
+      targetPrice =
+        exitPrice + (rng() - 0.5) * volatility * 1.5;
+    }
+
+    // Smooth approach
+    currentPrice = currentPrice * 0.6 + targetPrice * 0.4;
+
+    // Generate candle OHLC
+    const open = currentPrice;
+    const bodySize = volatility * (0.2 + rng() * 0.6);
+    const direction = rng() > 0.5 ? 1 : -1;
+    const close = open + direction * bodySize;
+    const wickUp = Math.max(open, close) + rng() * volatility * 0.5;
+    const wickDown = Math.min(open, close) - rng() * volatility * 0.5;
+
+    candles.push({
+      t,
+      open,
+      high: wickUp,
+      low: wickDown,
+      close,
+    });
+
+    currentPrice = close;
+  }
+
+  // Force key prices at exact moments
+  if (candles[entryCandle]) candles[entryCandle].close = entryPrice;
+  if (candles[exitCandle]) candles[exitCandle].close = exitPrice;
+
+  // Key moments
+  const keyMoments: KeyMoment[] = [
+    {
+      t: entryCandle / (totalCandles - 1),
+      price: entryPrice,
+      type: "entry",
+      label: "Entrée",
+      color: "#06b6d4",
+      icon: "entry",
+    },
+    {
+      t: maeCandle / (totalCandles - 1),
+      price: maePrice,
+      type: "mae",
+      label: "MAE",
+      color: "#f43f5e",
+      icon: "down",
+    },
+    {
+      t: mfeCandle / (totalCandles - 1),
+      price: mfePrice,
+      type: "mfe",
+      label: "MFE",
+      color: "#10b981",
+      icon: "up",
+    },
+    {
+      t: exitCandle / (totalCandles - 1),
+      price: exitPrice,
+      type: "exit",
+      label: "Sortie",
+      color: trade.result >= 0 ? "#10b981" : "#f43f5e",
+      icon: "exit",
+    },
+  ];
+
+  return { candles, keyMoments };
+}
+
+/* ─── Animated Candle Chart ─── */
+
+function AnimatedCandleChart({
   trade,
   progress,
+  candles,
+  keyMoments,
+  onSeek,
 }: {
   trade: Trade;
-  progress: number; // 0..1
+  progress: number;
+  candles: PricePoint[];
+  keyMoments: KeyMoment[];
+  onSeek: (t: number) => void;
 }) {
+  const svgRef = useRef<SVGSVGElement>(null);
   const isLong = trade.direction === "LONG";
   const exitPrice = trade.exit ?? trade.entry;
   const isWin = trade.result >= 0;
 
-  const allPrices = [trade.entry, trade.sl, trade.tp, exitPrice];
-  const min = Math.min(...allPrices) * 0.9998;
-  const max = Math.max(...allPrices) * 1.0002;
-  const range = max - min || 1;
-  const toY = (p: number) => 10 + ((max - p) / range) * 80;
+  // Calculate price range for scaling
+  const allPrices = candles.flatMap((c) => [c.high, c.low]);
+  allPrices.push(trade.entry, trade.sl, trade.tp, exitPrice);
+  const priceMin = Math.min(...allPrices);
+  const priceMax = Math.max(...allPrices);
+  const padding = (priceMax - priceMin) * 0.08;
+  const chartMin = priceMin - padding;
+  const chartMax = priceMax + padding;
+  const chartRange = chartMax - chartMin || 1;
 
-  // Generate a pseudo-random but deterministic price path
-  const pathPoints = useMemo(() => {
-    const points: { x: number; y: number }[] = [];
-    const steps = 60;
-    const seed = trade.id
-      .split("")
-      .reduce((a, c) => a + c.charCodeAt(0), 0);
+  // SVG dimensions
+  const W = 900;
+  const H = 340;
+  const PAD_L = 75;
+  const PAD_R = 20;
+  const PAD_T = 20;
+  const PAD_B = 30;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
 
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const x = 5 + t * 90;
-      // Interpolate from entry to exit with noise
-      const basePrice = trade.entry + (exitPrice - trade.entry) * t;
-      // Deterministic noise based on seed and step
-      const noiseAmplitude = range * 0.15;
-      const noise =
-        Math.sin(seed * 0.1 + i * 1.7) * noiseAmplitude * 0.5 +
-        Math.sin(seed * 0.3 + i * 3.1) * noiseAmplitude * 0.3 +
-        Math.sin(seed * 0.7 + i * 0.5) * noiseAmplitude * 0.2;
-      const price = clamp(basePrice + noise, min, max);
-      points.push({ x, y: toY(price) });
-    }
-    return points;
-  }, [trade.id, trade.entry, exitPrice, min, max, range, toY]);
+  const toX = (t: number) => PAD_L + t * chartW;
+  const toY = (price: number) =>
+    PAD_T + ((chartMax - price) / chartRange) * chartH;
 
-  // Build the visible portion of the path based on progress
-  const visibleCount = Math.max(1, Math.floor(progress * pathPoints.length));
-  const visiblePoints = pathPoints.slice(0, visibleCount);
-  const pathD = visiblePoints
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
+  const visibleCount = Math.max(1, Math.floor(progress * candles.length));
+  const visibleCandles = candles.slice(0, visibleCount);
+  const lastCandle = visibleCandles[visibleCandles.length - 1];
+
+  // Build line path from close prices
+  const linePath = visibleCandles
+    .map(
+      (c, i) =>
+        `${i === 0 ? "M" : "L"} ${toX(c.t).toFixed(1)} ${toY(c.close).toFixed(1)}`
+    )
     .join(" ");
 
-  const currentPoint = visiblePoints[visiblePoints.length - 1];
+  // Area fill path
+  const areaPath = linePath
+    ? `${linePath} L ${toX(lastCandle.t).toFixed(1)} ${(PAD_T + chartH).toFixed(1)} L ${toX(visibleCandles[0].t).toFixed(1)} ${(PAD_T + chartH).toFixed(1)} Z`
+    : "";
+
+  // Visible key moments
+  const visibleMoments = keyMoments.filter((m) => m.t <= progress + 0.01);
+
+  // Price labels for Y axis
+  const priceSteps = 5;
+  const priceLabels: number[] = [];
+  for (let i = 0; i <= priceSteps; i++) {
+    priceLabels.push(chartMin + (chartRange * i) / priceSteps);
+  }
+
+  // Click handler for seeking
+  const handleClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const svgX = (x / rect.width) * W;
+    const t = clamp((svgX - PAD_L) / chartW, 0, 1);
+    onSeek(t);
+  };
+
+  // Decimal places based on asset
+  const decimals = trade.entry > 100 ? 2 : trade.entry > 10 ? 3 : 5;
 
   return (
     <svg
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      className="w-full h-full"
+      ref={svgRef}
+      viewBox={`0 0 ${W} ${H}`}
+      className="w-full h-full cursor-crosshair"
       style={{ overflow: "visible" }}
+      onClick={handleClick}
     >
-      {/* Background grid */}
-      {[0, 20, 40, 60, 80, 100].map((y) => (
-        <line
-          key={`g-${y}`}
-          x1="0"
-          y1={y}
-          x2="100"
-          y2={y}
-          stroke="rgba(255,255,255,0.04)"
-          strokeWidth="0.2"
-        />
-      ))}
-      {[0, 20, 40, 60, 80, 100].map((x) => (
-        <line
-          key={`gv-${x}`}
-          x1={x}
-          y1="0"
-          x2={x}
-          y2="100"
-          stroke="rgba(255,255,255,0.03)"
-          strokeWidth="0.2"
-        />
-      ))}
+      <defs>
+        <linearGradient id="areaGradWin" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
+          <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="areaGradLose" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.15" />
+          <stop offset="100%" stopColor="#f43f5e" stopOpacity="0" />
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
 
-      {/* SL zone fill */}
+      {/* Background grid */}
+      {priceLabels.map((p, i) => {
+        const y = toY(p);
+        return (
+          <g key={`grid-${i}`}>
+            <line
+              x1={PAD_L}
+              y1={y}
+              x2={W - PAD_R}
+              y2={y}
+              stroke="rgba(255,255,255,0.04)"
+              strokeWidth="1"
+            />
+            <text
+              x={PAD_L - 8}
+              y={y + 4}
+              textAnchor="end"
+              fontSize="10"
+              fill="rgba(255,255,255,0.3)"
+              fontFamily="monospace"
+            >
+              {p.toFixed(decimals)}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* SL zone */}
       <rect
-        x="0"
+        x={PAD_L}
         y={isLong ? toY(trade.entry) : toY(trade.sl)}
-        width="100"
+        width={chartW}
         height={Math.abs(toY(trade.entry) - toY(trade.sl))}
         fill="#f43f5e"
         opacity="0.04"
       />
 
-      {/* TP zone fill */}
+      {/* TP zone */}
       <rect
-        x="0"
+        x={PAD_L}
         y={isLong ? toY(trade.tp) : toY(trade.entry)}
-        width="100"
+        width={chartW}
         height={Math.abs(toY(trade.tp) - toY(trade.entry))}
         fill="#10b981"
         opacity="0.04"
       />
 
-      {/* Entry line - cyan dashed */}
+      {/* Entry level */}
       <line
-        x1="0"
+        x1={PAD_L}
         y1={toY(trade.entry)}
-        x2="100"
+        x2={W - PAD_R}
         y2={toY(trade.entry)}
         stroke="#06b6d4"
-        strokeWidth="0.3"
-        strokeDasharray="2,1.5"
-        opacity="0.7"
+        strokeWidth="1"
+        strokeDasharray="6,4"
+        opacity="0.6"
+      />
+      <rect
+        x={PAD_L}
+        y={toY(trade.entry) - 10}
+        width={60}
+        height={18}
+        rx="3"
+        fill="rgba(6,182,212,0.15)"
+        stroke="#06b6d4"
+        strokeWidth="0.5"
+        opacity="0.8"
       />
       <text
-        x="1"
-        y={toY(trade.entry) - 1.5}
-        fontSize="2.8"
+        x={PAD_L + 30}
+        y={toY(trade.entry) + 3}
+        textAnchor="middle"
+        fontSize="9"
         fill="#06b6d4"
         fontFamily="monospace"
+        fontWeight="bold"
       >
-        Entry {trade.entry.toFixed(5)}
+        ENTRY
       </text>
 
-      {/* SL line - red dashed */}
+      {/* SL level */}
       <line
-        x1="0"
+        x1={PAD_L}
         y1={toY(trade.sl)}
-        x2="100"
+        x2={W - PAD_R}
         y2={toY(trade.sl)}
         stroke="#f43f5e"
-        strokeWidth="0.3"
-        strokeDasharray="1.5,1"
-        opacity="0.7"
+        strokeWidth="1"
+        strokeDasharray="4,3"
+        opacity="0.5"
+      />
+      <rect
+        x={W - PAD_R - 50}
+        y={toY(trade.sl) - 10}
+        width={50}
+        height={18}
+        rx="3"
+        fill="rgba(244,63,94,0.12)"
+        stroke="#f43f5e"
+        strokeWidth="0.5"
+        opacity="0.8"
       />
       <text
-        x="1"
-        y={toY(trade.sl) + 4}
-        fontSize="2.8"
+        x={W - PAD_R - 25}
+        y={toY(trade.sl) + 3}
+        textAnchor="middle"
+        fontSize="9"
         fill="#f43f5e"
         fontFamily="monospace"
+        fontWeight="bold"
       >
-        SL {trade.sl.toFixed(5)}
+        SL
       </text>
 
-      {/* TP line - green dashed */}
+      {/* TP level */}
       <line
-        x1="0"
+        x1={PAD_L}
         y1={toY(trade.tp)}
-        x2="100"
+        x2={W - PAD_R}
         y2={toY(trade.tp)}
         stroke="#10b981"
-        strokeWidth="0.3"
-        strokeDasharray="1.5,1"
-        opacity="0.7"
+        strokeWidth="1"
+        strokeDasharray="4,3"
+        opacity="0.5"
+      />
+      <rect
+        x={W - PAD_R - 50}
+        y={toY(trade.tp) - 10}
+        width={50}
+        height={18}
+        rx="3"
+        fill="rgba(16,185,129,0.12)"
+        stroke="#10b981"
+        strokeWidth="0.5"
+        opacity="0.8"
       />
       <text
-        x="1"
-        y={toY(trade.tp) - 1.5}
-        fontSize="2.8"
+        x={W - PAD_R - 25}
+        y={toY(trade.tp) + 3}
+        textAnchor="middle"
+        fontSize="9"
         fill="#10b981"
         fontFamily="monospace"
+        fontWeight="bold"
       >
-        TP {trade.tp.toFixed(5)}
+        TP
       </text>
 
-      {/* Exit line - green if win, red if loss */}
-      {progress >= 1 && (
+      {/* Exit level when visible */}
+      {progress >= 0.85 && (
         <>
           <line
-            x1="0"
+            x1={PAD_L}
             y1={toY(exitPrice)}
-            x2="100"
+            x2={W - PAD_R}
             y2={toY(exitPrice)}
             stroke={isWin ? "#10b981" : "#f43f5e"}
-            strokeWidth="0.35"
-            strokeDasharray="1,1"
-            opacity="0.6"
+            strokeWidth="1.2"
+            strokeDasharray="2,2"
+            opacity="0.7"
+          />
+          <rect
+            x={PAD_L + chartW * 0.4}
+            y={toY(exitPrice) - 10}
+            width={50}
+            height={18}
+            rx="3"
+            fill={isWin ? "rgba(16,185,129,0.15)" : "rgba(244,63,94,0.15)"}
+            stroke={isWin ? "#10b981" : "#f43f5e"}
+            strokeWidth="0.5"
+            opacity="0.9"
           />
           <text
-            x="70"
-            y={toY(exitPrice) + (isWin === isLong ? 4 : -1.5)}
-            fontSize="2.8"
+            x={PAD_L + chartW * 0.4 + 25}
+            y={toY(exitPrice) + 3}
+            textAnchor="middle"
+            fontSize="9"
             fill={isWin ? "#10b981" : "#f43f5e"}
             fontFamily="monospace"
+            fontWeight="bold"
           >
-            Exit {exitPrice.toFixed(5)}
+            EXIT
           </text>
         </>
       )}
 
-      {/* Price path */}
-      <path
-        d={pathD}
-        fill="none"
-        stroke={isWin ? "#10b981" : "#f43f5e"}
-        strokeWidth="0.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.9"
-      />
+      {/* Candles */}
+      {visibleCandles.map((c, i) => {
+        const x = toX(c.t);
+        const candleW = Math.max(2, chartW / candles.length * 0.6);
+        const isBull = c.close >= c.open;
+        const bodyTop = toY(Math.max(c.open, c.close));
+        const bodyBottom = toY(Math.min(c.open, c.close));
+        const bodyH = Math.max(1, bodyBottom - bodyTop);
+        const color = isBull ? "#10b981" : "#f43f5e";
 
-      {/* Glow effect on path */}
-      <path
-        d={pathD}
-        fill="none"
-        stroke={isWin ? "#10b981" : "#f43f5e"}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.15"
-      />
+        return (
+          <g key={i} opacity={0.7}>
+            {/* Wick */}
+            <line
+              x1={x}
+              y1={toY(c.high)}
+              x2={x}
+              y2={toY(c.low)}
+              stroke={color}
+              strokeWidth="1"
+            />
+            {/* Body */}
+            <rect
+              x={x - candleW / 2}
+              y={bodyTop}
+              width={candleW}
+              height={bodyH}
+              fill={isBull ? color : color}
+              stroke={color}
+              strokeWidth="0.5"
+              opacity={isBull ? 0.3 : 0.6}
+            />
+          </g>
+        );
+      })}
 
-      {/* Current position dot */}
-      {currentPoint && (
+      {/* Price line overlay */}
+      {linePath && (
         <>
-          <circle
-            cx={currentPoint.x}
-            cy={currentPoint.y}
-            r="1.8"
-            fill={isWin ? "#10b981" : "#f43f5e"}
+          <path
+            d={areaPath}
+            fill={isWin ? "url(#areaGradWin)" : "url(#areaGradLose)"}
           />
-          <circle
-            cx={currentPoint.x}
-            cy={currentPoint.y}
-            r="3.5"
+          <path
+            d={linePath}
             fill="none"
             stroke={isWin ? "#10b981" : "#f43f5e"}
-            strokeWidth="0.25"
-            opacity="0.5"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.85"
+          />
+          {/* Glow */}
+          <path
+            d={linePath}
+            fill="none"
+            stroke={isWin ? "#10b981" : "#f43f5e"}
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.08"
+          />
+        </>
+      )}
+
+      {/* Key moment markers */}
+      {visibleMoments.map((m) => {
+        const cx = toX(m.t);
+        const cy = toY(m.price);
+        return (
+          <g key={m.type}>
+            {/* Vertical dashed line */}
+            <line
+              x1={cx}
+              y1={PAD_T}
+              x2={cx}
+              y2={PAD_T + chartH}
+              stroke={m.color}
+              strokeWidth="1"
+              strokeDasharray="3,3"
+              opacity="0.25"
+            />
+            {/* Diamond marker */}
+            <polygon
+              points={`${cx},${cy - 7} ${cx + 5},${cy} ${cx},${cy + 7} ${cx - 5},${cy}`}
+              fill={m.color}
+              opacity="0.9"
+              stroke="rgba(0,0,0,0.3)"
+              strokeWidth="0.5"
+            />
+            {/* Label */}
+            <rect
+              x={cx - 18}
+              y={cy - 22}
+              width={36}
+              height={14}
+              rx="3"
+              fill="rgba(0,0,0,0.6)"
+              stroke={m.color}
+              strokeWidth="0.5"
+            />
+            <text
+              x={cx}
+              y={cy - 12}
+              textAnchor="middle"
+              fontSize="8"
+              fill={m.color}
+              fontFamily="monospace"
+              fontWeight="bold"
+            >
+              {m.label}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Current price dot */}
+      {lastCandle && (
+        <g>
+          <circle
+            cx={toX(lastCandle.t)}
+            cy={toY(lastCandle.close)}
+            r="5"
+            fill={isWin ? "#10b981" : "#f43f5e"}
           >
             <animate
               attributeName="r"
-              from="2"
-              to="5"
+              from="4"
+              to="8"
               dur="1.5s"
               repeatCount="indefinite"
             />
             <animate
               attributeName="opacity"
-              from="0.6"
-              to="0"
+              from="0.9"
+              to="0.3"
               dur="1.5s"
               repeatCount="indefinite"
             />
           </circle>
-        </>
+          <circle
+            cx={toX(lastCandle.t)}
+            cy={toY(lastCandle.close)}
+            r="3"
+            fill="white"
+            opacity="0.9"
+          />
+          {/* Current price label */}
+          <rect
+            x={toX(lastCandle.t) + 10}
+            y={toY(lastCandle.close) - 9}
+            width={65}
+            height={18}
+            rx="3"
+            fill="rgba(0,0,0,0.7)"
+            stroke={isWin ? "#10b981" : "#f43f5e"}
+            strokeWidth="0.5"
+          />
+          <text
+            x={toX(lastCandle.t) + 42}
+            y={toY(lastCandle.close) + 4}
+            textAnchor="middle"
+            fontSize="9"
+            fill="white"
+            fontFamily="monospace"
+          >
+            {lastCandle.close.toFixed(decimals)}
+          </text>
+        </g>
       )}
 
-      {/* Entry marker */}
-      <circle cx="5" cy={toY(trade.entry)} r="1.5" fill="#06b6d4" />
-
-      {/* Exit marker when complete */}
-      {progress >= 1 && (
-        <circle
-          cx="95"
-          cy={toY(exitPrice)}
-          r="1.5"
-          fill={isWin ? "#10b981" : "#f43f5e"}
-        />
-      )}
+      {/* Time axis labels */}
+      {[0, 0.25, 0.5, 0.75, 1].map((t) => (
+        <text
+          key={`time-${t}`}
+          x={toX(t)}
+          y={H - 5}
+          textAnchor="middle"
+          fontSize="9"
+          fill="rgba(255,255,255,0.25)"
+          fontFamily="monospace"
+        >
+          {Math.round(t * 100)}%
+        </text>
+      ))}
     </svg>
   );
 }
@@ -340,19 +764,14 @@ function computeTradeScore(trade: Trade): {
   const isLong = trade.direction === "LONG";
   const exitPrice = trade.exit ?? trade.entry;
 
-  // Entry quality: how close was entry to the ideal (far from SL, close to best entry)
   const riskDistance = Math.abs(trade.entry - trade.sl);
   const rewardDistance = Math.abs(trade.tp - trade.entry);
   const totalRange = riskDistance + rewardDistance;
 
-  // Higher score if entry is closer to SL (better entry for a long, worse for short but we flip)
   let entryRatio = totalRange > 0 ? riskDistance / totalRange : 0.5;
-  // A small risk distance relative to reward means a good entry
   const entryQuality = Math.round(clamp((1 - entryRatio) * 10, 0, 10));
 
-  // Discipline: did result align with the strategy direction?
-  // If trade hit TP or exited between entry and TP, good discipline
-  let disciplineScore = 5; // base
+  let disciplineScore = 5;
   const exitDistFromEntry = isLong
     ? exitPrice - trade.entry
     : trade.entry - exitPrice;
@@ -365,26 +784,22 @@ function computeTradeScore(trade: Trade): {
 
   if (tpDistFromEntry > 0) {
     const exitRatio = exitDistFromEntry / tpDistFromEntry;
-    if (exitRatio >= 0.9) disciplineScore = 9; // exited near TP
+    if (exitRatio >= 0.9) disciplineScore = 9;
     else if (exitRatio >= 0.5) disciplineScore = 7;
     else if (exitRatio >= 0) disciplineScore = 5;
     else {
-      // Exited at loss
       if (slDistFromEntry > 0) {
         const lossRatio = Math.abs(exitDistFromEntry) / slDistFromEntry;
-        if (lossRatio <= 1.05) disciplineScore = 6; // respected SL
-        else disciplineScore = 2; // went past SL
+        if (lossRatio <= 1.05) disciplineScore = 6;
+        else disciplineScore = 2;
       } else {
         disciplineScore = 3;
       }
     }
   }
 
-  // R:R achieved vs planned
-  const plannedRR =
-    riskDistance > 0 ? rewardDistance / riskDistance : 1;
-  const achievedRR =
-    riskDistance > 0 ? exitDistFromEntry / riskDistance : 0;
+  const plannedRR = riskDistance > 0 ? rewardDistance / riskDistance : 1;
+  const achievedRR = riskDistance > 0 ? exitDistFromEntry / riskDistance : 0;
   let rrScore = 5;
   if (plannedRR > 0) {
     const rrRatio = achievedRR / plannedRR;
@@ -440,6 +855,112 @@ function getScoreLabel(score: number) {
   return "replayScoreBad";
 }
 
+/* ─── Post-Replay Analysis ─── */
+
+function computePostReplayStats(trade: Trade, keyMoments: KeyMoment[]) {
+  const isLong = trade.direction === "LONG";
+  const exitPrice = trade.exit ?? trade.entry;
+  const riskDist = Math.abs(trade.entry - trade.sl);
+  const rewardDist = Math.abs(trade.tp - trade.entry);
+
+  const mae = keyMoments.find((m) => m.type === "mae");
+  const mfe = keyMoments.find((m) => m.type === "mfe");
+
+  const maeFromEntry = mae
+    ? Math.abs(mae.price - trade.entry)
+    : 0;
+  const mfeFromEntry = mfe
+    ? Math.abs(mfe.price - trade.entry)
+    : 0;
+
+  // How close to SL did it get?
+  const slProximity = riskDist > 0 ? (maeFromEntry / riskDist) * 100 : 0;
+
+  // Did price hit SL zone before TP?
+  const hitSlZone = slProximity > 90;
+
+  // How close to TP did it get?
+  const tpProximity = rewardDist > 0 ? (mfeFromEntry / rewardDist) * 100 : 0;
+
+  // Was entry optimal? (entry close to best possible price)
+  const entryEfficiency =
+    rewardDist + riskDist > 0
+      ? (rewardDist / (rewardDist + riskDist)) * 100
+      : 50;
+
+  // Exit efficiency: how much of MFE was captured?
+  const exitPnl = isLong
+    ? exitPrice - trade.entry
+    : trade.entry - exitPrice;
+  const mfePnl = mfeFromEntry;
+  const exitEfficiency = mfePnl > 0 ? (exitPnl / mfePnl) * 100 : 0;
+
+  // R multiple achieved
+  const rMultiple = riskDist > 0 ? exitPnl / riskDist : 0;
+
+  return {
+    maeFromEntry,
+    mfeFromEntry,
+    slProximity: Math.min(slProximity, 100),
+    tpProximity: Math.min(tpProximity, 100),
+    hitSlZone,
+    entryEfficiency: clamp(entryEfficiency, 0, 100),
+    exitEfficiency: clamp(exitEfficiency, 0, 100),
+    rMultiple,
+  };
+}
+
+/* ─── Key Moment Badge Component ─── */
+
+function MomentBadge({
+  moment,
+  trade,
+  onJump,
+}: {
+  moment: KeyMoment;
+  trade: Trade;
+  onJump: (t: number) => void;
+}) {
+  const decimals = trade.entry > 100 ? 2 : trade.entry > 10 ? 3 : 5;
+  const IconComponent =
+    moment.icon === "entry"
+      ? Crosshair
+      : moment.icon === "down"
+        ? TrendingDown
+        : moment.icon === "up"
+          ? TrendingUp
+          : Flag;
+
+  return (
+    <button
+      onClick={() => onJump(moment.t)}
+      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all hover:scale-[1.02]"
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        border: `1px solid ${moment.color}33`,
+      }}
+    >
+      <div
+        className="flex items-center justify-center w-7 h-7 rounded-md"
+        style={{ background: `${moment.color}15` }}
+      >
+        <IconComponent className="w-3.5 h-3.5" style={{ color: moment.color }} />
+      </div>
+      <div>
+        <p className="text-xs font-medium" style={{ color: moment.color }}>
+          {moment.label}
+        </p>
+        <p
+          className="text-[10px] mono"
+          style={{ color: "var(--text-muted)" }}
+        >
+          {moment.price.toFixed(decimals)}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 /* ─── Main Page ─── */
 
 export default function ReplayPage() {
@@ -454,6 +975,7 @@ export default function ReplayPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [speed, setSpeed] = useState(1);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   const animRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
 
@@ -504,6 +1026,18 @@ export default function ReplayPage() {
     [closedTrades, selectedId]
   );
 
+  // Generate candle data for selected trade
+  const { candles, keyMoments } = useMemo(() => {
+    if (!selected) return { candles: [], keyMoments: [] };
+    return generateCandleData(selected);
+  }, [selected]);
+
+  // Post-replay analysis
+  const postReplayStats = useMemo(() => {
+    if (!selected || keyMoments.length === 0) return null;
+    return computePostReplayStats(selected, keyMoments);
+  }, [selected, keyMoments]);
+
   // Auto-select first trade
   useEffect(() => {
     if (!selectedId && closedTrades.length > 0)
@@ -515,6 +1049,7 @@ export default function ReplayPage() {
     setEditingNote(false);
     setIsPlaying(false);
     setProgress(0);
+    setShowAnalysis(false);
     if (selected) setCurrentNote(notes[selected.id] || "");
   }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -531,9 +1066,10 @@ export default function ReplayPage() {
       lastTimeRef.current = time;
 
       setProgress((prev) => {
-        const next = prev + (delta / (4000 / speed));
+        const next = prev + delta / (5000 / speed);
         if (next >= 1) {
           setIsPlaying(false);
+          setShowAnalysis(true);
           return 1;
         }
         return next;
@@ -551,13 +1087,34 @@ export default function ReplayPage() {
   }, [isPlaying, speed]);
 
   const handlePlay = () => {
-    if (progress >= 1) setProgress(0);
+    if (progress >= 1) {
+      setProgress(0);
+      setShowAnalysis(false);
+    }
     setIsPlaying(true);
   };
   const handlePause = () => setIsPlaying(false);
   const handleReset = () => {
     setIsPlaying(false);
     setProgress(0);
+    setShowAnalysis(false);
+  };
+  const handleSeek = (t: number) => {
+    setIsPlaying(false);
+    setProgress(clamp(t, 0, 1));
+    if (t >= 0.98) setShowAnalysis(true);
+  };
+  const handleStepBack = () => {
+    setIsPlaying(false);
+    setProgress((p) => clamp(p - 0.05, 0, 1));
+  };
+  const handleStepForward = () => {
+    setIsPlaying(false);
+    setProgress((p) => {
+      const next = clamp(p + 0.05, 0, 1);
+      if (next >= 0.98) setShowAnalysis(true);
+      return next;
+    });
   };
 
   const navigate = useCallback(
@@ -580,16 +1137,25 @@ export default function ReplayPage() {
       )
         return;
 
-      if (e.key === "ArrowLeft") {
+      if (e.key === "ArrowLeft" && e.shiftKey) {
         e.preventDefault();
         navigate(-1);
-      } else if (e.key === "ArrowRight") {
+      } else if (e.key === "ArrowRight" && e.shiftKey) {
         e.preventDefault();
         navigate(1);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handleStepBack();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleStepForward();
       } else if (e.key === " ") {
         e.preventDefault();
         if (isPlaying) handlePause();
         else handlePlay();
+      } else if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        handleReset();
       }
     };
     window.addEventListener("keydown", handler);
@@ -610,27 +1176,30 @@ export default function ReplayPage() {
     const achievedRR = riskPips > 0 ? achievedPips / riskPips : 0;
     const riskAmount = riskPips * selected.lots * 100000;
     const rewardAmount = rewardPips * selected.lots * 100000;
-    return { rr, achievedRR, riskAmount, rewardAmount, isLong, riskPips, rewardPips };
+    return {
+      rr,
+      achievedRR,
+      riskAmount,
+      rewardAmount,
+      isLong,
+      riskPips,
+      rewardPips,
+    };
   }, [selected]);
 
-  // What Would Have Happened - alternatives
+  // What Would Have Happened
   const alternatives = useMemo(() => {
     if (!selected || !stats) return null;
     const isLong = selected.direction === "LONG";
     const riskPips = stats.riskPips;
     const lotMultiplier = selected.lots * 100000;
 
-    // 1R cut scenario
     const oneRTarget = isLong
       ? selected.entry + riskPips
       : selected.entry - riskPips;
     const oneRPL = riskPips * lotMultiplier;
-
-    // Let it run to TP
     const tpPips = Math.abs(selected.tp - selected.entry);
     const tpPL = tpPips * lotMultiplier;
-
-    // Double position
     const doublePL = selected.result * 2;
 
     return {
@@ -681,6 +1250,13 @@ export default function ReplayPage() {
     );
   }
 
+  const decimals =
+    selected && selected.entry > 100
+      ? 2
+      : selected && selected.entry > 10
+        ? 3
+        : 5;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -727,7 +1303,7 @@ export default function ReplayPage() {
         </div>
       </div>
 
-      {/* Trade Selector - Grouped by Date */}
+      {/* Trade Selector */}
       <div className="glass rounded-xl p-4">
         <label
           className="text-xs font-medium mb-2 block"
@@ -749,11 +1325,11 @@ export default function ReplayPage() {
             <optgroup key={dateKey} label={formatDateGroup(dateKey)}>
               {grouped[dateKey].map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.asset} {t.direction === "LONG" ? "\▲" : "\▼"}{" "}
+                  {t.asset} {t.direction === "LONG" ? "\u25B2" : "\u25BC"}{" "}
                   {t.direction} &mdash;{" "}
                   {t.result >= 0 ? "+" : ""}
-                  {t.result.toFixed(2)}€
-                  {t.strategy ? ` \— ${t.strategy}` : ""}
+                  {t.result.toFixed(2)}\u20AC
+                  {t.strategy ? ` \u2014 ${t.strategy}` : ""}
                 </option>
               ))}
             </optgroup>
@@ -763,14 +1339,15 @@ export default function ReplayPage() {
 
       {selected && (
         <>
-          {/* Visual Trade Chart with Animation */}
+          {/* Visual Candle Chart with Animation */}
           <div className="glass rounded-xl p-5">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
               <h3
                 className="text-sm font-semibold flex items-center gap-2"
                 style={{ color: "var(--text-primary)" }}
               >
-                <BarChart3 className="w-4 h-4 text-cyan-400" /> {t("replayPriceSimulation")}
+                <BarChart3 className="w-4 h-4 text-cyan-400" />{" "}
+                {t("replayPriceSimulation")}
               </h3>
               <div className="flex items-center gap-2">
                 {/* Speed control */}
@@ -806,14 +1383,22 @@ export default function ReplayPage() {
                   onClick={handleReset}
                   className="glass p-1.5 rounded-lg hover:opacity-80 transition-opacity"
                   style={{ color: "var(--text-secondary)" }}
-                  title={t("reset")}
+                  title="Reset (R)"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={handleStepBack}
+                  className="glass p-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                  style={{ color: "var(--text-secondary)" }}
+                  title="Reculer"
+                >
+                  <SkipBack className="w-3.5 h-3.5" />
                 </button>
                 {isPlaying ? (
                   <button
                     onClick={handlePause}
-                    className="p-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                    className="p-2 rounded-lg hover:opacity-80 transition-opacity"
                     style={{
                       background: "rgba(6,182,212,0.2)",
                       color: "#06b6d4",
@@ -825,7 +1410,7 @@ export default function ReplayPage() {
                 ) : (
                   <button
                     onClick={handlePlay}
-                    className="p-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                    className="p-2 rounded-lg hover:opacity-80 transition-opacity"
                     style={{
                       background: "rgba(6,182,212,0.2)",
                       color: "#06b6d4",
@@ -835,37 +1420,138 @@ export default function ReplayPage() {
                     <Play className="w-4 h-4" />
                   </button>
                 )}
+                <button
+                  onClick={handleStepForward}
+                  className="glass p-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                  style={{ color: "var(--text-secondary)" }}
+                  title="Avancer"
+                >
+                  <SkipForward className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
 
-            {/* Progress bar */}
+            {/* Clickable progress bar */}
             <div
-              className="w-full h-1 rounded-full mb-4 overflow-hidden"
-              style={{ background: "rgba(255,255,255,0.05)" }}
+              className="w-full h-2 rounded-full mb-4 overflow-hidden cursor-pointer relative group"
+              style={{ background: "rgba(255,255,255,0.06)" }}
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const t = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+                handleSeek(t);
+              }}
             >
               <div
-                className="h-full rounded-full transition-all"
+                className="h-full rounded-full"
                 style={{
                   width: `${progress * 100}%`,
                   background:
                     selected.result >= 0
                       ? "linear-gradient(90deg, #06b6d4, #10b981)"
                       : "linear-gradient(90deg, #06b6d4, #f43f5e)",
-                  transition: isPlaying ? "none" : "width 0.3s",
+                  transition: isPlaying ? "none" : "width 0.15s",
                 }}
               />
+              {/* Key moment markers on progress bar */}
+              {keyMoments.map((m) => (
+                <div
+                  key={m.type}
+                  className="absolute top-0 h-full w-0.5"
+                  style={{
+                    left: `${m.t * 100}%`,
+                    background: m.color,
+                    opacity: 0.6,
+                  }}
+                  title={m.label}
+                />
+              ))}
+            </div>
+
+            {/* Keyboard hints */}
+            <div className="flex items-center gap-4 mb-3">
+              <span
+                className="text-[10px]"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <kbd
+                  className="px-1.5 py-0.5 rounded text-[9px]"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  Espace
+                </kbd>{" "}
+                Lecture &nbsp;
+                <kbd
+                  className="px-1.5 py-0.5 rounded text-[9px]"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  \u2190 \u2192
+                </kbd>{" "}
+                Pas &nbsp;
+                <kbd
+                  className="px-1.5 py-0.5 rounded text-[9px]"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  R
+                </kbd>{" "}
+                Reset &nbsp;
+                <kbd
+                  className="px-1.5 py-0.5 rounded text-[9px]"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  Shift+\u2190\u2192
+                </kbd>{" "}
+                Changer trade
+              </span>
             </div>
 
             {/* Chart */}
             <div
               className="relative rounded-lg overflow-hidden"
               style={{
-                height: "280px",
+                height: "340px",
                 background:
-                  "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)",
+                  "linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%)",
               }}
             >
-              <AnimatedPriceChart trade={selected} progress={progress} />
+              <AnimatedCandleChart
+                trade={selected}
+                progress={progress}
+                candles={candles}
+                keyMoments={keyMoments}
+                onSeek={handleSeek}
+              />
+            </div>
+
+            {/* Key Moments Timeline */}
+            <div className="mt-4">
+              <p
+                className="text-xs font-medium mb-2 flex items-center gap-1.5"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <Clock className="w-3 h-3" /> Moments cl\u00E9s
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {keyMoments.map((m) => (
+                  <MomentBadge
+                    key={m.type}
+                    moment={m}
+                    trade={selected}
+                    onJump={handleSeek}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
@@ -876,7 +1562,8 @@ export default function ReplayPage() {
                 className="text-sm font-semibold mb-4 flex items-center gap-2"
                 style={{ color: "var(--text-primary)" }}
               >
-                <Target className="w-4 h-4 text-cyan-400" /> {t("replayTradeDetails")}
+                <Target className="w-4 h-4 text-cyan-400" />{" "}
+                {t("replayTradeDetails")}
               </h3>
               <div className="space-y-2.5">
                 {[
@@ -893,34 +1580,36 @@ export default function ReplayPage() {
                   { label: t("lots"), value: selected.lots.toString() },
                   {
                     label: t("entry"),
-                    value: selected.entry.toFixed(5),
+                    value: selected.entry.toFixed(decimals),
                     mono: true,
                   },
                   {
                     label: t("exit"),
-                    value: (selected.exit ?? 0).toFixed(5),
+                    value: (selected.exit ?? 0).toFixed(decimals),
                     mono: true,
                   },
                   {
                     label: t("stopLoss"),
-                    value: selected.sl.toFixed(5),
+                    value: selected.sl.toFixed(decimals),
                     mono: true,
                     color: "#f43f5e",
                   },
                   {
                     label: t("takeProfit"),
-                    value: selected.tp.toFixed(5),
+                    value: selected.tp.toFixed(decimals),
                     mono: true,
                     color: "#10b981",
                   },
                   {
                     label: t("replayPlannedRR"),
-                    value: stats ? stats.rr.toFixed(2) : "\—",
+                    value: stats ? stats.rr.toFixed(2) : "\u2014",
                     mono: true,
                   },
                   {
                     label: t("replayAchievedRR"),
-                    value: stats ? stats.achievedRR.toFixed(2) + "R" : "\—",
+                    value: stats
+                      ? stats.achievedRR.toFixed(2) + "R"
+                      : "\u2014",
                     mono: true,
                     color: stats
                       ? stats.achievedRR >= 0
@@ -930,23 +1619,23 @@ export default function ReplayPage() {
                   },
                   {
                     label: t("result"),
-                    value: `${selected.result >= 0 ? "+" : ""}${selected.result.toFixed(2)}€`,
+                    value: `${selected.result >= 0 ? "+" : ""}${selected.result.toFixed(2)}\u20AC`,
                     color:
                       selected.result >= 0 ? "#10b981" : "#f43f5e",
                     mono: true,
                   },
                   {
                     label: t("strategy"),
-                    value: selected.strategy || "\—",
+                    value: selected.strategy || "\u2014",
                   },
                   {
                     label: t("emotion"),
-                    value: selected.emotion || "\—",
+                    value: selected.emotion || "\u2014",
                   },
-                  { label: t("tags"), value: selected.tags || "\—" },
+                  { label: t("tags"), value: selected.tags || "\u2014" },
                   {
                     label: t("setup"),
-                    value: selected.setup || "\—",
+                    value: selected.setup || "\u2014",
                   },
                 ].map((item) => (
                   <div
@@ -976,8 +1665,301 @@ export default function ReplayPage() {
               </div>
             </div>
 
-            {/* Right column: Score + Alternatives */}
+            {/* Right column */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Post-Replay Analysis */}
+              {showAnalysis && postReplayStats && (
+                <div
+                  className="glass rounded-xl p-5"
+                  style={{
+                    animation: "fadeIn 0.5s ease-out",
+                  }}
+                >
+                  <h3
+                    className="text-sm font-semibold mb-4 flex items-center gap-2"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    <Activity className="w-4 h-4 text-cyan-400" /> Analyse
+                    post-replay
+                  </h3>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                    {/* Entry Optimal? */}
+                    <div
+                      className="rounded-xl p-3 text-center"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <Crosshair
+                        className="w-4 h-4 mx-auto mb-1.5"
+                        style={{
+                          color:
+                            postReplayStats.entryEfficiency >= 60
+                              ? "#10b981"
+                              : postReplayStats.entryEfficiency >= 40
+                                ? "#eab308"
+                                : "#f43f5e",
+                        }}
+                      />
+                      <p
+                        className="text-lg font-bold mono"
+                        style={{
+                          color:
+                            postReplayStats.entryEfficiency >= 60
+                              ? "#10b981"
+                              : postReplayStats.entryEfficiency >= 40
+                                ? "#eab308"
+                                : "#f43f5e",
+                        }}
+                      >
+                        {postReplayStats.entryEfficiency.toFixed(0)}%
+                      </p>
+                      <p
+                        className="text-[10px] mt-0.5"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        Efficacit\u00E9 entr\u00E9e
+                      </p>
+                    </div>
+
+                    {/* SL Proximity */}
+                    <div
+                      className="rounded-xl p-3 text-center"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <AlertTriangle
+                        className="w-4 h-4 mx-auto mb-1.5"
+                        style={{
+                          color: postReplayStats.hitSlZone
+                            ? "#f43f5e"
+                            : "#eab308",
+                        }}
+                      />
+                      <p
+                        className="text-lg font-bold mono"
+                        style={{
+                          color: postReplayStats.hitSlZone
+                            ? "#f43f5e"
+                            : postReplayStats.slProximity > 70
+                              ? "#eab308"
+                              : "#10b981",
+                        }}
+                      >
+                        {postReplayStats.slProximity.toFixed(0)}%
+                      </p>
+                      <p
+                        className="text-[10px] mt-0.5"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        Proximit\u00E9 SL
+                      </p>
+                    </div>
+
+                    {/* TP Proximity */}
+                    <div
+                      className="rounded-xl p-3 text-center"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <TrendingUp
+                        className="w-4 h-4 mx-auto mb-1.5"
+                        style={{
+                          color:
+                            postReplayStats.tpProximity >= 80
+                              ? "#10b981"
+                              : "#eab308",
+                        }}
+                      />
+                      <p
+                        className="text-lg font-bold mono"
+                        style={{
+                          color:
+                            postReplayStats.tpProximity >= 80
+                              ? "#10b981"
+                              : postReplayStats.tpProximity >= 50
+                                ? "#eab308"
+                                : "#f43f5e",
+                        }}
+                      >
+                        {postReplayStats.tpProximity.toFixed(0)}%
+                      </p>
+                      <p
+                        className="text-[10px] mt-0.5"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        Proximit\u00E9 TP
+                      </p>
+                    </div>
+
+                    {/* Exit Efficiency */}
+                    <div
+                      className="rounded-xl p-3 text-center"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <Flag
+                        className="w-4 h-4 mx-auto mb-1.5"
+                        style={{
+                          color:
+                            postReplayStats.exitEfficiency >= 70
+                              ? "#10b981"
+                              : postReplayStats.exitEfficiency >= 40
+                                ? "#eab308"
+                                : "#f43f5e",
+                        }}
+                      />
+                      <p
+                        className="text-lg font-bold mono"
+                        style={{
+                          color:
+                            postReplayStats.exitEfficiency >= 70
+                              ? "#10b981"
+                              : postReplayStats.exitEfficiency >= 40
+                                ? "#eab308"
+                                : "#f43f5e",
+                        }}
+                      >
+                        {postReplayStats.exitEfficiency.toFixed(0)}%
+                      </p>
+                      <p
+                        className="text-[10px] mt-0.5"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        Efficacit\u00E9 sortie
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Verdict badges */}
+                  <div className="space-y-2">
+                    {/* Hit SL before TP? */}
+                    <div
+                      className="flex items-center gap-3 rounded-lg px-3 py-2"
+                      style={{
+                        background: postReplayStats.hitSlZone
+                          ? "rgba(244,63,94,0.08)"
+                          : "rgba(16,185,129,0.08)",
+                        border: `1px solid ${postReplayStats.hitSlZone ? "rgba(244,63,94,0.2)" : "rgba(16,185,129,0.2)"}`,
+                      }}
+                    >
+                      {postReplayStats.hitSlZone ? (
+                        <XCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      )}
+                      <span
+                        className="text-xs"
+                        style={{
+                          color: postReplayStats.hitSlZone
+                            ? "#f43f5e"
+                            : "#10b981",
+                        }}
+                      >
+                        {postReplayStats.hitSlZone
+                          ? "Le prix a frôlé ou touché la zone SL avant d'atteindre le TP"
+                          : "Le prix n'a pas atteint la zone SL critique"}
+                      </span>
+                    </div>
+
+                    {/* Was exit close to perfect? */}
+                    <div
+                      className="flex items-center gap-3 rounded-lg px-3 py-2"
+                      style={{
+                        background:
+                          postReplayStats.exitEfficiency >= 70
+                            ? "rgba(16,185,129,0.08)"
+                            : "rgba(234,179,8,0.08)",
+                        border: `1px solid ${postReplayStats.exitEfficiency >= 70 ? "rgba(16,185,129,0.2)" : "rgba(234,179,8,0.2)"}`,
+                      }}
+                    >
+                      {postReplayStats.exitEfficiency >= 70 ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
+                      )}
+                      <span
+                        className="text-xs"
+                        style={{
+                          color:
+                            postReplayStats.exitEfficiency >= 70
+                              ? "#10b981"
+                              : "#eab308",
+                        }}
+                      >
+                        {postReplayStats.exitEfficiency >= 70
+                          ? `Sortie quasi optimale \u2014 ${postReplayStats.exitEfficiency.toFixed(0)}% du MFE captur\u00E9`
+                          : `Sortie pr\u00E9matur\u00E9e \u2014 seulement ${postReplayStats.exitEfficiency.toFixed(0)}% du MFE captur\u00E9`}
+                      </span>
+                    </div>
+
+                    {/* R multiple summary */}
+                    <div
+                      className="flex items-center gap-3 rounded-lg px-3 py-2"
+                      style={{
+                        background:
+                          postReplayStats.rMultiple >= 1
+                            ? "rgba(16,185,129,0.08)"
+                            : postReplayStats.rMultiple >= 0
+                              ? "rgba(234,179,8,0.08)"
+                              : "rgba(244,63,94,0.08)",
+                        border: `1px solid ${
+                          postReplayStats.rMultiple >= 1
+                            ? "rgba(16,185,129,0.2)"
+                            : postReplayStats.rMultiple >= 0
+                              ? "rgba(234,179,8,0.2)"
+                              : "rgba(244,63,94,0.2)"
+                        }`,
+                      }}
+                    >
+                      <Zap
+                        className="w-4 h-4 shrink-0"
+                        style={{
+                          color:
+                            postReplayStats.rMultiple >= 1
+                              ? "#10b981"
+                              : postReplayStats.rMultiple >= 0
+                                ? "#eab308"
+                                : "#f43f5e",
+                        }}
+                      />
+                      <span
+                        className="text-xs"
+                        style={{
+                          color:
+                            postReplayStats.rMultiple >= 1
+                              ? "#10b981"
+                              : postReplayStats.rMultiple >= 0
+                                ? "#eab308"
+                                : "#f43f5e",
+                        }}
+                      >
+                        R\u00E9sultat :{" "}
+                        <span className="font-bold mono">
+                          {postReplayStats.rMultiple >= 0 ? "+" : ""}
+                          {postReplayStats.rMultiple.toFixed(2)}R
+                        </span>
+                        {postReplayStats.rMultiple >= 2
+                          ? " \u2014 Excellente gestion !"
+                          : postReplayStats.rMultiple >= 1
+                            ? " \u2014 Objectif atteint"
+                            : postReplayStats.rMultiple >= 0
+                              ? " \u2014 Gain partiel"
+                              : " \u2014 Perte contr\u00F4l\u00E9e"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Trade Score */}
               {score && (
                 <div className="glass rounded-xl p-5">
@@ -985,24 +1967,22 @@ export default function ReplayPage() {
                     className="text-sm font-semibold mb-4 flex items-center gap-2"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    <Award className="w-4 h-4 text-cyan-400" /> {t("replayTradeScore")}
+                    <Award className="w-4 h-4 text-cyan-400" />{" "}
+                    {t("replayTradeScore")}
                   </h3>
 
-                  {/* Overall score */}
                   <div className="flex items-center gap-6 mb-5">
                     <div
                       className="relative flex items-center justify-center"
                       style={{ width: 80, height: 80 }}
                     >
                       <svg viewBox="0 0 36 36" className="w-full h-full">
-                        {/* Background circle */}
                         <path
                           d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                           fill="none"
                           stroke="rgba(255,255,255,0.08)"
                           strokeWidth="3"
                         />
-                        {/* Score arc */}
                         <path
                           d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                           fill="none"
@@ -1012,9 +1992,7 @@ export default function ReplayPage() {
                           strokeLinecap="round"
                         />
                       </svg>
-                      <div
-                        className="absolute inset-0 flex flex-col items-center justify-center"
-                      >
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
                         <span
                           className="text-xl font-bold mono"
                           style={{ color: getScoreColor(score.total) }}
@@ -1045,7 +2023,6 @@ export default function ReplayPage() {
                     </div>
                   </div>
 
-                  {/* Score breakdown */}
                   <div className="space-y-3">
                     {score.details.map((d) => (
                       <div key={d.label}>
@@ -1120,7 +2097,8 @@ export default function ReplayPage() {
                     className="text-sm font-semibold mb-4 flex items-center gap-2"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    <Calculator className="w-4 h-4 text-cyan-400" /> {t("replayWhatIf")}
+                    <Calculator className="w-4 h-4 text-cyan-400" />{" "}
+                    {t("replayWhatIf")}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {/* Cut at 1R */}
@@ -1147,23 +2125,21 @@ export default function ReplayPage() {
                         }}
                       >
                         {alternatives.cutAt1R.pl >= 0 ? "+" : ""}
-                        {alternatives.cutAt1R.pl.toFixed(2)}€
+                        {alternatives.cutAt1R.pl.toFixed(2)}\u20AC
                       </p>
                       <p
                         className="text-[10px] mono mt-1"
                         style={{ color: "var(--text-muted)" }}
                       >
                         {t("replayExitAt")}{" "}
-                        {alternatives.cutAt1R.price.toFixed(5)}
+                        {alternatives.cutAt1R.price.toFixed(decimals)}
                       </p>
                       <div className="mt-2 flex items-center gap-1">
                         <span
                           className="text-[10px] mono"
                           style={{
                             color:
-                              alternatives.cutAt1R.pl -
-                                selected.result >=
-                              0
+                              alternatives.cutAt1R.pl - selected.result >= 0
                                 ? "#10b981"
                                 : "#f43f5e",
                           }}
@@ -1174,7 +2150,7 @@ export default function ReplayPage() {
                           {(
                             alternatives.cutAt1R.pl - selected.result
                           ).toFixed(2)}
-                          € {t("replayVsReal")}
+                          \u20AC {t("replayVsReal")}
                         </span>
                       </div>
                     </div>
@@ -1203,35 +2179,33 @@ export default function ReplayPage() {
                         }}
                       >
                         {alternatives.letRunToTP.pl >= 0 ? "+" : ""}
-                        {alternatives.letRunToTP.pl.toFixed(2)}€
+                        {alternatives.letRunToTP.pl.toFixed(2)}\u20AC
                       </p>
                       <p
                         className="text-[10px] mono mt-1"
                         style={{ color: "var(--text-muted)" }}
                       >
                         {t("replayExitAt")}{" "}
-                        {alternatives.letRunToTP.price.toFixed(5)}
+                        {alternatives.letRunToTP.price.toFixed(decimals)}
                       </p>
                       <div className="mt-2 flex items-center gap-1">
                         <span
                           className="text-[10px] mono"
                           style={{
                             color:
-                              alternatives.letRunToTP.pl -
-                                selected.result >=
+                              alternatives.letRunToTP.pl - selected.result >=
                               0
                                 ? "#10b981"
                                 : "#f43f5e",
                           }}
                         >
-                          {alternatives.letRunToTP.pl - selected.result >=
-                          0
+                          {alternatives.letRunToTP.pl - selected.result >= 0
                             ? "+"
                             : ""}
                           {(
                             alternatives.letRunToTP.pl - selected.result
                           ).toFixed(2)}
-                          € {t("replayVsReal")}
+                          \u20AC {t("replayVsReal")}
                         </span>
                       </div>
                     </div>
@@ -1260,13 +2234,16 @@ export default function ReplayPage() {
                         }}
                       >
                         {alternatives.doublePosition.pl >= 0 ? "+" : ""}
-                        {alternatives.doublePosition.pl.toFixed(2)}€
+                        {alternatives.doublePosition.pl.toFixed(2)}\u20AC
                       </p>
                       <p
                         className="text-[10px] mono mt-1"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        {t("replayLotsInsteadOf", { lots: alternatives.doublePosition.lots, orig: selected.lots })}
+                        {t("replayLotsInsteadOf", {
+                          lots: alternatives.doublePosition.lots,
+                          orig: selected.lots,
+                        })}
                       </p>
                       <div className="mt-2 flex items-center gap-1">
                         <span
@@ -1280,16 +2257,14 @@ export default function ReplayPage() {
                                 : "#f43f5e",
                           }}
                         >
-                          {alternatives.doublePosition.pl -
-                            selected.result >=
+                          {alternatives.doublePosition.pl - selected.result >=
                           0
                             ? "+"
                             : ""}
                           {(
-                            alternatives.doublePosition.pl -
-                            selected.result
+                            alternatives.doublePosition.pl - selected.result
                           ).toFixed(2)}
-                          € {t("replayVsReal")}
+                          \u20AC {t("replayVsReal")}
                         </span>
                       </div>
                     </div>
@@ -1323,7 +2298,7 @@ export default function ReplayPage() {
                       }}
                     >
                       {selected.result >= 0 ? "+" : ""}
-                      {selected.result.toFixed(2)}€
+                      {selected.result.toFixed(2)}\u20AC
                     </span>
                   </div>
                 </div>
@@ -1338,7 +2313,8 @@ export default function ReplayPage() {
                 className="text-sm font-semibold mb-4 flex items-center gap-2"
                 style={{ color: "var(--text-primary)" }}
               >
-                <Camera className="w-4 h-4 text-cyan-400" /> {t("screenshots")}
+                <Camera className="w-4 h-4 text-cyan-400" />{" "}
+                {t("screenshots")}
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {selected.screenshots.map((ss) => (
@@ -1367,7 +2343,8 @@ export default function ReplayPage() {
               className="text-sm font-semibold mb-4 flex items-center gap-2"
               style={{ color: "var(--text-primary)" }}
             >
-              <Edit3 className="w-4 h-4 text-cyan-400" /> {t("replayNotesAnnotations")}
+              <Edit3 className="w-4 h-4 text-cyan-400" />{" "}
+              {t("replayNotesAnnotations")}
             </h3>
             {selected.setup && (
               <div
@@ -1498,7 +2475,7 @@ export default function ReplayPage() {
                 }}
               >
                 {selected.result >= 0 ? "+" : ""}
-                {selected.result.toFixed(2)}€
+                {selected.result.toFixed(2)}\u20AC
               </span>
             </div>
             <button
@@ -1515,6 +2492,14 @@ export default function ReplayPage() {
           </div>
         </>
       )}
+
+      {/* Inline animation keyframes */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

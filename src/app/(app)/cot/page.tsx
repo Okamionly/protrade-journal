@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Chart, registerables } from "chart.js";
 import { fetchCotData, type CotParsed } from "@/lib/market/cot";
 import { COT_CONTRACTS, COT_CATEGORIES } from "@/lib/market/constants";
-import { RefreshCw, Search, TrendingUp, TrendingDown, ArrowLeft } from "lucide-react";
+import { RefreshCw, Search, TrendingUp, TrendingDown, ArrowLeft, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 import { useTheme } from "next-themes";
 
@@ -24,6 +24,41 @@ interface CotOverviewRow {
   sentiment: "bullish" | "bearish";
   sentimentTrend: "up" | "down" | "flat";
   change: number;
+  percentileRank: number; // 0-100, how current net compares to 52w history
+}
+
+type SignalLevel = "extreme" | "elevated" | "normal";
+
+function getSignalLevel(percentile: number): SignalLevel {
+  if (percentile >= 95 || percentile <= 5) return "extreme";
+  if (percentile >= 75 || percentile <= 25) return "elevated";
+  return "normal";
+}
+
+function getSignalStyle(level: SignalLevel): { badge: string; dot: string; label: string; rowBg: string } {
+  switch (level) {
+    case "extreme":
+      return {
+        badge: "bg-rose-500/20 text-rose-400 border border-rose-500/40",
+        dot: "bg-rose-500",
+        label: "Extrême",
+        rowBg: "bg-rose-500/[0.06]",
+      };
+    case "elevated":
+      return {
+        badge: "bg-amber-500/20 text-amber-400 border border-amber-500/40",
+        dot: "bg-amber-500",
+        label: "Élevé",
+        rowBg: "bg-amber-500/[0.04]",
+      };
+    default:
+      return {
+        badge: "bg-[--bg-secondary]/50 text-[--text-secondary] border border-[--border]",
+        dot: "bg-[--text-muted]",
+        label: "Normal",
+        rowBg: "",
+      };
+  }
 }
 
 export default function CotPage() {
@@ -51,7 +86,7 @@ export default function CotPage() {
       const keys = Object.keys(COT_CONTRACTS);
       const results = await Promise.allSettled(
         keys.map(async (key) => {
-          const data = await fetchCotData(key, 4);
+          const data = await fetchCotData(key, 52);
           return { key, data };
         })
       );
@@ -74,6 +109,11 @@ export default function CotPage() {
         const sentiment: "bullish" | "bearish" = netPosition >= 0 ? "bullish" : "bearish";
         const sentimentTrend = changeNet > 0 ? "up" : changeNet < 0 ? "down" : "flat";
 
+        // Compute percentile rank of current net position vs 52w history
+        const allNets = data.map((d) => d.nonCommNet).sort((a, b) => a - b);
+        const belowCount = allNets.filter((n) => n < netPosition).length;
+        const percentileRank = allNets.length > 1 ? (belowCount / (allNets.length - 1)) * 100 : 50;
+
         rows.push({
           key,
           name: contract.name,
@@ -86,6 +126,7 @@ export default function CotPage() {
           sentiment,
           sentimentTrend,
           change: prevNet !== 0 ? ((netPosition - prevNet) / Math.abs(prevNet)) * 100 : 0,
+          percentileRank: Math.round(percentileRank),
         });
       }
       setOverviewData(rows);
@@ -308,6 +349,94 @@ export default function CotPage() {
         </div>
       </div>
 
+      {/* COT Signals Section */}
+      {!loading && overviewData.length > 0 && (() => {
+        const signalRows = overviewData.filter((r) => getSignalLevel(r.percentileRank) !== "normal");
+        if (signalRows.length === 0) return null;
+        return (
+          <div className="glass rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              <h2 className="text-lg font-semibold">Signaux COT</h2>
+              <span className="text-xs text-[--text-muted] ml-2">{signalRows.length} positionnement(s) extrême(s)</span>
+            </div>
+            <p className="text-xs text-[--text-muted] mb-4">
+              Le <strong>%</strong> indique où se situe le positionnement actuel par rapport aux 52 dernières semaines.
+              Ex : <span className="text-rose-400">97%</span> = plus haut que 97% de l&apos;historique → signal de retournement potentiel.
+              <span className="text-rose-400 ml-2">● Extrême (&lt;5% ou &gt;95%)</span>
+              <span className="text-amber-400 ml-2">● Élevé (&lt;25% ou &gt;75%)</span>
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {signalRows
+                .sort((a, b) => {
+                  const aExt = getSignalLevel(a.percentileRank) === "extreme" ? 0 : 1;
+                  const bExt = getSignalLevel(b.percentileRank) === "extreme" ? 0 : 1;
+                  if (aExt !== bExt) return aExt - bExt;
+                  return Math.abs(b.percentileRank - 50) - Math.abs(a.percentileRank - 50);
+                })
+                .map((r) => {
+                  const level = getSignalLevel(r.percentileRank);
+                  const style = getSignalStyle(level);
+                  const isBullish = r.percentileRank > 50;
+                  const intensity = Math.abs(r.percentileRank - 50) * 2; // 0-100
+                  return (
+                    <button
+                      key={r.key}
+                      onClick={() => openDetail(r.key)}
+                      className={`flex flex-col gap-2 p-3 rounded-xl text-left transition hover:scale-[1.02] cursor-pointer ${style.badge}`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <span>{level === "extreme" ? "\uD83D\uDD34" : "\uD83D\uDFE1"}</span>
+                          <span className="font-bold text-sm">{r.key}</span>
+                          <span className="text-[10px] opacity-80">{r.name}</span>
+                        </div>
+                        <span className={`text-xs font-mono font-bold ${isBullish ? "text-emerald-400" : "text-rose-400"}`}>
+                          {isBullish ? "▲" : "▼"} {r.percentileRank}%
+                        </span>
+                      </div>
+                      {/* Gauge bar */}
+                      <div className="w-full h-3 rounded-full bg-[--bg-secondary]/60 overflow-hidden relative">
+                        <div className="absolute inset-0 flex">
+                          <div className="w-1/2 flex justify-end">
+                            {!isBullish && (
+                              <div
+                                className="h-full rounded-l-full bg-gradient-to-l from-rose-500/80 to-rose-600/40 transition-all duration-700"
+                                style={{ width: `${intensity}%` }}
+                              />
+                            )}
+                          </div>
+                          <div className="w-px bg-[--text-muted]/30 z-10" />
+                          <div className="w-1/2">
+                            {isBullish && (
+                              <div
+                                className="h-full rounded-r-full bg-gradient-to-r from-emerald-500/80 to-emerald-600/40 transition-all duration-700"
+                                style={{ width: `${intensity}%` }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-[9px] opacity-60">
+                        <span>Baissier</span>
+                        <span>{style.label}</span>
+                        <span>Haussier</span>
+                      </div>
+                      {/* Net position change */}
+                      <div className="flex items-center gap-2 text-[10px] opacity-70">
+                        <span>Net: {r.netPosition > 0 ? "+" : ""}{(r.netPosition / 1000).toFixed(1)}K</span>
+                        <span className={r.change > 0 ? "text-emerald-400" : r.change < 0 ? "text-rose-400" : ""}>
+                          {r.change > 0 ? "+" : ""}{r.change.toFixed(1)}% vs sem. préc.
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        );
+      })()}
+
       {error && <div className="glass rounded-xl p-4 text-rose-400 text-sm">{error}</div>}
 
       {loading ? (
@@ -324,6 +453,7 @@ export default function CotPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[--text-secondary] border-b border-[--border] text-xs uppercase tracking-wider">
+                  <th className="px-4 py-3">Signal</th>
                   <th className="px-4 py-3">{t("symbol")}</th>
                   <th className="px-4 py-3">{t("cotName")}</th>
                   <th className="px-4 py-3">{t("cotCategory")}</th>
@@ -339,10 +469,20 @@ export default function CotPage() {
               <tbody>
                 {filteredRows.map((r) => {
                   const changePct = r.change;
+                  const signalLevel = getSignalLevel(r.percentileRank);
+                  const signalStyle = getSignalStyle(signalLevel);
                   return (
                     <tr key={r.key}
                       onClick={() => openDetail(r.key)}
-                      className="border-b border-[--border-subtle]/50 hover:bg-[var(--bg-hover)] cursor-pointer transition">
+                      className={`border-b border-[--border-subtle]/50 hover:bg-[var(--bg-hover)] cursor-pointer transition ${signalStyle.rowBg}`}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2.5 h-2.5 rounded-full ${signalStyle.dot}`} />
+                          {signalLevel !== "normal" && (
+                            <span className="text-[10px] text-[--text-muted] mono" title={`Percentile 52 sem. : positionnement supérieur à ${r.percentileRank}% de l'historique`}>{r.percentileRank}%</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3 font-bold text-[--text-primary]">{r.key}</td>
                       <td className="px-4 py-3 text-[--text-secondary] text-xs">{r.name}</td>
                       <td className="px-4 py-3">

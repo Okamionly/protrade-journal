@@ -11,10 +11,17 @@ import {
   Calendar,
   DollarSign,
   Clock,
+  Save,
+  BookmarkCheck,
+  Trash2,
+  TrendingUp,
 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 import { useAdvancedFilters } from "@/hooks/useAdvancedFilters";
+import type { FilterPreset } from "@/hooks/useAdvancedFilters";
 import type { Trade } from "@/hooks/useTrades";
+
+export type { AdvancedFilters as FilterState } from "@/hooks/useAdvancedFilters";
 
 interface AdvancedFiltersProps {
   trades: Trade[];
@@ -99,8 +106,26 @@ function MultiSelect({
 
 export function AdvancedFilters({ trades }: AdvancedFiltersProps) {
   const { t } = useTranslation();
-  const { filters, setFilter, resetAll, activeFilterCount, EMOTION_OPTIONS } = useAdvancedFilters();
+  const {
+    filters, setFilter, resetAll, activeFilterCount, EMOTION_OPTIONS,
+    presets, savePreset, deletePreset, loadPreset,
+  } = useAdvancedFilters();
   const [expanded, setExpanded] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [showPresetMenu, setShowPresetMenu] = useState(false);
+  const presetMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close preset menu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (presetMenuRef.current && !presetMenuRef.current.contains(e.target as Node)) {
+        setShowPresetMenu(false);
+      }
+    };
+    if (showPresetMenu) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showPresetMenu]);
 
   // Derive unique values from trades
   const uniqueAssets = useMemo(() => [...new Set(trades.map((t) => t.asset))].sort(), [trades]);
@@ -114,10 +139,22 @@ export function AdvancedFilters({ trades }: AdvancedFiltersProps) {
     return [...new Set([...EMOTION_OPTIONS, ...fromTrades])].sort();
   }, [trades, EMOTION_OPTIONS]);
 
+  const handleSavePreset = () => {
+    if (!presetName.trim()) return;
+    savePreset(presetName.trim());
+    setPresetName("");
+    setShowSaveModal(false);
+  };
+
+  const handleLoadPreset = (preset: FilterPreset) => {
+    loadPreset(preset);
+    setShowPresetMenu(false);
+  };
+
   return (
     <div className="mb-6">
       {/* Toggle bar */}
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
         <button
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition relative"
@@ -142,6 +179,72 @@ export function AdvancedFilters({ trades }: AdvancedFiltersProps) {
             onChange={(e) => setFilter("search", e.target.value)}
             className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg pl-10 pr-4 py-2 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:border-cyan-500/50 focus:outline-none transition"
           />
+        </div>
+
+        {/* Preset dropdown */}
+        <div className="relative" ref={presetMenuRef}>
+          <button
+            onClick={() => setShowPresetMenu(!showPresetMenu)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition"
+            title="Filtres enregistres"
+          >
+            <BookmarkCheck className="w-4 h-4" />
+            <span className="hidden sm:inline">Presets</span>
+            {presets.length > 0 && (
+              <span className="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded-full font-bold">
+                {presets.length}
+              </span>
+            )}
+            <ChevronDown className={`w-3.5 h-3.5 text-[--text-muted] transition ${showPresetMenu ? "rotate-180" : ""}`} />
+          </button>
+          {showPresetMenu && (
+            <div className="absolute z-50 top-full mt-1 right-0 w-64 rounded-xl border border-[--border] bg-[--bg-card] shadow-2xl backdrop-blur-xl overflow-hidden">
+              {presets.length === 0 ? (
+                <div className="px-4 py-3 text-xs text-[--text-muted] text-center">
+                  Aucun preset enregistre
+                </div>
+              ) : (
+                <div className="max-h-60 overflow-y-auto">
+                  {presets.map((preset) => (
+                    <div
+                      key={preset.id}
+                      className="flex items-center gap-2 px-3 py-2.5 hover:bg-[--bg-hover] transition group"
+                    >
+                      <button
+                        onClick={() => handleLoadPreset(preset)}
+                        className="flex-1 text-left text-sm text-[--text-primary] truncate"
+                      >
+                        {preset.name}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deletePreset(preset.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-300 transition p-1"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="border-t border-[--border]">
+                <button
+                  onClick={() => {
+                    setShowPresetMenu(false);
+                    setShowSaveModal(true);
+                  }}
+                  disabled={activeFilterCount === 0}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-cyan-400 hover:bg-cyan-500/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  Sauvegarder le filtre actuel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {activeFilterCount > 0 && (
@@ -290,6 +393,40 @@ export function AdvancedFilters({ trades }: AdvancedFiltersProps) {
               />
             </div>
 
+            {/* Min RR */}
+            <div>
+              <label className="flex items-center gap-1 text-xs text-[--text-muted] mb-1">
+                <TrendingUp className="w-3 h-3" />
+                Min R:R
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={filters.minRR}
+                onChange={(e) => setFilter("minRR", e.target.value)}
+                placeholder="0"
+                className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:border-cyan-500/50 focus:outline-none transition"
+              />
+            </div>
+
+            {/* Max RR */}
+            <div>
+              <label className="flex items-center gap-1 text-xs text-[--text-muted] mb-1">
+                <TrendingUp className="w-3 h-3" />
+                Max R:R
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={filters.maxRR}
+                onChange={(e) => setFilter("maxRR", e.target.value)}
+                placeholder="0"
+                className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:border-cyan-500/50 focus:outline-none transition"
+              />
+            </div>
+
             {/* Session */}
             <div>
               <label className="flex items-center gap-1 text-xs text-[--text-muted] mb-1">
@@ -331,11 +468,60 @@ export function AdvancedFilters({ trades }: AdvancedFiltersProps) {
               {filters.tags.map((tg) => (
                 <FilterTag key={`t-${tg}`} label={`#${tg}`} onRemove={() => setFilter("tags", filters.tags.filter((x) => x !== tg))} />
               ))}
+              {filters.minRR && (
+                <FilterTag label={`Min R:R ${filters.minRR}`} onRemove={() => setFilter("minRR", "")} />
+              )}
+              {filters.maxRR && (
+                <FilterTag label={`Max R:R ${filters.maxRR}`} onRemove={() => setFilter("maxRR", "")} />
+              )}
               {filters.session !== "ALL" && (
                 <FilterTag label={filters.session} onRemove={() => setFilter("session", "ALL")} />
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Save preset modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="glass rounded-2xl p-6 max-w-sm w-full border border-[--border] shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold flex items-center gap-2 text-[--text-primary]">
+                <Save className="w-5 h-5 text-cyan-400" />
+                Sauvegarder le filtre
+              </h3>
+              <button onClick={() => setShowSaveModal(false)} className="text-[--text-muted] hover:text-[--text-primary] transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <input
+              type="text"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSavePreset()}
+              placeholder="Nom du preset..."
+              maxLength={50}
+              autoFocus
+              className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-xl px-4 py-2.5 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:outline-none focus:border-cyan-500/50 transition mb-4"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSavePreset}
+                disabled={!presetName.trim()}
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Sauvegarder
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -366,27 +366,50 @@ export default function DashboardPage() {
             {monthlyGoal > 0 ? t("editGoal") : t("setGoal")}
           </button>
         </div>
-        {monthlyGoal > 0 ? (
-          <>
-            <div className="flex justify-between text-sm mb-2">
-              <span className={monthlyPnL >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                {monthlyPnL >= 0 ? "+" : ""}{monthlyPnL.toFixed(2)}
-              </span>
-              <span className="text-[--text-muted]">{t("goalLabel")} {monthlyGoal.toFixed(2)}</span>
-            </div>
-            <div className="h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${monthlyPnL >= monthlyGoal ? "bg-emerald-500" : monthlyPnL >= 0 ? "bg-blue-500" : "bg-rose-500"}`}
-                style={{ width: `${Math.max(goalProgress, 0)}%` }}
-              />
-            </div>
-            <p className="text-xs text-[--text-muted] mt-1">
-              {monthlyTrades.length === 0
-                ? t("noTradesThisMonth")
-                : `${goalProgress.toFixed(1)}% ${t("goalProgress")} -- ${monthlyTrades.length} trade${monthlyTrades.length > 1 ? "s" : ""}`}
-            </p>
-          </>
-        ) : (
+        {monthlyGoal > 0 ? (() => {
+          const remaining = monthlyGoal - monthlyPnL;
+          const daysLeft = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate();
+          const dailyNeeded = daysLeft > 0 ? remaining / daysLeft : remaining;
+          const onTrack = monthlyPnL >= (monthlyGoal * (new Date().getDate() / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()));
+          const goalReached = monthlyPnL >= monthlyGoal;
+          return (
+            <>
+              <div className="flex justify-between text-sm mb-2">
+                <span className={monthlyPnL >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                  {monthlyPnL >= 0 ? "+" : ""}{monthlyPnL.toFixed(2)}€
+                </span>
+                <span className="text-[--text-muted]">{t("goalLabel")} {monthlyGoal.toFixed(2)}€</span>
+              </div>
+              <div className="h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${goalReached ? "bg-emerald-500" : monthlyPnL >= 0 ? "bg-blue-500" : "bg-rose-500"}`}
+                  style={{ width: `${Math.max(goalProgress, 0)}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-[--text-muted]">
+                  {monthlyTrades.length === 0
+                    ? t("noTradesThisMonth")
+                    : `${goalProgress.toFixed(1)}% — ${monthlyTrades.length} trade${monthlyTrades.length > 1 ? "s" : ""}`}
+                </p>
+                {!goalReached && remaining > 0 ? (
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${onTrack ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>
+                    {onTrack ? "En avance" : `${remaining.toFixed(0)}€ restants`}
+                  </span>
+                ) : goalReached ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
+                    Objectif atteint !
+                  </span>
+                ) : null}
+              </div>
+              {!goalReached && remaining > 0 && daysLeft > 0 && (
+                <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
+                  ~{dailyNeeded.toFixed(0)}€/jour nécessaires • {daysLeft} jours restants
+                </p>
+              )}
+            </>
+          );
+        })() : (
           <p className="text-[--text-muted] text-sm">{t("noTradesThisMonth")}</p>
         )}
       </div>

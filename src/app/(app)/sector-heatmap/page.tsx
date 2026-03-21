@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { RefreshCw, BarChart3, AlertTriangle, X, Clock, Globe } from "lucide-react";
+import { RefreshCw, BarChart3, AlertTriangle, X, Clock, Globe, TrendingUp, TrendingDown, Info } from "lucide-react";
 
 interface SectorStock {
   symbol: string;
@@ -113,6 +113,7 @@ function isMarketHours(): boolean {
 
 export default function SectorHeatmapPage() {
   const [quotes, setQuotes] = useState<Record<string, StockQuote>>({});
+  const [previousQuotes, setPreviousQuotes] = useState<Record<string, StockQuote>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [usingFallback, setUsingFallback] = useState(false);
@@ -166,7 +167,12 @@ export default function SectorHeatmapPage() {
               changepct: data.changepct?.[idx] || 0,
             };
           });
-          setQuotes(newQuotes);
+          setQuotes((currentQuotes) => {
+            if (Object.keys(currentQuotes).length > 0) {
+              setPreviousQuotes({ ...currentQuotes });
+            }
+            return newQuotes;
+          });
           setLastUpdated(new Date());
         }
       } else {
@@ -238,6 +244,29 @@ export default function SectorHeatmapPage() {
   });
 
   const displaySectors = selectedSector ? sectorPerf.filter((s) => s.name === selectedSector) : sectorPerf;
+
+  // Momentum indicator: compare current changepct vs previous period
+  const getMomentumIndicator = (symbol: string): { label: string; color: string } | null => {
+    const current = quotes[symbol]?.changepct;
+    const previous = previousQuotes[symbol]?.changepct;
+    if (current === undefined || previous === undefined) return null;
+    const diff = current - previous;
+    if (diff > 1) return { label: "\u25B2\u25B2", color: "text-emerald-300" }; // strong up
+    if (diff > 0.2) return { label: "\u25B2", color: "text-emerald-400" }; // moderate up
+    if (diff < -0.2) return { label: "\u25BC", color: "text-rose-400" }; // declining
+    return null;
+  };
+
+  // Market Breadth calculation
+  const hasSectorData = Object.keys(quotes).length > 0;
+  const positiveSectors = sectorPerf.filter((s) => s.avg >= 0).length;
+  const negativeSectors = sectorPerf.filter((s) => s.avg < 0).length;
+  const totalSectors = sectorPerf.length;
+  const breadthRatio = totalSectors > 0 ? positiveSectors / totalSectors : 0;
+  // Key sectors are Technology, Finance, Consumer - divergence if most are up but these key ones are down
+  const keySectorNames = ["Technology", "Finance", "Consumer"];
+  const keySectorsDown = sectorPerf.filter((s) => keySectorNames.includes(s.name) && s.avg < 0);
+  const hasBreadthDivergence = breadthRatio >= 0.6 && keySectorsDown.length >= 2;
 
   // Group global data by region
   const globalByRegion = globalData.reduce<Record<string, GlobalMarketEntry[]>>((acc, entry) => {
@@ -397,6 +426,39 @@ export default function SectorHeatmapPage() {
         </div>
       )}
 
+      {/* Market Breadth Summary */}
+      {hasSectorData && (
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-cyan-400" />
+              <h3 className="font-semibold text-[--text-primary] text-sm">Market Breadth</h3>
+            </div>
+            <span className={`text-sm font-medium ${breadthRatio >= 0.5 ? "text-emerald-400" : "text-rose-400"}`}>
+              {positiveSectors}/{totalSectors} secteurs en hausse
+            </span>
+          </div>
+          <div className="w-full h-3 bg-[--bg-secondary]/50 rounded-full overflow-hidden mb-2">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${breadthRatio >= 0.5 ? "bg-emerald-500" : "bg-rose-500"}`}
+              style={{ width: `${breadthRatio * 100}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-xs text-[--text-muted]">
+            <span>{negativeSectors} en baisse</span>
+            <span>{positiveSectors} en hausse</span>
+          </div>
+          {hasBreadthDivergence && (
+            <div className="mt-3 flex items-center gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25">
+              <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <span className="text-xs font-medium text-amber-400">
+                Divergence de breadth — Secteurs clés ({keySectorsDown.map(s => s.name).join(", ")}) en baisse malgré une majorité de secteurs positifs
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Sector Pills */}
       <div className="flex flex-wrap gap-2">
         <button
@@ -449,14 +511,34 @@ export default function SectorHeatmapPage() {
                 {stocks.map((stock) => {
                   const q = quotes[stock.symbol];
                   const pct = q?.changepct || 0;
+                  const momentum = getMomentumIndicator(stock.symbol);
                   return (
                     <div
                       key={stock.symbol}
-                      className={`${getColor(pct)} rounded-xl p-3 flex flex-col justify-between transition-transform hover:scale-105 cursor-default`}
+                      className={`${getColor(pct)} rounded-xl p-3 flex flex-col justify-between transition-transform hover:scale-105 cursor-default relative group`}
                       style={{ minHeight: `${60 + stock.marketCap * 0.15}px` }}
                     >
                       <div>
-                        <p className={`text-sm font-bold ${getTextColor(pct)}`}>{stock.symbol}</p>
+                        <div className="flex items-center justify-between">
+                          <p className={`text-sm font-bold ${getTextColor(pct)}`}>{stock.symbol}</p>
+                          <div className="flex items-center gap-1">
+                            {momentum && (
+                              <span className={`text-xs font-bold ${momentum.color}`} title="Momentum vs période précédente">
+                                {momentum.label}
+                              </span>
+                            )}
+                            {/* Volume context badge - no volume data available from API */}
+                            <span className="relative">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-[--text-muted] cursor-help flex items-center gap-0.5">
+                                <Info className="w-2.5 h-2.5" />
+                                Vol
+                              </span>
+                              <span className="absolute bottom-full right-0 mb-1 hidden group-hover:block w-36 p-1.5 rounded-lg bg-[--bg-primary] border border-[--border-subtle] text-[10px] text-[--text-muted] shadow-lg z-10 text-center">
+                                Volume non disponible — confirmez le volume sur votre broker
+                              </span>
+                            </span>
+                          </div>
+                        </div>
                         <p className={`text-xs opacity-80 ${getTextColor(pct)}`}>{stock.name}</p>
                       </div>
                       <div>
@@ -484,6 +566,8 @@ export default function SectorHeatmapPage() {
                 <th className="text-left text-xs font-semibold text-[--text-muted] p-4">Secteur</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Prix</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Change %</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4">Momentum</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4">Volume</th>
                 <th className="text-left text-xs font-semibold text-[--text-muted] p-4">Performance</th>
               </tr>
             </thead>
@@ -491,6 +575,7 @@ export default function SectorHeatmapPage() {
               {displaySectors.flatMap(({ stocks }) => stocks).sort((a, b) => (quotes[b.symbol]?.changepct || 0) - (quotes[a.symbol]?.changepct || 0)).map((stock) => {
                 const q = quotes[stock.symbol];
                 const pct = q?.changepct || 0;
+                const momentum = getMomentumIndicator(stock.symbol);
                 return (
                   <tr key={stock.symbol} className="border-b border-[--border-subtle] hover:bg-[--bg-hover]">
                     <td className="p-4">
@@ -502,6 +587,18 @@ export default function SectorHeatmapPage() {
                     <td className="p-4 text-right">
                       <span className={`text-sm font-medium px-2 py-1 rounded-lg ${pct >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
                         {pct >= 0 ? "+" : ""}{pct.toFixed(2)}%
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      {momentum ? (
+                        <span className={`text-sm font-bold ${momentum.color}`}>{momentum.label}</span>
+                      ) : (
+                        <span className="text-xs text-[--text-muted]">--</span>
+                      )}
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-[--text-muted] cursor-help" title="Volume non disponible — confirmez sur votre broker">
+                        N/A
                       </span>
                     </td>
                     <td className="p-4">

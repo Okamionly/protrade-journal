@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+export type BadgeRarity = "common" | "rare" | "epic" | "legendary";
+
 export interface Badge {
   id: string;
   name: string;
@@ -13,6 +15,9 @@ export interface Badge {
   target: number;
   unlocked: boolean;
   xpReward: number;
+  rarity: BadgeRarity;
+  unlockedAt: string | null;
+  percentOwned: number;
 }
 
 export interface DailyQuest {
@@ -44,6 +49,9 @@ export interface GamificationData {
     consecutiveTradeDays: number;
     totalMessages: number;
     biasDaysFilled: number;
+    totalProfit: number;
+    profitableMonths: number;
+    loginStreak: number;
   };
 }
 

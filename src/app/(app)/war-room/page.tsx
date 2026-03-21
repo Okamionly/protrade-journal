@@ -939,7 +939,7 @@ export default function WarRoomPage() {
 
   useEffect(() => {
     fetchPrices();
-    const interval = setInterval(fetchPrices, 5 * 60 * 1000); // 5 minutes
+    const interval = setInterval(fetchPrices, 30 * 1000); // 30 seconds
     return () => clearInterval(interval);
   }, [fetchPrices]);
 
@@ -1243,26 +1243,37 @@ export default function WarRoomPage() {
       </div>
 
       {/* ═══ LIVE PRICE TICKER ═══ */}
-      {livePrices && (
-        <div className="glass rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-          <div className="flex gap-0 overflow-x-auto py-2 px-1" style={{ scrollbarWidth: "none" }}>
-            {[...livePrices.forex.slice(0, 6), ...livePrices.crypto, ...livePrices.commodities.slice(0, 1)].map((item) => (
-              <div key={item.symbol} className="flex items-center gap-2 px-3 flex-shrink-0"
-                style={{ borderRight: "1px solid var(--border)" }}>
-                <span className="text-[10px] font-semibold mono" style={{ color: "var(--text-primary)" }}>
-                  {item.symbol}
-                </span>
-                <span className="text-[10px] mono font-bold" style={{ color: "var(--text-primary)" }}>
-                  {item.price > 100 ? item.price.toFixed(2) : item.price > 10 ? item.price.toFixed(3) : item.price.toFixed(4)}
-                </span>
-                <span className="text-[9px] mono font-semibold" style={{ color: item.change >= 0 ? "#22c55e" : "#ef4444" }}>
-                  {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
-                </span>
-              </div>
-            ))}
+      {livePrices && (() => {
+        const tickerItems = [
+          ...livePrices.forex.slice(0, 6),
+          ...livePrices.indices.slice(0, 4),
+          ...livePrices.crypto,
+          ...livePrices.commodities.slice(0, 2),
+        ];
+        return (
+          <div className="glass rounded-xl overflow-hidden relative" style={{ border: "1px solid var(--border)" }}>
+            <div className="ticker-scroll flex py-2">
+              {[...tickerItems, ...tickerItems].map((item, i) => (
+                <div key={`${item.symbol}-${i}`} className="flex items-center gap-2 px-4 flex-shrink-0"
+                  style={{ borderRight: "1px solid var(--border)" }}>
+                  <span className="text-[10px] font-semibold mono" style={{ color: "var(--text-primary)" }}>
+                    {item.symbol}
+                  </span>
+                  <span className="text-[10px] mono font-bold" style={{ color: "var(--text-primary)" }}>
+                    {item.price > 100 ? item.price.toFixed(2) : item.price > 10 ? item.price.toFixed(3) : item.price.toFixed(5)}
+                  </span>
+                  <span className="text-[9px] mono font-bold px-1.5 py-0.5 rounded" style={{
+                    color: item.change >= 0 ? "#22c55e" : "#ef4444",
+                    background: item.change >= 0 ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                  }}>
+                    {item.change >= 0 ? "▲" : "▼"} {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ═══ BREAKING NEWS TICKER ═══ */}
       <CollapsibleSection title="Breaking News" icon={Newspaper} sectionKey="news-ticker"
@@ -1425,6 +1436,90 @@ export default function WarRoomPage() {
           </div>
         </div>
       </div>
+
+      {/* ═══ TODAY'S PNL SUMMARY BY ASSET ═══ */}
+      {todayTrades.length > 0 && (() => {
+        // Group today's trades by asset
+        const assetMap: Record<string, { trades: number; wins: number; pnl: number; avgRR: number }> = {};
+        todayTrades.forEach(t => {
+          const a = t.asset || "N/A";
+          if (!assetMap[a]) assetMap[a] = { trades: 0, wins: 0, pnl: 0, avgRR: 0 };
+          assetMap[a].trades++;
+          assetMap[a].pnl += t.result;
+          if (t.result > 0) assetMap[a].wins++;
+          assetMap[a].avgRR += calcRR(t);
+        });
+        Object.values(assetMap).forEach(v => { if (v.trades > 0) v.avgRR /= v.trades; });
+        const sortedAssets = Object.entries(assetMap).sort((a, b) => b[1].pnl - a[1].pnl);
+
+        // Session breakdown
+        const sessionPnl: Record<string, { pnl: number; trades: number; wins: number }> = {};
+        todayTrades.forEach(t => {
+          const h = new Date(t.date).getUTCHours();
+          let sess = "Other";
+          if (h >= 0 && h < 8) sess = "Asia";
+          else if (h >= 8 && h < 13) sess = "London";
+          else if (h >= 13 && h < 17) sess = "NY AM";
+          else if (h >= 17 && h < 21) sess = "NY PM";
+          if (!sessionPnl[sess]) sessionPnl[sess] = { pnl: 0, trades: 0, wins: 0 };
+          sessionPnl[sess].pnl += t.result;
+          sessionPnl[sess].trades++;
+          if (t.result > 0) sessionPnl[sess].wins++;
+        });
+
+        return (
+          <CollapsibleSection title="Résumé du Jour" icon={BarChart3} sectionKey="daily-summary">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* By Asset */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Par Asset</h4>
+                <div className="space-y-1.5">
+                  {sortedAssets.map(([asset, data]) => (
+                    <div key={asset} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: "var(--bg-hover)" }}>
+                      <span className="text-xs font-bold w-20 truncate" style={{ color: "var(--text-primary)" }}>{asset}</span>
+                      <span className={`text-xs font-bold mono flex-1 ${data.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(2)}€
+                      </span>
+                      <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                        {data.wins}W/{data.trades - data.wins}L
+                      </span>
+                      <span className="text-[10px] mono" style={{ color: data.avgRR >= 1 ? "#10b981" : "#f59e0b" }}>
+                        {data.avgRR.toFixed(1)}R
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* By Session */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Par Session</h4>
+                <div className="space-y-1.5">
+                  {Object.entries(sessionPnl).sort((a, b) => b[1].pnl - a[1].pnl).map(([sess, data]) => {
+                    const wr = data.trades > 0 ? (data.wins / data.trades) * 100 : 0;
+                    const maxPnl = Math.max(...Object.values(sessionPnl).map(s => Math.abs(s.pnl)), 1);
+                    const barW = (Math.abs(data.pnl) / maxPnl) * 100;
+                    return (
+                      <div key={sess} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: "var(--bg-hover)" }}>
+                        <span className="text-xs font-medium w-16" style={{ color: "var(--text-primary)" }}>{sess}</span>
+                        <div className="flex-1 h-5 rounded overflow-hidden relative" style={{ background: "var(--bg-secondary)" }}>
+                          <div className={`h-full rounded ${data.pnl >= 0 ? "bg-emerald-500/40" : "bg-rose-500/40"}`} style={{ width: `${Math.max(barW, 5)}%` }} />
+                          <span className={`absolute inset-0 flex items-center px-2 text-[10px] font-bold mono ${data.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                            {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(0)}€
+                          </span>
+                        </div>
+                        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                          {data.trades}t • {wr.toFixed(0)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </CollapsibleSection>
+        );
+      })()}
 
       {/* ═══ RISK DASHBOARD MINI ═══ */}
       <CollapsibleSection title="Tableau de Risque" icon={Shield} sectionKey="risk-dashboard">
