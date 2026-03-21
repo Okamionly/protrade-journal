@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useTheme } from "next-themes";
 import { useTrades, Trade } from "@/hooks/useTrades";
-import { calculateRR } from "@/lib/utils";
+
 import {
   FlaskConical, SlidersHorizontal, TrendingUp, TrendingDown,
   ArrowUpRight, ArrowDownRight, Lightbulb, Zap, Target,
@@ -82,6 +82,7 @@ function simulateTrades(trades: Trade[], config: SimConfig): Trade[] {
   // SL modifier: adjust result proportionally
   if (config.slModifier !== 0) {
     filtered = filtered.map((t) => {
+      if (!t.sl || t.sl === 0) return t;
       const risk = Math.abs(t.entry - t.sl);
       const newRisk = risk * (1 + config.slModifier / 100);
       const newSl = t.direction === "LONG" ? t.entry - newRisk : t.entry + newRisk;

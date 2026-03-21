@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useTrades, Trade } from "@/hooks/useTrades";
 import {
   Grid3x3,
@@ -99,7 +99,7 @@ export default function CorrelationPage() {
   );
 
   // Initialize chart pair selection when assets load
-  useMemo(() => {
+  useEffect(() => {
     if (assets.length >= 2 && !chartPairA && !chartPairB) {
       setChartPairA(assets[0]);
       setChartPairB(assets[1]);

@@ -402,7 +402,7 @@ export default function ComparePage() {
         </div>
         <div className="space-y-2">
           {takeaways.map((tip, i) => {
-            const isPositive = tip.includes("augmenté") || tip.includes("amélioré") || tip.includes("hausse") || tip.includes("Meilleure");
+            const isPositive = tip.includes("augmenté") || tip.includes("amélioré") || tip.includes("hausse") || tip.includes("Meilleure") || tip.includes("increased") || tip.includes("improved") || tip.includes("better") || tip.includes("higher") || tip.includes("+");
             const icon = isPositive
               ? <TrendingUp size={14} style={{ color: "#10b981" }} />
               : <TrendingDown size={14} style={{ color: "#ef4444" }} />;

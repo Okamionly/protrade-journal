@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useUser } from "@/hooks/useTrades";
 import { Calculator, DollarSign, Target, Shield, TrendingUp, AlertTriangle, Percent, BarChart3 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
@@ -38,13 +38,17 @@ export default function CalculatorPage() {
   const [instrument, setInstrument] = useState<Instrument>("forex");
 
   // Sync capital when user loads
-  useState(() => { if (user?.balance) setCapital(user.balance); });
+  useEffect(() => { if (user?.balance) setCapital(user.balance); }, [user?.balance]);
 
-  const pipMultiplier = instrument === "forex" ? 10000 : 1;
+  const pipMultiplier = instrument === "forex"
+    ? (typeof entryPrice === "number" && entryPrice > 0 && entryPrice < 1 ? 10000 :
+       typeof entryPrice === "number" && entryPrice >= 1 && entryPrice < 200 ? 10000 :
+       typeof entryPrice === "number" && entryPrice >= 200 ? 100 : 10000) // JPY pairs have prices >100
+    : 1;
   const pipValue = PIP_VALUES[instrument];
 
   const results = useMemo(() => {
-    if (!entryPrice || !stopLoss || entryPrice === stopLoss) return null;
+    if (entryPrice === "" || stopLoss === "" || entryPrice === stopLoss) return null;
 
     const entry = Number(entryPrice);
     const sl = Number(stopLoss);
@@ -68,7 +72,7 @@ export default function CalculatorPage() {
   }, [capital, riskPercent, entryPrice, stopLoss, takeProfit, instrument, pipMultiplier, pipValue]);
 
   const quickRiskTable = useMemo(() => {
-    if (!entryPrice || !stopLoss || entryPrice === stopLoss) return null;
+    if (entryPrice === "" || stopLoss === "" || entryPrice === stopLoss) return null;
     const entry = Number(entryPrice);
     const sl = Number(stopLoss);
     const slDistance = Math.abs(entry - sl) * pipMultiplier;

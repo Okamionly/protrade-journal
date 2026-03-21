@@ -205,7 +205,7 @@ export default function ImportPage() {
     return reverseMap;
   }, [mapping]);
 
-  const requiredMapped = mappedFields["date"] && mappedFields["direction"];
+  const requiredMapped = mappedFields["date"] && mappedFields["direction"] && mappedFields["asset"];
 
   /* Preview rows */
   const previewRows = useMemo(() => {
