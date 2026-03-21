@@ -324,15 +324,15 @@ export function Sidebar() {
         mobileOpen ? "flex" : "hidden md:flex"
       }`}
     >
-      {/* Logo area */}
-      <div className="flex items-center h-16 px-3 border-b border-gray-200 dark:border-gray-800">
+      {/* Logo area — click to go to dashboard */}
+      <Link href="/dashboard" className="flex items-center h-16 px-3 border-b border-gray-200 dark:border-gray-800 hover:opacity-80 transition-opacity">
         <Image src="/logo-icon.png" alt="MarketPhase" width={44} height={44} className="w-11 h-11 rounded-xl flex-shrink-0" />
         {!collapsed && (
           <span className="ml-2.5 text-lg font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent whitespace-nowrap">
             MarketPhase
           </span>
         )}
-      </div>
+      </Link>
 
       {/* Nav items */}
       <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto scrollbar-thin">

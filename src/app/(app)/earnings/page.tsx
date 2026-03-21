@@ -211,44 +211,43 @@ export default function EarningsCalendarPage() {
               </div>
             </div>
 
-            {/* Week Grid — Vertical layout */}
-            <div className="space-y-4">
+            {/* Week Grid — Clean vertical layout */}
+            <div className="space-y-3">
               {weekDays.map((day) => {
                 const dateStr = day.toISOString().split("T")[0];
                 const dayEarnings = earningsByDate[dateStr] || [];
                 const isToday = day.toDateString() === today.toDateString();
 
                 return (
-                  <div key={dateStr} className={`rounded-xl border p-4 ${isToday ? "ring-2 ring-cyan-400/50 border-cyan-500/30" : "border-[--border-subtle]"}`}>
-                    <div className="flex items-center justify-between mb-3">
+                  <div key={dateStr} className={`rounded-xl p-4 transition-colors ${isToday ? "bg-cyan-500/8 border border-cyan-500/25" : "bg-[--bg-secondary]/30 border border-[--border-subtle]"}`}>
+                    <div className="flex items-center justify-between mb-2">
                       <p className={`text-sm font-semibold ${isToday ? "text-cyan-400" : "text-[--text-primary]"}`}>
                         {day.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}
+                        {isToday && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">{t("today")}</span>}
                       </p>
-                      <span className="text-xs text-[--text-muted]">{dayEarnings.length} {dayEarnings.length !== 1 ? t("results") : t("result")}</span>
+                      <span className="text-[11px] text-[--text-muted]">{dayEarnings.length} {dayEarnings.length !== 1 ? t("results") : t("result")}</span>
                     </div>
                     {dayEarnings.length === 0 ? (
-                      <p className="text-xs text-[--text-muted] py-2">{t("noEarningsThisDay")}</p>
+                      <p className="text-xs text-[--text-muted] py-1 italic">{t("noEarningsThisDay")}</p>
                     ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {dayEarnings.map((e, idx) => {
                           const isTraded = tradedSymbols.has(e.symbol);
                           return (
-                            <div key={`${e.symbol}-${e.hour}-${idx}`} className={`p-3 rounded-lg text-xs ${isTraded ? "bg-amber-500/15 border border-amber-500/30" : "bg-[--bg-secondary]/50"}`}>
-                              <div className="flex items-center justify-between gap-1 mb-1">
-                                <span className="font-bold text-[--text-primary]">{e.symbol}</span>
-                                {TIME_LABELS[e.hour] && (
-                                  <span className={`px-1.5 py-0.5 rounded text-[10px] flex-shrink-0 ${TIME_LABELS[e.hour].color}`}>
-                                    {e.hour.toUpperCase()}
-                                  </span>
-                                )}
-                              </div>
+                            <div key={`${e.symbol}-${e.hour}-${idx}`} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs ${isTraded ? "bg-amber-500/15 border border-amber-500/30" : "bg-[--bg-card]/60 border border-[--border-subtle]"}`}>
+                              <span className="font-bold text-[--text-primary]">{e.symbol}</span>
+                              {TIME_LABELS[e.hour] && (
+                                <span className={`px-1 py-0.5 rounded text-[9px] ${TIME_LABELS[e.hour].color}`}>
+                                  {e.hour.toUpperCase()}
+                                </span>
+                              )}
                               {e.epsEstimate != null && (
-                                <p className="text-[--text-secondary]">EPS: ${e.epsEstimate}</p>
+                                <span className="text-[--text-muted] text-[10px]">${e.epsEstimate}</span>
                               )}
                               {e.epsActual != null && (
-                                <p className={`${e.epsActual >= (e.epsEstimate ?? 0) ? "text-emerald-400" : "text-rose-400"}`}>
-                                  Actual: ${e.epsActual}
-                                </p>
+                                <span className={`text-[10px] font-semibold ${e.epsActual >= (e.epsEstimate ?? 0) ? "text-emerald-400" : "text-rose-400"}`}>
+                                  → ${e.epsActual}
+                                </span>
                               )}
                             </div>
                           );
