@@ -3,21 +3,40 @@
 import { useTheme } from "next-themes";
 import { signOut } from "next-auth/react";
 import { Sun, Moon, LogOut, Monitor } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { NotificationCenter } from "./NotificationCenter";
 import { NewsTicker } from "./NewsTicker";
 import { useTrades } from "@/hooks/useTrades";
 import { useTranslation } from "@/i18n/context";
+import type { Locale } from "@/i18n/types";
+
+const LOCALE_FLAGS: Record<Locale, { flag: string; short: string }> = {
+  fr: { flag: "🇫🇷", short: "FR" },
+  en: { flag: "🇬🇧", short: "EN" },
+  ar: { flag: "🇸🇦", short: "AR" },
+  es: { flag: "🇪🇸", short: "ES" },
+  de: { flag: "🇩🇪", short: "DE" },
+};
 
 export function Header() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { trades } = useTrades();
-  const { t } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
+    };
+    if (langOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [langOpen]);
 
   return (
     <header className="fixed top-8 right-0 left-0 z-40 h-14 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
@@ -46,6 +65,40 @@ export function Header() {
 
         {/* Notifications */}
         <NotificationCenter trades={trades} />
+
+        {/* Language selector */}
+        <div className="relative" ref={langRef}>
+          <button
+            onClick={() => setLangOpen(!langOpen)}
+            className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition text-sm"
+            title="Langue"
+          >
+            <span className="text-base leading-none">{LOCALE_FLAGS[locale]?.flag ?? "🇫🇷"}</span>
+          </button>
+          {langOpen && (
+            <div
+              className="absolute top-full right-0 mt-1 w-40 rounded-xl overflow-hidden shadow-xl z-50"
+              style={{ background: "var(--bg-card, #1a1a2e)", border: "1px solid var(--border, rgba(255,255,255,0.08))" }}
+            >
+              {(Object.keys(LOCALE_FLAGS) as Locale[]).map((l) => {
+                const isActive = locale === l;
+                const { flag, short } = LOCALE_FLAGS[l];
+                return (
+                  <button
+                    key={l}
+                    onClick={() => { setLocale(l); setLangOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs transition hover:bg-[var(--bg-hover)] ${isActive ? "bg-blue-500/10" : ""}`}
+                    style={{ color: isActive ? "rgb(59,130,246)" : "var(--text-primary, #e5e7eb)" }}
+                  >
+                    <span className="text-base leading-none">{flag}</span>
+                    <span className="font-medium">{short}</span>
+                    {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Logout */}
         <button

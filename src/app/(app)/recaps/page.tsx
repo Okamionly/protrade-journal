@@ -64,6 +64,11 @@ const SESSION_COLORS: Record<TradingSession, string> = {
   Sydney: "#a855f7",
 };
 
+// Net P&L helper: result minus commission and swap
+function getNetPnl(t: Trade): number {
+  return t.result - Math.abs(t.commission || 0) - Math.abs(t.swap || 0);
+}
+
 export default function RecapsPage() {
   const { trades, loading } = useTrades();
   const { t } = useTranslation();
@@ -164,10 +169,10 @@ export default function RecapsPage() {
     });
   }, [trades, prevRange.start, prevRange.end]);
 
-  // Compute profit factor helper
+  // Compute profit factor helper (using net P&L)
   const computePF = (tradeList: Trade[]) => {
-    const grossProfit = tradeList.filter(t => t.result > 0).reduce((s, t) => s + t.result, 0);
-    const grossLoss = Math.abs(tradeList.filter(t => t.result < 0).reduce((s, t) => s + t.result, 0));
+    const grossProfit = tradeList.filter(t => getNetPnl(t) > 0).reduce((s, t) => s + getNetPnl(t), 0);
+    const grossLoss = Math.abs(tradeList.filter(t => getNetPnl(t) < 0).reduce((s, t) => s + getNetPnl(t), 0));
     return grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
   };
 
@@ -185,32 +190,33 @@ export default function RecapsPage() {
 
   const stats = useMemo(() => {
     const total = periodTrades.length;
-    const wins = periodTrades.filter((t) => t.result > 0).length;
-    const losses = periodTrades.filter((t) => t.result < 0).length;
-    const pnl = periodTrades.reduce((s, t) => s + t.result, 0);
+    const wins = periodTrades.filter((t) => getNetPnl(t) > 0).length;
+    const losses = periodTrades.filter((t) => getNetPnl(t) < 0).length;
+    const pnl = periodTrades.reduce((s, t) => s + getNetPnl(t), 0);
     const winRate = total > 0 ? (wins / total) * 100 : 0;
-    const avgWin = wins > 0 ? periodTrades.filter((t) => t.result > 0).reduce((s, t) => s + t.result, 0) / wins : 0;
-    const avgLoss = losses > 0 ? periodTrades.filter((t) => t.result < 0).reduce((s, t) => s + t.result, 0) / losses : 0;
+    const avgWin = wins > 0 ? periodTrades.filter((t) => getNetPnl(t) > 0).reduce((s, t) => s + getNetPnl(t), 0) / wins : 0;
+    const avgLoss = losses > 0 ? periodTrades.filter((t) => getNetPnl(t) < 0).reduce((s, t) => s + getNetPnl(t), 0) / losses : 0;
     const profitFactor = computePF(periodTrades);
     const avgRR = computeAvgRR(periodTrades);
 
     const prevTotal = prevTrades.length;
-    const prevPnl = prevTrades.reduce((s, t) => s + t.result, 0);
-    const prevWins = prevTrades.filter((t) => t.result > 0).length;
+    const prevPnl = prevTrades.reduce((s, t) => s + getNetPnl(t), 0);
+    const prevWins = prevTrades.filter((t) => getNetPnl(t) > 0).length;
     const prevWinRate = prevTotal > 0 ? (prevWins / prevTotal) * 100 : 0;
     const prevPF = computePF(prevTrades);
     const prevAvgRR = computeAvgRR(prevTrades);
 
-    const sorted = [...periodTrades].sort((a, b) => b.result - a.result);
+    const sorted = [...periodTrades].sort((a, b) => getNetPnl(b) - getNetPnl(a));
     const top3 = sorted.slice(0, 3);
     const worst3 = sorted.slice(-3).reverse();
 
     const byStrategy: Record<string, { pnl: number; count: number; wins: number }> = {};
     periodTrades.forEach((t) => {
+      const net = getNetPnl(t);
       if (!byStrategy[t.strategy]) byStrategy[t.strategy] = { pnl: 0, count: 0, wins: 0 };
-      byStrategy[t.strategy].pnl += t.result;
+      byStrategy[t.strategy].pnl += net;
       byStrategy[t.strategy].count++;
-      if (t.result > 0) byStrategy[t.strategy].wins++;
+      if (net > 0) byStrategy[t.strategy].wins++;
     });
 
     return {
@@ -234,7 +240,7 @@ export default function RecapsPage() {
     for (const trade of periodTrades) {
       const s = getTradingSession(trade.date);
       if (s.length > 0 && map[s[0]]) {
-        map[s[0]].results.push(trade.result);
+        map[s[0]].results.push(getNetPnl(trade));
       }
     }
 
@@ -249,12 +255,13 @@ export default function RecapsPage() {
     }).filter(s => s.count > 0);
   }, [periodTrades]);
 
-  // Daily P&L chart data
+  // Daily P&L chart data (using local date to avoid timezone shift)
   const dailyPnl = useMemo(() => {
     const byDay: Record<string, number> = {};
     periodTrades.forEach((t) => {
-      const dayKey = new Date(t.date).toISOString().slice(0, 10);
-      byDay[dayKey] = (byDay[dayKey] || 0) + t.result;
+      const d = new Date(t.date);
+      const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      byDay[dayKey] = (byDay[dayKey] || 0) + getNetPnl(t);
     });
     return Object.entries(byDay)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -269,9 +276,10 @@ export default function RecapsPage() {
     periodTrades.forEach((t) => {
       const d = new Date(t.date).getDay();
       if (d >= 1 && d <= 5) {
-        days[d].pnl += t.result;
+        const net = getNetPnl(t);
+        days[d].pnl += net;
         days[d].count++;
-        if (t.result > 0) days[d].wins++;
+        if (net > 0) days[d].wins++;
       }
     });
 
@@ -296,8 +304,9 @@ export default function RecapsPage() {
       { label: ">100\u20AC", min: 100, max: Infinity, count: 0 },
     ];
     periodTrades.forEach((t) => {
+      const net = getNetPnl(t);
       for (const bin of bins) {
-        if (t.result >= bin.min && t.result < bin.max) {
+        if (net >= bin.min && net < bin.max) {
           bin.count++;
           break;
         }
@@ -332,12 +341,12 @@ export default function RecapsPage() {
 
     if (stats.top3.length > 0) {
       lines.push("--- Top 3 trades ---");
-      stats.top3.forEach((t, i) => lines.push(`#${i + 1} ${t.asset} (${t.strategy}): +${t.result.toFixed(2)}\u20AC`));
+      stats.top3.forEach((t, i) => lines.push(`#${i + 1} ${t.asset} (${t.strategy}): +${getNetPnl(t).toFixed(2)}\u20AC`));
       lines.push("");
     }
     if (stats.worst3.length > 0) {
       lines.push("--- Pires 3 trades ---");
-      stats.worst3.forEach((t, i) => lines.push(`#${i + 1} ${t.asset} (${t.strategy}): ${t.result.toFixed(2)}\u20AC`));
+      stats.worst3.forEach((t, i) => lines.push(`#${i + 1} ${t.asset} (${t.strategy}): ${getNetPnl(t).toFixed(2)}\u20AC`));
       lines.push("");
     }
 
@@ -460,7 +469,7 @@ export default function RecapsPage() {
           },
           {
             label: "Trades",
-            value: stats.total,
+            value: `${stats.total} (${stats.wins}W / ${stats.losses}L)`,
             delta: stats.total - stats.prevTotal,
             deltaFmt: `${stats.total - stats.prevTotal >= 0 ? "+" : ""}${stats.total - stats.prevTotal}`,
             color: "var(--text-primary)",
@@ -553,16 +562,18 @@ export default function RecapsPage() {
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("noTradeThisPeriod")}</p>
         ) : (
           <div className="w-full overflow-x-auto">
-            <svg viewBox={`0 0 ${Math.max(dailyPnl.length * 60, 200)} 180`} className="w-full" style={{ minWidth: `${dailyPnl.length * 60}px`, maxHeight: "200px" }}>
+            <svg viewBox={`0 0 ${Math.max(dailyPnl.length * 60, 200)} 200`} className="w-full" style={{ minWidth: `${dailyPnl.length * 60}px`, maxHeight: "220px" }}>
               {/* Zero line */}
               <line x1="0" y1="90" x2={dailyPnl.length * 60} y2="90" stroke="rgba(128,128,128,0.3)" strokeWidth="1" strokeDasharray="4,4" />
               {dailyPnl.map((d, i) => {
-                const barHeight = (Math.abs(d.pnl) / maxAbsDailyPnl) * 80;
+                const barHeight = (Math.abs(d.pnl) / maxAbsDailyPnl) * 70;
                 const x = i * 60 + 10;
                 const barWidth = 40;
                 const isPositive = d.pnl >= 0;
                 const y = isPositive ? 90 - barHeight : 90;
                 const shortDate = d.date.slice(5); // MM-DD
+                // Clamp negative label so it doesn't overlap with date labels
+                const labelY = isPositive ? y - 4 : Math.min(y + barHeight + 12, 170);
                 return (
                   <g key={d.date}>
                     <rect
@@ -578,7 +589,7 @@ export default function RecapsPage() {
                     </rect>
                     <text
                       x={x + barWidth / 2}
-                      y={isPositive ? y - 4 : y + barHeight + 12}
+                      y={labelY}
                       textAnchor="middle"
                       fontSize="9"
                       fill={isPositive ? "#10b981" : "#ef4444"}
@@ -588,7 +599,7 @@ export default function RecapsPage() {
                     </text>
                     <text
                       x={x + barWidth / 2}
-                      y="175"
+                      y="190"
                       textAnchor="middle"
                       fontSize="9"
                       fill="rgba(128,128,128,0.6)"
@@ -627,7 +638,7 @@ export default function RecapsPage() {
                       <span className="text-xs" style={{ color: "var(--text-muted)" }}>{new Date(tr.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
                     </div>
                   </div>
-                  <span className="font-bold mono" style={{ color: "#10b981" }}>+{tr.result.toFixed(2)}\u20AC</span>
+                  <span className="font-bold mono" style={{ color: "#10b981" }}>+{getNetPnl(tr).toFixed(2)}\u20AC</span>
                 </div>
               ))}
             </div>
@@ -656,7 +667,7 @@ export default function RecapsPage() {
                       <span className="text-xs" style={{ color: "var(--text-muted)" }}>{new Date(tr.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
                     </div>
                   </div>
-                  <span className="font-bold mono" style={{ color: "#ef4444" }}>{tr.result.toFixed(2)}\u20AC</span>
+                  <span className="font-bold mono" style={{ color: "#ef4444" }}>{getNetPnl(tr).toFixed(2)}\u20AC</span>
                 </div>
               ))}
             </div>
