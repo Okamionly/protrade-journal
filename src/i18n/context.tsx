@@ -41,7 +41,7 @@ function detectBrowserLocale(): Locale {
   } catch {
     // SSR or navigator not available
   }
-  return "en";
+  return "fr";
 }
 
 /**
@@ -93,11 +93,10 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       detectGeoLocale().then((geoLocale) => {
         if (geoLocale) {
           // Geo detection gives a more accurate result — update if different
-          // Only override if browser detection was the generic "en" fallback
+          // Only override if browser detection was the generic fallback
           const currentStored = localStorage.getItem(STORAGE_KEY) as Locale;
-          if (currentStored === "en" && geoLocale !== "en") {
-            setLocaleState(geoLocale);
-            localStorage.setItem(STORAGE_KEY, geoLocale);
+          if ((currentStored === "en" || currentStored === "fr") && geoLocale !== currentStored) {
+            // Don't auto-switch — let user choose manually via the flag selector
           }
         }
       });
