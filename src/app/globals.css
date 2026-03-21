@@ -67,6 +67,66 @@
   --glass-border: rgba(255, 255, 255, 0.06);
 }
 
+/* ========== GRID & TABLE SEMANTIC VARIABLES ========== */
+:root {
+  --grid-row-odd: rgba(0, 0, 0, 0.02);
+  --grid-row-even: transparent;
+  --grid-row-hover: rgba(14, 165, 233, 0.06);
+  --grid-header-bg: rgba(0, 0, 0, 0.04);
+  --grid-cell-border: rgba(0, 0, 0, 0.06);
+  --heatmap-positive: #059669;
+  --heatmap-negative: #dc2626;
+  --heatmap-neutral: rgba(0, 0, 0, 0.03);
+}
+
+.dark {
+  --grid-row-odd: rgba(255, 255, 255, 0.03);
+  --grid-row-even: transparent;
+  --grid-row-hover: rgba(14, 165, 233, 0.08);
+  --grid-header-bg: rgba(255, 255, 255, 0.05);
+  --grid-cell-border: rgba(255, 255, 255, 0.06);
+  --heatmap-positive: #22c55e;
+  --heatmap-negative: #ef4444;
+  --heatmap-neutral: rgba(255, 255, 255, 0.03);
+}
+
+.oled {
+  --grid-row-odd: rgba(255, 255, 255, 0.04);
+  --grid-row-even: transparent;
+  --grid-row-hover: rgba(14, 165, 233, 0.1);
+  --grid-header-bg: rgba(255, 255, 255, 0.06);
+  --grid-cell-border: rgba(255, 255, 255, 0.05);
+  --heatmap-positive: #22c55e;
+  --heatmap-negative: #ef4444;
+  --heatmap-neutral: rgba(255, 255, 255, 0.03);
+}
+
+/* Striped tables */
+table tbody tr:nth-child(odd) {
+  background-color: var(--grid-row-odd);
+}
+table tbody tr:nth-child(even) {
+  background-color: var(--grid-row-even);
+}
+table tbody tr:hover {
+  background-color: var(--grid-row-hover) !important;
+}
+table thead {
+  background-color: var(--grid-header-bg);
+}
+table thead th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+}
+
+/* Grid card subtle separator */
+.grid > .glass,
+.grid > [class*="rounded"] {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
 /* ========== LIGHT MODE CONTRAST FIXES (COMPREHENSIVE) ========== */
 /* Shorthand: L = html:not(.dark):not(.oled) */
 
@@ -376,7 +436,7 @@ html:not(.dark):not(.oled) .glass .mono:not([style*="color"]) {
 
 /* ---- HOVER BG ON TABLE ROWS ---- */
 html:not(.dark):not(.oled) tr:hover {
-  background-color: rgba(0, 0, 0, 0.03) !important;
+  background-color: var(--grid-row-hover) !important;
 }
 html:not(.dark):not(.oled) .hover\:bg-white\/5:hover {
   background-color: rgba(0, 0, 0, 0.04) !important;
@@ -436,9 +496,14 @@ html:not(.dark):not(.oled) .metric-card {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); }
+.metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); }
 .metric-card.clickable { cursor: pointer; }
-.metric-card.clickable:hover { transform: translateY(-4px); box-shadow: 0 15px 50px rgba(14, 165, 233, 0.3); border-color: rgba(14, 165, 233, 0.3); }
+.metric-card.clickable:hover { transform: translateY(-4px); box-shadow: 0 15px 50px rgba(14, 165, 233, 0.2); border-color: rgba(14, 165, 233, 0.3); }
+
+.dark .metric-card:hover { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); }
+.dark .metric-card.clickable:hover { box-shadow: 0 15px 50px rgba(14, 165, 233, 0.3); }
+.oled .metric-card:hover { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); }
+.oled .metric-card.clickable:hover { box-shadow: 0 15px 50px rgba(14, 165, 233, 0.4); }
 
 /* Input field utility */
 .input-field {

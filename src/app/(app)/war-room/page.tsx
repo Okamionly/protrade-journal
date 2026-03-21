@@ -189,6 +189,8 @@ function getSessions(date: Date): SessionInfo[] {
   const usDst = isUsDst(date);
   const euDst = isEuDst(date);
 
+  const sydneyStart = isAuDst(date) ? 21 : 22;
+  const sydneyEnd = isAuDst(date) ? 6 : 7;
   const tokyoStart = 0;
   const tokyoEnd = 9;
   const londonStart = euDst ? 7 : 8;
@@ -197,26 +199,90 @@ function getSessions(date: Date): SessionInfo[] {
   const nyEnd = usDst ? 21 : 22;
 
   return [
+    { name: "Sydney", emoji: "🇦🇺", start: sydneyStart, end: sydneyEnd, color: "#8b5cf6" },
     { name: "Tokyo", emoji: "\ud83c\udf0f", start: tokyoStart, end: tokyoEnd, color: "#f59e0b" },
     { name: "London", emoji: "\ud83c\udf0d", start: londonStart, end: londonEnd, color: "#3b82f6" },
     { name: "New York", emoji: "\ud83c\udf0e", start: nyStart, end: nyEnd, color: "#10b981" },
   ];
 }
 
+// ─── ICT Killzones & Silver Bullet Windows ──────────────────────────────────
+
+interface KillzoneInfo {
+  name: string;
+  type: "killzone" | "silver_bullet";
+  startUtc: number; // UTC hour (fractional)
+  endUtc: number;
+  color: string;
+  description: string;
+}
+
+function getKillzones(date: Date): KillzoneInfo[] {
+  const usDst = isUsDst(date);
+  const estOffset = usDst ? 4 : 5; // EST/EDT offset from UTC
+
+  // ICT Killzones (EST times → UTC)
+  const londonOpenKzStart = 2 + estOffset;  // 02:00 EST
+  const londonOpenKzEnd = 5 + estOffset;    // 05:00 EST
+  const nyAmKzStart = 7 + estOffset;        // 07:00 EST (NY AM Open)
+  const nyAmKzEnd = 10 + estOffset;         // 10:00 EST
+  const londonCloseKzStart = 10 + estOffset; // 10:00 EST
+  const londonCloseKzEnd = 12 + estOffset;   // 12:00 EST
+  const nyPmKzStart = 13.5 + estOffset;     // 13:30 EST (NY PM)
+  const nyPmKzEnd = 16 + estOffset;         // 16:00 EST
+
+  // ICT Silver Bullet windows (EST times → UTC)
+  const londonSbStart = 3 + estOffset;  // 03:00 EST
+  const londonSbEnd = 4 + estOffset;    // 04:00 EST
+  const nyAmSbStart = 10 + estOffset;   // 10:00 EST
+  const nyAmSbEnd = 11 + estOffset;     // 11:00 EST
+  const nyPmSbStart = 14 + estOffset;   // 14:00 EST
+  const nyPmSbEnd = 15 + estOffset;     // 15:00 EST
+
+  return [
+    { name: "London Open KZ", type: "killzone", startUtc: londonOpenKzStart, endUtc: londonOpenKzEnd, color: "#3b82f6", description: "London Open Killzone — haute volatilité, manipulation fréquente" },
+    { name: "NY AM KZ", type: "killzone", startUtc: nyAmKzStart, endUtc: nyAmKzEnd, color: "#10b981", description: "New York AM Killzone — mouvement directionnel majeur" },
+    { name: "London Close KZ", type: "killzone", startUtc: londonCloseKzStart, endUtc: londonCloseKzEnd, color: "#f59e0b", description: "London Close — retournements fréquents, prise de liquidité" },
+    { name: "NY PM KZ", type: "killzone", startUtc: nyPmKzStart, endUtc: nyPmKzEnd, color: "#ef4444", description: "New York PM Killzone — dernier mouvement du jour" },
+    { name: "London SB", type: "silver_bullet", startUtc: londonSbStart, endUtc: londonSbEnd, color: "#60a5fa", description: "Silver Bullet London — FVG entre 03:00-04:00 EST" },
+    { name: "NY AM SB", type: "silver_bullet", startUtc: nyAmSbStart, endUtc: nyAmSbEnd, color: "#34d399", description: "Silver Bullet NY AM — FVG entre 10:00-11:00 EST" },
+    { name: "NY PM SB", type: "silver_bullet", startUtc: nyPmSbStart, endUtc: nyPmSbEnd, color: "#f87171", description: "Silver Bullet NY PM — FVG entre 14:00-15:00 EST" },
+  ];
+}
+
 function getActiveSessions(hour: number, sessions: SessionInfo[]): SessionInfo[] {
-  return sessions.filter((s) => hour >= s.start && hour < s.end);
+  return sessions.filter((s) => {
+    if (s.start > s.end) {
+      // Overnight session (e.g., Sydney 21-06)
+      return hour >= s.start || hour < s.end;
+    }
+    return hour >= s.start && hour < s.end;
+  });
 }
 
 function getSessionProgress(hour: number, minute: number, session: SessionInfo): number {
-  const totalMinutes = (session.end - session.start) * 60;
-  const elapsed = (hour - session.start) * 60 + minute;
+  const isOvernight = session.start > session.end;
+  const totalMinutes = isOvernight
+    ? ((24 - session.start) + session.end) * 60
+    : (session.end - session.start) * 60;
+  const elapsed = isOvernight
+    ? (hour >= session.start ? (hour - session.start) * 60 + minute : (24 - session.start + hour) * 60 + minute)
+    : (hour - session.start) * 60 + minute;
   return Math.max(0, Math.min(100, (elapsed / totalMinutes) * 100));
 }
 
 function getSessionTimeRemaining(hour: number, minute: number, session: SessionInfo, finishedLabel = "Terminée"): string {
-  const endMinutes = session.end * 60;
+  const isOvernight = session.start > session.end;
   const currentMinutes = hour * 60 + minute;
-  const remaining = endMinutes - currentMinutes;
+  const endMinutes = session.end * 60;
+  let remaining: number;
+  if (isOvernight) {
+    remaining = hour >= session.start
+      ? ((24 - hour) * 60 - minute) + endMinutes
+      : endMinutes - currentMinutes;
+  } else {
+    remaining = endMinutes - currentMinutes;
+  }
   if (remaining <= 0) return finishedLabel;
   const h = Math.floor(remaining / 60);
   const m = remaining % 60;
@@ -909,6 +975,7 @@ export default function WarRoomPage() {
 
   // ─── DST-aware sessions ───────────────────────────────────────────────
   const sessions = useMemo(() => getSessions(currentTime), [currentTime]);
+  const killzones = useMemo(() => getKillzones(currentTime), [currentTime]);
 
   // ─── Computed Stats ─────────────────────────────────────────────────────
 
@@ -1009,6 +1076,7 @@ export default function WarRoomPage() {
   // ─── Performance par Session ──────────────────────────────────────────
   const sessionPerformance = useMemo(() => {
     const perf: Record<string, { pnl: number; trades: number; wins: number }> = {
+      "Sydney": { pnl: 0, trades: 0, wins: 0 },
       "Tokyo": { pnl: 0, trades: 0, wins: 0 },
       "London": { pnl: 0, trades: 0, wins: 0 },
       "New York": { pnl: 0, trades: 0, wins: 0 },
@@ -1134,6 +1202,7 @@ export default function WarRoomPage() {
   ];
 
   const sessionColors: Record<string, string> = {
+    "Sydney": "#8b5cf6",
     "Tokyo": "#f59e0b",
     "London": "#3b82f6",
     "New York": "#10b981",
@@ -1172,6 +1241,28 @@ export default function WarRoomPage() {
           </div>
         </div>
       </div>
+
+      {/* ═══ LIVE PRICE TICKER ═══ */}
+      {livePrices && (
+        <div className="glass rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+          <div className="flex gap-0 overflow-x-auto py-2 px-1" style={{ scrollbarWidth: "none" }}>
+            {[...livePrices.forex.slice(0, 6), ...livePrices.crypto, ...livePrices.commodities.slice(0, 1)].map((item) => (
+              <div key={item.symbol} className="flex items-center gap-2 px-3 flex-shrink-0"
+                style={{ borderRight: "1px solid var(--border)" }}>
+                <span className="text-[10px] font-semibold mono" style={{ color: "var(--text-primary)" }}>
+                  {item.symbol}
+                </span>
+                <span className="text-[10px] mono font-bold" style={{ color: "var(--text-primary)" }}>
+                  {item.price > 100 ? item.price.toFixed(2) : item.price > 10 ? item.price.toFixed(3) : item.price.toFixed(4)}
+                </span>
+                <span className="text-[9px] mono font-semibold" style={{ color: item.change >= 0 ? "#22c55e" : "#ef4444" }}>
+                  {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ═══ BREAKING NEWS TICKER ═══ */}
       <CollapsibleSection title="Breaking News" icon={Newspaper} sectionKey="news-ticker"
@@ -1655,6 +1746,151 @@ export default function WarRoomPage() {
           currentTime={currentTime}
           sessionPerformance={sessionPerformance}
         />
+      </CollapsibleSection>
+
+      {/* ═══ ICT KILLZONES & SILVER BULLET MODEL ═══ */}
+      <CollapsibleSection title="ICT Killzones & Silver Bullet" icon={Crosshair} sectionKey="ict-model">
+        <div className="space-y-4">
+          {/* Visual timeline of killzones */}
+          <div className="relative" style={{ height: "130px" }}>
+            {/* Hour markers */}
+            <div className="absolute top-0 left-0 right-0 flex justify-between text-[9px] mono" style={{ color: "var(--text-muted)" }}>
+              {[0, 3, 6, 9, 12, 15, 18, 21].map((h) => (
+                <span key={h}>{h.toString().padStart(2, "0")}h</span>
+              ))}
+            </div>
+
+            {/* Killzone bars */}
+            {killzones.filter(kz => kz.type === "killzone").map((kz, idx) => {
+              const left = (kz.startUtc / 24) * 100;
+              const width = ((kz.endUtc - kz.startUtc) / 24) * 100;
+              const isActive = hour >= kz.startUtc && hour < kz.endUtc;
+              return (
+                <div
+                  key={kz.name}
+                  className="absolute rounded-md flex items-center px-2 text-[9px] font-medium"
+                  title={kz.description}
+                  style={{
+                    left: `${left}%`,
+                    width: `${width}%`,
+                    top: `${18 + idx * 20}px`,
+                    height: "16px",
+                    background: isActive ? `${kz.color}40` : `${kz.color}18`,
+                    border: `1px solid ${isActive ? kz.color : `${kz.color}40`}`,
+                    color: kz.color,
+                    zIndex: 2,
+                    boxShadow: isActive ? `0 0 8px ${kz.color}30` : "none",
+                  }}
+                >
+                  <span className="truncate">{kz.name}</span>
+                </div>
+              );
+            })}
+
+            {/* Silver Bullet windows */}
+            {killzones.filter(kz => kz.type === "silver_bullet").map((kz, idx) => {
+              const left = (kz.startUtc / 24) * 100;
+              const width = ((kz.endUtc - kz.startUtc) / 24) * 100;
+              const isActive = hour >= kz.startUtc && hour < kz.endUtc;
+              return (
+                <div
+                  key={kz.name}
+                  className="absolute rounded flex items-center justify-center text-[8px] font-bold"
+                  title={kz.description}
+                  style={{
+                    left: `${left}%`,
+                    width: `${width}%`,
+                    top: `${100}px`,
+                    height: "14px",
+                    background: isActive ? `${kz.color}50` : `${kz.color}20`,
+                    border: `1px dashed ${isActive ? kz.color : `${kz.color}50`}`,
+                    color: kz.color,
+                    zIndex: 3,
+                    boxShadow: isActive ? `0 0 10px ${kz.color}40` : "none",
+                  }}
+                >
+                  <span>SB</span>
+                </div>
+              );
+            })}
+
+            {/* Current time marker */}
+            <div
+              className="absolute top-3 bottom-0 w-0.5"
+              style={{ left: `${((hour * 60 + minute) / (24 * 60)) * 100}%`, background: "#ef4444", zIndex: 10 }}
+            >
+              <div className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full" style={{ background: "#ef4444" }} />
+            </div>
+          </div>
+
+          {/* Active killzones status cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {killzones.map((kz) => {
+              const isActive = hour >= kz.startUtc && hour < kz.endUtc;
+              const estHourStart = kz.startUtc - (isUsDst(currentTime) ? 4 : 5);
+              const estHourEnd = kz.endUtc - (isUsDst(currentTime) ? 4 : 5);
+              const fmtH = (h: number) => {
+                const normalized = ((h % 24) + 24) % 24;
+                const hh = Math.floor(normalized);
+                const mm = Math.round((normalized - hh) * 60);
+                return `${hh.toString().padStart(2, "0")}:${mm.toString().padStart(2, "0")}`;
+              };
+              return (
+                <div
+                  key={kz.name}
+                  className="flex items-center gap-3 p-2.5 rounded-lg transition-all"
+                  style={{
+                    background: isActive ? `${kz.color}15` : "var(--bg-secondary)",
+                    border: `1px solid ${isActive ? kz.color : "var(--border)"}`,
+                  }}
+                >
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{
+                    background: isActive ? kz.color : "var(--text-muted)",
+                    boxShadow: isActive ? `0 0 6px ${kz.color}` : "none",
+                  }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold" style={{ color: isActive ? kz.color : "var(--text-primary)" }}>
+                        {kz.name}
+                      </span>
+                      {kz.type === "silver_bullet" && (
+                        <span className="text-[8px] px-1 py-0.5 rounded font-bold"
+                          style={{ background: `${kz.color}20`, color: kz.color }}>
+                          SB
+                        </span>
+                      )}
+                      {isActive && (
+                        <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold animate-pulse"
+                          style={{ background: `${kz.color}30`, color: kz.color }}>
+                          ACTIVE
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>
+                      {fmtH(estHourStart)}-{fmtH(estHourEnd)} EST | {fmtH(kz.startUtc)}-{fmtH(kz.endUtc)} UTC
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Legend */}
+          <div className="flex gap-4 text-[9px]" style={{ color: "var(--text-muted)" }}>
+            <span className="flex items-center gap-1">
+              <div className="w-3 h-2 rounded" style={{ background: "#3b82f630", border: "1px solid #3b82f650" }} />
+              Killzone
+            </span>
+            <span className="flex items-center gap-1">
+              <div className="w-3 h-2 rounded" style={{ background: "#60a5fa30", border: "1px dashed #60a5fa50" }} />
+              Silver Bullet (FVG window)
+            </span>
+            <span className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              Maintenant
+            </span>
+          </div>
+        </div>
       </CollapsibleSection>
 
       {/* ═══ GEOGRAPHIC MARKET MAP ═══ */}
