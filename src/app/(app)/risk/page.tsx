@@ -116,26 +116,26 @@ export default function RiskPage() {
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <Shield className="w-6 h-6 text-cyan-400" /> Risk Management
+          <Shield className="w-6 h-6 text-cyan-400" /> {t("riskManagementTitle")}
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          Metriques de risque avancees et calculateur de taille de position.
+          {t("riskManagementDesc")}
         </p>
       </div>
 
       {/* Key Risk Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Expectancy", value: `${risk.expectancy >= 0 ? "+" : ""}${risk.expectancy}€`, color: risk.expectancy >= 0 ? "#10b981" : "#ef4444", icon: TrendingDown },
-          { label: "Payoff Ratio", value: risk.payoffRatio.toFixed(2), color: risk.payoffRatio >= 1.5 ? "#10b981" : risk.payoffRatio >= 1 ? "#f59e0b" : "#ef4444", icon: Percent },
+          { label: t("riskExpectancy"), value: `${risk.expectancy >= 0 ? "+" : ""}${risk.expectancy}€`, color: risk.expectancy >= 0 ? "#10b981" : "#ef4444", icon: TrendingDown },
+          { label: t("riskPayoffRatio"), value: risk.payoffRatio.toFixed(2), color: risk.payoffRatio >= 1.5 ? "#10b981" : risk.payoffRatio >= 1 ? "#f59e0b" : "#ef4444", icon: Percent },
           {
-            label: "Kelly %",
+            label: t("riskKellyPercent"),
             value: kellyDisplay ? "N/A" : `${risk.kellyPercent}%`,
             color: kellyDisplay ? "#ef4444" : "#0ea5e9",
             icon: Calculator,
-            subtitle: kellyDisplay ? "Stratégie non profitable" : undefined,
+            subtitle: kellyDisplay ? t("riskStrategyNotProfitable") : undefined,
           },
-          { label: "Recovery Factor", value: risk.recoveryFactor.toFixed(2), color: risk.recoveryFactor >= 2 ? "#10b981" : "#f59e0b", icon: Shield },
+          { label: t("riskRecoveryFactor"), value: risk.recoveryFactor.toFixed(2), color: risk.recoveryFactor >= 2 ? "#10b981" : "#f59e0b", icon: Shield },
         ].map((m) => (
           <div key={m.label} className="metric-card rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-2">
@@ -153,20 +153,20 @@ export default function RiskPage() {
       {/* Extended metrics */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="metric-card rounded-2xl p-5">
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>Max Pertes Consecutives</span>
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>{t("riskMaxConsecutiveLosses")}</span>
           <div className="text-2xl font-bold mono text-rose-400 mt-1">{risk.maxConsecutiveLosses}</div>
         </div>
         <div className="metric-card rounded-2xl p-5">
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>Calmar Ratio</span>
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>{t("riskCalmarRatio")}</span>
           <div className="text-2xl font-bold mono mt-1" style={{ color: risk.calmarRatio >= 1 ? "#10b981" : "#f59e0b" }}>{risk.calmarRatio}</div>
         </div>
         <div className="metric-card rounded-2xl p-5">
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>P&L Net (apres frais)</span>
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>{t("riskNetPnlAfterFees")}</span>
           <div className="text-2xl font-bold mono mt-1" style={{ color: risk.netPnlAfterFees >= 0 ? "#10b981" : "#ef4444" }}>
             {risk.netPnlAfterFees >= 0 ? "+" : ""}{risk.netPnlAfterFees}€
           </div>
           <div className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-            Commissions: {risk.totalCommissions}€ &bull; Swaps: {risk.totalSwaps}€
+            {t("riskCommissions")}: {risk.totalCommissions}€ &bull; {t("riskSwaps")}: {risk.totalSwaps}€
           </div>
         </div>
       </div>
@@ -174,24 +174,24 @@ export default function RiskPage() {
       {/* VaR Section */}
       <div className="metric-card rounded-2xl p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <BarChart3 className="w-5 h-5 text-amber-400" /> Value at Risk (VaR)
+          <BarChart3 className="w-5 h-5 text-amber-400" /> {t("riskVarTitle")}
         </h3>
         {!varMetrics ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Minimum 5 trades requis pour calculer la VaR.</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("riskVarMin5Trades")}</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
-              <div className="text-xs mb-1 font-medium" style={{ color: "var(--text-muted)" }}>VaR 95%</div>
+              <div className="text-xs mb-1 font-medium" style={{ color: "var(--text-muted)" }}>{t("riskVar95")}</div>
               <div className="text-xl font-bold mono" style={{ color: "#f59e0b" }}>{varMetrics.var95.toFixed(2)}€</div>
               <p className="text-xs mt-2" style={{ color: "var(--text-secondary)" }}>
-                Il y a 5% de chance de perdre plus de {Math.abs(varMetrics.var95).toFixed(2)}€ par trade
+                {t("riskVar95Desc").replace("{{amount}}", Math.abs(varMetrics.var95).toFixed(2))}
               </p>
             </div>
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
-              <div className="text-xs mb-1 font-medium" style={{ color: "var(--text-muted)" }}>VaR 99%</div>
+              <div className="text-xs mb-1 font-medium" style={{ color: "var(--text-muted)" }}>{t("riskVar99")}</div>
               <div className="text-xl font-bold mono" style={{ color: "#ef4444" }}>{varMetrics.var99.toFixed(2)}€</div>
               <p className="text-xs mt-2" style={{ color: "var(--text-secondary)" }}>
-                Il y a 1% de chance de perdre plus de {Math.abs(varMetrics.var99).toFixed(2)}€ par trade
+                {t("riskVar99Desc").replace("{{amount}}", Math.abs(varMetrics.var99).toFixed(2))}
               </p>
             </div>
           </div>
@@ -201,10 +201,10 @@ export default function RiskPage() {
       {/* Risk Distribution Histogram */}
       <div className="metric-card rounded-2xl p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <BarChart3 className="w-5 h-5 text-cyan-400" /> Distribution du Risque par Trade
+          <BarChart3 className="w-5 h-5 text-cyan-400" /> {t("riskDistributionTitle")}
         </h3>
         {trades.length < 3 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Minimum 3 trades requis.</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("riskMin3Trades")}</p>
         ) : (() => {
           const typedTrades = trades as unknown as Trade[];
           // Compute risk % per trade
@@ -215,7 +215,7 @@ export default function RiskPage() {
             return balance > 0 ? (riskAmt / balance) * 100 : 0;
           }).filter((v): v is number => v !== null && v > 0 && v < 20);
 
-          if (riskPcts.length === 0) return <p className="text-sm" style={{ color: "var(--text-muted)" }}>Données SL requises pour calculer la distribution.</p>;
+          if (riskPcts.length === 0) return <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("riskSlDataRequired")}</p>;
 
           // Bucket into ranges: 0-0.5, 0.5-1, 1-1.5, 1.5-2, 2-3, 3-5, 5+
           const buckets = [
@@ -241,10 +241,10 @@ export default function RiskPage() {
               {/* Summary badge */}
               <div className="flex items-center gap-3 mb-4">
                 <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${safePct >= 80 ? "bg-emerald-500/15 text-emerald-400" : safePct >= 50 ? "bg-amber-500/15 text-amber-400" : "bg-rose-500/15 text-rose-400"}`}>
-                  {safePct}% de vos trades sont dans la zone sûre (0-2%)
+                  {t("riskSafeZonePct").replace("{{pct}}", String(safePct))}
                 </span>
                 <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                  {riskPcts.length} trades analysés
+                  {t("riskTradesAnalyzed").replace("{{count}}", String(riskPcts.length))}
                 </span>
               </div>
 
@@ -272,15 +272,15 @@ export default function RiskPage() {
               <div className="flex items-center gap-4 mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded" style={{ background: "#10b981" }} />
-                  <span>Zone sûre (0-2%)</span>
+                  <span>{t("riskZoneSafe")}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded" style={{ background: "#f59e0b" }} />
-                  <span>Modéré (2-3%)</span>
+                  <span>{t("riskZoneModerate")}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded" style={{ background: "#ef4444" }} />
-                  <span>Danger (3%+)</span>
+                  <span>{t("riskZoneDanger")}</span>
                 </div>
               </div>
             </>
@@ -292,7 +292,7 @@ export default function RiskPage() {
       <div className="metric-card rounded-2xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-            <TrendingDown className="w-5 h-5 text-rose-400" /> Courbe de Drawdown
+            <TrendingDown className="w-5 h-5 text-rose-400" /> {t("riskDrawdownCurve")}
           </h3>
           {maxDDPoint && maxDDPoint.drawdownPercent > 0 && (
             <span className="text-xs px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
@@ -301,7 +301,7 @@ export default function RiskPage() {
           )}
         </div>
         {drawdown.length <= 1 ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Ajoutez des trades pour voir la courbe de drawdown.</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("riskAddTradesToSeeDrawdown")}</p>
         ) : (
           <div className="flex items-end gap-[1px] h-40">
             {drawdown.slice(1).map((p, i) => {
@@ -328,16 +328,16 @@ export default function RiskPage() {
       {/* Risk Heatmap */}
       <div className="metric-card rounded-2xl p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <Activity className="w-5 h-5 text-purple-400" /> Heatmap de Risque (Asset x Jour)
+          <Activity className="w-5 h-5 text-purple-400" /> {t("riskHeatmapTitle")}
         </h3>
         {!heatmapData ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Ajoutez des trades pour voir la heatmap.</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("riskAddTradesToSeeHeatmap")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr>
-                  <th className="text-left p-2 text-xs font-medium" style={{ color: "var(--text-muted)" }}>Asset</th>
+                  <th className="text-left p-2 text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("riskAssetCol")}</th>
                   {heatmapData.weekdays.map((d) => (
                     <th key={d} className="p-2 text-xs font-medium text-center" style={{ color: "var(--text-muted)" }}>{DAYS_FR_SHORT[d]}</th>
                   ))}
@@ -375,15 +375,15 @@ export default function RiskPage() {
             <div className="flex items-center gap-4 mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 rounded" style={{ background: "rgba(239,68,68,0.6)" }} />
-                <span>Perte moyenne</span>
+                <span>{t("riskAvgLoss")}</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 rounded" style={{ background: "rgba(100,100,100,0.2)" }} />
-                <span>Neutre</span>
+                <span>{t("riskNeutral")}</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 rounded" style={{ background: "rgba(16,185,129,0.6)" }} />
-                <span>Gain moyen</span>
+                <span>{t("riskAvgGain")}</span>
               </div>
             </div>
           </div>
@@ -396,33 +396,33 @@ export default function RiskPage() {
           <RotateCcw className="w-5 h-5 text-emerald-400" /> {t("recoveryCalculator")}
         </h3>
         {!recoveryCalc ? (
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>Ajoutez des trades pour voir le calculateur de recovery.</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("riskAddTradesToSeeRecovery")}</p>
         ) : !recoveryCalc.inDrawdown ? (
           <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
             <div className="text-center">
-              <div className="text-lg font-bold" style={{ color: "#10b981" }}>Aucun drawdown actif</div>
-              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Vous etes a votre pic d&apos;equity. Continuez comme ca !</p>
+              <div className="text-lg font-bold" style={{ color: "#10b981" }}>{t("riskNoActiveDrawdown")}</div>
+              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{t("riskAtEquityPeak")}</p>
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
-              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Drawdown actuel</div>
+              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("riskCurrentDrawdown")}</div>
               <div className="text-xl font-bold mono text-rose-400">-{recoveryCalc.drawdown.toFixed(2)}€</div>
             </div>
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
-              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Expectancy / trade</div>
+              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("riskExpectancyPerTrade")}</div>
               <div className="text-xl font-bold mono" style={{ color: recoveryCalc.expectancy > 0 ? "#10b981" : "#ef4444" }}>
                 {recoveryCalc.expectancy > 0 ? "+" : ""}{recoveryCalc.expectancy.toFixed(2)}€
               </div>
             </div>
             <div className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
-              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Trades pour recovery</div>
+              <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{t("riskTradesToRecover")}</div>
               <div className="text-xl font-bold mono" style={{ color: recoveryCalc.tradesToRecover === Infinity ? "#ef4444" : "#0ea5e9" }}>
                 {recoveryCalc.tradesToRecover === Infinity ? "\u221E" : recoveryCalc.tradesToRecover}
               </div>
               {recoveryCalc.tradesToRecover === Infinity && (
-                <div className="text-[10px] mt-1" style={{ color: "#ef4444" }}>Expectancy négative — recovery impossible sans améliorer la stratégie</div>
+                <div className="text-[10px] mt-1" style={{ color: "#ef4444" }}>{t("riskNegativeExpectancy")}</div>
               )}
             </div>
           </div>
@@ -437,28 +437,28 @@ export default function RiskPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Type d&apos;actif</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("riskAssetType")}</label>
               <select
                 value={assetType}
                 onChange={(e) => setAssetType(e.target.value as AssetType)}
                 className="input-field w-full"
                 style={{ color: "var(--text-primary)", background: "var(--bg-hover)" }}
               >
-                <option value="forex">Forex (lot = 100 000)</option>
-                <option value="crypto">Crypto (1 coin)</option>
-                <option value="indices">Indices (1 contrat)</option>
-                <option value="stocks">Actions (1 action)</option>
+                <option value="forex">{t("riskAssetForex")}</option>
+                <option value="crypto">{t("riskAssetCrypto")}</option>
+                <option value="indices">{t("riskAssetIndices")}</option>
+                <option value="stocks">{t("riskAssetStocks")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Balance</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("riskBalance")}</label>
               <div className="input-field flex items-center gap-2">
                 <DollarSign className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
                 <span className="mono font-bold" style={{ color: "var(--text-primary)" }}>{balance.toFixed(2)}€</span>
               </div>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Risque par trade (%)</label>
+              <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("riskPerTrade")}</label>
               <div className="flex items-center gap-3">
                 <input
                   type="range" min="0.25" max="5" step="0.25" value={calcRisk}
@@ -471,30 +471,30 @@ export default function RiskPage() {
               </div>
               {calcRisk > 2 && (
                 <div className="flex items-center gap-1 mt-1 text-xs text-amber-400">
-                  <AlertTriangle className="w-3 h-3" /> Risque eleve -- recommande: 1-2%
+                  <AlertTriangle className="w-3 h-3" /> {t("riskHighWarning")}
                 </div>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Prix d&apos;entree</label>
+                <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("riskEntryPrice")}</label>
                 <input type="number" step="0.00001" value={calcEntry} onChange={(e) => setCalcEntry(parseFloat(e.target.value))} className="input-field mono" />
               </div>
               <div>
-                <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>Stop Loss</label>
+                <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("riskStopLoss")}</label>
                 <input type="number" step="0.00001" value={calcSl} onChange={(e) => setCalcSl(parseFloat(e.target.value))} className="input-field mono" />
               </div>
             </div>
           </div>
 
           <div className="rounded-xl p-6 flex flex-col items-center justify-center" style={{ background: "var(--bg-hover)" }}>
-            <span className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>TAILLE RECOMMANDEE</span>
+            <span className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>{t("riskRecommendedSize")}</span>
             <div className="text-5xl font-bold mono text-cyan-400">{posSize.lots}</div>
             <span className="text-lg" style={{ color: "var(--text-secondary)" }}>{posSize.unit}</span>
             <div className="mt-4 space-y-1 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-              <p>Risque: <span className="mono font-bold text-rose-400">{posSize.riskAmount}€</span></p>
-              <p>{assetType === "forex" ? "Pips at risk" : "Risque/unite"}: <span className="mono font-bold" style={{ color: "var(--text-primary)" }}>{posSize.pipsAtRisk}{assetType === "forex" ? "" : "€"}</span></p>
-              <p>Kelly recommande: <span className="mono font-bold" style={{ color: kellyDisplay ? "#ef4444" : "#0ea5e9" }}>
+              <p>{t("riskRiskLabel")}: <span className="mono font-bold text-rose-400">{posSize.riskAmount}€</span></p>
+              <p>{assetType === "forex" ? t("riskPipsAtRisk") : t("riskPerUnit")}: <span className="mono font-bold" style={{ color: "var(--text-primary)" }}>{posSize.pipsAtRisk}{assetType === "forex" ? "" : "€"}</span></p>
+              <p>{t("riskKellyRecommends")}: <span className="mono font-bold" style={{ color: kellyDisplay ? "#ef4444" : "#0ea5e9" }}>
                 {kellyDisplay ? "N/A" : `${risk.kellyPercent}%`}
               </span></p>
             </div>
