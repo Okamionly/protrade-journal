@@ -77,7 +77,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             setMobileOpen(next);
             window.dispatchEvent(new CustomEvent("mobile-sidebar", { detail: next }));
           }}
-          className="fixed top-10 left-3 z-[57] md:hidden w-10 h-10 rounded-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-lg"
+          id="mobile-hamburger"
+          className="fixed top-10 left-3 z-[70] md:hidden w-10 h-10 rounded-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-lg"
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>

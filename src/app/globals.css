@@ -987,10 +987,18 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
   }
 
   /* ── Boutons : taille tactile ── */
-  button,
+  button:not(#mobile-hamburger),
   a[class*="btn"],
   .btn-primary {
     min-height: 44px;
+  }
+
+  /* ── Hamburger menu : taille fixe ── */
+  #mobile-hamburger {
+    width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    right: auto !important;
   }
 
   /* ── Calendrier : cellules plus petites sur mobile ── */
