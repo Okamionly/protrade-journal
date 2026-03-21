@@ -822,7 +822,7 @@ export default function VipContentPage() {
             {/* Title */}
             <div>
               <label className="text-xs font-medium mb-1.5 block" style={{ color: "var(--text-muted)" }}>
-                {t("title")}
+                {t("vipFormTitle")}
               </label>
               <input
                 type="text"

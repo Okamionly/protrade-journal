@@ -552,7 +552,7 @@
   "vipNewPublication": "New publication",
   "vipEditPublication": "Edit publication",
   "vipNewPublicationForm": "New publication",
-  "title": "Title",
+  "vipFormTitle": "Title",
   "vipTitlePlaceholder": "Publication title...",
   "vipScriptCode": "Script code (optional)",
   "vipImageUrl": "Image URL (optional)",
