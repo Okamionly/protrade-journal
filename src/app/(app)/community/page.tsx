@@ -4,39 +4,26 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "@/i18n/context";
 import { useTrades } from "@/hooks/useTrades";
 import { useGamification } from "@/hooks/useGamification";
-import { TradeCard } from "@/components/TradeCard";
 import { CommunityShareTradeModal } from "@/components/CommunityShareTradeModal";
 import { calculateRR } from "@/lib/utils";
 import {
   Users,
-  Send,
   Share2,
   Smile,
-  TrendingUp,
-  Trophy,
   MessageCircle,
   Loader2,
-  Target,
-  Award,
-  MessageSquare,
   BarChart3,
-  Sparkles,
-  GitCompare,
   Bookmark,
-  GraduationCap,
-  Clock,
-  Bell,
-  CheckCircle,
-  Flame,
-  Star,
-  Zap,
-  Shield,
-  Lightbulb,
-  LineChart,
   Heart,
   Repeat2,
   Image as ImageIcon,
-  ArrowUp,
+  Search,
+  MoreHorizontal,
+  Link2,
+  BarChart2,
+  ArrowUpRight,
+  ArrowDownRight,
+  X,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────── */
@@ -80,135 +67,24 @@ interface FeedMessage {
   createdAt: string;
 }
 
-/* ─── Tabs ──────────────────────────────────────────────── */
+/* ─── Constants ─────────────────────────────────────────── */
 
-type TabId = "feed" | "leaderboard" | "challenges" | "discussions" | "highlights" | "mentors" | "compare";
-
-const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: "feed", label: "Fil d'actualite", icon: MessageCircle },
-  { id: "leaderboard", label: "Classement", icon: Trophy },
-  { id: "challenges", label: "Defis", icon: Target },
-  { id: "discussions", label: "Discussions", icon: MessageSquare },
-  { id: "highlights", label: "Best Of", icon: Sparkles },
-  { id: "mentors", label: "Mentorat", icon: GraduationCap },
-  { id: "compare", label: "Comparer", icon: GitCompare },
-];
-
-const QUICK_EMOJIS = ["\ud83d\udc4d", "\ud83d\udd25", "\ud83d\udcb0", "\ud83d\udcc8", "\ud83c\udfaf", "\ud83d\udcaa"];
-
-const MAX_POST_LENGTH = 500;
-
-/* ─── Tab placeholder metadata ─────────────────────────── */
-
-interface TabPlaceholderInfo {
-  icon: React.ElementType;
-  accentColor: string;
-  accentBg: string;
-  accentBorder: string;
-  title: string;
-  subtitle: string;
-  description: string;
-  features: { icon: React.ElementType; text: string }[];
-}
-
-const TAB_PLACEHOLDERS: Record<string, TabPlaceholderInfo> = {
-  leaderboard: {
-    icon: Trophy,
-    accentColor: "text-amber-400",
-    accentBg: "bg-amber-500/10",
-    accentBorder: "border-amber-500/20",
-    title: "Classement",
-    subtitle: "Grimpez les echelons",
-    description:
-      "Comparez vos performances avec les autres traders de la communaute. Classements hebdomadaires et mensuels bases sur le win rate, le P&L et la regularite.",
-    features: [
-      { icon: Trophy, text: "Classements hebdomadaires et mensuels" },
-      { icon: TrendingUp, text: "Bases sur vos vrais resultats de trading" },
-      { icon: Star, text: "Badges et recompenses exclusifs" },
-    ],
-  },
-  challenges: {
-    icon: Target,
-    accentColor: "text-rose-400",
-    accentBg: "bg-rose-500/10",
-    accentBorder: "border-rose-500/20",
-    title: "Defis",
-    subtitle: "Relevez le challenge",
-    description:
-      "Participez a des defis de trading hebdomadaires avec des objectifs precis. Meilleur win rate, plus gros R:R, serie de trades gagnants...",
-    features: [
-      { icon: Target, text: "Defis hebdomadaires avec objectifs clairs" },
-      { icon: Flame, text: "Competions par categorie de trading" },
-      { icon: Award, text: "Badges speciaux pour les gagnants" },
-    ],
-  },
-  discussions: {
-    icon: MessageSquare,
-    accentColor: "text-blue-400",
-    accentBg: "bg-blue-500/10",
-    accentBorder: "border-blue-500/20",
-    title: "Discussions",
-    subtitle: "Echangez entre traders",
-    description:
-      "Forums thematiques pour discuter strategies, analyses de marche, psychologie du trading et plus encore. Creez vos propres sujets.",
-    features: [
-      { icon: MessageSquare, text: "Forums par categorie (strategie, psychologie...)" },
-      { icon: Lightbulb, text: "Partagez vos analyses et setups" },
-      { icon: Bookmark, text: "Sauvegardez les meilleurs posts" },
-    ],
-  },
-  highlights: {
-    icon: Sparkles,
-    accentColor: "text-purple-400",
-    accentBg: "bg-purple-500/10",
-    accentBorder: "border-purple-500/20",
-    title: "Best Of",
-    subtitle: "Les meilleurs moments",
-    description:
-      "Selection hebdomadaire des meilleurs trades, analyses et contributions de la communaute. Vote par les membres.",
-    features: [
-      { icon: Sparkles, text: "Meilleurs trades de la semaine" },
-      { icon: Star, text: "Analyses les plus pertinentes" },
-      { icon: Zap, text: "Votes de la communaute" },
-    ],
-  },
-  mentors: {
-    icon: GraduationCap,
-    accentColor: "text-emerald-400",
-    accentBg: "bg-emerald-500/10",
-    accentBorder: "border-emerald-500/20",
-    title: "Mentorat",
-    subtitle: "Apprenez des meilleurs",
-    description:
-      "Connectez-vous avec des traders experimentes pour du coaching personnalise. Sessions de mentorat, revue de trades et accompagnement.",
-    features: [
-      { icon: GraduationCap, text: "Mentorat par des traders experimentes" },
-      { icon: Shield, text: "Profils verifies et notes par la communaute" },
-      { icon: LineChart, text: "Revue de vos trades et conseils personnalises" },
-    ],
-  },
-  compare: {
-    icon: GitCompare,
-    accentColor: "text-cyan-400",
-    accentBg: "bg-cyan-500/10",
-    accentBorder: "border-cyan-500/20",
-    title: "Comparer",
-    subtitle: "Analysez vos ecarts",
-    description:
-      "Comparez vos statistiques avec d'autres traders anonymises. Identifiez vos forces, vos faiblesses et les axes d'amelioration.",
-    features: [
-      { icon: GitCompare, text: "Comparaison anonymisee des statistiques" },
-      { icon: BarChart3, text: "Graphiques detailles par metrique" },
-      { icon: TrendingUp, text: "Suggestions d'amelioration personnalisees" },
-    ],
-  },
-};
+const MAX_POST_LENGTH = 280;
 
 /* ─── Helpers ───────────────────────────────────────────── */
 
 function getInitials(name: string | null) {
   if (!name) return "?";
-  return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function getHandle(email: string) {
+  return email.split("@")[0].toLowerCase();
 }
 
 function formatTime(dateStr: string) {
@@ -218,56 +94,35 @@ function formatTime(dateStr: string) {
   const mins = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  if (mins < 1) return "A l'instant";
+  if (mins < 1) return "maintenant";
   if (mins < 60) return `${mins}min`;
   if (hours < 24) return `${hours}h`;
   if (days < 7) return `${days}j`;
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 }
 
-function getAvatarGradient(name: string | null) {
+function getAvatarGradient(name: string | null): string {
   const gradients = [
-    "from-cyan-400 to-blue-600",
-    "from-purple-400 to-pink-600",
-    "from-emerald-400 to-teal-600",
-    "from-amber-400 to-orange-600",
-    "from-rose-400 to-red-600",
-    "from-indigo-400 to-violet-600",
+    "linear-gradient(135deg, #06b6d4, #3b82f6)",
+    "linear-gradient(135deg, #a855f7, #ec4899)",
+    "linear-gradient(135deg, #10b981, #14b8a6)",
+    "linear-gradient(135deg, #f59e0b, #f97316)",
+    "linear-gradient(135deg, #f43f5e, #ef4444)",
+    "linear-gradient(135deg, #6366f1, #8b5cf6)",
+    "linear-gradient(135deg, #06b6d4, #8b5cf6)",
+    "linear-gradient(135deg, #ec4899, #f59e0b)",
   ];
   if (!name) return gradients[0];
   const hash = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
   return gradients[hash % gradients.length];
 }
 
-/* ─── Notify hook (localStorage) ─────────────────────────── */
-
-function useNotifyPreferences() {
-  const [notified, setNotified] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("community-notify-prefs");
-      if (stored) setNotified(new Set(JSON.parse(stored)));
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const toggle = useCallback((tabId: string) => {
-    setNotified((prev) => {
-      const next = new Set(prev);
-      if (next.has(tabId)) next.delete(tabId);
-      else next.add(tabId);
-      try {
-        localStorage.setItem("community-notify-prefs", JSON.stringify([...next]));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }, []);
-
-  return { notified, toggle };
+function pseudoRandom(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
 }
 
 /* ─── Likes hook (localStorage) ─────────────────────────── */
@@ -332,167 +187,248 @@ function useBookmarks() {
   return { bookmarks, toggleBookmark };
 }
 
-/* ─── Enhanced Placeholder component ─────────────────────── */
+/* ─── Inline Trade Card (embedded in tweet) ─────────────── */
 
-function ComingSoonPlaceholder({ tabId, isNotified, onToggleNotify }: { tabId: string; isNotified: boolean; onToggleNotify: () => void }) {
-  const info = TAB_PLACEHOLDERS[tabId];
-  if (!info) return null;
-  const Icon = info.icon;
+function InlineTradeCard({ trade }: { trade: SharedTrade }) {
+  const isBuy = trade.direction?.toUpperCase() === "BUY" || trade.direction?.toUpperCase() === "LONG";
+  const pnl = trade.result;
+  const rr = trade.sl && trade.tp ? calculateRR(trade.entry, trade.sl, trade.tp) : null;
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="glass rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
-        {/* Decorative gradient blob */}
-        <div
-          className="absolute -top-20 -right-20 w-60 h-60 rounded-full opacity-[0.07] blur-3xl pointer-events-none"
-          style={{
-            background: `radial-gradient(circle, ${
-              info.accentColor.includes("amber") ? "#f59e0b" :
-              info.accentColor.includes("rose") ? "#f43f5e" :
-              info.accentColor.includes("blue") ? "#3b82f6" :
-              info.accentColor.includes("purple") ? "#a855f7" :
-              info.accentColor.includes("emerald") ? "#10b981" :
-              "#06b6d4"
-            } 0%, transparent 70%)`,
-          }}
-        />
-
-        {/* Icon */}
-        <div className={`w-16 h-16 rounded-2xl ${info.accentBg} border ${info.accentBorder} flex items-center justify-center mx-auto mb-6`}>
-          <Icon className={`w-8 h-8 ${info.accentColor}`} />
-        </div>
-
-        {/* Title & subtitle */}
-        <h2 className="text-2xl font-bold text-[--text-primary] mb-1">{info.title}</h2>
-        <p className={`text-sm font-medium ${info.accentColor} mb-4`}>{info.subtitle}</p>
-
-        {/* Description */}
-        <p className="text-sm text-[--text-secondary] leading-relaxed max-w-lg mx-auto mb-8">
-          {info.description}
-        </p>
-
-        {/* Feature list */}
-        <div className="space-y-3 max-w-md mx-auto mb-8">
-          {info.features.map((f, i) => {
-            const FIcon = f.icon;
-            return (
-              <div key={i} className="flex items-center gap-3 text-left">
-                <div className={`w-8 h-8 rounded-lg ${info.accentBg} border ${info.accentBorder} flex items-center justify-center shrink-0`}>
-                  <FIcon className={`w-4 h-4 ${info.accentColor}`} />
-                </div>
-                <span className="text-sm text-[--text-secondary]">{f.text}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Notify button */}
-        <button
-          onClick={onToggleNotify}
-          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-            isNotified
-              ? "bg-[--bg-secondary] border border-[--border] text-emerald-400"
-              : `${info.accentBg} border ${info.accentBorder} ${info.accentColor} hover:opacity-80`
-          }`}
-        >
-          {isNotified ? (
-            <>
-              <CheckCircle className="w-4 h-4" />
-              Notification activee
-            </>
+    <div
+      className="mt-3 rounded-xl border overflow-hidden"
+      style={{ borderColor: "var(--border)", background: "var(--bg-secondary)" }}
+    >
+      <div className="p-3.5">
+        {/* Asset + Direction badge */}
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center gap-2.5">
+            <span className="font-bold text-[15px]" style={{ color: "var(--text-primary)" }}>
+              {trade.asset}
+            </span>
+            <span
+              className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide"
+              style={{
+                background: isBuy ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
+                color: isBuy ? "#10b981" : "#ef4444",
+                border: `1px solid ${isBuy ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
+              }}
+            >
+              {isBuy ? "LONG" : "SHORT"}
+            </span>
+          </div>
+          {isBuy ? (
+            <ArrowUpRight className="w-5 h-5" style={{ color: "#10b981" }} />
           ) : (
-            <>
-              <Bell className="w-4 h-4" />
-              M&apos;avertir du lancement
-            </>
+            <ArrowDownRight className="w-5 h-5" style={{ color: "#ef4444" }} />
           )}
-        </button>
+        </div>
 
-        {/* Coming soon badge */}
-        <div className="mt-6">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[--bg-secondary]/60 border border-[--border] text-xs text-[--text-muted]">
-            <Clock className="w-3 h-3" />
-            Disponible prochainement
-          </span>
+        {/* Details grid */}
+        <div className="grid grid-cols-4 gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>
+              Entree
+            </p>
+            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              {trade.entry}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>
+              Sortie
+            </p>
+            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              {trade.exit ?? "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>
+              P&L
+            </p>
+            <p
+              className="text-sm font-bold"
+              style={{ color: pnl >= 0 ? "#10b981" : "#ef4444" }}
+            >
+              {pnl >= 0 ? "+" : ""}
+              {pnl.toFixed(2)}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>
+              R:R
+            </p>
+            <p className="text-sm font-semibold" style={{ color: "#06b6d4" }}>
+              {rr ? parseFloat(rr).toFixed(1) : "—"}
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── Tweet-style Post Component ─────────────────────────── */
+/* ─── Tweet Post Component ──────────────────────────────── */
 
 function TweetPost({
   msg,
-  reactions,
   isLiked,
   isBookmarked,
-  currentUserId,
-  onReaction,
   onLike,
   onBookmark,
   onReply,
+  likeCount,
+  replyCount,
 }: {
   msg: FeedMessage;
-  reactions: { emoji: string; count: number; users: string[]; hasReacted: boolean }[];
   isLiked: boolean;
   isBookmarked: boolean;
-  currentUserId: string | null;
-  onReaction: (messageId: string, emoji: string) => void;
   onLike: (messageId: string) => void;
   onBookmark: (messageId: string) => void;
   onReply: (messageId: string) => void;
+  likeCount: number;
+  replyCount: number;
 }) {
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const likeCount = reactions.reduce((s, r) => s + r.count, 0) + (isLiked ? 1 : 0);
+  const [showMore, setShowMore] = useState(false);
+  const [likeAnim, setLikeAnim] = useState(false);
+  const [copied, setCopied] = useState(false);
   const gradient = getAvatarGradient(msg.user.name);
+  const handle = getHandle(msg.user.email);
+  const viewCount = pseudoRandom(msg.id + "views") % 4500 + 120;
+
+  const handleLike = () => {
+    onLike(msg.id);
+    if (!isLiked) {
+      setLikeAnim(true);
+      setTimeout(() => setLikeAnim(false), 300);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/community#post-${msg.id}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  };
 
   return (
     <article
-      className="px-4 py-4 border-b border-[--border] hover:bg-[--bg-secondary]/30 transition-colors cursor-default"
-      style={{ borderColor: "var(--border)" }}
+      className="px-4 py-3 transition-colors cursor-default"
+      style={{
+        borderBottom: "1px solid var(--border)",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      id={`post-${msg.id}`}
     >
       <div className="flex gap-3">
         {/* Avatar */}
-        <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+          style={{ background: gradient }}
+        >
           {getInitials(msg.user.name)}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           {/* Header line */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="font-bold text-sm text-[--text-primary] hover:underline cursor-pointer">
+          <div className="flex items-center gap-1 min-w-0">
+            <span
+              className="font-bold text-[15px] truncate hover:underline cursor-pointer"
+              style={{ color: "var(--text-primary)" }}
+            >
               {msg.user.name || "Anonyme"}
             </span>
             {msg.user.role === "ADMIN" && (
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                ADMIN
-              </span>
+              <svg viewBox="0 0 22 22" className="w-[18px] h-[18px] shrink-0" style={{ color: "#06b6d4" }}>
+                <path
+                  fill="currentColor"
+                  d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.855-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.691-.13.635-.08 1.293.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.604-.274 1.26-.144 1.896.13.636.433 1.221.878 1.69.47.446 1.055.75 1.69.882.635.13 1.294.083 1.902-.143.271.586.702 1.084 1.24 1.438.54.354 1.167.551 1.813.568.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.225 1.261.273 1.896.143.634-.131 1.218-.435 1.688-.88.444-.47.748-1.056.88-1.692.13-.635.082-1.293-.14-1.896.587-.274 1.084-.706 1.438-1.246.355-.54.552-1.17.57-1.817zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z"
+                />
+              </svg>
             )}
-            <span className="text-[--text-muted] text-sm">&middot;</span>
-            <span className="text-[--text-muted] text-sm hover:underline cursor-pointer">
+            <span className="text-[15px] truncate" style={{ color: "var(--text-muted)" }}>
+              @{handle}
+            </span>
+            <span className="shrink-0" style={{ color: "var(--text-muted)" }}>
+              ·
+            </span>
+            <span
+              className="text-[13px] shrink-0 hover:underline cursor-pointer"
+              style={{ color: "var(--text-muted)" }}
+            >
               {formatTime(msg.createdAt)}
             </span>
+
+            {/* More menu */}
+            <div className="ml-auto relative shrink-0">
+              <button
+                onClick={() => setShowMore(!showMore)}
+                className="p-1.5 rounded-full transition-colors"
+                style={{ color: "var(--text-muted)" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(6,182,212,0.1)";
+                  e.currentTarget.style.color = "#06b6d4";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "var(--text-muted)";
+                }}
+              >
+                <MoreHorizontal className="w-[18px] h-[18px]" />
+              </button>
+              {showMore && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setShowMore(false)} />
+                  <div
+                    className="absolute right-0 top-full mt-1 w-48 rounded-xl py-1 shadow-2xl z-40"
+                    style={{
+                      background: "var(--bg-card, var(--bg-primary))",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <button
+                      onClick={() => setShowMore(false)}
+                      className="w-full px-4 py-2.5 text-left text-sm transition-colors"
+                      style={{ color: "var(--text-secondary)" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      Signaler ce post
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Post content */}
-          <div className="mt-1">
-            <p className="text-[15px] text-[--text-primary] whitespace-pre-wrap break-words leading-relaxed">
+          <div className="mt-0.5">
+            <p
+              className="whitespace-pre-wrap break-words"
+              style={{
+                color: "var(--text-primary)",
+                fontSize: "15px",
+                lineHeight: "1.5",
+              }}
+            >
               {msg.content}
             </p>
           </div>
 
           {/* Trade card if attached */}
-          {msg.trade && (
-            <div className="mt-3 rounded-xl border border-[--border] overflow-hidden">
-              <TradeCard trade={msg.trade} />
-            </div>
-          )}
+          {msg.trade && <InlineTradeCard trade={msg.trade} />}
 
           {/* Image if attached */}
           {msg.imageUrl && (
-            <div className="mt-3 rounded-2xl overflow-hidden border border-[--border]">
+            <div
+              className="mt-3 rounded-2xl overflow-hidden"
+              style={{ border: "1px solid var(--border)" }}
+            >
               <img
                 src={msg.imageUrl}
                 alt="Image partagee"
@@ -502,42 +438,31 @@ function TweetPost({
             </div>
           )}
 
-          {/* Emoji reactions display */}
-          {reactions.length > 0 && (
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {reactions.map((r) => (
-                <button
-                  key={r.emoji}
-                  onClick={() => onReaction(msg.id, r.emoji)}
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all ${
-                    r.hasReacted
-                      ? "bg-cyan-500/15 border border-cyan-500/30 text-cyan-400"
-                      : "bg-[--bg-secondary]/60 border border-[--border] text-[--text-secondary] hover:bg-[--bg-secondary]"
-                  }`}
-                  title={r.users.join(", ")}
-                >
-                  <span>{r.emoji}</span>
-                  <span className="font-medium">{r.count}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* Action bar — Twitter-style */}
-          <div className="flex items-center justify-between mt-3 -ml-2 max-w-md">
+          <div className="flex items-center justify-between mt-2 -ml-2" style={{ maxWidth: "425px" }}>
             {/* Reply */}
             <button
               onClick={() => onReply(msg.id)}
-              className="group flex items-center gap-1.5 p-2 rounded-full text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
+              className="group flex items-center gap-1.5 p-2 rounded-full transition-all"
+              style={{ color: "var(--text-muted)" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "#06b6d4";
+                e.currentTarget.style.background = "rgba(6,182,212,0.1)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--text-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
               title="Repondre"
             >
               <MessageCircle className="w-[18px] h-[18px]" />
-              <span className="text-xs">{reactions.length > 0 ? reactions.length : ""}</span>
+              {replyCount > 0 && <span className="text-[13px]">{replyCount}</span>}
             </button>
 
             {/* Repost */}
             <button
-              className="group flex items-center gap-1.5 p-2 rounded-full text-[--text-muted] hover:text-emerald-400 hover:bg-emerald-500/10 transition-all opacity-50 cursor-default"
+              className="group flex items-center gap-1.5 p-2 rounded-full transition-all cursor-default"
+              style={{ color: "var(--text-muted)", opacity: 0.5 }}
               title="Disponible prochainement"
             >
               <Repeat2 className="w-[18px] h-[18px]" />
@@ -545,63 +470,92 @@ function TweetPost({
 
             {/* Like (heart) */}
             <button
-              onClick={() => onLike(msg.id)}
-              className={`group flex items-center gap-1.5 p-2 rounded-full transition-all ${
-                isLiked
-                  ? "text-rose-500"
-                  : "text-[--text-muted] hover:text-rose-500 hover:bg-rose-500/10"
-              }`}
+              onClick={handleLike}
+              className="group flex items-center gap-1.5 p-2 rounded-full transition-all"
+              style={{ color: isLiked ? "#f43f5e" : "var(--text-muted)" }}
+              onMouseEnter={(e) => {
+                if (!isLiked) {
+                  e.currentTarget.style.color = "#f43f5e";
+                  e.currentTarget.style.background = "rgba(244,63,94,0.1)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isLiked) {
+                  e.currentTarget.style.color = "var(--text-muted)";
+                }
+                e.currentTarget.style.background = "transparent";
+              }}
               title="J'aime"
             >
               <Heart
-                className={`w-[18px] h-[18px] transition-transform ${isLiked ? "fill-rose-500 scale-110" : ""}`}
-                style={isLiked ? { fill: "currentColor" } : undefined}
+                className="w-[18px] h-[18px] transition-transform"
+                style={{
+                  fill: isLiked ? "#f43f5e" : "none",
+                  transform: likeAnim ? "scale(1.3)" : "scale(1)",
+                  transition: "transform 0.15s cubic-bezier(0.17, 0.67, 0.35, 1.5)",
+                }}
               />
-              <span className="text-xs">{likeCount > 0 ? likeCount : ""}</span>
+              {likeCount > 0 && <span className="text-[13px]">{likeCount}</span>}
             </button>
 
-            {/* Emoji reaction */}
-            <div className="relative">
-              <button
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="group flex items-center gap-1.5 p-2 rounded-full text-[--text-muted] hover:text-amber-400 hover:bg-amber-500/10 transition-all"
-                title="Reagir"
-              >
-                <Smile className="w-[18px] h-[18px]" />
-              </button>
-              {showEmojiPicker && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex gap-1 p-2 rounded-xl bg-[--bg-card-solid] border border-[--border] shadow-2xl z-30">
-                  {QUICK_EMOJIS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => {
-                        onReaction(msg.id, emoji);
-                        setShowEmojiPicker(false);
-                      }}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[--bg-secondary] transition text-base"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              )}
+            {/* Views */}
+            <div
+              className="flex items-center gap-1.5 p-2"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <BarChart2 className="w-[18px] h-[18px]" />
+              <span className="text-[13px]">{viewCount.toLocaleString("fr-FR")}</span>
             </div>
 
-            {/* Bookmark */}
-            <button
-              onClick={() => onBookmark(msg.id)}
-              className={`group flex items-center gap-1.5 p-2 rounded-full transition-all ${
-                isBookmarked
-                  ? "text-cyan-400"
-                  : "text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10"
-              }`}
-              title="Sauvegarder"
-            >
-              <Bookmark
-                className={`w-[18px] h-[18px] ${isBookmarked ? "fill-cyan-400" : ""}`}
-                style={isBookmarked ? { fill: "currentColor" } : undefined}
-              />
-            </button>
+            {/* Bookmark + Share */}
+            <div className="flex items-center gap-0">
+              <button
+                onClick={() => onBookmark(msg.id)}
+                className="p-2 rounded-full transition-all"
+                style={{ color: isBookmarked ? "#06b6d4" : "var(--text-muted)" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#06b6d4";
+                  e.currentTarget.style.background = "rgba(6,182,212,0.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = isBookmarked ? "#06b6d4" : "var(--text-muted)";
+                  e.currentTarget.style.background = "transparent";
+                }}
+                title="Sauvegarder"
+              >
+                <Bookmark
+                  className="w-[18px] h-[18px]"
+                  style={{ fill: isBookmarked ? "#06b6d4" : "none" }}
+                />
+              </button>
+              <button
+                onClick={handleShare}
+                className="p-2 rounded-full transition-all relative"
+                style={{ color: "var(--text-muted)" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#06b6d4";
+                  e.currentTarget.style.background = "rgba(6,182,212,0.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--text-muted)";
+                  e.currentTarget.style.background = "transparent";
+                }}
+                title="Partager"
+              >
+                <Link2 className="w-[18px] h-[18px]" />
+                {copied && (
+                  <span
+                    className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap"
+                    style={{
+                      background: "#06b6d4",
+                      color: "#fff",
+                    }}
+                  >
+                    Lien copie !
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -627,14 +581,24 @@ function PostComposer({
   userName: string | null;
 }) {
   const gradient = getAvatarGradient(userName);
-  const remaining = MAX_POST_LENGTH - input.length;
+  const charCount = input.length;
+  const remaining = MAX_POST_LENGTH - charCount;
   const isOverLimit = remaining < 0;
+  const progress = Math.min(1, charCount / MAX_POST_LENGTH);
+  const circumference = 2 * Math.PI * 10;
+  const strokeColor = isOverLimit ? "#ef4444" : remaining <= 20 ? "#ef4444" : remaining <= 40 ? "#f59e0b" : "#06b6d4";
 
   return (
-    <div className="px-4 py-4 border-b border-[--border]" style={{ borderColor: "var(--border)" }}>
+    <div
+      className="px-4 py-3"
+      style={{ borderBottom: "1px solid var(--border)" }}
+    >
       <div className="flex gap-3">
         {/* Avatar */}
-        <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-sm font-bold shrink-0`}>
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+          style={{ background: gradient }}
+        >
           {getInitials(userName)}
         </div>
 
@@ -642,82 +606,138 @@ function PostComposer({
         <div className="flex-1 min-w-0">
           <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value.slice(0, MAX_POST_LENGTH + 50))}
+            onChange={(e) => setInput(e.target.value.slice(0, MAX_POST_LENGTH + 20))}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !isOverLimit) {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !isOverLimit && input.trim()) {
                 e.preventDefault();
                 onSend();
               }
             }}
             placeholder="Quoi de neuf sur les marches ?"
-            rows={3}
-            className="w-full bg-transparent text-[--text-primary] text-lg placeholder:text-[--text-muted] resize-none focus:outline-none leading-relaxed"
+            rows={2}
+            className="w-full bg-transparent resize-none focus:outline-none"
+            style={{
+              color: "var(--text-primary)",
+              fontSize: "18px",
+              lineHeight: "1.5",
+              caretColor: "#06b6d4",
+            }}
           />
 
           {/* Divider */}
-          <div className="h-px bg-[--border] my-3" />
+          <div style={{ height: "1px", background: "var(--border)", margin: "12px 0" }} />
 
           {/* Bottom bar */}
           <div className="flex items-center justify-between">
-            {/* Action buttons */}
-            <div className="flex items-center gap-1">
+            {/* Action icons */}
+            <div className="flex items-center gap-0.5">
               <button
-                className="p-2 rounded-full text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10 transition-all opacity-50 cursor-default"
-                title="Disponible prochainement"
+                className="p-2 rounded-full transition-all"
+                style={{ color: "#06b6d4", opacity: 0.5 }}
+                title="Image (bientot)"
               >
                 <ImageIcon className="w-5 h-5" />
               </button>
               <button
+                className="p-2 rounded-full transition-all"
+                style={{ color: "#06b6d4", opacity: 0.5 }}
+                title="Graphique (bientot)"
+              >
+                <BarChart3 className="w-5 h-5" />
+              </button>
+              <button
                 onClick={onShareTrade}
-                className="p-2 rounded-full text-[--text-muted] hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                className="p-2 rounded-full transition-all"
+                style={{ color: "#06b6d4" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(6,182,212,0.1)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 title="Partager un trade"
               >
                 <Share2 className="w-5 h-5" />
               </button>
               <button
-                className="p-2 rounded-full text-[--text-muted] hover:text-amber-400 hover:bg-amber-500/10 transition-all opacity-50 cursor-default"
-                title="Disponible prochainement"
+                className="p-2 rounded-full transition-all"
+                style={{ color: "#06b6d4", opacity: 0.5 }}
+                title="Emoji (bientot)"
               >
                 <Smile className="w-5 h-5" />
+              </button>
+              <button
+                className="p-2 rounded-full transition-all"
+                style={{ color: "#06b6d4", opacity: 0.5 }}
+                title="Sondage (bientot)"
+              >
+                <BarChart2 className="w-5 h-5" />
               </button>
             </div>
 
             {/* Character counter + Post button */}
             <div className="flex items-center gap-3">
-              {input.length > 0 && (
+              {charCount > 0 && (
                 <div className="flex items-center gap-2">
                   {/* Circular progress */}
-                  <div className="relative w-6 h-6">
-                    <svg className="w-6 h-6 -rotate-90" viewBox="0 0 24 24">
+                  <div className="relative w-[28px] h-[28px]">
+                    <svg className="-rotate-90" width="28" height="28" viewBox="0 0 24 24">
                       <circle
-                        cx="12" cy="12" r="10"
+                        cx="12"
+                        cy="12"
+                        r="10"
                         fill="none"
                         stroke="var(--border)"
                         strokeWidth="2"
                       />
                       <circle
-                        cx="12" cy="12" r="10"
+                        cx="12"
+                        cy="12"
+                        r="10"
                         fill="none"
-                        stroke={isOverLimit ? "#ef4444" : remaining < 50 ? "#f59e0b" : "#06b6d4"}
+                        stroke={strokeColor}
                         strokeWidth="2"
-                        strokeDasharray={`${Math.min(1, input.length / MAX_POST_LENGTH) * 62.83} 62.83`}
+                        strokeDasharray={`${progress * circumference} ${circumference}`}
                         strokeLinecap="round"
+                        style={{ transition: "stroke-dasharray 0.15s ease, stroke 0.15s ease" }}
                       />
                     </svg>
+                    {remaining <= 20 && (
+                      <span
+                        className="absolute inset-0 flex items-center justify-center text-[10px] font-bold"
+                        style={{ color: strokeColor }}
+                      >
+                        {remaining}
+                      </span>
+                    )}
                   </div>
-                  {remaining < 50 && (
-                    <span className={`text-xs font-medium ${isOverLimit ? "text-rose-400" : "text-amber-400"}`}>
-                      {remaining}
-                    </span>
-                  )}
+
+                  {/* Separator */}
+                  <div
+                    className="w-px h-6"
+                    style={{ background: "var(--border)" }}
+                  />
                 </div>
               )}
+
               <button
                 onClick={onSend}
                 disabled={sending || !input.trim() || isOverLimit}
-                className="px-5 py-2 rounded-full bg-cyan-500 text-white font-bold text-sm hover:bg-cyan-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-5 py-2 rounded-full font-bold text-sm transition-all"
+                style={{
+                  background: sending || !input.trim() || isOverLimit ? "rgba(6,182,212,0.4)" : "#06b6d4",
+                  color: "#fff",
+                  cursor: sending || !input.trim() || isOverLimit ? "not-allowed" : "pointer",
+                  opacity: sending || !input.trim() || isOverLimit ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!sending && input.trim() && !isOverLimit) {
+                    e.currentTarget.style.background = "#22d3ee";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!sending && input.trim() && !isOverLimit) {
+                    e.currentTarget.style.background = "#06b6d4";
+                  }
+                }}
               >
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publier"}
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Poster"}
               </button>
             </div>
           </div>
@@ -732,150 +752,204 @@ function PostComposer({
 function RightSidebar({
   myStats,
   trendingAssets,
-  gamData,
+  searchQuery,
+  setSearchQuery,
 }: {
   myStats: {
     winRate: number;
     totalPnl: number;
     streak: number;
     trades: number;
-    meanRR: number;
-    wins: number;
-    losses: number;
-    bestTrade: number;
-    worstTrade: number;
   } | null;
   trendingAssets: { asset: string; count: number; pnl: number }[];
-  gamData: { badges: { id: string; name: string; description: string; color: string; unlocked: boolean }[] } | null;
+  searchQuery: string;
+  setSearchQuery: (v: string) => void;
 }) {
   return (
     <aside className="space-y-4 sticky top-4">
-      {/* User Stats Card */}
-      {myStats && (
-        <div className="glass rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-[--border]">
-            <h3 className="font-bold text-[--text-primary] flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-cyan-400" />
-              Mes Statistiques
-            </h3>
-          </div>
-          <div className="p-4">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl p-3 text-center" style={{ background: "rgba(6,182,212,0.08)" }}>
-                <p className="text-xl font-bold text-cyan-400">{myStats.winRate.toFixed(1)}%</p>
-                <p className="text-[10px] text-[--text-muted] mt-0.5">Taux de reussite</p>
-              </div>
-              <div className="rounded-xl p-3 text-center" style={{ background: myStats.totalPnl >= 0 ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)" }}>
-                <p className={`text-xl font-bold ${myStats.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  {myStats.totalPnl >= 0 ? "+" : ""}{myStats.totalPnl.toFixed(0)}&euro;
-                </p>
-                <p className="text-[10px] text-[--text-muted] mt-0.5">P&amp;L total</p>
-              </div>
-              <div className="rounded-xl p-3 text-center" style={{ background: "rgba(168,85,247,0.08)" }}>
-                <p className="text-xl font-bold text-purple-400">{myStats.streak}</p>
-                <p className="text-[10px] text-[--text-muted] mt-0.5">Serie en cours</p>
-              </div>
-              <div className="rounded-xl p-3 text-center" style={{ background: "rgba(245,158,11,0.08)" }}>
-                <p className="text-xl font-bold text-amber-400">{myStats.trades}</p>
-                <p className="text-[10px] text-[--text-muted] mt-0.5">Trades total</p>
-              </div>
-            </div>
-            <div className="mt-3 space-y-1.5">
-              <div className="flex items-center justify-between text-xs px-1">
-                <span className="text-[--text-muted]">R:R moyen</span>
-                <span className="font-medium text-[--text-primary]">{myStats.meanRR.toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs px-1">
-                <span className="text-[--text-muted]">Meilleur trade</span>
-                <span className="font-medium text-emerald-400">+{myStats.bestTrade.toFixed(0)}&euro;</span>
-              </div>
-              <div className="flex items-center justify-between text-xs px-1">
-                <span className="text-[--text-muted]">Pire trade</span>
-                <span className="font-medium text-rose-400">{myStats.worstTrade.toFixed(0)}&euro;</span>
-              </div>
-              <div className="flex items-center justify-between text-xs px-1">
-                <span className="text-[--text-muted]">Victoires / Defaites</span>
-                <span className="font-medium text-[--text-primary]">{myStats.wins}V / {myStats.losses}D</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Search bar */}
+      <div className="relative">
+        <Search
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4"
+          style={{ color: "var(--text-muted)" }}
+        />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Rechercher"
+          className="w-full pl-10 pr-4 py-2.5 rounded-full text-sm focus:outline-none transition-all"
+          style={{
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            color: "var(--text-primary)",
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = "#06b6d4")}
+          onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full"
+            style={{ background: "#06b6d4", color: "#fff" }}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
 
-      {/* Trending Assets */}
+      {/* Tendances Trading */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="p-4 border-b border-[--border]">
-          <h3 className="font-bold text-[--text-primary] flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-cyan-400" />
-            Tendances Trading
+        <div className="p-4" style={{ borderBottom: "1px solid var(--border)" }}>
+          <h3 className="font-extrabold text-[17px]" style={{ color: "var(--text-primary)" }}>
+            Tendances pour vous
           </h3>
         </div>
-        <div className="p-2">
+        <div>
           {trendingAssets.length > 0 ? (
             trendingAssets.map((item, i) => (
               <div
                 key={item.asset}
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[--bg-secondary]/50 transition-colors cursor-default"
+                className="px-4 py-3 transition-colors cursor-default"
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                <div>
-                  <p className="text-xs text-[--text-muted]">{i + 1} &middot; Trending</p>
-                  <p className="font-bold text-sm text-[--text-primary]">{item.asset}</p>
-                  <p className="text-xs text-[--text-muted]">{item.count} trade{item.count > 1 ? "s" : ""}</p>
-                </div>
-                <span className={`text-sm font-bold ${item.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  {item.pnl >= 0 ? "+" : ""}{item.pnl.toFixed(0)}&euro;
-                </span>
+                <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+                  {i + 1} · Trading
+                </p>
+                <p className="font-bold text-[15px]" style={{ color: "var(--text-primary)" }}>
+                  {item.asset}
+                </p>
+                <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+                  {item.count} trade{item.count > 1 ? "s" : ""}
+                  <span
+                    className="ml-2 font-medium"
+                    style={{ color: item.pnl >= 0 ? "#10b981" : "#ef4444" }}
+                  >
+                    {item.pnl >= 0 ? "+" : ""}
+                    {item.pnl.toFixed(0)}&euro;
+                  </span>
+                </p>
               </div>
             ))
           ) : (
-            <div className="px-3 py-4 text-center">
-              <p className="text-xs text-[--text-muted]">Ajoutez des trades pour voir vos tendances</p>
+            <div className="px-4 py-6 text-center">
+              <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+                Ajoutez des trades pour voir les tendances
+              </p>
+            </div>
+          )}
+          {trendingAssets.length > 0 && (
+            <div
+              className="px-4 py-3 transition-colors cursor-pointer"
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <span className="text-[15px]" style={{ color: "#06b6d4" }}>
+                Voir plus
+              </span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Traders a suivre */}
+      {/* Qui suivre */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="p-4 border-b border-[--border]">
-          <h3 className="font-bold text-[--text-primary] flex items-center gap-2">
-            <Users className="w-4 h-4 text-cyan-400" />
-            Traders a suivre
+        <div className="p-4" style={{ borderBottom: "1px solid var(--border)" }}>
+          <h3 className="font-extrabold text-[17px]" style={{ color: "var(--text-primary)" }}>
+            Qui suivre
           </h3>
         </div>
         <div className="p-4 text-center">
-          <p className="text-xs text-[--text-muted]">Disponible prochainement</p>
+          <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+            Disponible prochainement
+          </p>
         </div>
       </div>
 
-      {/* Badges */}
-      {gamData && gamData.badges.filter((b) => b.unlocked).length > 0 && (
+      {/* Mes Stats */}
+      {myStats && (
         <div className="glass rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-[--border]">
-            <h3 className="font-bold text-[--text-primary] flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-400" />
-              Mes Badges
+          <div className="p-4" style={{ borderBottom: "1px solid var(--border)" }}>
+            <h3 className="font-extrabold text-[17px]" style={{ color: "var(--text-primary)" }}>
+              Mes Stats
             </h3>
           </div>
           <div className="p-4">
-            <div className="flex flex-wrap gap-2">
-              {gamData.badges.filter((b) => b.unlocked).slice(0, 6).map((b) => (
-                <div
-                  key={b.id}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium border"
-                  style={{ background: `${b.color}15`, color: b.color, borderColor: `${b.color}30` }}
-                  title={b.description}
+            <div className="grid grid-cols-2 gap-2">
+              <div
+                className="rounded-xl p-3 text-center"
+                style={{ background: "rgba(6,182,212,0.08)" }}
+              >
+                <p className="text-xl font-bold" style={{ color: "#06b6d4" }}>
+                  {myStats.winRate.toFixed(1)}%
+                </p>
+                <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+                  Win rate
+                </p>
+              </div>
+              <div
+                className="rounded-xl p-3 text-center"
+                style={{
+                  background: myStats.totalPnl >= 0 ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)",
+                }}
+              >
+                <p
+                  className="text-xl font-bold"
+                  style={{ color: myStats.totalPnl >= 0 ? "#10b981" : "#ef4444" }}
                 >
-                  {b.name}
-                </div>
-              ))}
+                  {myStats.totalPnl >= 0 ? "+" : ""}
+                  {myStats.totalPnl.toFixed(0)}&euro;
+                </p>
+                <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+                  P&amp;L total
+                </p>
+              </div>
+              <div
+                className="rounded-xl p-3 text-center"
+                style={{ background: "rgba(168,85,247,0.08)" }}
+              >
+                <p className="text-xl font-bold" style={{ color: "#a855f7" }}>
+                  {myStats.streak}
+                </p>
+                <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+                  Serie
+                </p>
+              </div>
+              <div
+                className="rounded-xl p-3 text-center"
+                style={{ background: "rgba(245,158,11,0.08)" }}
+              >
+                <p className="text-xl font-bold" style={{ color: "#f59e0b" }}>
+                  {myStats.trades}
+                </p>
+                <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+                  Trades
+                </p>
+              </div>
             </div>
-            {gamData.badges.filter((b) => b.unlocked).length > 6 && (
-              <p className="text-xs text-[--text-muted] mt-2">+{gamData.badges.filter((b) => b.unlocked).length - 6} autres</p>
-            )}
           </div>
         </div>
       )}
+
+      {/* Footer links */}
+      <div className="px-4 flex flex-wrap gap-x-2 gap-y-1">
+        <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+          Conditions
+        </span>
+        <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+          ·
+        </span>
+        <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+          Confidentialite
+        </span>
+        <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+          ·
+        </span>
+        <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+          &copy; 2026 MarketPhase
+        </span>
+      </div>
     </aside>
   );
 }
@@ -886,11 +960,11 @@ export default function CommunityPage() {
   const { t } = useTranslation();
   const { trades, loading: tradesLoading } = useTrades();
   const { data: gamData } = useGamification();
-  const { notified, toggle: toggleNotify } = useNotifyPreferences();
   const { likes, toggleLike } = useLikes();
   const { bookmarks, toggleBookmark } = useBookmarks();
 
-  const [activeTab, setActiveTab] = useState<TabId>("feed");
+  type TabId = "foryou" | "following";
+  const [activeTab, setActiveTab] = useState<TabId>("foryou");
   const [messages, setMessages] = useState<FeedMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [communityRoomId, setCommunityRoomId] = useState<string | null>(null);
@@ -899,36 +973,28 @@ export default function CommunityPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
-  const [onlineCount, setOnlineCount] = useState<number | null>(null);
-  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [newPostCount, setNewPostCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const feedRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSeenCountRef = useRef(0);
 
   /* ─── My stats (from real data) ─── */
   const myStats = useMemo(() => {
     if (!trades.length) return null;
     const wins = trades.filter((t) => t.result > 0);
-    const losses = trades.filter((t) => t.result < 0);
-    const winRate = trades.length > 0 ? (wins.length / trades.length) * 100 : 0;
     const totalPnl = trades.reduce((s, t) => s + t.result, 0);
+    const winRate = (wins.length / trades.length) * 100;
     let streak = 0;
-    const sorted = [...trades].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const sorted = [...trades].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
     for (const t of sorted) {
       if (t.result > 0) streak++;
       else break;
     }
-    const avgRR = trades
-      .filter((t) => t.sl && t.tp)
-      .map((t) => parseFloat(calculateRR(t.entry, t.sl, t.tp)))
-      .filter((v) => !isNaN(v));
-    const meanRR = avgRR.length > 0 ? avgRR.reduce((s, v) => s + v, 0) / avgRR.length : 0;
-
-    const bestTrade = trades.length > 0 ? Math.max(...trades.map((t) => t.result)) : 0;
-    const worstTrade = trades.length > 0 ? Math.min(...trades.map((t) => t.result)) : 0;
-
-    return { winRate, totalPnl, streak, trades: trades.length, meanRR, wins: wins.length, losses: losses.length, bestTrade, worstTrade };
+    return { winRate, totalPnl, streak, trades: trades.length };
   }, [trades]);
 
   /* ─── Trending assets from real trades ─── */
@@ -953,7 +1019,10 @@ export default function CommunityPage() {
       const res = await fetch("/api/chat/rooms");
       if (!res.ok) return;
       const rooms = await res.json();
-      const community = rooms.find((r: { name: string }) => r.name === "Communaute" || r.name === "community" || r.name === "Communauté");
+      const community = rooms.find(
+        (r: { name: string }) =>
+          r.name === "Communaute" || r.name === "community" || r.name === "Communaute"
+      );
       if (community) {
         setCommunityRoomId(community.id);
       } else {
@@ -968,7 +1037,7 @@ export default function CommunityPage() {
 
   useEffect(() => {
     fetch("/api/user/role")
-      .then((res) => res.ok ? res.json() : null)
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.userId) setCurrentUserId(data.userId);
         else if (data?.id) setCurrentUserId(data.id);
@@ -977,47 +1046,46 @@ export default function CommunityPage() {
       .catch(() => {});
   }, []);
 
-  /* ─── Online members count (from unique users in recent messages) ─── */
+  const fetchMessages = useCallback(
+    async (roomId: string, after?: string) => {
+      try {
+        const url = after
+          ? `/api/chat/messages?roomId=${roomId}&after=${encodeURIComponent(after)}`
+          : `/api/chat/messages?roomId=${roomId}&limit=50`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (after) {
+          if (data.messages?.length > 0) {
+            setMessages((prev) => {
+              const existingIds = new Set(prev.map((m) => m.id));
+              const newMsgs = data.messages.filter(
+                (m: FeedMessage) => !existingIds.has(m.id)
+              );
+              if (newMsgs.length > 0) {
+                // Track new posts for notification bar
+                setNewPostCount((c) => c + newMsgs.length);
+                return [...prev, ...newMsgs];
+              }
+              return prev;
+            });
+          }
+        } else {
+          setMessages(data.messages || []);
+          lastSeenCountRef.current = data.messages?.length || 0;
+        }
+      } catch (error) {
+        console.error("Fetch messages error:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
-    if (messages.length > 0) {
-      const recentCutoff = Date.now() - 30 * 60 * 1000; // 30 min
-      const recentUsers = new Set<string>();
-      for (const msg of messages) {
-        if (new Date(msg.createdAt).getTime() > recentCutoff) {
-          recentUsers.add(msg.userId);
-        }
-      }
-      setOnlineCount(recentUsers.size);
-    }
-  }, [messages]);
-
-  const fetchMessages = useCallback(async (roomId: string, after?: string) => {
-    try {
-      const url = after
-        ? `/api/chat/messages?roomId=${roomId}&after=${encodeURIComponent(after)}`
-        : `/api/chat/messages?roomId=${roomId}&limit=50`;
-      const res = await fetch(url);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (after) {
-        if (data.messages?.length > 0) {
-          setMessages((prev) => {
-            const existingIds = new Set(prev.map((m) => m.id));
-            const newMsgs = data.messages.filter((m: FeedMessage) => !existingIds.has(m.id));
-            return newMsgs.length > 0 ? [...prev, ...newMsgs] : prev;
-          });
-        }
-      } else {
-        setMessages(data.messages || []);
-      }
-    } catch (error) {
-      console.error("Fetch messages error:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { initRoom(); }, [initRoom]);
+    initRoom();
+  }, [initRoom]);
 
   const messagesRef = useRef<FeedMessage[]>([]);
   messagesRef.current = messages;
@@ -1030,17 +1098,10 @@ export default function CommunityPage() {
       if (lastMsg) fetchMessages(communityRoomId, lastMsg.createdAt);
       else fetchMessages(communityRoomId);
     }, 5000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [communityRoomId, fetchMessages]);
-
-  /* ─── Scroll to top button logic ─── */
-  useEffect(() => {
-    const el = feedRef.current;
-    if (!el) return;
-    const onScroll = () => setShowScrollTop(el.scrollTop > 600);
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [activeTab]);
 
   const sendMessage = async (content: string, tradeId?: string, imageUrl?: string) => {
     if (!communityRoomId || !content.trim()) return;
@@ -1049,26 +1110,23 @@ export default function CommunityPage() {
       const res = await fetch("/api/chat/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId: communityRoomId, content: content.trim(), tradeId: tradeId || null, imageUrl: imageUrl || null }),
+        body: JSON.stringify({
+          roomId: communityRoomId,
+          content: content.trim(),
+          tradeId: tradeId || null,
+          imageUrl: imageUrl || null,
+        }),
       });
       if (res.ok) {
         const msg = await res.json();
         setMessages((prev) => [...prev, msg]);
         setInput("");
       }
-    } catch (error) { console.error("Send message error:", error); }
-    finally { setSending(false); }
-  };
-
-  const handleReaction = async (messageId: string, emoji: string) => {
-    try {
-      const res = await fetch("/api/chat/reactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId, emoji }),
-      });
-      if (res.ok && communityRoomId) fetchMessages(communityRoomId);
-    } catch (error) { console.error("Reaction error:", error); }
+    } catch (error) {
+      console.error("Send message error:", error);
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleShareFromJournal = (tradeId: string, content: string, comment: string) => {
@@ -1077,87 +1135,144 @@ export default function CommunityPage() {
     setShowShareModal(false);
   };
 
-  const groupReactions = (reactions: Reaction[]) => {
-    const map = new Map<string, { count: number; users: string[]; hasReacted: boolean }>();
-    for (const r of reactions) {
-      const existing = map.get(r.emoji) || { count: 0, users: [], hasReacted: false };
-      existing.count++;
-      existing.users.push(r.user.name || "?");
-      if (r.userId === currentUserId) existing.hasReacted = true;
-      map.set(r.emoji, existing);
-    }
-    return Array.from(map.entries()).map(([emoji, data]) => ({ emoji, ...data }));
-  };
-
   const handleReply = (messageId: string) => {
     const msg = messages.find((m) => m.id === messageId);
     if (msg) {
       setInput(`@${msg.user.name || "Anonyme"} `);
+      // Focus composer
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  const handleShowNewPosts = () => {
+    setNewPostCount(0);
+    feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  /* ─── Filter messages by search ─── */
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery.trim()) return messages;
+    const q = searchQuery.toLowerCase();
+    return messages.filter(
+      (m) =>
+        m.content.toLowerCase().includes(q) ||
+        m.user.name?.toLowerCase().includes(q) ||
+        m.user.email.toLowerCase().includes(q) ||
+        m.trade?.asset.toLowerCase().includes(q)
+    );
+  }, [messages, searchQuery]);
+
+  /* ─── Sort: newest first ─── */
+  const sortedMessages = useMemo(() => {
+    return [...filteredMessages].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [filteredMessages]);
+
+  /* ─── Like counts (pseudo from reactions + localStorage) ─── */
+  const getLikeCount = (msg: FeedMessage) => {
+    const reactionCount = msg.reactions?.length || 0;
+    return reactionCount + (likes.has(msg.id) ? 1 : 0);
   };
 
   /* ─── Render ─── */
   return (
-    <div className="max-w-7xl mx-auto space-y-4">
-      {/* ─── Header ─── */}
-      <div className="glass rounded-2xl p-5">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <Users className="w-6 h-6 text-white" />
+    <div className="max-w-[1280px] mx-auto">
+      <div className="flex gap-0">
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* CENTER COLUMN — Main Feed                                  */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <div
+          className="flex-1 min-w-0"
+          style={{
+            maxWidth: "600px",
+            borderLeft: "1px solid var(--border)",
+            borderRight: "1px solid var(--border)",
+          }}
+        >
+          {/* Sticky Header + Tabs */}
+          <div
+            className="sticky top-0 z-20"
+            style={{
+              background: "rgba(var(--bg-primary-rgb, 10,10,20), 0.85)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              borderBottom: "1px solid var(--border)",
+            }}
+          >
+            {/* Title */}
+            <div className="px-4 py-3">
+              <h1
+                className="text-[20px] font-extrabold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Communaute
+              </h1>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-[--text-primary]">Hub Communautaire</h1>
-              <p className="text-xs text-[--text-secondary]">
-                Partagez, comparez et progressez avec la communaute
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {onlineCount !== null && onlineCount > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                <span className="text-xs font-medium text-emerald-400">
-                  {onlineCount} {onlineCount > 1 ? "actifs" : "actif"}
-                </span>
-              </div>
-            )}
-            <div className="text-xs text-[--text-muted] px-2 py-1 rounded-full bg-[--bg-secondary]/50">
-              {messages.length} posts
-            </div>
-          </div>
-        </div>
 
-        {/* Tab bar */}
-        <div className="flex items-center gap-1 mt-4 overflow-x-auto pb-1 scrollbar-hide">
-          {TABS.map((tab) => (
+            {/* Tabs: Pour toi / Suivis */}
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab("foryou")}
+                className="flex-1 py-3 text-center relative transition-colors"
+                style={{
+                  color: activeTab === "foryou" ? "var(--text-primary)" : "var(--text-muted)",
+                  fontWeight: activeTab === "foryou" ? 700 : 500,
+                  fontSize: "15px",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                Pour toi
+                {activeTab === "foryou" && (
+                  <div
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[4px] rounded-full"
+                    style={{ width: "56px", background: "#06b6d4" }}
+                  />
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("following")}
+                className="flex-1 py-3 text-center relative transition-colors"
+                style={{
+                  color: activeTab === "following" ? "var(--text-primary)" : "var(--text-muted)",
+                  fontWeight: activeTab === "following" ? 700 : 500,
+                  fontSize: "15px",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                Suivis
+                {activeTab === "following" && (
+                  <div
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[4px] rounded-full"
+                    style={{ width: "42px", background: "#06b6d4" }}
+                  />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* New posts notification bar */}
+          {newPostCount > 0 && (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
-                  : "text-[--text-muted] hover:text-[--text-secondary] hover:bg-[--bg-secondary]/50"
-              }`}
+              onClick={handleShowNewPosts}
+              className="w-full py-3 text-center text-sm font-medium transition-colors"
+              style={{
+                color: "#06b6d4",
+                borderBottom: "1px solid var(--border)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(6,182,212,0.05)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
+              {newPostCount} nouveau{newPostCount > 1 ? "x" : ""} post
+              {newPostCount > 1 ? "s" : ""}
             </button>
-          ))}
-        </div>
-      </div>
+          )}
 
-      {/* ═══════════════════════════════════════════════════ */}
-      {/* TAB: FEED — Twitter-style layout                   */}
-      {/* ═══════════════════════════════════════════════════ */}
-      {activeTab === "feed" && (
-        <div className="flex gap-6">
-          {/* Main Feed Column */}
-          <div className="flex-1 min-w-0">
-            <div className="glass rounded-2xl overflow-hidden" ref={feedRef} style={{ maxHeight: "calc(100vh - 220px)", overflowY: "auto" }}>
+          {/* Feed content */}
+          {activeTab === "foryou" ? (
+            <div ref={feedRef}>
               {/* Post Composer */}
               {communityRoomId && (
                 <PostComposer
@@ -1170,97 +1285,121 @@ export default function CommunityPage() {
                 />
               )}
 
-              {/* Feed content */}
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-16">
-                  <Loader2 className="w-7 h-7 animate-spin text-cyan-400 mb-3" />
-                  <p className="text-sm text-[--text-muted]">Chargement du fil...</p>
-                </div>
-              ) : !communityRoomId ? (
-                <div className="py-16 text-center px-6">
-                  <div className="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-8 h-8 text-cyan-400" />
-                  </div>
-                  <h2 className="text-lg font-bold text-[--text-primary] mb-2">Communaute</h2>
-                  <p className="text-sm text-[--text-secondary] max-w-sm mx-auto">
-                    Le salon communautaire n&apos;a pas encore ete cree. Contactez un administrateur pour l&apos;initialiser.
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Loader2 className="w-7 h-7 animate-spin mb-3" style={{ color: "#06b6d4" }} />
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                    Chargement du fil...
                   </p>
                 </div>
-              ) : messages.length === 0 ? (
-                <div className="py-16 text-center px-6">
-                  <div className="w-16 h-16 rounded-full bg-[--bg-secondary] flex items-center justify-center mx-auto mb-4">
-                    <MessageCircle className="w-8 h-8 text-[--text-muted]" />
+              ) : !communityRoomId ? (
+                <div className="py-20 text-center px-6">
+                  <div
+                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                    style={{ background: "rgba(6,182,212,0.1)" }}
+                  >
+                    <Users className="w-8 h-8" style={{ color: "#06b6d4" }} />
                   </div>
-                  <h2 className="text-lg font-bold text-[--text-primary] mb-2">Aucun post pour le moment</h2>
-                  <p className="text-sm text-[--text-secondary]">Soyez le premier a poster sur le fil !</p>
+                  <h2
+                    className="text-lg font-bold mb-2"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Communaute
+                  </h2>
+                  <p className="text-sm max-w-sm mx-auto" style={{ color: "var(--text-secondary)" }}>
+                    Le salon communautaire n&apos;a pas encore ete cree. Contactez un administrateur.
+                  </p>
+                </div>
+              ) : sortedMessages.length === 0 ? (
+                /* Empty state */
+                <div className="py-20 text-center px-8">
+                  <div
+                    className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5"
+                    style={{ background: "rgba(6,182,212,0.1)" }}
+                  >
+                    <MessageCircle className="w-10 h-10" style={{ color: "#06b6d4" }} />
+                  </div>
+                  <h2
+                    className="text-2xl font-extrabold mb-2"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Bienvenue dans la communaute !
+                  </h2>
+                  <p
+                    className="text-[15px] max-w-md mx-auto mb-6"
+                    style={{ color: "var(--text-secondary)", lineHeight: "1.5" }}
+                  >
+                    Partagez vos analyses, vos trades et echangez avec d&apos;autres traders.
+                  </p>
+                  <button
+                    onClick={() => {
+                      const textarea = document.querySelector("textarea");
+                      textarea?.focus();
+                    }}
+                    className="px-8 py-3 rounded-full font-bold text-[15px] transition-all"
+                    style={{ background: "#06b6d4", color: "#fff" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#22d3ee")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "#06b6d4")}
+                  >
+                    Poster
+                  </button>
                 </div>
               ) : (
                 <>
-                  {messages.map((msg) => {
-                    const reactions = groupReactions(msg.reactions);
-                    return (
-                      <TweetPost
-                        key={msg.id}
-                        msg={msg}
-                        reactions={reactions}
-                        isLiked={likes.has(msg.id)}
-                        isBookmarked={bookmarks.has(msg.id)}
-                        currentUserId={currentUserId}
-                        onReaction={handleReaction}
-                        onLike={toggleLike}
-                        onBookmark={toggleBookmark}
-                        onReply={handleReply}
-                      />
-                    );
-                  })}
-                  <div ref={messagesEndRef} className="h-4" />
+                  {sortedMessages.map((msg) => (
+                    <TweetPost
+                      key={msg.id}
+                      msg={msg}
+                      isLiked={likes.has(msg.id)}
+                      isBookmarked={bookmarks.has(msg.id)}
+                      onLike={toggleLike}
+                      onBookmark={toggleBookmark}
+                      onReply={handleReply}
+                      likeCount={getLikeCount(msg)}
+                      replyCount={msg.reactions?.length || 0}
+                    />
+                  ))}
+                  <div className="h-20" />
                 </>
               )}
-
-              {/* Scroll to top button */}
-              {showScrollTop && (
-                <button
-                  onClick={() => feedRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
-                  className="fixed bottom-6 right-6 lg:right-auto lg:relative lg:bottom-auto w-10 h-10 rounded-full bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 flex items-center justify-center hover:bg-cyan-400 transition-all z-30"
-                >
-                  <ArrowUp className="w-5 h-5" />
-                </button>
-              )}
             </div>
-          </div>
-
-          {/* Right Sidebar — hidden on mobile */}
-          <div className="hidden lg:block w-80 shrink-0">
-            <RightSidebar
-              myStats={myStats}
-              trendingAssets={trendingAssets}
-              gamData={gamData ? { badges: gamData.badges } : null}
-            />
-          </div>
+          ) : (
+            /* Following tab — coming soon */
+            <div className="py-20 text-center px-8">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ background: "rgba(6,182,212,0.1)" }}
+              >
+                <Users className="w-8 h-8" style={{ color: "#06b6d4" }} />
+              </div>
+              <h2
+                className="text-xl font-extrabold mb-2"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Disponible prochainement
+              </h2>
+              <p className="text-[15px]" style={{ color: "var(--text-secondary)" }}>
+                Suivez d&apos;autres traders pour voir leurs posts ici.
+              </p>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* ═══════════════════════════════════════════════════ */}
-      {/* OTHER TABS — Coming Soon placeholders              */}
-      {/* ═══════════════════════════════════════════════════ */}
-      {activeTab === "leaderboard" && (
-        <ComingSoonPlaceholder tabId="leaderboard" isNotified={notified.has("leaderboard")} onToggleNotify={() => toggleNotify("leaderboard")} />
-      )}
-      {activeTab === "challenges" && (
-        <ComingSoonPlaceholder tabId="challenges" isNotified={notified.has("challenges")} onToggleNotify={() => toggleNotify("challenges")} />
-      )}
-      {activeTab === "discussions" && (
-        <ComingSoonPlaceholder tabId="discussions" isNotified={notified.has("discussions")} onToggleNotify={() => toggleNotify("discussions")} />
-      )}
-      {activeTab === "highlights" && (
-        <ComingSoonPlaceholder tabId="highlights" isNotified={notified.has("highlights")} onToggleNotify={() => toggleNotify("highlights")} />
-      )}
-      {activeTab === "mentors" && (
-        <ComingSoonPlaceholder tabId="mentors" isNotified={notified.has("mentors")} onToggleNotify={() => toggleNotify("mentors")} />
-      )}
-      {activeTab === "compare" && (
-        <ComingSoonPlaceholder tabId="compare" isNotified={notified.has("compare")} onToggleNotify={() => toggleNotify("compare")} />
-      )}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* RIGHT SIDEBAR — hidden on small screens                    */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        <div
+          className="hidden lg:block shrink-0 pl-6 pt-2"
+          style={{ width: "350px" }}
+        >
+          <RightSidebar
+            myStats={myStats}
+            trendingAssets={trendingAssets}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
+        </div>
+      </div>
 
       {/* ─── Modals ─── */}
       {showShareModal && (
