@@ -1,11 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, ArrowUp, ArrowDown, Upload, Plus } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, ArrowUp, ArrowDown, Upload, Plus, Save, FolderOpen, Trash2, Pencil } from "lucide-react";
 import { Trade } from "@/hooks/useTrades";
 import { useStrategies } from "@/hooks/useStrategies";
 import { TagPicker } from "@/components/TagPicker";
 import { useTranslation } from "@/i18n/context";
+
+interface TradeTemplate {
+  id: string;
+  name: string;
+  asset: string;
+  direction: string;
+  strategy: string;
+  lots: number;
+  sl: number;
+  tp: number;
+  entry?: number;
+  emotion?: string;
+}
+
+function loadTemplates(): TradeTemplate[] {
+  try {
+    const raw = localStorage.getItem("trade-templates");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTemplates(templates: TradeTemplate[]) {
+  localStorage.setItem("trade-templates", JSON.stringify(templates));
+}
 
 interface TradeFormProps {
   onSubmit: (trade: Record<string, unknown>) => Promise<boolean>;
@@ -28,6 +54,72 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>(
     editTrade?.tags ? editTrade.tags.split(",").map((t) => t.trim()).filter(Boolean) : []
   );
+
+  // Template state
+  const [templates, setTemplates] = useState<TradeTemplate[]>([]);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    setTemplates(loadTemplates());
+  }, []);
+
+  const handleSaveTemplate = () => {
+    if (!formRef.current || !templateName.trim()) return;
+    const form = new FormData(formRef.current);
+    const tpl: TradeTemplate = {
+      id: Date.now().toString(),
+      name: templateName.trim(),
+      asset: form.get("asset") as string,
+      direction,
+      strategy: form.get("strategy") as string,
+      lots: parseFloat(form.get("lots") as string) || 0,
+      sl: parseFloat(form.get("sl") as string) || 0,
+      tp: parseFloat(form.get("tp") as string) || 0,
+      entry: parseFloat(form.get("entry") as string) || undefined,
+      emotion: form.get("emotion") as string || undefined,
+    };
+    const updated = [...templates, tpl];
+    setTemplates(updated);
+    saveTemplates(updated);
+    setTemplateName("");
+  };
+
+  const handleLoadTemplate = (tplId: string) => {
+    const tpl = templates.find((t) => t.id === tplId);
+    if (!tpl || !formRef.current) return;
+    const form = formRef.current;
+    const setVal = (name: string, value: string | number) => {
+      const el = form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null;
+      if (el) el.value = String(value);
+    };
+    setVal("asset", tpl.asset);
+    setDirection(tpl.direction);
+    setVal("strategy", tpl.strategy);
+    setVal("lots", tpl.lots);
+    setVal("sl", tpl.sl);
+    setVal("tp", tpl.tp);
+    if (tpl.entry) setVal("entry", tpl.entry);
+    if (tpl.emotion) setVal("emotion", tpl.emotion);
+  };
+
+  const handleDeleteTemplate = (id: string) => {
+    const updated = templates.filter((t) => t.id !== id);
+    setTemplates(updated);
+    saveTemplates(updated);
+  };
+
+  const handleRenameTemplate = (id: string) => {
+    if (!renameValue.trim()) return;
+    const updated = templates.map((t) => t.id === id ? { ...t, name: renameValue.trim() } : t);
+    setTemplates(updated);
+    saveTemplates(updated);
+    setRenamingId(null);
+    setRenameValue("");
+  };
 
   const strategyNames = strategies.length > 0
     ? strategies.map((s) => s.name)
@@ -112,7 +204,97 @@ export function TradeForm({ onSubmit, onClose, editTrade }: TradeFormProps) {
             <X className="w-6 h-6" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Template controls */}
+          <div className="flex flex-wrap items-end gap-3 p-4 rounded-xl" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
+            <div className="flex-1 min-w-[160px]">
+              <label className="block text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+                <FolderOpen className="w-3 h-3 inline mr-1" />
+                Charger un template
+              </label>
+              <select
+                onChange={(e) => { if (e.target.value) handleLoadTemplate(e.target.value); e.target.value = ""; }}
+                className="input-field text-sm"
+                defaultValue=""
+              >
+                <option value="" disabled>-- Sélectionner --</option>
+                {templates.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 min-w-[160px]">
+              <label className="block text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+                <Save className="w-3 h-3 inline mr-1" />
+                Sauvegarder comme template
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  className="input-field text-sm flex-1"
+                  placeholder="Nom du template..."
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleSaveTemplate())}
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveTemplate}
+                  disabled={!templateName.trim()}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium btn-primary text-white disabled:opacity-40 transition"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            {templates.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowTemplateManager(!showTemplateManager)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+              >
+                Gérer ({templates.length})
+              </button>
+            )}
+          </div>
+
+          {/* Template manager */}
+          {showTemplateManager && templates.length > 0 && (
+            <div className="p-4 rounded-xl space-y-2" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
+              <h4 className="text-sm font-medium mb-2" style={{ color: "var(--text-primary)" }}>Gérer les templates</h4>
+              {templates.map((tpl) => (
+                <div key={tpl.id} className="flex items-center gap-2 py-1.5 px-3 rounded-lg" style={{ background: "var(--bg-primary)", border: "1px solid var(--border)" }}>
+                  {renamingId === tpl.id ? (
+                    <div className="flex-1 flex gap-2">
+                      <input
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        className="input-field text-sm flex-1"
+                        onKeyDown={(e) => e.key === "Enter" && handleRenameTemplate(tpl.id)}
+                        autoFocus
+                      />
+                      <button type="button" onClick={() => handleRenameTemplate(tpl.id)} className="text-emerald-400 hover:text-emerald-300 text-xs">OK</button>
+                      <button type="button" onClick={() => setRenamingId(null)} className="text-[--text-muted] hover:text-[--text-primary] text-xs">Annuler</button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm" style={{ color: "var(--text-primary)" }}>{tpl.name}</span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">{tpl.asset}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded ${tpl.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>{tpl.direction}</span>
+                      <button type="button" onClick={() => { setRenamingId(tpl.id); setRenameValue(tpl.name); }} className="text-blue-400 hover:text-blue-300">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button type="button" onClick={() => handleDeleteTemplate(tpl.id)} className="text-rose-400 hover:text-rose-300">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm mb-1" style={{ color: "var(--text-secondary)" }}>{t("dateTime")}</label>

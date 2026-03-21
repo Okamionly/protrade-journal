@@ -5,54 +5,75 @@ import { TradeForm } from "@/components/TradeForm";
 import { JournalSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { calculateRR, formatDate } from "@/lib/utils";
-import { useState, useMemo, useCallback } from "react";
-import { Plus, Search, Camera, Trash2, Pencil, FilterX, ArrowUpDown, Download, X } from "lucide-react";
+import { useState, useMemo, useCallback, Suspense } from "react";
+import { Plus, Search, Camera, Trash2, Pencil, FilterX, ArrowUpDown, Download, X, Copy, Brain, Share2 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import { CommunityShareTradeModal } from "@/components/CommunityShareTradeModal";
+import { AdvancedFilters } from "@/components/AdvancedFilters";
+import { useAdvancedFilters } from "@/hooks/useAdvancedFilters";
+import { useNotificationSystem } from "@/hooks/useNotifications";
+
+interface AIReviewResult {
+  score: number;
+  grade: string;
+  observations: { type: "positive" | "warning" | "negative"; text: string }[];
+  suggestions: string[];
+}
+
+function ScoreGauge({ score }: { score: number }) {
+  const radius = 45;
+  const circumference = 2 * Math.PI * radius;
+  const progress = (score / 100) * circumference;
+  const color = score >= 70 ? "#10b981" : score >= 40 ? "#f59e0b" : "#ef4444";
+  return (
+    <div className="relative w-28 h-28 mx-auto mb-4">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="currentColor" className="text-gray-700/30" strokeWidth="8" />
+        <circle cx="50" cy="50" r={radius} fill="none" stroke={color} strokeWidth="8" strokeDasharray={circumference} strokeDashoffset={circumference - progress} strokeLinecap="round" className="transition-all duration-700" />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold" style={{ color }}>{score}</span>
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>/100</span>
+      </div>
+    </div>
+  );
+}
 
 export default function JournalPage() {
+  return (
+    <Suspense fallback={<JournalSkeleton />}>
+      <JournalPageContent />
+    </Suspense>
+  );
+}
+
+function JournalPageContent() {
   const { trades, loading, addTrade, deleteTrade, bulkDeleteTrades, updateTrade } = useTrades();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { addNotification } = useNotificationSystem();
   const [showForm, setShowForm] = useState(false);
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
-  const [search, setSearch] = useState("");
-  const [assetFilter, setAssetFilter] = useState("all");
-  const [directionFilter, setDirectionFilter] = useState("all");
-  const [resultFilter, setResultFilter] = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [emotionFilter, setEmotionFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"date" | "result" | "rr">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const { applyFilters } = useAdvancedFilters();
+
+  // Duplication state
+  const [duplicatingTrade, setDuplicatingTrade] = useState<Trade | null>(null);
+
+  // AI Review state
+  const [aiReview, setAiReview] = useState<AIReviewResult | null>(null);
+  const [aiReviewLoading, setAiReviewLoading] = useState(false);
+  const [aiReviewTradeId, setAiReviewTradeId] = useState<string | null>(null);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [showCommunityShare, setShowCommunityShare] = useState(false);
+  const [shareTradeId, setShareTradeId] = useState<string | null>(null);
 
-  const hasFilters = search || assetFilter !== "all" || directionFilter !== "all" || resultFilter !== "all" || dateFrom || dateTo || emotionFilter !== "all";
-
-  const resetFilters = () => {
-    setSearch("");
-    setAssetFilter("all");
-    setDirectionFilter("all");
-    setResultFilter("all");
-    setEmotionFilter("all");
-    setDateFrom("");
-    setDateTo("");
-  };
-
-  const filtered = trades.filter((t) => {
-    const matchSearch = search === "" || t.asset.toLowerCase().includes(search.toLowerCase()) || (t.setup || "").toLowerCase().includes(search.toLowerCase()) || t.strategy.toLowerCase().includes(search.toLowerCase());
-    const matchAsset = assetFilter === "all" || t.asset === assetFilter;
-    const matchDirection = directionFilter === "all" || t.direction === directionFilter;
-    const matchResult = resultFilter === "all" || (resultFilter === "win" && t.result > 0) || (resultFilter === "loss" && t.result < 0) || (resultFilter === "be" && t.result === 0);
-    const matchEmotion = emotionFilter === "all" || t.emotion === emotionFilter;
-    const tradeDate = new Date(t.date);
-    const matchDateFrom = !dateFrom || tradeDate >= new Date(dateFrom);
-    const matchDateTo = !dateTo || tradeDate <= new Date(dateTo + "T23:59:59");
-    return matchSearch && matchAsset && matchDirection && matchResult && matchEmotion && matchDateFrom && matchDateTo;
-  });
+  const filtered = useMemo(() => applyFilters(trades), [trades, applyFilters]);
 
   // Sort
   const sorted = [...filtered].sort((a, b) => {
@@ -62,8 +83,6 @@ export default function JournalPage() {
     else if (sortBy === "rr") cmp = (Number(calculateRR(a.entry, a.sl, a.tp)) || 0) - (Number(calculateRR(b.entry, b.sl, b.tp)) || 0);
     return sortDir === "desc" ? -cmp : cmp;
   });
-
-  const assets = [...new Set(trades.map((t) => t.asset))];
 
   // Selection helpers
   const filteredIds = useMemo(() => new Set(sorted.map((t) => t.id)), [sorted]);
@@ -152,8 +171,20 @@ export default function JournalPage() {
 
   const handleAddTrade = async (trade: Record<string, unknown>) => {
     const ok = await addTrade(trade);
-    if (ok) toast(t("tradeCreated"), "success");
-    else toast(t("tradeCreateError"), "error");
+    if (ok) {
+      toast(t("tradeCreated"), "success");
+      const asset = trade.asset as string || "?";
+      const result = Number(trade.result) || 0;
+      const sign = result >= 0 ? "+" : "";
+      addNotification(
+        "TRADE_ALERT",
+        "Trade enregistre",
+        `${asset} ${sign}$${result.toFixed(2)}`,
+        "/journal"
+      );
+    } else {
+      toast(t("tradeCreateError"), "error");
+    }
     return ok;
   };
 
@@ -170,6 +201,44 @@ export default function JournalPage() {
       const ok = await deleteTrade(id);
       if (ok) toast(t("tradeDeleted"), "success");
       else toast(t("tradeDeleteError"), "error");
+    }
+  };
+
+  const handleDuplicate = (trade: Trade) => {
+    // Create a copy without date and result
+    const dup = { ...trade };
+    setDuplicatingTrade(dup);
+  };
+
+  const handleDuplicateSubmit = async (data: Record<string, unknown>) => {
+    const ok = await addTrade(data);
+    if (ok) toast(t("tradeCreated"), "success");
+    else toast(t("tradeCreateError"), "error");
+    return ok;
+  };
+
+  const handleAIReview = async (tradeId: string) => {
+    setAiReviewTradeId(tradeId);
+    setAiReview(null);
+    setAiReviewLoading(true);
+    try {
+      const res = await fetch("/api/ai/trade-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tradeId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAiReview(data);
+      } else {
+        toast("Erreur lors de l'analyse AI", "error");
+        setAiReviewTradeId(null);
+      }
+    } catch {
+      toast("Erreur lors de l'analyse AI", "error");
+      setAiReviewTradeId(null);
+    } finally {
+      setAiReviewLoading(false);
     }
   };
 
@@ -195,47 +264,11 @@ export default function JournalPage() {
           </div>
         </div>
 
-        {/* Filtres avancés */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          <div className="relative lg:col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--text-muted]" />
-            <input
-              type="text"
-              placeholder={t("search")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-lg pl-10 pr-4 py-2 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:border-cyan-500/50 focus:outline-none transition"
-            />
-          </div>
-          <select value={assetFilter} onChange={(e) => setAssetFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
-            <option value="all">{t("allAssets")}</option>
-            {assets.map((a) => (<option key={a} value={a}>{a}</option>))}
-          </select>
-          <select value={directionFilter} onChange={(e) => setDirectionFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
-            <option value="all">{t("allDirections")}</option>
-            <option value="LONG">LONG</option>
-            <option value="SHORT">SHORT</option>
-          </select>
-          <select value={resultFilter} onChange={(e) => setResultFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
-            <option value="all">{t("allResults")}</option>
-            <option value="win">{t("winnersFilter")}</option>
-            <option value="loss">{t("losersFilter")}</option>
-            <option value="be">{t("breakeven")}</option>
-          </select>
-          <select value={emotionFilter} onChange={(e) => setEmotionFilter(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]">
-            <option value="all">{t("allEmotions")}</option>
-            {[...new Set(trades.map(t => t.emotion).filter((e): e is string => !!e))].map(e => <option key={e} value={e}>{e}</option>)}
-          </select>
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-2 py-2 text-sm" />
-        </div>
+        {/* Advanced Filters */}
+        <Suspense fallback={null}>
+          <AdvancedFilters trades={trades} />
+        </Suspense>
         <div className="flex items-center gap-3 mb-4">
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-3 py-2 text-sm text-[--text-primary]" />
-          {hasFilters && (
-            <button onClick={resetFilters} className="flex items-center gap-1 text-sm text-[--text-secondary] hover:text-[--text-primary] transition">
-              <FilterX className="w-4 h-4" />
-              {t("reset")}
-            </button>
-          )}
           <div className="flex items-center gap-2 ml-auto">
             <ArrowUpDown className="w-3.5 h-3.5 text-[--text-muted]" />
             <select value={`${sortBy}-${sortDir}`} onChange={(e) => { const [s, d] = e.target.value.split("-"); setSortBy(s as "date" | "result" | "rr"); setSortDir(d as "asc" | "desc"); }} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-2 py-1 text-xs">
@@ -325,10 +358,19 @@ export default function JournalPage() {
                       <td className="py-4 text-xs text-[--text-secondary]">{trade.emotion || "-"}</td>
                       <td className="py-4">
                         <div className="flex gap-2">
-                          <button onClick={() => setEditingTrade(trade)} className="text-blue-400 hover:text-blue-300">
+                          <button onClick={() => setEditingTrade(trade)} className="text-blue-400 hover:text-blue-300" title={t("editTrade")}>
                             <Pencil className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDelete(trade.id)} className="text-rose-400 hover:text-rose-300">
+                          <button onClick={() => handleDuplicate(trade)} className="text-cyan-400 hover:text-cyan-300" title="Dupliquer">
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setShareTradeId(trade.id)} className="text-emerald-400 hover:text-emerald-300 transition" title="Partager">
+                            <Share2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleAIReview(trade.id)} className="text-purple-400 hover:text-purple-300" title="AI Review">
+                            <Brain className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDelete(trade.id)} className="text-rose-400 hover:text-rose-300" title={t("delete")}>
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -395,6 +437,224 @@ export default function JournalPage() {
 
       {showForm && <TradeForm onSubmit={handleAddTrade} onClose={() => setShowForm(false)} />}
       {editingTrade && <TradeForm onSubmit={handleUpdateTrade} onClose={() => setEditingTrade(null)} editTrade={editingTrade} />}
+
+      {/* Duplicate trade form - opens TradeForm with pre-filled data but cleared date/result */}
+      {duplicatingTrade && (
+        <TradeForm
+          onSubmit={handleDuplicateSubmit}
+          onClose={() => setDuplicatingTrade(null)}
+          editTrade={{
+            ...duplicatingTrade,
+            id: "",
+            date: new Date().toISOString(),
+            result: 0,
+            exit: null,
+          }}
+        />
+      )}
+
+      {/* AI Review Modal */}
+      {aiReviewTradeId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+                <Brain className="w-5 h-5 text-purple-400" />
+                AI Trade Review
+              </h3>
+              <button onClick={() => { setAiReviewTradeId(null); setAiReview(null); }} style={{ color: "var(--text-muted)" }} className="hover:opacity-80">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {aiReviewLoading ? (
+              <div className="flex flex-col items-center py-10 gap-3">
+                <div className="w-10 h-10 border-3 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>Analyse en cours...</p>
+              </div>
+            ) : aiReview ? (
+              <div className="space-y-5">
+                <ScoreGauge score={aiReview.score} />
+                <div className="text-center">
+                  <span className={`text-2xl font-bold ${
+                    aiReview.score >= 70 ? "text-emerald-400" : aiReview.score >= 40 ? "text-yellow-400" : "text-rose-400"
+                  }`}>
+                    Grade: {aiReview.grade}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Observations</h4>
+                  {aiReview.observations.map((obs, i) => (
+                    <div
+                      key={i}
+                      className={`flex items-start gap-2 p-3 rounded-lg text-sm ${
+                        obs.type === "positive"
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                          : obs.type === "warning"
+                          ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
+                          : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                      }`}
+                    >
+                      <span className="mt-0.5">{obs.type === "positive" ? "+" : obs.type === "warning" ? "!" : "-"}</span>
+                      <span>{obs.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {aiReview.suggestions.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Suggestions</h4>
+                    <ul className="space-y-1.5">
+                      {aiReview.suggestions.map((s, i) => (
+                        <li key={i} className="text-sm flex items-start gap-2 p-2 rounded-lg" style={{ background: "var(--bg-secondary)", color: "var(--text-primary)" }}>
+                          <span className="text-purple-400 mt-0.5">*</span>
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Share Trade to Community Modal */}
+      {shareTradeId && (
+        <ShareTradeToCommunityModal
+          tradeId={shareTradeId}
+          trades={trades}
+          onClose={() => setShareTradeId(null)}
+        />
+      )}
     </>
+  );
+}
+
+function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: string; trades: Trade[]; onClose: () => void }) {
+  const [comment, setComment] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const { toast } = useToast();
+
+  const trade = trades.find((t) => t.id === tradeId);
+  if (!trade) return null;
+
+  const isWin = trade.result > 0;
+
+  const handleShare = async () => {
+    setSending(true);
+    try {
+      // Get community room
+      const roomsRes = await fetch("/api/chat/rooms");
+      if (!roomsRes.ok) throw new Error("Failed to fetch rooms");
+      const rooms = await roomsRes.json();
+      const community = rooms.find((r: { name: string }) => r.name === "Communauté" || r.name === "community");
+      if (!community) {
+        toast("Salon communautaire non trouvé", "error");
+        setSending(false);
+        return;
+      }
+
+      const content = comment
+        ? `${comment}\n\n📊 Trade partagé : ${trade.asset} ${trade.direction} — ${isWin ? "+" : ""}${trade.result}€`
+        : `📊 Trade partagé : ${trade.asset} ${trade.direction} — ${isWin ? "+" : ""}${trade.result}€`;
+
+      const res = await fetch("/api/chat/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomId: community.id,
+          content,
+          tradeId: trade.id,
+        }),
+      });
+
+      if (res.ok) {
+        setSent(true);
+        toast("Trade partagé dans la communauté !", "success");
+        setTimeout(onClose, 1200);
+      } else {
+        toast("Erreur lors du partage", "error");
+      }
+    } catch {
+      toast("Erreur lors du partage", "error");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="glass rounded-2xl p-6 max-w-md w-full border border-[--border] shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Share2 className="w-5 h-5 text-cyan-400" />
+            Partager ce trade
+          </h3>
+          <button onClick={onClose} className="text-[--text-muted] hover:text-[--text-primary] transition">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Trade preview */}
+        <div className="rounded-xl p-4 bg-[--bg-secondary]/50 border border-[--border] mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm">{trade.asset}</span>
+              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
+              }`}>
+                {trade.direction}
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div>
+              <p className="text-[--text-muted]">Entrée</p>
+              <p className="mono font-medium">{trade.entry}</p>
+            </div>
+            <div>
+              <p className="text-[--text-muted]">Sortie</p>
+              <p className="mono font-medium">{trade.exit || "-"}</p>
+            </div>
+            <div>
+              <p className="text-[--text-muted]">Résultat</p>
+              <p className={`mono font-bold ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
+                {isWin ? "+" : ""}{trade.result}€
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Comment */}
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Ajouter un commentaire (optionnel)..."
+          rows={3}
+          maxLength={500}
+          className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-xl px-4 py-2.5 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:outline-none focus:border-cyan-500/50 transition resize-none mb-4"
+        />
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleShare}
+            disabled={sending || sent}
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {sent ? "Partagé !" : sending ? "Envoi..." : "Publier"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

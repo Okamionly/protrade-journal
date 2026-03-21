@@ -2,6 +2,43 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+// ─── Profanity filter ────────────────────────────────────
+const BLOCKED_WORDS = [
+  "putain", "merde", "connard", "connasse", "enculé", "enculer",
+  "salope", "pute", "nique", "niquer", "ntm", "fdp", "tg",
+  "fuck", "shit", "bitch", "asshole", "bastard", "dick", "cunt",
+  "nigger", "nigga", "faggot", "retard",
+];
+
+function containsProfanity(text: string): boolean {
+  const lower = text.toLowerCase().replace(/[^a-zàâäéèêëïîôùûüç\s]/g, "");
+  return BLOCKED_WORDS.some((word) => {
+    const regex = new RegExp(`\\b${word}\\b`, "i");
+    return regex.test(lower);
+  });
+}
+
+// ─── Shared includes ─────────────────────────────────────
+const messageInclude = {
+  user: { select: { id: true, name: true, email: true, role: true, banned: true } },
+  trade: {
+    select: {
+      id: true,
+      asset: true,
+      direction: true,
+      strategy: true,
+      entry: true,
+      exit: true,
+      lots: true,
+      result: true,
+      date: true,
+    },
+  },
+  reactions: {
+    include: { user: { select: { id: true, name: true } } },
+  },
+};
+
 export async function GET(req: Request) {
   try {
     const session = await auth();
@@ -19,32 +56,22 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "roomId requis" }, { status: 400 });
     }
 
+    // Get list of banned user IDs to exclude their messages
+    const bannedUsers = await prisma.user.findMany({
+      where: { banned: true },
+      select: { id: true },
+    });
+    const bannedIds = bannedUsers.map((u) => u.id);
+
     // If "after" is provided, fetch only newer messages (for polling)
     if (after) {
       const messages = await prisma.chatMessage.findMany({
         where: {
           roomId,
           createdAt: { gt: new Date(after) },
+          ...(bannedIds.length > 0 ? { userId: { notIn: bannedIds } } : {}),
         },
-        include: {
-          user: { select: { id: true, name: true, email: true } },
-          trade: {
-            select: {
-              id: true,
-              asset: true,
-              direction: true,
-              strategy: true,
-              entry: true,
-              exit: true,
-              lots: true,
-              result: true,
-              date: true,
-            },
-          },
-          reactions: {
-            include: { user: { select: { id: true, name: true } } },
-          },
-        },
+        include: messageInclude,
         orderBy: { createdAt: "asc" },
         take: limit,
       });
@@ -54,26 +81,11 @@ export async function GET(req: Request) {
 
     // Regular pagination with cursor
     const messages = await prisma.chatMessage.findMany({
-      where: { roomId },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        trade: {
-          select: {
-            id: true,
-            asset: true,
-            direction: true,
-            strategy: true,
-            entry: true,
-            exit: true,
-            lots: true,
-            result: true,
-            date: true,
-          },
-        },
-        reactions: {
-          include: { user: { select: { id: true, name: true } } },
-        },
+      where: {
+        roomId,
+        ...(bannedIds.length > 0 ? { userId: { notIn: bannedIds } } : {}),
       },
+      include: messageInclude,
       orderBy: { createdAt: "desc" },
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -102,6 +114,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
+    // Check if user is banned
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { banned: true },
+    });
+    if (currentUser?.banned) {
+      return NextResponse.json({ error: "Vous êtes banni du chat" }, { status: 403 });
+    }
+
     const body = await req.json();
 
     if (!body.roomId || !body.content?.trim()) {
@@ -110,6 +131,11 @@ export async function POST(req: Request) {
 
     if (body.content.length > 1000) {
       return NextResponse.json({ error: "Message trop long (max 1000 caractères)" }, { status: 400 });
+    }
+
+    // Profanity filter
+    if (containsProfanity(body.content)) {
+      return NextResponse.json({ error: "Message non autorisé" }, { status: 400 });
     }
 
     // Verify room exists
@@ -136,22 +162,7 @@ export async function POST(req: Request) {
         roomId: body.roomId,
         tradeId: body.tradeId || null,
       },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        trade: {
-          select: {
-            id: true,
-            asset: true,
-            direction: true,
-            strategy: true,
-            entry: true,
-            exit: true,
-            lots: true,
-            result: true,
-            date: true,
-          },
-        },
-      },
+      include: messageInclude,
     });
 
     return NextResponse.json(message);

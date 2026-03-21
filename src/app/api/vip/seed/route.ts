@@ -1,9 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-
-// One-time seed endpoint for VIP content
-// Secured by a simple key to prevent abuse
-const SEED_KEY = process.env.VIP_SEED_KEY || "marketphase-seed-2026";
 
 // ─── Real GLD Analysis — loaded from analyst file ───
 const GLD_ANALYSIS = `# GLD — ANALYSE POST-CLÔTURE 360°
@@ -680,24 +677,24 @@ Le **Sniper Oscillator v3** est un oscillateur composite conçu pour identifier 
 | Divergence Lookback | 5 | Nombre de pivots pour détecter les divergences |
 `;
 
-export async function POST(req: Request) {
+export async function POST() {
   try {
-    const body = await req.json();
-    const { key } = body;
-
-    if (key !== SEED_KEY) {
-      return NextResponse.json({ error: "Invalid seed key" }, { status: 403 });
+    // Require admin session
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    // Find admin user
-    const admin = await prisma.user.findFirst({
-      where: { role: "ADMIN" },
-      select: { id: true },
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, role: true },
     });
 
-    if (!admin) {
-      return NextResponse.json({ error: "No admin user found" }, { status: 404 });
+    if (!user || user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Admin requis" }, { status: 403 });
     }
+
+    const admin = user;
 
     // Check if posts already exist to avoid duplicates
     const existing = await prisma.vipPost.count();

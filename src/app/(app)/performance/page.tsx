@@ -101,7 +101,9 @@ function UnderwaterChart({ drawdowns }: { drawdowns: number[] }) {
   const { t } = useTranslation();
   if (drawdowns.length < 2) return <p className="text-sm text-[--text-muted] text-center py-8">{t("notEnoughDrawdown")}</p>;
   const W = 600, H = 160, PX = 40, PY = 16;
-  const maxDD = Math.max(...drawdowns.map(Math.abs)) || 1;
+  const rawMaxDD = Math.max(...drawdowns.map(Math.abs));
+  if (rawMaxDD === 0) return <p className="text-sm text-emerald-400 text-center py-8">Aucun drawdown — performance parfaite</p>;
+  const maxDD = rawMaxDD;
   const pts = drawdowns.map((v, i) => ({
     x: PX + (i / (drawdowns.length - 1)) * (W - PX * 2),
     y: PY + (Math.abs(v) / maxDD) * (H - PY * 2),
@@ -189,9 +191,10 @@ export default function PerformancePage() {
   const profitFactor = avgLoss > 0 ? (avgWin * wins.length) / (avgLoss * losses.length) : 0;
   const expectancy = trades.length > 0 ? trades.reduce((s, t) => s + t.result, 0) / trades.length : 0;
 
-  const rrs = trades.map((t) => {
-    const rr = calculateRR(t.entry, t.sl, t.tp);
-    return t.result > 0 ? parseFloat(rr) : -1;
+  const rrs = trades.map((tr) => {
+    const rr = calculateRR(tr.entry, tr.sl, tr.tp);
+    const rrNum = parseFloat(rr);
+    return tr.result > 0 && !isNaN(rrNum) ? rrNum : -1;
   });
   const avgRR = rrs.length > 0 ? rrs.reduce((s, r) => s + r, 0) / rrs.length : 0;
 
@@ -217,7 +220,7 @@ export default function PerformancePage() {
 
   // Streaks
   let currentStreak = 0, maxWinStreak = 0, maxLossStreak = 0, tempStreak = 0;
-  const sorted = [...trades].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   sorted.forEach((t, i) => {
     if (i === 0) { currentStreak = t.result > 0 ? 1 : -1; tempStreak = currentStreak; return; }
     if (t.result > 0 && tempStreak > 0) tempStreak++;
@@ -243,7 +246,7 @@ export default function PerformancePage() {
     const wAvgWin = wWins.length > 0 ? wWins.reduce((s, t) => s + t.result, 0) / wWins.length : 0;
     const wAvgLoss = wLosses.length > 0 ? Math.abs(wLosses.reduce((s, t) => s + t.result, 0) / wLosses.length) : 0;
     const wPF = wAvgLoss > 0 ? (wAvgWin * wWins.length) / (wAvgLoss * wLosses.length) : 0;
-    const wRRs = window.map((t) => { const rr = calculateRR(t.entry, t.sl, t.tp); return t.result > 0 ? parseFloat(rr) : -1; });
+    const wRRs = window.map((tr) => { const rr = calculateRR(tr.entry, tr.sl, tr.tp); const rrNum = parseFloat(rr); return tr.result > 0 && !isNaN(rrNum) ? rrNum : -1; });
     const wAvgRR = wRRs.reduce((s, r) => s + r, 0) / wRRs.length;
     let wPeak = 0, wMaxDD = 0, wRun = 0;
     window.forEach((t) => { wRun += t.result; if (wRun > wPeak) wPeak = wRun; const dd = wPeak - wRun; if (dd > wMaxDD) wMaxDD = dd; });

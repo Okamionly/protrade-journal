@@ -111,7 +111,7 @@ export default function HeatmapPage() {
             <div key={wi} className="flex flex-col gap-[3px]">
               {week.map((day, di) => (
                 <div key={di}
-                  className={`w-[14px] h-[14px] rounded-sm ${getColor(day.pnl, maxPnL)} transition hover:ring-1 hover:ring-white/30`}
+                  className={`w-[14px] h-[14px] rounded-sm ${getColor(day.pnl, maxPnL)} transition hover:brightness-125 outline-offset-1 hover:outline hover:outline-1 hover:outline-white/40 cursor-pointer`}
                   title={`${day.date.toLocaleDateString("fr-FR")}: ${day.pnl > 0 ? "+" : ""}€${day.pnl.toFixed(0)} (${day.count} trades)`}
                 />
               ))}

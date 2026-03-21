@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { BarChart3, Mail, Lock, User } from "lucide-react";
+import Image from "next/image";
+import { Mail, Lock, User } from "lucide-react";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -51,9 +52,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="glass rounded-2xl w-full max-w-md p-8">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center mb-4">
-            <BarChart3 className="text-white w-8 h-8" />
-          </div>
+          <Image src="/logo-icon.png" alt="MarketPhase" width={72} height={72} className="w-[72px] h-[72px] rounded-2xl mb-4 drop-shadow-lg" />
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
             MarketPhase
           </h1>

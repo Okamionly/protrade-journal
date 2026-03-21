@@ -36,7 +36,7 @@ export interface ChatMessage {
   content: string;
   imageUrl: string | null;
   userId: string;
-  user: { id: string; name: string | null; email: string };
+  user: { id: string; name: string | null; email: string; role?: string; banned?: boolean };
   roomId: string;
   trade: SharedTrade | null;
   isPinned: boolean;
@@ -149,22 +149,22 @@ export function useChat(roomId: string) {
           latestTimestamp.current = msg.createdAt;
           return [...prev, { ...msg, reactions: msg.reactions || [] }];
         });
-        return true;
+        return { success: true };
       }
-      return false;
+      const data = await res.json().catch(() => ({ error: "Erreur" }));
+      return { success: false, error: data.error };
     } catch (error) {
       console.error("Send message error:", error);
-      return false;
+      return { success: false, error: "Erreur réseau" };
     } finally {
       setSending(false);
     }
   }, [roomId]);
 
-  const deleteMessage = useCallback(async (messageId: string, adminSecret: string) => {
+  const deleteMessage = useCallback(async (messageId: string) => {
     try {
       const res = await fetch(`/api/chat/messages/${messageId}`, {
         method: "DELETE",
-        headers: { "x-admin-secret": adminSecret },
       });
       if (res.ok) {
         setMessages((prev) => prev.filter((m) => m.id !== messageId));
@@ -176,11 +176,10 @@ export function useChat(roomId: string) {
     }
   }, []);
 
-  const pinMessage = useCallback(async (messageId: string, adminSecret: string) => {
+  const pinMessage = useCallback(async (messageId: string) => {
     try {
       const res = await fetch(`/api/chat/messages/${messageId}/pin`, {
         method: "PUT",
-        headers: { "x-admin-secret": adminSecret },
       });
       if (res.ok) {
         setMessages((prev) =>
@@ -193,6 +192,30 @@ export function useChat(roomId: string) {
       return false;
     }
   }, []);
+
+  const banUser = useCallback(async (userId: string) => {
+    try {
+      const res = await fetch("/api/chat/ban", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Remove banned user's messages from view
+        if (data.action === "banned") {
+          setMessages((prev) => prev.filter((m) => m.userId !== userId));
+        } else {
+          // Refetch to show unbanned user's messages
+          fetchMessages(false);
+        }
+        return data;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, [fetchMessages]);
 
   const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
     try {
@@ -223,5 +246,5 @@ export function useChat(roomId: string) {
     }
   }, [fetchMessages]);
 
-  return { messages, loading, sending, sendMessage, deleteMessage, pinMessage, toggleReaction, fetchMessages };
+  return { messages, loading, sending, sendMessage, deleteMessage, pinMessage, toggleReaction, banUser, fetchMessages };
 }

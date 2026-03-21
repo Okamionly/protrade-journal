@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useTradingRules } from "@/hooks/useTradingRules";
 import { useTranslation } from "@/i18n/context";
+import { useNotificationSystem } from "@/hooks/useNotifications";
 
 const GRADE_OPTIONS = ["A+", "A", "B", "C", "D", "F"];
 
@@ -600,6 +601,7 @@ export default function DailyBiasPage() {
   const [plan, setPlan] = useState<DailyPlan>({ date, bias: "", notes: "", pairs: "", keyLevels: "", review: "", grade: "" });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { addNotification } = useNotificationSystem();
   const { rules, addRule, deleteRule } = useTradingRules();
   const [checkedRules, setCheckedRules] = useState<Set<string>>(new Set());
   const [newRuleText, setNewRuleText] = useState("");
@@ -666,6 +668,13 @@ export default function DailyBiasPage() {
         setTimeout(() => setSaved(false), 2000);
         // Refresh history after save
         fetchHistory();
+        // Notification
+        addNotification(
+          "BIAS_REMINDER",
+          "Daily bias sauvegarde",
+          `Biais quotidien enregistre pour le ${date}`,
+          "/daily-bias"
+        );
       }
     } catch { /* ignore */ } finally {
       setSaving(false);

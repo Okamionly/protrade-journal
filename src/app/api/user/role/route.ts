@@ -11,14 +11,14 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { role: true },
+      select: { role: true, banned: true },
     });
 
     if (!user) {
       return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
     }
 
-    return NextResponse.json({ role: user.role });
+    return NextResponse.json({ role: user.role, banned: user.banned });
   } catch (error) {
     console.error("GET user/role error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

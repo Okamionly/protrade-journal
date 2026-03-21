@@ -16,6 +16,9 @@ import {
   Pin,
   Trash2,
   Shield,
+  ShieldCheck,
+  Crown,
+  Ban,
   X,
   Hash,
   ImagePlus,
@@ -104,9 +107,10 @@ function getReactionGroups(msg: ChatMessage, currentUserId?: string) {
 function MessageBubble({
   msg,
   isOwn,
-  adminSecret,
+  isAdmin,
   onDelete,
   onPin,
+  onBan,
   onImageClick,
   onReaction,
   onReply,
@@ -115,9 +119,10 @@ function MessageBubble({
 }: {
   msg: ChatMessage;
   isOwn: boolean;
-  adminSecret: string | null;
+  isAdmin: boolean;
   onDelete: (id: string) => void;
   onPin: (id: string) => void;
+  onBan: (userId: string) => void;
   onImageClick: (url: string) => void;
   onReaction: (id: string, emoji: string) => void;
   onReply: (msg: ChatMessage) => void;
@@ -162,6 +167,16 @@ function MessageBubble({
             <span className="font-semibold text-[13px]" style={{ color: isOwn ? "var(--accent, #06b6d4)" : "var(--text-primary)" }}>
               {msg.user.name || msg.user.email.split("@")[0]}
             </span>
+            {msg.user.role === "ADMIN" && (
+              <span className="flex items-center gap-0.5 text-[10px] text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-full font-bold">
+                <ShieldCheck className="w-2.5 h-2.5" /> ADMIN
+              </span>
+            )}
+            {msg.user.role === "VIP" && (
+              <span className="flex items-center gap-0.5 text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-full font-bold">
+                <Crown className="w-2.5 h-2.5" /> VIP
+              </span>
+            )}
             {msg.isPinned && (
               <span className="flex items-center gap-1 text-[10px] text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
                 <Pin className="w-2.5 h-2.5" /> {t("pinned")}
@@ -243,7 +258,7 @@ function MessageBubble({
         >
           <Reply className="w-3.5 h-3.5" />
         </button>
-        {adminSecret && (
+        {isAdmin && (
           <>
             <button
               onClick={() => onPin(msg.id)}
@@ -259,6 +274,15 @@ function MessageBubble({
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
+            {!isOwn && msg.user.role !== "ADMIN" && (
+              <button
+                onClick={() => onBan(msg.userId)}
+                className="p-1.5 rounded hover:bg-[var(--bg-hover)] text-[--text-muted] hover:text-rose-400 transition"
+                title="Bannir l'utilisateur"
+              >
+                <Ban className="w-3.5 h-3.5" />
+              </button>
+            )}
           </>
         )}
       </div>
@@ -517,9 +541,9 @@ export default function ChatPage() {
   const [activeRoomId, setActiveRoomId] = useState<string>("");
   const [input, setInput] = useState("");
   const [showTradeModal, setShowTradeModal] = useState(false);
-  const [adminSecret, setAdminSecret] = useState<string | null>(null);
-  const [showAdminInput, setShowAdminInput] = useState(false);
-  const [adminInput, setAdminInput] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isBanned, setIsBanned] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -542,12 +566,18 @@ export default function ChatPage() {
     if (rooms.length > 0 && !activeRoomId) setActiveRoomId(rooms[0].id);
   }, [rooms, activeRoomId]);
 
+  // Fetch current user role and banned status
   useEffect(() => {
-    const stored = sessionStorage.getItem("adminSecret");
-    if (stored) setAdminSecret(stored);
+    fetch("/api/user/role")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.role === "ADMIN") setIsAdmin(true);
+        if (data?.banned) setIsBanned(true);
+      })
+      .catch(() => {});
   }, []);
 
-  const { messages, loading: msgsLoading, sending, sendMessage, deleteMessage, pinMessage, toggleReaction } = useChat(activeRoomId);
+  const { messages, loading: msgsLoading, sending, sendMessage, deleteMessage, pinMessage, toggleReaction, banUser } = useChat(activeRoomId);
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
 
   // Track new messages for indicator
@@ -617,14 +647,18 @@ export default function ChatPage() {
 
     if (!content && !imageUrl) return;
 
-    const success = await sendMessage(content, undefined, imageUrl);
-    if (success) {
+    setSendError(null);
+    const result = await sendMessage(content, undefined, imageUrl);
+    if (result.success) {
       setInput("");
       setImageFile(null);
       setImagePreview(null);
       setReplyTo(null);
       shouldAutoScroll.current = true;
       if (fileInputRef.current) fileInputRef.current.value = "";
+    } else if (result.error) {
+      setSendError(result.error);
+      setTimeout(() => setSendError(null), 4000);
     }
   };
 
@@ -635,26 +669,24 @@ export default function ChatPage() {
   };
 
   const handleDelete = async (messageId: string) => {
-    if (!adminSecret) return;
-    if (confirm(t("confirmDeleteMessage"))) await deleteMessage(messageId, adminSecret);
+    if (!isAdmin) return;
+    if (confirm(t("confirmDeleteMessage"))) await deleteMessage(messageId);
   };
 
   const handlePin = async (messageId: string) => {
-    if (!adminSecret) return;
-    await pinMessage(messageId, adminSecret);
+    if (!isAdmin) return;
+    await pinMessage(messageId);
+  };
+
+  const handleBan = async (userId: string) => {
+    if (!isAdmin) return;
+    if (confirm("Bannir cet utilisateur du chat ?")) {
+      await banUser(userId);
+    }
   };
 
   const handleReaction = async (messageId: string, emoji: string) => {
     await toggleReaction(messageId, emoji);
-  };
-
-  const handleAdminLogin = () => {
-    if (adminInput.trim()) {
-      sessionStorage.setItem("adminSecret", adminInput.trim());
-      setAdminSecret(adminInput.trim());
-      setShowAdminInput(false);
-      setAdminInput("");
-    }
   };
 
   const handleReply = (msg: ChatMessage) => {
@@ -777,6 +809,25 @@ export default function ChatPage() {
     );
   }
 
+  // Banned user view
+  if (isBanned) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4">
+            <Ban className="w-8 h-8 text-rose-400" />
+          </div>
+          <h2 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+            Vous êtes banni du chat
+          </h2>
+          <p className="text-sm text-[--text-muted] max-w-sm">
+            Votre accès au chat a été restreint par un administrateur. Contactez le support si vous pensez que c&apos;est une erreur.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 120px)" }}>
       {/* Top bar */}
@@ -809,41 +860,17 @@ export default function ChatPage() {
       <div className="flex flex-1 min-h-0 bg-white/50 dark:bg-gray-950/50 rounded-b-2xl overflow-hidden border border-t-0 border-gray-200 dark:border-gray-800">
         {/* LEFT PANEL - Room sidebar */}
         <div className="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50/50 dark:bg-gray-950/80">
-          {/* Admin */}
+          {/* Admin badge */}
           <div className="px-3 pt-3 pb-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-[--text-muted] uppercase tracking-widest">{t("channels")}</span>
-              <button
-                onClick={() => setShowAdminInput(!showAdminInput)}
-                className={`p-1 rounded-md transition ${adminSecret ? "text-amber-500" : "text-[--text-muted] hover:text-[--text-secondary]"}`}
-                title={t("adminMode")}
-              >
-                <Shield className="w-3.5 h-3.5" />
-              </button>
+              {isAdmin && (
+                <span className="flex items-center gap-1 text-[10px] text-amber-500" title="Mode admin actif">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </span>
+              )}
             </div>
-
-            {showAdminInput && (
-              <div className="mt-2 flex gap-1.5">
-                <input
-                  type="password"
-                  placeholder={t("adminKeyPlaceholder")}
-                  value={adminInput}
-                  onChange={(e) => setAdminInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
-                  className="flex-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-2.5 py-1 text-[11px] outline-none focus:border-amber-500"
-                  style={{ color: "var(--text-primary)" }}
-                />
-                {adminSecret && (
-                  <button
-                    onClick={() => { sessionStorage.removeItem("adminSecret"); setAdminSecret(null); setShowAdminInput(false); }}
-                    className="text-rose-400 hover:text-rose-300 p-1"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            )}
-            {adminSecret && !showAdminInput && (
+            {isAdmin && (
               <p className="mt-1 text-[10px] text-amber-500 flex items-center gap-1">
                 <Shield className="w-2.5 h-2.5" /> Admin actif
               </p>
@@ -961,7 +988,7 @@ export default function ChatPage() {
                   <span className="text-sm text-[--text-secondary]">Chargement...</span>
                 </div>
               </div>
-            ) : messages.length === 0 ? (
+            ) : messages.length === 0 && pinnedCount === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 flex items-center justify-center mb-4">
                   <MessageCircle className="w-8 h-8 text-cyan-400 opacity-50" />
@@ -992,6 +1019,41 @@ export default function ChatPage() {
               </div>
             ) : (
               <div className="py-2">
+                {/* Pinned messages section */}
+                {pinnedCount > 0 && (
+                  <div className="mx-4 mb-3 rounded-xl border border-amber-500/20 bg-amber-500/5 overflow-hidden">
+                    <div className="flex items-center gap-2 px-3 py-2 border-b border-amber-500/10">
+                      <Pin className="w-3.5 h-3.5 text-amber-500" />
+                      <span className="text-[11px] font-bold text-amber-500 uppercase tracking-wider">
+                        Messages épinglés ({pinnedCount})
+                      </span>
+                    </div>
+                    <div className="divide-y divide-amber-500/10">
+                      {messages.filter((m) => m.isPinned).map((m) => (
+                        <div key={m.id} className="px-3 py-2 hover:bg-amber-500/5 transition cursor-pointer" onClick={() => handleJumpToMessage(m.id)}>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[11px] font-semibold" style={{ color: "var(--text-primary)" }}>
+                              {m.user.name || m.user.email.split("@")[0]}
+                            </span>
+                            {m.user.role === "ADMIN" && (
+                              <span className="flex items-center gap-0.5 text-[9px] text-amber-500 bg-amber-500/10 px-1 py-0.5 rounded-full font-bold">
+                                <ShieldCheck className="w-2 h-2" /> ADMIN
+                              </span>
+                            )}
+                            {m.user.role === "VIP" && (
+                              <span className="flex items-center gap-0.5 text-[9px] text-purple-400 bg-purple-500/10 px-1 py-0.5 rounded-full font-bold">
+                                <Crown className="w-2 h-2" /> VIP
+                              </span>
+                            )}
+                            <span className="text-[10px] text-[--text-muted]">{formatDate(m.createdAt)} {formatTime(m.createdAt)}</span>
+                          </div>
+                          <p className="text-xs text-[--text-secondary] line-clamp-2">{m.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {messageGroups.map((group, gi) => (
                   <div key={gi}>
                     <DateSeparator date={group.date} />
@@ -1006,9 +1068,10 @@ export default function ChatPage() {
                           <MessageBubble
                             msg={msg}
                             isOwn={false}
-                            adminSecret={adminSecret}
+                            isAdmin={isAdmin}
                             onDelete={handleDelete}
                             onPin={handlePin}
+                            onBan={handleBan}
                             onImageClick={setLightboxUrl}
                             onReaction={handleReaction}
                             onReply={handleReply}
@@ -1064,6 +1127,17 @@ export default function ChatPage() {
                 className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 text-[--text-muted] hover:text-rose-400 transition"
               >
                 <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Send error */}
+          {sendError && (
+            <div className="px-4 py-2 border-t border-rose-500/20 bg-rose-500/10 flex items-center gap-2">
+              <Ban className="w-4 h-4 text-rose-400 flex-shrink-0" />
+              <span className="text-xs text-rose-400 font-medium">{sendError}</span>
+              <button onClick={() => setSendError(null)} className="ml-auto p-0.5 rounded hover:bg-rose-500/20 text-rose-400">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           )}

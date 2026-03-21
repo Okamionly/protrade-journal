@@ -17,7 +17,6 @@ import {
   TrendingUp,
   Zap,
   Trophy,
-  Star,
   Target,
   Flame,
   Monitor,
@@ -80,7 +79,7 @@ const SLIDE_LABELS = [
   "AI Coach",
   "All Features",
   "Compare",
-  "Reviews",
+  "Community",
   "Pricing",
 ];
 
@@ -425,16 +424,11 @@ export default function LandingContent() {
                 </div>
 
                 <div className="mt-8 flex flex-col sm:flex-row items-center lg:items-start gap-4 sm:gap-6">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-0.5">
-                      {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />)}
-                    </div>
-                    <span className="text-sm text-gray-600 font-medium">{t("landing_socialRating")}</span>
-                  </div>
-                  <span className="text-sm text-gray-400">{t("landing_socialTraders")}</span>
+                  <span className="text-sm text-gray-500 font-medium">35+ outils gratuits</span>
+                  <span className="text-sm text-gray-400">Journal &bull; Analytics &bull; AI Coach &bull; Market Data</span>
                   <div className="flex -space-x-2">
-                    {["TK","SM","JP","AL","RD","MN"].map((a, i) => (
-                      <div key={a} className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-sm" style={{background: `hsl(${i*60+200}, 60%, 55%)`, zIndex: 6-i}}>
+                    {["MP","AI","VIP"].map((a, i) => (
+                      <div key={a} className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-sm" style={{background: `hsl(${i*60+200}, 60%, 55%)`, zIndex: 3-i}}>
                         {a}
                       </div>
                     ))}
@@ -743,41 +737,32 @@ export default function LandingContent() {
           </div>
         </div>
 
-        {/* ==================== SLIDE 9: TESTIMONIALS ==================== */}
+        {/* ==================== SLIDE 9: COMMUNITY CTA ==================== */}
         <div
           ref={setSlideRef(8)}
           className={slideClass}
           style={isMobile ? {} : { scrollSnapAlign: "start" }}
         >
-          <div className={`${animBase} ${isVisible(8) ? animIn : animOut} max-w-6xl mx-auto w-full`}>
-            <div className="text-center mb-8 sm:mb-12">
-              <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-wider uppercase mb-3">{t("landing_testimonialTag")}</p>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900">
-                {t("landing_testimonialTitle1")}{" "}
-                <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">{t("landing_testimonialTitle2")}</span>
-              </h2>
-              <p className="mt-3 text-sm sm:text-base text-gray-400">{t("landing_testimonialSub")}</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-              {[
-                { name: t("landing_testimonial1Name"), role: t("landing_testimonial1Role"), text: t("landing_testimonial1Text"), avatar: "TK", color: "from-blue-500 to-cyan-500" },
-                { name: t("landing_testimonial2Name"), role: t("landing_testimonial2Role"), text: t("landing_testimonial2Text"), avatar: "SM", color: "from-purple-500 to-violet-500" },
-                { name: t("landing_testimonial3Name"), role: t("landing_testimonial3Role"), text: t("landing_testimonial3Text"), avatar: "JP", color: "from-emerald-500 to-cyan-500" },
-              ].map((tm) => (
-                <div key={tm.name} className="p-5 sm:p-6 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition">
-                  <div className="flex items-center gap-1 mb-4 sm:mb-5">
-                    {[1,2,3,4,5].map(i => <Star key={i} className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 fill-amber-400" />)}
-                  </div>
-                  <p className="text-gray-600 leading-relaxed mb-5 sm:mb-6 text-sm sm:text-base">&ldquo;{tm.text}&rdquo;</p>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br ${tm.color} flex items-center justify-center text-white text-xs sm:text-sm font-bold`}>{tm.avatar}</div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{tm.name}</p>
-                      <p className="text-xs text-gray-400">{tm.role}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+          <div className={`${animBase} ${isVisible(8) ? animIn : animOut} max-w-4xl mx-auto w-full text-center`}>
+            <p className="text-blue-600 text-xs sm:text-sm font-semibold tracking-wider uppercase mb-3">{t("landing_testimonialTag")}</p>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 mb-4">
+              {t("landing_testimonialTitle1")}{" "}
+              <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">{t("landing_testimonialTitle2")}</span>
+            </h2>
+            <p className="text-gray-400 text-sm sm:text-lg max-w-2xl mx-auto mb-10">{t("landing_testimonialSub")}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
+              <div className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                <div className="text-3xl font-black text-blue-600 mb-1">35+</div>
+                <p className="text-sm text-gray-500">Outils de trading</p>
+              </div>
+              <div className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                <div className="text-3xl font-black text-emerald-600 mb-1">100%</div>
+                <p className="text-sm text-gray-500">Gratuit, pour toujours</p>
+              </div>
+              <div className="p-6 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                <div className="text-3xl font-black text-purple-600 mb-1">5</div>
+                <p className="text-sm text-gray-500">Langues supportees</p>
+              </div>
             </div>
           </div>
         </div>

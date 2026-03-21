@@ -86,12 +86,6 @@ const jsonLd = {
     priceCurrency: "EUR",
     availability: "https://schema.org/InStock",
   },
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "4.8",
-    ratingCount: "127",
-    bestRating: "5",
-  },
   featureList: "Trading Journal, Analytics, AI Coach, Market Data, Options Flow, Risk Management, P&L Calendar, Trade Replay, Market Scanner",
   inLanguage: ["fr", "en"],
 };
@@ -104,6 +98,11 @@ export default function RootLayout({
   return (
     <html lang="fr" className="dark" suppressHydrationWarning>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0ea5e9" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="apple-touch-icon" href="/logo-icon.png" />
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function() {
             try {
@@ -111,6 +110,11 @@ export default function RootLayout({
               document.documentElement.className = theme;
             } catch(e) {}
           })();
+        `}</Script>
+        <Script id="sw-register" strategy="afterInteractive">{`
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+          }
         `}</Script>
       </head>
       <body className="antialiased min-h-screen overflow-x-hidden">

@@ -12,6 +12,10 @@ import {
   ArrowDownRight,
   ShieldCheck,
   ShieldOff,
+  Star,
+  Flame,
+  Zap,
+  Trophy,
 } from "lucide-react";
 import ShareButton from "@/components/ShareButton";
 
@@ -31,6 +35,8 @@ interface Trade {
   strategy: string;
   commission: number | null;
   swap: number | null;
+  setup: string | null;
+  notes: string | null;
   createdAt: Date;
 }
 
@@ -97,11 +103,33 @@ function computeStats(trades: Trade[]) {
     }
   }
 
+  // Current streak
+  let currentStreak = 0;
+  let streakType: "win" | "loss" | "none" = "none";
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    if (sorted[i].result > 0) {
+      if (streakType === "none") streakType = "win";
+      if (streakType === "win") currentStreak++;
+      else break;
+    } else if (sorted[i].result < 0) {
+      if (streakType === "none") streakType = "loss";
+      if (streakType === "loss") currentStreak++;
+      else break;
+    } else break;
+  }
+
+  // Favorite assets (top 3)
+  const assetCount = new Map<string, number>();
+  for (const t of sorted) {
+    assetCount.set(t.asset, (assetCount.get(t.asset) || 0) + 1);
+  }
+  const favoriteAssets = Array.from(assetCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([asset, count]) => ({ asset, count }));
+
   // Monthly breakdown
-  const monthlyMap = new Map<
-    string,
-    { pnl: number; trades: number; wins: number }
-  >();
+  const monthlyMap = new Map<string, { pnl: number; trades: number; wins: number }>();
   for (const t of sorted) {
     const d = new Date(t.date);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -119,6 +147,22 @@ function computeStats(trades: Trade[]) {
       winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0,
     }));
 
+  const bestMonth = monthlyBreakdown.length > 0
+    ? monthlyBreakdown.reduce((best, m) => (m.pnl > best.pnl ? m : best))
+    : null;
+
+  // Trading style inference
+  const strategies = new Map<string, number>();
+  for (const t of sorted) {
+    strategies.set(t.strategy, (strategies.get(t.strategy) || 0) + 1);
+  }
+  const topStrategy = strategies.size > 0
+    ? Array.from(strategies.entries()).sort((a, b) => b[1] - a[1])[0][0]
+    : null;
+
+  // Last 6 months
+  const last6Months = monthlyBreakdown.slice(-6);
+
   return {
     totalTrades,
     winRate,
@@ -130,8 +174,14 @@ function computeStats(trades: Trade[]) {
     maxDrawdown,
     maxConsWins,
     maxConsLosses,
+    currentStreak,
+    streakType,
+    favoriteAssets,
+    bestMonth,
+    topStrategy,
     equityCurve,
     monthlyBreakdown,
+    last6Months,
   };
 }
 
@@ -155,8 +205,8 @@ function formatDate(date: Date): string {
 function formatMonthLabel(key: string): string {
   const [year, month] = key.split("-");
   const months = [
-    "Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
-    "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc",
+    "Jan", "Fev", "Mar", "Avr", "Mai", "Juin",
+    "Juil", "Aou", "Sep", "Oct", "Nov", "Dec",
   ];
   return `${months[parseInt(month) - 1]} ${year}`;
 }
@@ -164,8 +214,8 @@ function formatMonthLabel(key: string): string {
 function EquityCurveSVG({ data }: { data: { date: Date; cumPnL: number }[] }) {
   if (data.length < 2) {
     return (
-      <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-        Pas assez de données pour afficher la courbe
+      <div className="flex items-center justify-center h-48 text-gray-500 text-sm">
+        Pas assez de donnees pour afficher la courbe
       </div>
     );
   }
@@ -189,10 +239,12 @@ function EquityCurveSVG({ data }: { data: { date: Date; cumPnL: number }[] }) {
 
   const zeroY = yScale(0);
 
-  // Area fill
   const areaPath = `M ${padding},${yScale(data[0].cumPnL)} ${data
     .map((d, i) => `L ${padding + i * xStep},${yScale(d.cumPnL)}`)
     .join(" ")} L ${padding + (data.length - 1) * xStep},${zeroY} L ${padding},${zeroY} Z`;
+
+  const lastVal = data[data.length - 1].cumPnL;
+  const color = lastVal >= 0 ? "#10b981" : "#ef4444";
 
   return (
     <svg
@@ -200,48 +252,89 @@ function EquityCurveSVG({ data }: { data: { date: Date; cumPnL: number }[] }) {
       className="w-full h-auto"
       preserveAspectRatio="xMidYMid meet"
     >
-      {/* Zero line */}
       <line
         x1={padding}
         y1={zeroY}
         x2={width - padding}
         y2={zeroY}
-        stroke="#e5e7eb"
+        stroke="#374151"
         strokeWidth="1"
         strokeDasharray="4 4"
       />
-      {/* Area */}
-      <path d={areaPath} fill="url(#equityGradient)" opacity="0.3" />
-      {/* Line */}
+      <path d={areaPath} fill={`url(#equityGradient)`} opacity="0.2" />
       <polyline
         points={points}
         fill="none"
-        stroke="#10b981"
+        stroke={color}
         strokeWidth="2.5"
         strokeLinejoin="round"
         strokeLinecap="round"
       />
-      {/* Gradient */}
       <defs>
         <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#10b981" />
-          <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+          <stop offset="0%" stopColor={color} />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      {/* Y labels */}
-      <text x={padding - 4} y={yScale(maxVal) + 4} textAnchor="end" className="fill-gray-400 text-[10px]">
+      <text x={padding - 4} y={yScale(maxVal) + 4} textAnchor="end" className="fill-gray-500 text-[10px]">
         {maxVal.toFixed(0)}$
       </text>
-      <text x={padding - 4} y={zeroY + 4} textAnchor="end" className="fill-gray-400 text-[10px]">
+      <text x={padding - 4} y={zeroY + 4} textAnchor="end" className="fill-gray-500 text-[10px]">
         0$
       </text>
       {minVal < 0 && (
-        <text x={padding - 4} y={yScale(minVal) + 4} textAnchor="end" className="fill-gray-400 text-[10px]">
+        <text x={padding - 4} y={yScale(minVal) + 4} textAnchor="end" className="fill-gray-500 text-[10px]">
           {minVal.toFixed(0)}$
         </text>
       )}
     </svg>
   );
+}
+
+function MonthlyBarChart({ data }: { data: { month: string; pnl: number; trades: number; winRate: number }[] }) {
+  if (data.length === 0) return null;
+
+  const maxPnl = Math.max(...data.map((d) => Math.abs(d.pnl)), 1);
+  const barWidth = 100 / data.length;
+
+  return (
+    <div className="flex items-end gap-2 h-40 px-2">
+      {data.map((d) => {
+        const heightPercent = (Math.abs(d.pnl) / maxPnl) * 100;
+        const isPositive = d.pnl >= 0;
+        return (
+          <div key={d.month} className="flex-1 flex flex-col items-center gap-1">
+            <span className={`text-xs font-bold ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
+              {d.pnl >= 0 ? "+" : ""}{d.pnl.toFixed(0)}$
+            </span>
+            <div className="w-full flex items-end justify-center" style={{ height: "100px" }}>
+              <div
+                className={`w-full max-w-[40px] rounded-t-lg transition-all ${
+                  isPositive
+                    ? "bg-gradient-to-t from-emerald-600 to-emerald-400"
+                    : "bg-gradient-to-t from-rose-600 to-rose-400"
+                }`}
+                style={{ height: `${Math.max(heightPercent, 4)}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-gray-500 whitespace-nowrap">
+              {formatMonthLabel(d.month).split(" ")[0]}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// XP / Level computation (simple heuristic)
+function computeLevel(totalTrades: number, winRate: number) {
+  const tradeXP = totalTrades * 10;
+  const winBonus = winRate > 50 ? (winRate - 50) * 5 : 0;
+  const xp = tradeXP + winBonus;
+  const level = Math.floor(xp / 100) + 1;
+  const xpInLevel = xp % 100;
+  return { level: Math.min(level, 99), xp, xpInLevel };
 }
 
 export default async function TrackRecordPage({
@@ -265,7 +358,7 @@ export default async function TrackRecordPage({
     notFound();
   }
 
-  const trades = user.trades as Trade[];
+  const trades = user.trades as unknown as Trade[];
   const stats = computeStats(trades);
 
   const memberSince = new Date(user.createdAt).toLocaleDateString("fr-FR", {
@@ -273,7 +366,6 @@ export default async function TrackRecordPage({
     year: "numeric",
   });
 
-  // Check if user has "imported" trades (heuristic: trades created in bulk have similar createdAt)
   const hasImportedTrades = trades.length > 5;
   const initials = (user.name || "?")
     .split(" ")
@@ -282,37 +374,66 @@ export default async function TrackRecordPage({
     .toUpperCase()
     .slice(0, 2);
 
-  const recentTrades = trades.slice(0, 20);
+  const { level, xpInLevel } = computeLevel(stats.totalTrades, stats.winRate);
+
+  const recentTrades = trades.slice(0, 10);
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      {/* Header */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+    <div className="min-h-screen bg-gray-950 text-gray-100">
+      {/* Gradient background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 -z-10" />
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-cyan-500/5 rounded-full blur-[120px] -z-10" />
+
+      {/* Profile Header */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
           {/* Avatar */}
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-white font-bold text-xl shrink-0">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-2xl shrink-0 shadow-lg shadow-cyan-500/20">
             {initials}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold text-gray-900 truncate">
+              <h1 className="text-2xl font-bold text-white truncate">
                 {user.name}
               </h1>
+              {/* Level Badge */}
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 border border-amber-500/30">
+                <Trophy className="w-3.5 h-3.5" />
+                Niv. {level}
+              </span>
               {hasImportedTrades ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  Vérifié
+                  Verifie
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-800 text-gray-500 border border-gray-700">
                   <ShieldOff className="w-3.5 h-3.5" />
-                  Non vérifié
+                  Non verifie
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Membre depuis {memberSince}
-            </p>
+            <div className="flex items-center gap-4 mt-2">
+              <p className="text-sm text-gray-500">
+                Membre depuis {memberSince}
+              </p>
+              {stats.topStrategy && (
+                <span className="text-xs text-gray-500 flex items-center gap-1">
+                  <Target className="w-3 h-3" />
+                  Style: {stats.topStrategy}
+                </span>
+              )}
+            </div>
+            {/* XP Bar */}
+            <div className="mt-2 flex items-center gap-2 max-w-xs">
+              <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all"
+                  style={{ width: `${xpInLevel}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-gray-600">{xpInLevel}/100 XP</span>
+            </div>
           </div>
           <ShareButton />
         </div>
@@ -321,76 +442,158 @@ export default async function TrackRecordPage({
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-8">
         {/* Key Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <StatCard
+          <GlassStatCard
             label="Total Trades"
             value={stats.totalTrades.toString()}
-            icon={<BarChart3 className="w-4 h-4 text-blue-500" />}
+            icon={<BarChart3 className="w-4 h-4 text-blue-400" />}
           />
-          <StatCard
+          <GlassStatCard
             label="Win Rate"
             value={formatPercent(stats.winRate)}
-            icon={<Target className="w-4 h-4 text-emerald-500" />}
+            icon={<Target className="w-4 h-4 text-emerald-400" />}
             color={stats.winRate >= 50 ? "green" : "red"}
           />
-          <StatCard
+          <GlassStatCard
             label="Profit Factor"
             value={
               stats.profitFactor === Infinity
-                ? "∞"
+                ? "Inf"
                 : stats.profitFactor.toFixed(2)
             }
-            icon={<TrendingUp className="w-4 h-4 text-purple-500" />}
+            icon={<TrendingUp className="w-4 h-4 text-purple-400" />}
             color={stats.profitFactor >= 1 ? "green" : "red"}
           />
-          <StatCard
-            label="Total P&L"
-            value={formatPnL(stats.totalPnL)}
-            icon={
-              stats.totalPnL >= 0 ? (
-                <ArrowUpRight className="w-4 h-4 text-emerald-500" />
-              ) : (
-                <ArrowDownRight className="w-4 h-4 text-red-500" />
-              )
-            }
-            color={stats.totalPnL >= 0 ? "green" : "red"}
-          />
-          <StatCard
-            label="R:R Moyen"
+          <GlassStatCard
+            label="Avg R:R"
             value={stats.avgRR.toFixed(2)}
-            icon={<Award className="w-4 h-4 text-amber-500" />}
+            icon={<Award className="w-4 h-4 text-amber-400" />}
           />
-          <StatCard
+          <GlassStatCard
             label="Max Drawdown"
-            value={`-${stats.maxDrawdown.toFixed(2)} $`}
-            icon={<AlertTriangle className="w-4 h-4 text-red-500" />}
+            value={`-${stats.maxDrawdown.toFixed(0)} $`}
+            icon={<AlertTriangle className="w-4 h-4 text-red-400" />}
             color="red"
+          />
+          <GlassStatCard
+            label="Streak"
+            value={`${stats.currentStreak} ${stats.streakType === "win" ? "W" : stats.streakType === "loss" ? "L" : ""}`}
+            icon={<Flame className="w-4 h-4 text-orange-400" />}
+            color={stats.streakType === "win" ? "green" : stats.streakType === "loss" ? "red" : undefined}
           />
         </div>
 
+        {/* Favorite Assets + Best Month + Streaks */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Favorite Assets */}
+          <div className="rounded-2xl p-5 bg-gray-900/60 backdrop-blur-xl border border-gray-800/60">
+            <h3 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+              <Star className="w-4 h-4 text-amber-400" />
+              Actifs Favoris
+            </h3>
+            {stats.favoriteAssets.length > 0 ? (
+              <div className="space-y-2">
+                {stats.favoriteAssets.map((a, i) => (
+                  <div key={a.asset} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center ${
+                        i === 0 ? "bg-amber-500/20 text-amber-400" : i === 1 ? "bg-gray-700 text-gray-400" : "bg-gray-800 text-gray-500"
+                      }`}>
+                        {i + 1}
+                      </span>
+                      <span className="font-medium text-sm">{a.asset}</span>
+                    </div>
+                    <span className="text-xs text-gray-500">{a.count} trades</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">Aucune donnee</p>
+            )}
+          </div>
+
+          {/* Best Month */}
+          <div className="rounded-2xl p-5 bg-gray-900/60 backdrop-blur-xl border border-gray-800/60">
+            <h3 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-cyan-400" />
+              Meilleur Mois
+            </h3>
+            {stats.bestMonth ? (
+              <div className="space-y-2">
+                <p className="text-2xl font-bold text-emerald-400">
+                  {formatPnL(stats.bestMonth.pnl)}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {formatMonthLabel(stats.bestMonth.month)}
+                </p>
+                <p className="text-xs text-gray-600">
+                  {stats.bestMonth.trades} trades - {formatPercent(stats.bestMonth.winRate)} WR
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">Aucune donnee</p>
+            )}
+          </div>
+
+          {/* Record Streaks */}
+          <div className="rounded-2xl p-5 bg-gray-900/60 backdrop-blur-xl border border-gray-800/60">
+            <h3 className="text-sm font-semibold text-gray-400 mb-3 flex items-center gap-2">
+              <Flame className="w-4 h-4 text-orange-400" />
+              Records
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Max wins</span>
+                <span className="font-bold text-emerald-400">{stats.maxConsWins}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Max pertes</span>
+                <span className="font-bold text-rose-400">{stats.maxConsLosses}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Serie actuelle</span>
+                <span className={`font-bold ${stats.streakType === "win" ? "text-emerald-400" : stats.streakType === "loss" ? "text-rose-400" : "text-gray-500"}`}>
+                  {stats.currentStreak} {stats.streakType === "win" ? "W" : stats.streakType === "loss" ? "L" : "-"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Equity Curve */}
-        <section className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-emerald-500" />
+        <section className="rounded-2xl p-6 bg-gray-900/60 backdrop-blur-xl border border-gray-800/60">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-emerald-400" />
             Courbe d&apos;Equity
           </h2>
           <EquityCurveSVG data={stats.equityCurve} />
         </section>
 
+        {/* Monthly Performance Bar Chart (last 6 months) */}
+        {stats.last6Months.length > 0 && (
+          <section className="rounded-2xl p-6 bg-gray-900/60 backdrop-blur-xl border border-gray-800/60">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-blue-400" />
+              Performance (6 derniers mois)
+            </h2>
+            <MonthlyBarChart data={stats.last6Months} />
+          </section>
+        )}
+
         {/* Monthly Performance Grid */}
         {stats.monthlyBreakdown.length > 0 && (
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-500" />
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-400" />
               Performance Mensuelle
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {stats.monthlyBreakdown.map((m) => (
                 <div
                   key={m.month}
-                  className={`rounded-xl p-3 border ${
+                  className={`rounded-xl p-3 border backdrop-blur-sm ${
                     m.pnl >= 0
-                      ? "bg-green-50 border-green-200"
-                      : "bg-red-50 border-red-200"
+                      ? "bg-emerald-500/10 border-emerald-500/20"
+                      : "bg-rose-500/10 border-rose-500/20"
                   }`}
                 >
                   <div className="text-xs font-medium text-gray-500 mb-1">
@@ -398,13 +601,13 @@ export default async function TrackRecordPage({
                   </div>
                   <div
                     className={`text-sm font-bold ${
-                      m.pnl >= 0 ? "text-green-700" : "text-red-700"
+                      m.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
                     }`}
                   >
                     {formatPnL(m.pnl)}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {m.trades} trades · {formatPercent(m.winRate)} WR
+                  <div className="text-xs text-gray-600 mt-1">
+                    {m.trades} trades - {formatPercent(m.winRate)} WR
                   </div>
                 </div>
               ))}
@@ -416,27 +619,27 @@ export default async function TrackRecordPage({
         {(stats.bestTrade || stats.worstTrade) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {stats.bestTrade && (
-              <div className="rounded-xl border border-green-200 bg-green-50 p-5">
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-sm p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                  <h3 className="font-semibold text-green-800">
+                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  <h3 className="font-semibold text-emerald-400">
                     Meilleur Trade
                   </h3>
                 </div>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Asset</span>
-                    <span className="font-medium">{stats.bestTrade.asset}</span>
+                    <span className="text-gray-500">Asset</span>
+                    <span className="font-medium text-gray-300">{stats.bestTrade.asset}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Date</span>
-                    <span className="font-medium">
+                    <span className="text-gray-500">Date</span>
+                    <span className="font-medium text-gray-300">
                       {formatDate(stats.bestTrade.date)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">P&L</span>
-                    <span className="font-bold text-green-700">
+                    <span className="text-gray-500">P&L</span>
+                    <span className="font-bold text-emerald-400">
                       {formatPnL(stats.bestTrade.result)}
                     </span>
                   </div>
@@ -444,27 +647,27 @@ export default async function TrackRecordPage({
               </div>
             )}
             {stats.worstTrade && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 backdrop-blur-sm p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <TrendingDown className="w-5 h-5 text-red-600" />
-                  <h3 className="font-semibold text-red-800">Pire Trade</h3>
+                  <TrendingDown className="w-5 h-5 text-rose-400" />
+                  <h3 className="font-semibold text-rose-400">Pire Trade</h3>
                 </div>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Asset</span>
-                    <span className="font-medium">
+                    <span className="text-gray-500">Asset</span>
+                    <span className="font-medium text-gray-300">
                       {stats.worstTrade.asset}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Date</span>
-                    <span className="font-medium">
+                    <span className="text-gray-500">Date</span>
+                    <span className="font-medium text-gray-300">
                       {formatDate(stats.worstTrade.date)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">P&L</span>
-                    <span className="font-bold text-red-700">
+                    <span className="text-gray-500">P&L</span>
+                    <span className="font-bold text-rose-400">
                       {formatPnL(stats.worstTrade.result)}
                     </span>
                   </div>
@@ -474,60 +677,76 @@ export default async function TrackRecordPage({
           </div>
         )}
 
-        {/* Streak Info */}
-        <div className="flex gap-4 text-sm">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50 border border-green-200">
-            <span className="text-green-700 font-medium">
-              Max wins consécutifs:
-            </span>
-            <span className="font-bold text-green-800">
-              {stats.maxConsWins}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200">
-            <span className="text-red-700 font-medium">
-              Max pertes consécutives:
-            </span>
-            <span className="font-bold text-red-800">
-              {stats.maxConsLosses}
-            </span>
-          </div>
-        </div>
+        {/* Recent Shared Setups */}
+        {recentTrades.filter(t => t.setup).length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Target className="w-5 h-5 text-cyan-400" />
+              Setups Recents
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {recentTrades.filter(t => t.setup).slice(0, 4).map((trade) => (
+                <div
+                  key={trade.id}
+                  className="rounded-xl p-4 bg-gray-900/60 backdrop-blur-xl border border-gray-800/60"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{trade.asset}</span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                        trade.direction === "LONG" || trade.direction.toLowerCase() === "buy"
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : "bg-rose-500/20 text-rose-400"
+                      }`}>
+                        {trade.direction}
+                      </span>
+                    </div>
+                    <span className={`text-sm font-bold ${trade.result >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {formatPnL(trade.result)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 line-clamp-2">{trade.setup}</p>
+                  <p className="text-[10px] text-gray-600 mt-2">{formatDate(trade.date)} - {trade.strategy}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Recent Trades Table */}
         {recentTrades.length > 0 && (
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <h2 className="text-lg font-semibold text-white mb-4">
               Derniers Trades
             </h2>
-            <div className="overflow-x-auto rounded-xl border border-gray-200">
+            <div className="overflow-x-auto rounded-2xl border border-gray-800/60 bg-gray-900/60 backdrop-blur-xl">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 text-left text-gray-500 text-xs uppercase tracking-wider">
+                  <tr className="text-left text-gray-500 text-xs uppercase tracking-wider border-b border-gray-800/60">
                     <th className="px-4 py-3 font-medium">Date</th>
                     <th className="px-4 py-3 font-medium">Asset</th>
                     <th className="px-4 py-3 font-medium">Direction</th>
-                    <th className="px-4 py-3 font-medium text-right">Entrée</th>
+                    <th className="px-4 py-3 font-medium text-right">Entree</th>
                     <th className="px-4 py-3 font-medium text-right">Sortie</th>
                     <th className="px-4 py-3 font-medium text-right">P&L</th>
                     <th className="px-4 py-3 font-medium text-right">R:R</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-800/40">
                   {recentTrades.map((trade) => {
                     const risk = Math.abs(trade.entry - trade.sl);
                     const reward =
                       trade.exit !== null
                         ? Math.abs(trade.exit - trade.entry)
                         : 0;
-                    const rr = risk > 0 ? (reward / risk).toFixed(2) : "—";
+                    const rr = risk > 0 ? (reward / risk).toFixed(2) : "--";
 
                     return (
-                      <tr key={trade.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 whitespace-nowrap text-gray-600">
+                      <tr key={trade.id} className="hover:bg-gray-800/30 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-500">
                           {formatDate(trade.date)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
+                        <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-200">
                           {trade.asset}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
@@ -535,8 +754,8 @@ export default async function TrackRecordPage({
                             className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
                               trade.direction.toLowerCase() === "long" ||
                               trade.direction.toLowerCase() === "buy"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-red-100 text-red-700"
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : "bg-rose-500/20 text-rose-400"
                             }`}
                           >
                             {trade.direction.toLowerCase() === "long" ||
@@ -548,22 +767,22 @@ export default async function TrackRecordPage({
                             {trade.direction}
                           </span>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-gray-600">
+                        <td className="px-4 py-3 whitespace-nowrap text-right text-gray-500">
                           {trade.entry.toFixed(5)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-gray-600">
-                          {trade.exit !== null ? trade.exit.toFixed(5) : "—"}
+                        <td className="px-4 py-3 whitespace-nowrap text-right text-gray-500">
+                          {trade.exit !== null ? trade.exit.toFixed(5) : "--"}
                         </td>
                         <td
                           className={`px-4 py-3 whitespace-nowrap text-right font-semibold ${
                             trade.result >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
+                              ? "text-emerald-400"
+                              : "text-rose-400"
                           }`}
                         >
                           {formatPnL(trade.result)}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-gray-600">
+                        <td className="px-4 py-3 whitespace-nowrap text-right text-gray-500">
                           {rr}
                         </td>
                       </tr>
@@ -578,28 +797,28 @@ export default async function TrackRecordPage({
         {/* Empty state */}
         {trades.length === 0 && (
           <div className="text-center py-16">
-            <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <BarChart3 className="w-12 h-12 text-gray-700 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-500">
-              Aucun trade enregistré
+              Aucun trade enregistre
             </h3>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-sm text-gray-600 mt-1">
               Ce trader n&apos;a pas encore de trades dans son journal.
             </p>
           </div>
         )}
 
         {/* Footer */}
-        <footer className="pt-8 border-t border-gray-200 text-center">
-          <p className="text-sm text-gray-400">
-            Propulsé par{" "}
-            <span className="font-semibold text-gray-600">MarketPhase</span>{" "}
-            — Journal de Trading Gratuit
+        <footer className="pt-8 border-t border-gray-800/60 text-center">
+          <p className="text-sm text-gray-600">
+            Propulse par{" "}
+            <span className="font-semibold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">MarketPhase</span>{" "}
+            -- Journal de Trading Gratuit
           </p>
           <a
             href="/register"
-            className="inline-block mt-3 text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+            className="inline-block mt-3 text-sm font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
           >
-            Créer mon compte gratuitement →
+            Creer mon compte gratuitement
           </a>
         </footer>
       </div>
@@ -607,7 +826,7 @@ export default async function TrackRecordPage({
   );
 }
 
-function StatCard({
+function GlassStatCard({
   label,
   value,
   icon,
@@ -619,7 +838,7 @@ function StatCard({
   color?: "green" | "red";
 }) {
   return (
-    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+    <div className="rounded-xl p-4 bg-gray-900/60 backdrop-blur-xl border border-gray-800/60 hover:border-gray-700/60 transition-colors">
       <div className="flex items-center gap-1.5 mb-1">
         {icon}
         <span className="text-xs text-gray-500 font-medium">{label}</span>
@@ -627,10 +846,10 @@ function StatCard({
       <div
         className={`text-lg font-bold ${
           color === "green"
-            ? "text-green-600"
+            ? "text-emerald-400"
             : color === "red"
-            ? "text-red-600"
-            : "text-gray-900"
+            ? "text-rose-400"
+            : "text-white"
         }`}
       >
         {value}

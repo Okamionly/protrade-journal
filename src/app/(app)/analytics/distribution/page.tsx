@@ -334,7 +334,7 @@ export default function DistributionPage() {
                       {row.map((cell, di) => (
                         <div
                           key={di}
-                          className="flex-1 flex items-center justify-center rounded-sm cursor-default transition-all hover:ring-1 hover:ring-white/20"
+                          className="flex-1 flex items-center justify-center rounded-sm cursor-default transition-all hover:brightness-125 outline-offset-0 hover:outline hover:outline-1 hover:outline-white/30"
                           style={{
                             height: "28px",
                             margin: "0 1px",

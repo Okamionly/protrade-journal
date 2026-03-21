@@ -43,6 +43,8 @@ import {
   FileBarChart,
   Camera,
   User,
+  Users,
+  CreditCard,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import type { Locale } from "@/i18n/types";
@@ -69,14 +71,14 @@ type SidebarKey =
   | "adminPanel" | "secTrading" | "dashboard" | "journal" | "analytics" | "distribution"
   | "riskManager" | "errors" | "strategies" | "playbook" | "checklist" | "importCsv"
   | "secPerformance" | "score" | "grading" | "plCalendar" | "heatmap" | "dailyBias"
-  | "challenges" | "leaderboard"
+  | "challenges" | "leaderboard" | "badges" | "sessions"
   | "secMarket" | "cotReport" | "macro" | "ecoCalendar" | "sentiment" | "currencyStrength"
   | "news" | "marketData" | "lbmaMetals" | "scanner" | "watchlist" | "sectorHeatmap"
   | "volatility" | "earnings" | "optionsFlow"
   | "secAdvanced" | "aiCoach" | "warRoom" | "backtesting" | "calculator" | "replay"
   | "correlation" | "comparison"
   | "secTools" | "myDashboard" | "pdfReports" | "recaps" | "screenshots" | "chat"
-  | "secMySpace" | "profile"
+  | "secMySpace" | "profile" | "pricing" | "community"
   | "secPremium" | "vip" | "indicators" | "macroAnalyses"
   | "collapse";
 
@@ -86,7 +88,7 @@ const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
     distribution: "Distribution", riskManager: "Risk Manager", errors: "Erreurs", strategies: "Stratégies",
     playbook: "Playbook", checklist: "Checklist", importCsv: "Import CSV",
     secPerformance: "PERFORMANCE", score: "Score", grading: "Notation", plCalendar: "P&L Calendrier",
-    heatmap: "Heatmap", dailyBias: "Daily Bias", challenges: "Challenges", leaderboard: "Leaderboard",
+    heatmap: "Heatmap", dailyBias: "Daily Bias", challenges: "Challenges", leaderboard: "Leaderboard", badges: "Badges", sessions: "Sessions",
     secMarket: "MARCHÉ", cotReport: "Rapport COT", macro: "Macro", ecoCalendar: "Calendrier Éco",
     sentiment: "Sentiment", currencyStrength: "Force Devises", news: "News", marketData: "Market Data",
     lbmaMetals: "LBMA Métaux", scanner: "Scanner", watchlist: "Watchlist", sectorHeatmap: "Heatmap Secteurs",
@@ -95,7 +97,7 @@ const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
     calculator: "Calculateur", replay: "Replay", correlation: "Corrélation", comparison: "Comparaison",
     secTools: "OUTILS", myDashboard: "Mon Dashboard", pdfReports: "Rapports PDF", recaps: "Recaps",
     screenshots: "Screenshots", chat: "Chat",
-    secMySpace: "MON ESPACE", profile: "Profil",
+    secMySpace: "MON ESPACE", profile: "Profil", pricing: "Abonnement", community: "Communauté",
     secPremium: "PREMIUM", vip: "VIP", indicators: "Indicateurs", macroAnalyses: "Analyses Macro",
     collapse: "Réduire",
   },
@@ -104,7 +106,7 @@ const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
     distribution: "Distribution", riskManager: "Risk Manager", errors: "Mistakes", strategies: "Strategies",
     playbook: "Playbook", checklist: "Checklist", importCsv: "Import CSV",
     secPerformance: "PERFORMANCE", score: "Score", grading: "Grading", plCalendar: "P&L Calendar",
-    heatmap: "Heatmap", dailyBias: "Daily Bias", challenges: "Challenges", leaderboard: "Leaderboard",
+    heatmap: "Heatmap", dailyBias: "Daily Bias", challenges: "Challenges", leaderboard: "Leaderboard", badges: "Badges", sessions: "Sessions",
     secMarket: "MARKET", cotReport: "COT Report", macro: "Macro", ecoCalendar: "Eco Calendar",
     sentiment: "Sentiment", currencyStrength: "Currency Strength", news: "News", marketData: "Market Data",
     lbmaMetals: "LBMA Metals", scanner: "Scanner", watchlist: "Watchlist", sectorHeatmap: "Sector Heatmap",
@@ -113,7 +115,7 @@ const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
     calculator: "Calculator", replay: "Replay", correlation: "Correlation", comparison: "Comparison",
     secTools: "TOOLS", myDashboard: "My Dashboard", pdfReports: "PDF Reports", recaps: "Recaps",
     screenshots: "Screenshots", chat: "Chat",
-    secMySpace: "MY SPACE", profile: "Profile",
+    secMySpace: "MY SPACE", profile: "Profile", pricing: "Subscription", community: "Community",
     secPremium: "PREMIUM", vip: "VIP", indicators: "Indicators", macroAnalyses: "Macro Analyses",
     collapse: "Collapse",
   },
@@ -122,7 +124,7 @@ const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
     distribution: "التوزيع", riskManager: "إدارة المخاطر", errors: "الأخطاء", strategies: "الاستراتيجيات",
     playbook: "دليل التداول", checklist: "قائمة المراجعة", importCsv: "استيراد CSV",
     secPerformance: "الأداء", score: "النتيجة", grading: "التقييم", plCalendar: "تقويم الأرباح",
-    heatmap: "خريطة حرارية", dailyBias: "الانحياز اليومي", challenges: "التحديات", leaderboard: "المتصدرين",
+    heatmap: "خريطة حرارية", dailyBias: "الانحياز اليومي", challenges: "التحديات", leaderboard: "المتصدرين", badges: "الشارات", sessions: "الجلسات",
     secMarket: "السوق", cotReport: "تقرير COT", macro: "ماكرو", ecoCalendar: "التقويم الاقتصادي",
     sentiment: "المعنويات", currencyStrength: "قوة العملات", news: "الأخبار", marketData: "بيانات السوق",
     lbmaMetals: "معادن LBMA", scanner: "الماسح", watchlist: "قائمة المراقبة", sectorHeatmap: "خريطة القطاعات",
@@ -131,7 +133,7 @@ const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
     calculator: "الآلة الحاسبة", replay: "إعادة", correlation: "الارتباط", comparison: "المقارنة",
     secTools: "أدوات", myDashboard: "لوحتي", pdfReports: "تقارير PDF", recaps: "ملخصات",
     screenshots: "لقطات الشاشة", chat: "الدردشة",
-    secMySpace: "مساحتي", profile: "الملف الشخصي",
+    secMySpace: "مساحتي", profile: "الملف الشخصي", pricing: "الاشتراك", community: "المجتمع",
     secPremium: "بريميوم", vip: "VIP", indicators: "المؤشرات", macroAnalyses: "تحليلات ماكرو",
     collapse: "طي",
   },
@@ -140,7 +142,7 @@ const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
     distribution: "Distribución", riskManager: "Gestión de Riesgo", errors: "Errores", strategies: "Estrategias",
     playbook: "Playbook", checklist: "Checklist", importCsv: "Importar CSV",
     secPerformance: "RENDIMIENTO", score: "Puntuación", grading: "Calificación", plCalendar: "Calendario P&L",
-    heatmap: "Mapa de Calor", dailyBias: "Sesgo Diario", challenges: "Desafíos", leaderboard: "Clasificación",
+    heatmap: "Mapa de Calor", dailyBias: "Sesgo Diario", challenges: "Desafíos", leaderboard: "Clasificación", badges: "Insignias", sessions: "Sesiones",
     secMarket: "MERCADO", cotReport: "Informe COT", macro: "Macro", ecoCalendar: "Calendario Eco",
     sentiment: "Sentimiento", currencyStrength: "Fuerza Divisas", news: "Noticias", marketData: "Datos de Mercado",
     lbmaMetals: "Metales LBMA", scanner: "Escáner", watchlist: "Watchlist", sectorHeatmap: "Mapa Sectores",
@@ -149,7 +151,7 @@ const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
     calculator: "Calculadora", replay: "Replay", correlation: "Correlación", comparison: "Comparación",
     secTools: "HERRAMIENTAS", myDashboard: "Mi Dashboard", pdfReports: "Informes PDF", recaps: "Resúmenes",
     screenshots: "Capturas", chat: "Chat",
-    secMySpace: "MI ESPACIO", profile: "Perfil",
+    secMySpace: "MI ESPACIO", profile: "Perfil", pricing: "Suscripción", community: "Comunidad",
     secPremium: "PREMIUM", vip: "VIP", indicators: "Indicadores", macroAnalyses: "Análisis Macro",
     collapse: "Reducir",
   },
@@ -158,7 +160,7 @@ const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
     distribution: "Verteilung", riskManager: "Risikomanager", errors: "Fehler", strategies: "Strategien",
     playbook: "Playbook", checklist: "Checkliste", importCsv: "CSV Import",
     secPerformance: "LEISTUNG", score: "Punktzahl", grading: "Bewertung", plCalendar: "P&L Kalender",
-    heatmap: "Heatmap", dailyBias: "Tagesbias", challenges: "Challenges", leaderboard: "Rangliste",
+    heatmap: "Heatmap", dailyBias: "Tagesbias", challenges: "Challenges", leaderboard: "Rangliste", badges: "Abzeichen", sessions: "Sitzungen",
     secMarket: "MARKT", cotReport: "COT-Bericht", macro: "Makro", ecoCalendar: "Wirtschaftskalender",
     sentiment: "Stimmung", currencyStrength: "Währungsstärke", news: "Nachrichten", marketData: "Marktdaten",
     lbmaMetals: "LBMA Metalle", scanner: "Scanner", watchlist: "Watchlist", sectorHeatmap: "Sektor-Heatmap",
@@ -167,7 +169,7 @@ const SIDEBAR_I18N: Record<Locale, Record<SidebarKey, string>> = {
     calculator: "Rechner", replay: "Replay", correlation: "Korrelation", comparison: "Vergleich",
     secTools: "WERKZEUGE", myDashboard: "Mein Dashboard", pdfReports: "PDF-Berichte", recaps: "Zusammenfassungen",
     screenshots: "Screenshots", chat: "Chat",
-    secMySpace: "MEIN BEREICH", profile: "Profil",
+    secMySpace: "MEIN BEREICH", profile: "Profil", pricing: "Abonnement", community: "Community",
     secPremium: "PREMIUM", vip: "VIP", indicators: "Indikatoren", macroAnalyses: "Makroanalysen",
     collapse: "Einklappen",
   },
@@ -195,6 +197,8 @@ const navItems = [
   { href: "/daily-bias", labelKey: "dailyBias", icon: Target },
   { href: "/challenges", labelKey: "challenges", icon: Swords },
   { href: "/leaderboard", labelKey: "leaderboard", icon: Medal },
+  { href: "/badges", labelKey: "badges", icon: Award },
+  { href: "/analytics/sessions", labelKey: "sessions", icon: Clock },
   // MARCHÉ
   { divider: true, labelKey: "secMarket" },
   { href: "/cot", labelKey: "cotReport", icon: TrendingUp },
@@ -230,6 +234,8 @@ const navItems = [
   // MON ESPACE
   { divider: true, labelKey: "secMySpace" },
   { href: "/profile", labelKey: "profile", icon: User },
+  { href: "/community", labelKey: "community", icon: Users },
+  { href: "/pricing", labelKey: "pricing", icon: CreditCard },
   // PREMIUM
   { divider: true, labelKey: "secPremium" },
   { href: "/vip", labelKey: "vip", icon: Crown, isVip: true },

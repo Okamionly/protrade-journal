@@ -34,8 +34,13 @@ export async function POST(req: NextRequest) {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature") || "";
 
-    // Verify signature if secret is configured
-    if (WEBHOOK_SECRET && !verifyStripeSignature(body, signature, WEBHOOK_SECRET)) {
+    // Reject if no webhook secret is configured
+    if (!WEBHOOK_SECRET) {
+      console.error("[Stripe] STRIPE_WEBHOOK_SECRET not configured");
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+    }
+
+    if (!verifyStripeSignature(body, signature, WEBHOOK_SECRET)) {
       console.error("[Stripe] Invalid signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }

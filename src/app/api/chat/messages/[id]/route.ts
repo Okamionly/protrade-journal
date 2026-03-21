@@ -1,16 +1,24 @@
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-
-const ADMIN_SECRET = process.env.ADMIN_SECRET || "protrade-admin-2026";
 
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const secret = req.headers.get("x-admin-secret");
-    if (secret !== ADMIN_SECRET) {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
+    // Admin check
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    if (user?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Admin requis" }, { status: 403 });
     }
 
     const { id } = await params;

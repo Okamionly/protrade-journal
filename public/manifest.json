@@ -1,0 +1,14 @@
+{
+  "name": "MarketPhase - Trading Journal",
+  "short_name": "MarketPhase",
+  "description": "Journal de trading professionnel avec IA",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#0ea5e9",
+  "orientation": "any",
+  "icons": [
+    { "src": "/logo-icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/logo-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
