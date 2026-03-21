@@ -228,12 +228,21 @@ function FormattedText({ text }: { text: string }) {
 
 // ─── Trade Share Card ────────────────────────────────────
 function SharedTradeCard({ trade }: { trade: any }) {
-  const pnl = trade.pnl ?? (trade.exitPrice && trade.entryPrice
-    ? ((trade.direction === "LONG" ? 1 : -1) * (trade.exitPrice - trade.entryPrice) * (trade.size || 1))
+  // Support both API field names (asset/entry/exit/result/lots) and legacy names (pair/entryPrice/exitPrice/pnl/size)
+  const pair = trade.asset || trade.pair || trade.symbol || "N/A";
+  const entryPrice = trade.entry ?? trade.entryPrice;
+  const exitPrice = trade.exit ?? trade.exitPrice;
+  const direction = trade.direction;
+  const size = trade.lots ?? trade.size;
+  const stopLoss = trade.sl ?? trade.stopLoss;
+  const takeProfit = trade.tp ?? trade.takeProfit;
+
+  const pnl = trade.result ?? trade.pnl ?? (exitPrice && entryPrice
+    ? ((direction === "LONG" ? 1 : -1) * (exitPrice - entryPrice) * (size || 1))
     : null);
   const isProfit = pnl !== null && pnl > 0;
-  const rr = trade.riskReward || (trade.stopLoss && trade.takeProfit && trade.entryPrice
-    ? Math.abs(trade.takeProfit - trade.entryPrice) / Math.abs(trade.entryPrice - trade.stopLoss)
+  const rr = trade.riskReward || (stopLoss && takeProfit && entryPrice
+    ? Math.abs(takeProfit - entryPrice) / Math.abs(entryPrice - stopLoss)
     : null);
 
   return (
@@ -249,20 +258,20 @@ function SharedTradeCard({ trade }: { trade: any }) {
         <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>
           Trade partagé
         </span>
-        {trade.direction && (
+        {direction && (
           <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${
-            trade.direction === "LONG"
+            direction === "LONG"
               ? "bg-emerald-500/20 text-emerald-400"
               : "bg-rose-500/20 text-rose-400"
           }`}>
-            {trade.direction}
+            {direction}
           </span>
         )}
       </div>
       <div className="px-3 py-2.5 space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-            {trade.pair || trade.symbol || "N/A"}
+            {pair}
           </span>
           {pnl !== null && (
             <span className={`text-sm font-bold mono ${isProfit ? "text-emerald-400" : "text-rose-400"}`}>
@@ -271,28 +280,28 @@ function SharedTradeCard({ trade }: { trade: any }) {
           )}
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
-          {trade.entryPrice && (
+          {entryPrice != null && (
             <div className="flex justify-between">
               <span className="text-[--text-muted]">Entrée</span>
-              <span className="mono font-medium" style={{ color: "var(--text-primary)" }}>{trade.entryPrice}</span>
+              <span className="mono font-medium" style={{ color: "var(--text-primary)" }}>{entryPrice}</span>
             </div>
           )}
-          {trade.exitPrice && (
+          {exitPrice != null && (
             <div className="flex justify-between">
               <span className="text-[--text-muted]">Sortie</span>
-              <span className="mono font-medium" style={{ color: "var(--text-primary)" }}>{trade.exitPrice}</span>
+              <span className="mono font-medium" style={{ color: "var(--text-primary)" }}>{exitPrice}</span>
             </div>
           )}
-          {trade.stopLoss && (
+          {stopLoss != null && (
             <div className="flex justify-between">
               <span className="text-[--text-muted]">SL</span>
-              <span className="mono font-medium text-rose-400">{trade.stopLoss}</span>
+              <span className="mono font-medium text-rose-400">{stopLoss}</span>
             </div>
           )}
-          {trade.takeProfit && (
+          {takeProfit != null && (
             <div className="flex justify-between">
               <span className="text-[--text-muted]">TP</span>
-              <span className="mono font-medium text-emerald-400">{trade.takeProfit}</span>
+              <span className="mono font-medium text-emerald-400">{takeProfit}</span>
             </div>
           )}
         </div>

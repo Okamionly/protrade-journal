@@ -105,10 +105,10 @@ function computeHeatmap(trades: Trade[]): { pnl: number[][]; count: number[][] }
 
   for (const trade of trades) {
     const d = new Date(trade.date);
-    const day = d.getUTCDay();
+    const day = d.getDay();
     if (day === 0 || day === 6) continue;
     const row = day - 1;
-    const hour = d.getUTCHours();
+    const hour = d.getHours();
     grid[row][hour] += trade.result;
     counts[row][hour] += 1;
   }
@@ -933,10 +933,10 @@ export default function SessionsPage() {
                     </span>
                   </td>
                   <td className="py-3 text-emerald-400">
-                    {s.bestTrade > 0 ? `+${s.bestTrade.toFixed(2)}` : "-"}
+                    {s.trades > 0 ? `${s.bestTrade >= 0 ? "+" : ""}${s.bestTrade.toFixed(2)}` : "-"}
                   </td>
                   <td className="py-3 text-rose-400">
-                    {s.worstTrade < 0 ? s.worstTrade.toFixed(2) : "-"}
+                    {s.trades > 0 ? `${s.worstTrade >= 0 ? "+" : ""}${s.worstTrade.toFixed(2)}` : "-"}
                   </td>
                 </tr>
               ))}

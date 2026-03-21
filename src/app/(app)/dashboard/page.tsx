@@ -394,23 +394,23 @@ export default function DashboardPage() {
                 </p>
                 {!goalReached && remaining > 0 ? (
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${onTrack ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"}`}>
-                    {onTrack ? "En avance" : `${remaining.toFixed(0)}€ restants`}
+                    {onTrack ? t("aheadOfSchedule") : `${remaining.toFixed(0)}€ ${t("goalRemainingAmount")}`}
                   </span>
                 ) : goalReached ? (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
-                    Objectif atteint !
+                    {t("goalReached")}
                   </span>
                 ) : null}
               </div>
               {!goalReached && remaining > 0 && daysLeft > 0 && (
                 <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-                  ~{dailyNeeded.toFixed(0)}€/jour nécessaires • {daysLeft} jours restants
+                  ~{dailyNeeded.toFixed(0)}€{t("dailyNeededAmount")} • {daysLeft} {t("daysRemainingCount")}
                 </p>
               )}
             </>
           );
         })() : (
-          <p className="text-[--text-muted] text-sm">{t("noTradesThisMonth")}</p>
+          <p className="text-[--text-muted] text-sm">{t("noGoalSet")}</p>
         )}
       </div>
 
@@ -643,6 +643,13 @@ export default function DashboardPage() {
 
       {/* Weekly Comparison */}
       {(() => {
+        // Use date-only string comparison to avoid UTC vs local timezone mismatches
+        const toDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const tradeDateStr = (t: Trade) => {
+          const d = new Date(t.date);
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        };
+
         const today = new Date();
         const dayOfWeek = today.getDay() || 7;
         const thisWeekStart = new Date(today);
@@ -650,11 +657,13 @@ export default function DashboardPage() {
         thisWeekStart.setHours(0, 0, 0, 0);
         const lastWeekStart = new Date(thisWeekStart);
         lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-        const lastWeekEnd = new Date(thisWeekStart);
-        lastWeekEnd.setMilliseconds(-1);
 
-        const thisWeekTrades = trades.filter(t => new Date(t.date) >= thisWeekStart);
-        const lastWeekTrades = trades.filter(t => { const d = new Date(t.date); return d >= lastWeekStart && d <= lastWeekEnd; });
+        const thisWeekStartStr = toDateStr(thisWeekStart);
+        const lastWeekStartStr = toDateStr(lastWeekStart);
+        const todayStr = toDateStr(today);
+
+        const thisWeekTrades = trades.filter(tr => { const ds = tradeDateStr(tr); return ds >= thisWeekStartStr && ds <= todayStr; });
+        const lastWeekTrades = trades.filter(tr => { const ds = tradeDateStr(tr); return ds >= lastWeekStartStr && ds < thisWeekStartStr; });
 
         const twPnL = thisWeekTrades.reduce((s, t) => s + t.result, 0);
         const lwPnL = lastWeekTrades.reduce((s, t) => s + t.result, 0);
@@ -664,10 +673,10 @@ export default function DashboardPage() {
         const lwWR = lastWeekTrades.length > 0 ? (lwWins / lastWeekTrades.length) * 100 : 0;
 
         const metrics = [
-          { label: "P&L", current: twPnL, previous: lwPnL, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}` },
-          { label: "Trades", current: thisWeekTrades.length, previous: lastWeekTrades.length, format: (v: number) => String(v) },
-          { label: "Win Rate", current: twWR, previous: lwWR, format: (v: number) => `${v.toFixed(0)}%` },
-          { label: "Avg P&L", current: thisWeekTrades.length ? twPnL / thisWeekTrades.length : 0, previous: lastWeekTrades.length ? lwPnL / lastWeekTrades.length : 0, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}` },
+          { key: "pnl", label: t("pnlLabel"), current: twPnL, previous: lwPnL, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}`, alwaysPositiveLabel: false },
+          { key: "trades", label: t("trades"), current: thisWeekTrades.length, previous: lastWeekTrades.length, format: (v: number) => String(v), alwaysPositiveLabel: true },
+          { key: "winrate", label: t("winRate"), current: twWR, previous: lwWR, format: (v: number) => `${v.toFixed(0)}%`, alwaysPositiveLabel: true },
+          { key: "avgpnl", label: t("avgPnl"), current: thisWeekTrades.length ? twPnL / thisWeekTrades.length : 0, previous: lastWeekTrades.length ? lwPnL / lastWeekTrades.length : 0, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}`, alwaysPositiveLabel: false },
         ];
 
         return (
@@ -677,13 +686,13 @@ export default function DashboardPage() {
               <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>{t("weeklyComparison")}</h3>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {metrics.map(({ label, current, previous, format }) => {
+              {metrics.map(({ key, label, current, previous, format, alwaysPositiveLabel }) => {
                 const delta = previous !== 0 ? ((current - previous) / Math.abs(previous)) * 100 : current > 0 ? 100 : 0;
                 const improved = current >= previous;
                 return (
-                  <div key={label} className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
+                  <div key={key} className="rounded-xl p-4" style={{ background: "var(--bg-hover)" }}>
                     <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>{label}</div>
-                    <div className="text-xl font-bold mono" style={{ color: current >= 0 || label === "Trades" || label === "Win Rate" ? "var(--text-primary)" : "#ef4444" }}>
+                    <div className="text-xl font-bold mono" style={{ color: current >= 0 || alwaysPositiveLabel ? "var(--text-primary)" : "#ef4444" }}>
                       {format(current)}
                     </div>
                     <div className="flex items-center gap-1 mt-1">

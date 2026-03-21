@@ -18,6 +18,14 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
   const totalBalance = balance + stats.netProfit;
   const profitPercent = balance > 0 ? ((stats.netProfit / balance) * 100).toFixed(1) : "0";
 
+  // Filter trades for the current month
+  const now = new Date();
+  const monthlyTrades = trades.filter((tr) => {
+    const d = new Date(tr.date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthlyStats = computeStats(monthlyTrades);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div className="metric-card clickable rounded-2xl p-6 relative overflow-hidden group">
@@ -92,16 +100,16 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
         <div className="flex justify-between items-start mb-4">
           <div>
             <p className="text-[--text-secondary] text-sm font-medium">{t("tradesThisMonth")}</p>
-            <h3 className="text-3xl font-bold mono mt-1" style={{ color: "var(--text-primary)" }}>{stats.totalTrades}</h3>
+            <h3 className="text-3xl font-bold mono mt-1" style={{ color: "var(--text-primary)" }}>{monthlyStats.totalTrades}</h3>
           </div>
           <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
             <ArrowLeftRight className="text-orange-400 w-5 h-5" />
           </div>
         </div>
         <div className="flex items-center text-sm">
-          <span className="text-emerald-400 font-medium">{stats.wins} {t("won")}</span>
+          <span className="text-emerald-400 font-medium">{monthlyStats.wins} {t("won")}</span>
           <span className="text-[--text-muted] mx-2">|</span>
-          <span className="text-rose-400 font-medium">{stats.losses} {t("lost")}</span>
+          <span className="text-rose-400 font-medium">{monthlyStats.losses} {t("lost")}</span>
         </div>
       </Link>
     </div>

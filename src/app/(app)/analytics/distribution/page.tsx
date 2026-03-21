@@ -37,7 +37,7 @@ function BarChart({ data, labelKey, valueKey, colorFn }: { data: Record<string, 
   );
 }
 
-const HEATMAP_DAYS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven"];
+// Day labels are resolved at render time via t() to support i18n
 const HEATMAP_DAY_INDICES = [1, 2, 3, 4, 5]; // Mon=1 ... Fri=5
 
 interface HeatmapCell {
@@ -50,7 +50,7 @@ interface HeatmapCell {
   winRate: number;
 }
 
-function computeHourDayHeatmap(trades: Trade[]): { cells: HeatmapCell[][]; maxPnl: number; bestCell: HeatmapCell | null } {
+function computeHourDayHeatmap(trades: Trade[], dayLabels: string[]): { cells: HeatmapCell[][]; maxPnl: number; bestCell: HeatmapCell | null } {
   // cells[hour][dayIndex] where dayIndex 0=Mon, 1=Tue...4=Fri
   const grid: Record<string, { pnl: number; trades: number; wins: number }> = {};
   for (let h = 0; h < 24; h++) {
@@ -83,7 +83,7 @@ function computeHourDayHeatmap(trades: Trade[]): { cells: HeatmapCell[][]; maxPn
       const cell: HeatmapCell = {
         hour: h,
         day: HEATMAP_DAY_INDICES[di],
-        dayLabel: HEATMAP_DAYS_FR[di],
+        dayLabel: dayLabels[di],
         pnl: g.pnl,
         trades: g.trades,
         wins: g.wins,
@@ -101,8 +101,10 @@ function computeHourDayHeatmap(trades: Trade[]): { cells: HeatmapCell[][]; maxPn
 
 function getHeatmapColor(pnl: number, maxPnl: number): string {
   if (maxPnl === 0) return "rgba(107, 114, 128, 0.15)";
+  // Treat near-zero values as neutral to avoid coloring cells with negligible PnL
+  const threshold = maxPnl * 0.005;
+  if (Math.abs(pnl) <= threshold) return "rgba(107, 114, 128, 0.15)";
   const intensity = Math.min(Math.abs(pnl) / maxPnl, 1);
-  if (pnl === 0) return "rgba(107, 114, 128, 0.15)";
   if (pnl > 0) {
     // green gradient: from subtle to vivid
     const alpha = 0.15 + intensity * 0.75;
@@ -121,7 +123,8 @@ export default function DistributionPage() {
   const daily = useMemo(() => computeDayDistribution(trades as unknown as Trade[]), [trades]);
   const sessions = useMemo(() => computeSessionDistribution(trades as unknown as Trade[]), [trades]);
 
-  const heatmapData = useMemo(() => computeHourDayHeatmap(trades as unknown as Trade[]), [trades]);
+  const heatmapDayLabels = useMemo(() => [t("heatmapMon"), t("heatmapTue"), t("heatmapWed"), t("heatmapThu"), t("heatmapFri")], [t]);
+  const heatmapData = useMemo(() => computeHourDayHeatmap(trades as unknown as Trade[], heatmapDayLabels), [trades, heatmapDayLabels]);
   const [hoveredCell, setHoveredCell] = useState<HeatmapCell | null>(null);
 
   const colorFn = (v: number) => v >= 0 ? "#10b981" : "#ef4444";
@@ -248,13 +251,19 @@ export default function DistributionPage() {
           <div className="flex items-end gap-[2px] h-48">
             {hourly.map((h) => {
               const maxPnl = Math.max(...hourly.map((x) => Math.abs(x.pnl)), 1);
-              const pct = (Math.abs(h.pnl) / maxPnl) * 100;
+              const pct = h.trades > 0 ? (Math.abs(h.pnl) / maxPnl) * 100 : 0;
               return (
                 <div key={h.hour} className="flex-1 flex flex-col items-center group relative">
                   <div
                     className="w-full rounded-t transition-all cursor-default hover:opacity-80"
-                    style={{ height: `${Math.max(pct, 2)}%`, background: h.pnl >= 0 ? "#10b981" : "#ef4444" }}
-                    title={`${h.hour}h: ${h.pnl >= 0 ? "+" : ""}${h.pnl.toFixed(2)}€ (${h.trades} trades, ${h.winRate.toFixed(0)}% WR)`}
+                    style={{
+                      height: `${h.trades > 0 ? Math.max(pct, 2) : 1}%`,
+                      background: h.trades > 0 ? (h.pnl >= 0 ? "#10b981" : "#ef4444") : "rgba(107, 114, 128, 0.15)",
+                    }}
+                    title={h.trades > 0
+                      ? `${h.hour}h: ${h.pnl >= 0 ? "+" : ""}${h.pnl.toFixed(2)}€ (${h.trades} trades, ${h.winRate.toFixed(0)}% WR)`
+                      : `${h.hour}h: ${t("noTradeThisDay")}`
+                    }
                   />
                   <span className="text-[9px] mt-1" style={{ color: "var(--text-muted)" }}>{h.hour}</span>
                 </div>
@@ -313,7 +322,7 @@ export default function DistributionPage() {
                 {/* Day headers */}
                 <div className="flex">
                   <div className="w-12 shrink-0" />
-                  {HEATMAP_DAYS_FR.map((day) => (
+                  {heatmapDayLabels.map((day) => (
                     <div key={day} className="flex-1 text-center text-xs font-semibold pb-2" style={{ color: "var(--text-secondary)" }}>
                       {day}
                     </div>
