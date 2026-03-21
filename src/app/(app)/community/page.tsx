@@ -26,6 +26,15 @@ import {
   Bookmark,
   GraduationCap,
   Clock,
+  Bell,
+  BellOff,
+  CheckCircle,
+  Flame,
+  Star,
+  Zap,
+  Shield,
+  Lightbulb,
+  LineChart,
 } from "lucide-react";
 
 /* ─── Types ─────────────────────────────────────────────── */
@@ -85,15 +94,110 @@ const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
 
 const QUICK_EMOJIS = ["\ud83d\udc4d", "\ud83d\udd25", "\ud83d\udcb0", "\ud83d\udcc8", "\ud83c\udfaf", "\ud83d\udcaa"];
 
-/* ─── Tab icon mapping for placeholders ─────────────────── */
+/* ─── Tab placeholder metadata ─────────────────────────── */
 
-const TAB_PLACEHOLDER_ICONS: Record<string, React.ElementType> = {
-  leaderboard: Trophy,
-  challenges: Target,
-  discussions: MessageSquare,
-  highlights: Sparkles,
-  mentors: GraduationCap,
-  compare: GitCompare,
+interface TabPlaceholderInfo {
+  icon: React.ElementType;
+  accentColor: string;
+  accentBg: string;
+  accentBorder: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  features: { icon: React.ElementType; text: string }[];
+}
+
+const TAB_PLACEHOLDERS: Record<string, TabPlaceholderInfo> = {
+  leaderboard: {
+    icon: Trophy,
+    accentColor: "text-amber-400",
+    accentBg: "bg-amber-500/10",
+    accentBorder: "border-amber-500/20",
+    title: "Classement",
+    subtitle: "Grimpez les echelons",
+    description:
+      "Comparez vos performances avec les autres traders de la communaute. Classements hebdomadaires et mensuels bases sur le win rate, le P&L et la regularite.",
+    features: [
+      { icon: Trophy, text: "Classements hebdomadaires et mensuels" },
+      { icon: TrendingUp, text: "Bases sur vos vrais resultats de trading" },
+      { icon: Star, text: "Badges et recompenses exclusifs" },
+    ],
+  },
+  challenges: {
+    icon: Target,
+    accentColor: "text-rose-400",
+    accentBg: "bg-rose-500/10",
+    accentBorder: "border-rose-500/20",
+    title: "Defis",
+    subtitle: "Relevez le challenge",
+    description:
+      "Participez a des defis de trading hebdomadaires avec des objectifs precis. Meilleur win rate, plus gros R:R, serie de trades gagnants...",
+    features: [
+      { icon: Target, text: "Defis hebdomadaires avec objectifs clairs" },
+      { icon: Flame, text: "Competions par categorie de trading" },
+      { icon: Award, text: "Badges speciaux pour les gagnants" },
+    ],
+  },
+  discussions: {
+    icon: MessageSquare,
+    accentColor: "text-blue-400",
+    accentBg: "bg-blue-500/10",
+    accentBorder: "border-blue-500/20",
+    title: "Discussions",
+    subtitle: "Echangez entre traders",
+    description:
+      "Forums thematiques pour discuter strategies, analyses de marche, psychologie du trading et plus encore. Creez vos propres sujets.",
+    features: [
+      { icon: MessageSquare, text: "Forums par categorie (strategie, psychologie...)" },
+      { icon: Lightbulb, text: "Partagez vos analyses et setups" },
+      { icon: Bookmark, text: "Sauvegardez les meilleurs posts" },
+    ],
+  },
+  highlights: {
+    icon: Sparkles,
+    accentColor: "text-purple-400",
+    accentBg: "bg-purple-500/10",
+    accentBorder: "border-purple-500/20",
+    title: "Best Of",
+    subtitle: "Les meilleurs moments",
+    description:
+      "Selection hebdomadaire des meilleurs trades, analyses et contributions de la communaute. Vote par les membres.",
+    features: [
+      { icon: Sparkles, text: "Meilleurs trades de la semaine" },
+      { icon: Star, text: "Analyses les plus pertinentes" },
+      { icon: Zap, text: "Votes de la communaute" },
+    ],
+  },
+  mentors: {
+    icon: GraduationCap,
+    accentColor: "text-emerald-400",
+    accentBg: "bg-emerald-500/10",
+    accentBorder: "border-emerald-500/20",
+    title: "Mentorat",
+    subtitle: "Apprenez des meilleurs",
+    description:
+      "Connectez-vous avec des traders experimentes pour du coaching personnalise. Sessions de mentorat, revue de trades et accompagnement.",
+    features: [
+      { icon: GraduationCap, text: "Mentorat par des traders experimentes" },
+      { icon: Shield, text: "Profils verifies et notes par la communaute" },
+      { icon: LineChart, text: "Revue de vos trades et conseils personnalises" },
+    ],
+  },
+  compare: {
+    icon: GitCompare,
+    accentColor: "text-cyan-400",
+    accentBg: "bg-cyan-500/10",
+    accentBorder: "border-cyan-500/20",
+    title: "Comparer",
+    subtitle: "Analysez vos ecarts",
+    description:
+      "Comparez vos statistiques avec d'autres traders anonymises. Identifiez vos forces, vos faiblesses et les axes d'amelioration.",
+    features: [
+      { icon: GitCompare, text: "Comparaison anonymisee des statistiques" },
+      { icon: BarChart3, text: "Graphiques detailles par metrique" },
+      { icon: TrendingUp, text: "Suggestions d'amelioration personnalisees" },
+    ],
+  },
 };
 
 /* ─── Helpers ───────────────────────────────────────────── */
@@ -117,22 +221,121 @@ function formatTime(dateStr: string) {
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 }
 
-/* ─── Placeholder component ─────────────────────────────── */
+/* ─── Notify hook (localStorage) ─────────────────────────── */
 
-function ComingSoonPlaceholder({ tabId }: { tabId: string }) {
-  const Icon = TAB_PLACEHOLDER_ICONS[tabId] || Clock;
-  const tabLabel = TABS.find((t) => t.id === tabId)?.label || tabId;
+function useNotifyPreferences() {
+  const [notified, setNotified] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("community-notify-prefs");
+      if (stored) setNotified(new Set(JSON.parse(stored)));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggle = useCallback((tabId: string) => {
+    setNotified((prev) => {
+      const next = new Set(prev);
+      if (next.has(tabId)) next.delete(tabId);
+      else next.add(tabId);
+      try {
+        localStorage.setItem("community-notify-prefs", JSON.stringify([...next]));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  return { notified, toggle };
+}
+
+/* ─── Enhanced Placeholder component ─────────────────────── */
+
+function ComingSoonPlaceholder({ tabId, isNotified, onToggleNotify }: { tabId: string; isNotified: boolean; onToggleNotify: () => void }) {
+  const info = TAB_PLACEHOLDERS[tabId];
+  if (!info) return null;
+  const Icon = info.icon;
 
   return (
-    <div className="glass rounded-2xl p-16 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
-        <Icon className="w-8 h-8 text-cyan-400" />
+    <div className="max-w-2xl mx-auto">
+      <div className="glass rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
+        {/* Decorative gradient blob */}
+        <div
+          className="absolute -top-20 -right-20 w-60 h-60 rounded-full opacity-[0.07] blur-3xl pointer-events-none"
+          style={{
+            background: `radial-gradient(circle, ${
+              info.accentColor.includes("amber") ? "#f59e0b" :
+              info.accentColor.includes("rose") ? "#f43f5e" :
+              info.accentColor.includes("blue") ? "#3b82f6" :
+              info.accentColor.includes("purple") ? "#a855f7" :
+              info.accentColor.includes("emerald") ? "#10b981" :
+              "#06b6d4"
+            } 0%, transparent 70%)`,
+          }}
+        />
+
+        {/* Icon */}
+        <div className={`w-16 h-16 rounded-2xl ${info.accentBg} border ${info.accentBorder} flex items-center justify-center mx-auto mb-6`}>
+          <Icon className={`w-8 h-8 ${info.accentColor}`} />
+        </div>
+
+        {/* Title & subtitle */}
+        <h2 className="text-2xl font-bold text-[--text-primary] mb-1">{info.title}</h2>
+        <p className={`text-sm font-medium ${info.accentColor} mb-4`}>{info.subtitle}</p>
+
+        {/* Description */}
+        <p className="text-sm text-[--text-secondary] leading-relaxed max-w-lg mx-auto mb-8">
+          {info.description}
+        </p>
+
+        {/* Feature list */}
+        <div className="space-y-3 max-w-md mx-auto mb-8">
+          {info.features.map((f, i) => {
+            const FIcon = f.icon;
+            return (
+              <div key={i} className="flex items-center gap-3 text-left">
+                <div className={`w-8 h-8 rounded-lg ${info.accentBg} border ${info.accentBorder} flex items-center justify-center shrink-0`}>
+                  <FIcon className={`w-4 h-4 ${info.accentColor}`} />
+                </div>
+                <span className="text-sm text-[--text-secondary]">{f.text}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Notify button */}
+        <button
+          onClick={onToggleNotify}
+          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            isNotified
+              ? "bg-[--bg-secondary] border border-[--border] text-emerald-400"
+              : `${info.accentBg} border ${info.accentBorder} ${info.accentColor} hover:opacity-80`
+          }`}
+        >
+          {isNotified ? (
+            <>
+              <CheckCircle className="w-4 h-4" />
+              Notification activee
+            </>
+          ) : (
+            <>
+              <Bell className="w-4 h-4" />
+              M&apos;avertir du lancement
+            </>
+          )}
+        </button>
+
+        {/* Coming soon badge */}
+        <div className="mt-6">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[--bg-secondary]/60 border border-[--border] text-xs text-[--text-muted]">
+            <Clock className="w-3 h-3" />
+            Disponible prochainement
+          </span>
+        </div>
       </div>
-      <h2 className="text-xl font-bold text-[--text-primary] mb-2">{tabLabel}</h2>
-      <p className="text-base text-[--text-secondary] mb-1">Disponible prochainement</p>
-      <p className="text-sm text-[--text-muted]">
-        Cette fonctionnalite est en cours de developpement et sera bientot accessible.
-      </p>
     </div>
   );
 }
@@ -143,6 +346,7 @@ export default function CommunityPage() {
   const { t } = useTranslation();
   const { trades, loading: tradesLoading } = useTrades();
   const { data: gamData } = useGamification();
+  const { notified, toggle: toggleNotify } = useNotifyPreferences();
 
   const [activeTab, setActiveTab] = useState<TabId>("feed");
   const [messages, setMessages] = useState<FeedMessage[]>([]);
@@ -154,6 +358,7 @@ export default function CommunityPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [followedUsers, setFollowedUsers] = useState<Set<string>>(new Set());
+  const [onlineCount, setOnlineCount] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -162,6 +367,7 @@ export default function CommunityPage() {
   const myStats = useMemo(() => {
     if (!trades.length) return null;
     const wins = trades.filter((t) => t.result > 0);
+    const losses = trades.filter((t) => t.result < 0);
     const winRate = trades.length > 0 ? (wins.length / trades.length) * 100 : 0;
     const totalPnl = trades.reduce((s, t) => s + t.result, 0);
     let streak = 0;
@@ -176,7 +382,10 @@ export default function CommunityPage() {
       .filter((v) => !isNaN(v));
     const meanRR = avgRR.length > 0 ? avgRR.reduce((s, v) => s + v, 0) / avgRR.length : 0;
 
-    return { winRate, totalPnl, streak, trades: trades.length, meanRR };
+    const bestTrade = trades.length > 0 ? Math.max(...trades.map((t) => t.result)) : 0;
+    const worstTrade = trades.length > 0 ? Math.min(...trades.map((t) => t.result)) : 0;
+
+    return { winRate, totalPnl, streak, trades: trades.length, meanRR, wins: wins.length, losses: losses.length, bestTrade, worstTrade };
   }, [trades]);
 
   /* ─── Room init & messaging ─── */
@@ -202,6 +411,20 @@ export default function CommunityPage() {
       })
       .catch(() => {});
   }, []);
+
+  /* ─── Online members count (from unique users in recent messages) ─── */
+  useEffect(() => {
+    if (messages.length > 0) {
+      const recentCutoff = Date.now() - 30 * 60 * 1000; // 30 min
+      const recentUsers = new Set<string>();
+      for (const msg of messages) {
+        if (new Date(msg.createdAt).getTime() > recentCutoff) {
+          recentUsers.add(msg.userId);
+        }
+      }
+      setOnlineCount(recentUsers.size);
+    }
+  }, [messages]);
 
   const fetchMessages = useCallback(async (roomId: string, after?: string) => {
     try {
@@ -313,7 +536,18 @@ export default function CommunityPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            {onlineCount !== null && onlineCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                </span>
+                <span className="text-xs font-medium text-emerald-400">
+                  {onlineCount} {onlineCount > 1 ? "membres actifs" : "membre actif"}
+                </span>
+              </div>
+            )}
             <div className="text-xs text-[--text-muted]">{messages.length} messages</div>
           </div>
         </div>
@@ -471,27 +705,47 @@ export default function CommunityPage() {
             {/* My Stats Card */}
             {myStats && (
               <div className="glass rounded-2xl p-5">
-                <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-cyan-400" /> Mes Stats
+                <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-cyan-400" /> Mes Statistiques
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-xl p-2.5 text-center" style={{ background: "rgba(6,182,212,0.08)" }}>
                     <p className="text-lg font-bold text-cyan-400">{myStats.winRate.toFixed(1)}%</p>
-                    <p className="text-[10px] text-[--text-muted]">Win Rate</p>
+                    <p className="text-[10px] text-[--text-muted]">Taux de reussite</p>
                   </div>
                   <div className="rounded-xl p-2.5 text-center" style={{ background: myStats.totalPnl >= 0 ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)" }}>
                     <p className={`text-lg font-bold ${myStats.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {myStats.totalPnl >= 0 ? "+" : ""}{myStats.totalPnl.toFixed(0)}€
                     </p>
-                    <p className="text-[10px] text-[--text-muted]">P&L</p>
+                    <p className="text-[10px] text-[--text-muted]">P&L total</p>
                   </div>
-                  <div className="rounded-xl p-2.5 text-center" style={{ background: "rgba(239,68,68,0.08)" }}>
-                    <p className="text-lg font-bold text-rose-400">{myStats.streak}</p>
-                    <p className="text-[10px] text-[--text-muted]">Streak</p>
+                  <div className="rounded-xl p-2.5 text-center" style={{ background: "rgba(168,85,247,0.08)" }}>
+                    <p className="text-lg font-bold text-purple-400">{myStats.streak}</p>
+                    <p className="text-[10px] text-[--text-muted]">Serie en cours</p>
                   </div>
                   <div className="rounded-xl p-2.5 text-center" style={{ background: "rgba(245,158,11,0.08)" }}>
                     <p className="text-lg font-bold text-amber-400">{myStats.trades}</p>
-                    <p className="text-[10px] text-[--text-muted]">Trades</p>
+                    <p className="text-[10px] text-[--text-muted]">Trades total</p>
+                  </div>
+                </div>
+
+                {/* Extended stats */}
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs px-1">
+                    <span className="text-[--text-muted]">R:R moyen</span>
+                    <span className="font-medium text-[--text-primary]">{myStats.meanRR.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs px-1">
+                    <span className="text-[--text-muted]">Meilleur trade</span>
+                    <span className="font-medium text-emerald-400">+{myStats.bestTrade.toFixed(0)}€</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs px-1">
+                    <span className="text-[--text-muted]">Pire trade</span>
+                    <span className="font-medium text-rose-400">{myStats.worstTrade.toFixed(0)}€</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs px-1">
+                    <span className="text-[--text-muted]">Victoires / Defaites</span>
+                    <span className="font-medium text-[--text-primary]">{myStats.wins}V / {myStats.losses}D</span>
                   </div>
                 </div>
               </div>
@@ -527,32 +781,44 @@ export default function CommunityPage() {
       {/* ═══════════════════════════════════════════════════ */}
       {/* TAB: LEADERBOARD                                   */}
       {/* ═══════════════════════════════════════════════════ */}
-      {activeTab === "leaderboard" && <ComingSoonPlaceholder tabId="leaderboard" />}
+      {activeTab === "leaderboard" && (
+        <ComingSoonPlaceholder tabId="leaderboard" isNotified={notified.has("leaderboard")} onToggleNotify={() => toggleNotify("leaderboard")} />
+      )}
 
       {/* ═══════════════════════════════════════════════════ */}
       {/* TAB: CHALLENGES                                    */}
       {/* ═══════════════════════════════════════════════════ */}
-      {activeTab === "challenges" && <ComingSoonPlaceholder tabId="challenges" />}
+      {activeTab === "challenges" && (
+        <ComingSoonPlaceholder tabId="challenges" isNotified={notified.has("challenges")} onToggleNotify={() => toggleNotify("challenges")} />
+      )}
 
       {/* ═══════════════════════════════════════════════════ */}
       {/* TAB: DISCUSSIONS                                   */}
       {/* ═══════════════════════════════════════════════════ */}
-      {activeTab === "discussions" && <ComingSoonPlaceholder tabId="discussions" />}
+      {activeTab === "discussions" && (
+        <ComingSoonPlaceholder tabId="discussions" isNotified={notified.has("discussions")} onToggleNotify={() => toggleNotify("discussions")} />
+      )}
 
       {/* ═══════════════════════════════════════════════════ */}
       {/* TAB: WEEKLY HIGHLIGHTS                             */}
       {/* ═══════════════════════════════════════════════════ */}
-      {activeTab === "highlights" && <ComingSoonPlaceholder tabId="highlights" />}
+      {activeTab === "highlights" && (
+        <ComingSoonPlaceholder tabId="highlights" isNotified={notified.has("highlights")} onToggleNotify={() => toggleNotify("highlights")} />
+      )}
 
       {/* ═══════════════════════════════════════════════════ */}
       {/* TAB: MENTORS                                       */}
       {/* ═══════════════════════════════════════════════════ */}
-      {activeTab === "mentors" && <ComingSoonPlaceholder tabId="mentors" />}
+      {activeTab === "mentors" && (
+        <ComingSoonPlaceholder tabId="mentors" isNotified={notified.has("mentors")} onToggleNotify={() => toggleNotify("mentors")} />
+      )}
 
       {/* ═══════════════════════════════════════════════════ */}
       {/* TAB: COMPARE                                       */}
       {/* ═══════════════════════════════════════════════════ */}
-      {activeTab === "compare" && <ComingSoonPlaceholder tabId="compare" />}
+      {activeTab === "compare" && (
+        <ComingSoonPlaceholder tabId="compare" isNotified={notified.has("compare")} onToggleNotify={() => toggleNotify("compare")} />
+      )}
 
       {/* ─── Modals ─── */}
       {showShareModal && (
