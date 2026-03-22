@@ -76,7 +76,7 @@ export function DailyGoalTracker({ trades, monthlyGoal }: DailyGoalTrackerProps)
         <div
           className="absolute bottom-full right-0 mb-2 p-3 rounded-xl"
           style={{
-            background: "var(--widget-bg, rgba(30,30,40,0.95))",
+            background: "var(--bg-card)",
             border: "1px solid var(--border)",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",

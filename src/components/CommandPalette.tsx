@@ -116,11 +116,11 @@ export function CommandPalette() {
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[20vh]" onClick={() => setOpen(false)}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-lg bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800">
           <Search className="w-5 h-5 text-gray-500 flex-shrink-0" />
           <input
             ref={inputRef}
@@ -128,9 +128,9 @@ export function CommandPalette() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleInputKeyDown}
             placeholder="Rechercher une page ou action..."
-            className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none"
+            className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-500 outline-none"
           />
-          <kbd className="px-2 py-0.5 rounded bg-gray-800 text-gray-500 text-[10px] font-mono">ESC</kbd>
+          <kbd className="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-gray-500 text-[10px] font-mono">ESC</kbd>
         </div>
 
         {/* Results */}
@@ -158,7 +158,7 @@ export function CommandPalette() {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-4 px-4 py-2 border-t border-gray-800 text-[10px] text-gray-600">
+        <div className="flex items-center gap-4 px-4 py-2 border-t border-gray-200 dark:border-gray-800 text-[10px] text-gray-600">
           <span>↑↓ naviguer</span>
           <span>↵ ouvrir</span>
           <span>esc fermer</span>

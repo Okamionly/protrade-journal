@@ -27,7 +27,7 @@ export function TradeShareModal({ onSelect, onClose }: TradeShareModalProps) {
             <Share2 className="w-5 h-5 text-cyan-400" />
             Partager un trade
           </h3>
-          <button onClick={onClose} className="text-[--text-secondary] hover:text-white">
+          <button onClick={onClose} className="text-[--text-secondary] hover:text-[--text-primary]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -39,7 +39,7 @@ export function TradeShareModal({ onSelect, onClose }: TradeShareModalProps) {
             placeholder="Rechercher par actif ou stratégie..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-dark-bg border border-gray-600 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-gray-600 rounded-lg pl-10 pr-4 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
           />
         </div>
 

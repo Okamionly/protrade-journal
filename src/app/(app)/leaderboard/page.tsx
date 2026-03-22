@@ -136,7 +136,7 @@ function PodiumCard({
     <div
       className={`relative flex flex-col items-center p-5 rounded-2xl backdrop-blur-xl bg-gradient-to-b ${config.gradient} border ${config.border} ${config.scale} ${config.shadow} transition-all hover:scale-105`}
       style={{
-        background: `linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)`,
+        background: `linear-gradient(180deg, var(--glass-bg, rgba(255,255,255,0.04)) 0%, transparent 100%)`,
         backdropFilter: "blur(20px)",
       }}
     >
@@ -153,14 +153,14 @@ function PodiumCard({
 
       {/* Avatar */}
       <div
-        className={`${config.size} rounded-full ${config.ring} flex items-center justify-center text-white font-bold text-lg mt-2 mb-3`}
+        className={`${config.size} rounded-full ${config.ring} flex items-center justify-center text-[--text-primary] font-bold text-lg mt-2 mb-3`}
         style={{ background: avatarGradient(entry.avatarHash) }}
       >
         {entry.name.charAt(0).toUpperCase()}
       </div>
 
       {/* Name */}
-      <p className="text-sm font-semibold text-white truncate max-w-[120px]">{entry.name}</p>
+      <p className="text-sm font-semibold text-[--text-primary] truncate max-w-[120px]">{entry.name}</p>
 
       {/* Badge */}
       <div className="mt-1">
@@ -201,7 +201,7 @@ function LeaderboardRow({
 }) {
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-white/5 ${
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:bg-[var(--bg-secondary)] ${
         entry.isCurrentUser
           ? "bg-cyan-500/10 border border-cyan-500/20"
           : "border border-transparent"
@@ -209,7 +209,7 @@ function LeaderboardRow({
       style={{
         background: entry.isCurrentUser
           ? "rgba(6,182,212,0.08)"
-          : "rgba(255,255,255,0.02)",
+          : "var(--bg-secondary)",
       }}
     >
       {/* Rank */}
@@ -225,7 +225,7 @@ function LeaderboardRow({
 
       {/* Avatar */}
       <div
-        className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+        className="w-9 h-9 rounded-full flex items-center justify-center text-[--text-primary] text-sm font-bold flex-shrink-0"
         style={{ background: avatarGradient(entry.avatarHash) }}
       >
         {entry.name.charAt(0).toUpperCase()}
@@ -236,7 +236,7 @@ function LeaderboardRow({
         <div className="flex items-center gap-2">
           <span
             className={`text-sm font-medium truncate ${
-              entry.isCurrentUser ? "text-cyan-300" : "text-white"
+              entry.isCurrentUser ? "text-cyan-300" : "text-[--text-primary]"
             }`}
           >
             {entry.name}
@@ -257,7 +257,7 @@ function LeaderboardRow({
               ? "text-emerald-400"
               : metric === "pnl"
               ? "text-red-400"
-              : "text-white"
+              : "text-[--text-primary]"
           }`}
         >
           {formatMetric(entry.metricValue, metric)}
@@ -334,7 +334,7 @@ export default function LeaderboardPage() {
             </div>
             <div
               className="glass rounded-2xl p-8"
-              style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+              style={{ border: "1px solid var(--border)" }}
             >
               <div className="space-y-3">
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -381,7 +381,7 @@ export default function LeaderboardPage() {
           className="relative z-10 glass rounded-2xl p-8 md:p-12 max-w-lg mx-4 text-center"
           style={{
             border: "1px solid rgba(6,182,212,0.2)",
-            background: "rgba(var(--bg-card-rgb, 15,15,20), 0.85)",
+            background: "var(--bg-card)",
             backdropFilter: "blur(20px)",
           }}
         >
@@ -475,10 +475,10 @@ export default function LeaderboardPage() {
       {/* Controls */}
       <div
         className="glass rounded-2xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between"
-        style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+        style={{ border: "1px solid var(--border)" }}
       >
         {/* Period tabs */}
-        <div className="flex gap-1 p-1 rounded-xl bg-white/5">
+        <div className="flex gap-1 p-1 rounded-xl bg-[var(--bg-secondary)]">
           {PERIODS.map((p) => (
             <button
               key={p.value}
@@ -486,7 +486,7 @@ export default function LeaderboardPage() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 period === p.value
                   ? "bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/10"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-[var(--bg-secondary)]"
               }`}
             >
               {p.label}
@@ -495,7 +495,7 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Metric selector */}
-        <div className="flex gap-1 p-1 rounded-xl bg-white/5">
+        <div className="flex gap-1 p-1 rounded-xl bg-[var(--bg-secondary)]">
           {METRICS.map((m) => {
             const Icon = m.icon;
             return (
@@ -505,7 +505,7 @@ export default function LeaderboardPage() {
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                   metric === m.value
                     ? "bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/10"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+                    : "text-gray-400 hover:text-gray-200 hover:bg-[var(--bg-secondary)]"
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -527,7 +527,7 @@ export default function LeaderboardPage() {
       {!loading && data && data.leaderboard.length === 0 && (
         <div
           className="glass rounded-2xl p-12 text-center"
-          style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ border: "1px solid var(--border)" }}
         >
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -538,7 +538,7 @@ export default function LeaderboardPage() {
           >
             <Trophy className="w-8 h-8 text-yellow-400" />
           </div>
-          <h3 className="text-lg font-semibold text-white mb-2">
+          <h3 className="text-lg font-semibold text-[--text-primary] mb-2">
             Aucun participant pour le moment
           </h3>
           <p className="text-sm text-gray-400 max-w-md mx-auto">
@@ -583,9 +583,9 @@ export default function LeaderboardPage() {
       {!loading && rest.length > 0 && (
         <div
           className="glass rounded-2xl overflow-hidden"
-          style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ border: "1px solid var(--border)" }}
         >
-          <div className="max-h-[500px] overflow-y-auto divide-y divide-white/5 p-2">
+          <div className="max-h-[500px] overflow-y-auto divide-y divide-[var(--border)] p-2">
             {rest.map((entry) => (
               <LeaderboardRow
                 key={entry.userId}

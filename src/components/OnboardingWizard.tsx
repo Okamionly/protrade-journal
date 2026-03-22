@@ -93,7 +93,7 @@ export function OnboardingWizard() {
                 >
                   <Sparkles className="w-8 h-8 text-cyan-400" />
                 </div>
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-[--text-primary]">
                   Bienvenue sur MarketPhase !
                 </h2>
                 <p
@@ -145,7 +145,7 @@ export function OnboardingWizard() {
           {step === 1 && (
             <div className="space-y-6">
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-[--text-primary]">
                   Ajoutez votre premier trade
                 </h2>
                 <p
@@ -175,7 +175,7 @@ export function OnboardingWizard() {
                     <Upload className="w-6 h-6 text-cyan-400" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-sm font-semibold text-[--text-primary]">
                       Importer des trades
                     </p>
                     <p
@@ -205,7 +205,7 @@ export function OnboardingWizard() {
                     <PenLine className="w-6 h-6 text-purple-400" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-sm font-semibold text-[--text-primary]">
                       Ajouter manuellement
                     </p>
                     <p
@@ -232,7 +232,7 @@ export function OnboardingWizard() {
           {step === 2 && (
             <div className="space-y-6">
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-[--text-primary]">
                   Découvrez vos outils
                 </h2>
                 <p
@@ -281,7 +281,7 @@ export function OnboardingWizard() {
                       <item.icon className="w-5 h-5" style={{ color: item.color }} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">
+                      <p className="text-sm font-semibold text-[--text-primary]">
                         {item.title}
                       </p>
                       <p

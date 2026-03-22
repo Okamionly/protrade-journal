@@ -517,7 +517,7 @@ export default function CorrelationPage() {
             ))}
           </div>
         </div>
-        <div className="relative z-10 glass rounded-2xl p-8 md:p-12 max-w-lg mx-4 text-center" style={{ border: "1px solid rgba(6,182,212,0.2)", background: "rgba(var(--bg-card-rgb, 15,15,20), 0.85)", backdropFilter: "blur(20px)" }}>
+        <div className="relative z-10 glass rounded-2xl p-8 md:p-12 max-w-lg mx-4 text-center" style={{ border: "1px solid rgba(6,182,212,0.2)", background: "var(--bg-card)", backdropFilter: "blur(20px)" }}>
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" }}>
             <Lock className="w-8 h-8 text-cyan-400" />
           </div>
@@ -690,7 +690,7 @@ export default function CorrelationPage() {
           {/* Period selector tabs */}
           <div
             className="flex items-center gap-1 rounded-xl p-1"
-            style={{ background: "rgba(255,255,255,0.04)" }}
+            style={{ background: "var(--bg-secondary)" }}
           >
             <Clock className="w-3.5 h-3.5 ml-2 shrink-0" style={{ color: "var(--text-muted)" }} />
             {PERIOD_OPTIONS.map((opt) => (
@@ -968,7 +968,7 @@ export default function CorrelationPage() {
             </div>
             <div
               className="rounded-xl p-4 text-center"
-              style={{ background: "rgba(255,255,255,0.03)" }}
+              style={{ background: "var(--bg-secondary)" }}
             >
               <div
                 className="text-[10px] uppercase tracking-wider mb-2"
@@ -988,7 +988,7 @@ export default function CorrelationPage() {
             </div>
             <div
               className="rounded-xl p-4 text-center"
-              style={{ background: "rgba(255,255,255,0.03)" }}
+              style={{ background: "var(--bg-secondary)" }}
             >
               <div
                 className="text-[10px] uppercase tracking-wider mb-2"

@@ -162,7 +162,7 @@ export function QuickTradeButton() {
               </label>
               <select name="asset" required className={inputClass} style={{ color: "var(--text-primary)" }}>
                 {ASSETS.map((a) => (
-                  <option key={a} value={a} style={{ background: "#1a1a2e" }}>{a}</option>
+                  <option key={a} value={a} style={{ background: "var(--bg-card-solid)" }}>{a}</option>
                 ))}
               </select>
             </div>
@@ -269,7 +269,7 @@ export function QuickTradeButton() {
               </label>
               <select name="strategy" required className={inputClass} style={{ color: "var(--text-primary)" }}>
                 {strategyNames.map((s) => (
-                  <option key={s} value={s} style={{ background: "#1a1a2e" }}>{s}</option>
+                  <option key={s} value={s} style={{ background: "var(--bg-card-solid)" }}>{s}</option>
                 ))}
               </select>
             </div>

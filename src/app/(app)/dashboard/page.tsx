@@ -129,7 +129,7 @@ function TradeDuJourWidget() {
 
       <div
         className="rounded-xl p-3 mb-3"
-        style={{ background: "rgba(0,0,0,0.15)", border: "1px solid rgba(234,179,8,0.1)" }}
+        style={{ background: "var(--bg-secondary)", border: "1px solid rgba(234,179,8,0.1)" }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

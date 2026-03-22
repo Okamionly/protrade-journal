@@ -103,7 +103,7 @@ export function Header() {
           {langOpen && (
             <div
               className="absolute top-full right-0 mt-1 w-40 rounded-xl overflow-hidden shadow-xl z-50"
-              style={{ background: "var(--bg-card, #1a1a2e)", border: "1px solid var(--border, rgba(255,255,255,0.08))" }}
+              style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
             >
               {(Object.keys(LOCALE_FLAGS) as Locale[]).map((l) => {
                 const isActive = locale === l;

@@ -27,10 +27,10 @@ const FALLBACK_STRATEGIES = [
 
 /* ── Glassmorphism helpers ──────────────────────────── */
 const glassStyle: React.CSSProperties = {
-  background: "rgba(15, 15, 30, 0.78)",
+  background: "var(--glass-bg, rgba(15, 15, 30, 0.78))",
   backdropFilter: "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",
-  border: "1px solid rgba(255,255,255,0.10)",
+  border: "1px solid var(--glass-border, rgba(255,255,255,0.10))",
 };
 
 const glassInputClass =
@@ -425,7 +425,7 @@ function MiniTradeForm({
                 style={{ color: "var(--text-primary, #fff)" }}
               >
                 {ASSETS.map((a) => (
-                  <option key={a} value={a} style={{ background: "#1a1a2e" }}>
+                  <option key={a} value={a} style={{ background: "var(--bg-card-solid)" }}>
                     {a}
                   </option>
                 ))}
@@ -575,7 +575,7 @@ function MiniTradeForm({
                 style={{ color: "var(--text-primary, #fff)" }}
               >
                 {strategyNames.map((s) => (
-                  <option key={s} value={s} style={{ background: "#1a1a2e" }}>
+                  <option key={s} value={s} style={{ background: "var(--bg-card-solid)" }}>
                     {s}
                   </option>
                 ))}
@@ -630,7 +630,7 @@ function ScreenshotButton({
       // Dynamically import html2canvas only when needed
       const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(wrapperRef.current, {
-        backgroundColor: theme === "dark" ? "#0a0a0f" : "#ffffff",
+        backgroundColor: theme === "dark" ? "#0f172a" : "#ffffff",
         useCORS: true,
         allowTaint: true,
         scale: 2,
@@ -800,12 +800,12 @@ export default function ChartPage() {
       style={{
         margin: 0,
         height: isFullscreen ? "100vh" : "calc(100vh - 140px)",
-        background: theme === "dark" ? "#0a0a0f" : "#ffffff",
+        background: theme === "dark" ? "var(--bg-primary)" : "#ffffff",
         borderRadius: isFullscreen ? 0 : "12px",
         overflow: "hidden",
         border: isFullscreen
           ? "none"
-          : `1px solid ${theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)"}`,
+          : `1px solid var(--border)`,
       }}
     >
       {/* ── Top-right toolbar ───────────────────────────── */}
@@ -865,7 +865,7 @@ export default function ChartPage() {
             style={{
               height: "100%",
               width: "50%",
-              borderLeft: `1px solid ${theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)"}`,
+              borderLeft: `1px solid var(--border)`,
             }}
           />
         )}

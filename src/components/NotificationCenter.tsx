@@ -573,7 +573,7 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
                   className="sticky top-0 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider backdrop-blur-sm"
                   style={{
                     color: "var(--text-muted)",
-                    background: "var(--bg-secondary, rgba(0,0,0,0.3))",
+                    background: "var(--bg-secondary)",
                   }}
                 >
                   {group.label}

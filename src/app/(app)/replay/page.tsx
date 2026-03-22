@@ -936,7 +936,7 @@ function MomentBadge({
       onClick={() => onJump(moment.t)}
       className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all hover:scale-[1.02]"
       style={{
-        background: "rgba(255,255,255,0.03)",
+        background: "var(--bg-secondary)",
         border: `1px solid ${moment.color}33`,
       }}
     >
@@ -1291,7 +1291,7 @@ export default function ReplayPage() {
             className="text-xs mono px-3 py-1 rounded"
             style={{
               color: "var(--text-muted)",
-              background: "rgba(255,255,255,0.05)",
+              background: "var(--bg-secondary)",
             }}
           >
             {currentIndex + 1} / {closedTrades.length}
@@ -1439,7 +1439,7 @@ export default function ReplayPage() {
             {/* Clickable progress bar */}
             <div
               className="w-full h-2 rounded-full mb-4 overflow-hidden cursor-pointer relative group"
-              style={{ background: "rgba(255,255,255,0.06)" }}
+              style={{ background: "var(--bg-secondary)" }}
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const t = clamp((e.clientX - rect.left) / rect.width, 0, 1);
@@ -1481,8 +1481,8 @@ export default function ReplayPage() {
                 <kbd
                   className="px-1.5 py-0.5 rounded text-[9px]"
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border)",
                   }}
                 >
                   Espace
@@ -1491,8 +1491,8 @@ export default function ReplayPage() {
                 <kbd
                   className="px-1.5 py-0.5 rounded text-[9px]"
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border)",
                   }}
                 >
                   \u2190 \u2192
@@ -1501,8 +1501,8 @@ export default function ReplayPage() {
                 <kbd
                   className="px-1.5 py-0.5 rounded text-[9px]"
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border)",
                   }}
                 >
                   R
@@ -1511,8 +1511,8 @@ export default function ReplayPage() {
                 <kbd
                   className="px-1.5 py-0.5 rounded text-[9px]"
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border)",
                   }}
                 >
                   Shift+\u2190\u2192
@@ -1647,8 +1647,8 @@ export default function ReplayPage() {
                     key={item.label}
                     className="flex items-center justify-between py-1.5 px-2 rounded"
                     style={{
-                      background: "rgba(255,255,255,0.02)",
-                      borderBottom: "1px solid rgba(255,255,255,0.04)",
+                      background: "var(--bg-secondary)",
+                      borderBottom: "1px solid var(--border)",
                     }}
                   >
                     <span
@@ -1693,7 +1693,7 @@ export default function ReplayPage() {
                     <div
                       className="rounded-xl p-3 text-center"
                       style={{
-                        background: "rgba(255,255,255,0.03)",
+                        background: "var(--bg-secondary)",
                         border: "1px solid var(--border)",
                       }}
                     >
@@ -1733,7 +1733,7 @@ export default function ReplayPage() {
                     <div
                       className="rounded-xl p-3 text-center"
                       style={{
-                        background: "rgba(255,255,255,0.03)",
+                        background: "var(--bg-secondary)",
                         border: "1px solid var(--border)",
                       }}
                     >
@@ -1769,7 +1769,7 @@ export default function ReplayPage() {
                     <div
                       className="rounded-xl p-3 text-center"
                       style={{
-                        background: "rgba(255,255,255,0.03)",
+                        background: "var(--bg-secondary)",
                         border: "1px solid var(--border)",
                       }}
                     >
@@ -1807,7 +1807,7 @@ export default function ReplayPage() {
                     <div
                       className="rounded-xl p-3 text-center"
                       style={{
-                        background: "rgba(255,255,255,0.03)",
+                        background: "var(--bg-secondary)",
                         border: "1px solid var(--border)",
                       }}
                     >
@@ -2072,7 +2072,7 @@ export default function ReplayPage() {
                         <div
                           className="w-full h-1.5 rounded-full overflow-hidden"
                           style={{
-                            background: "rgba(255,255,255,0.06)",
+                            background: "var(--bg-secondary)",
                           }}
                         >
                           <div
@@ -2110,7 +2110,7 @@ export default function ReplayPage() {
                     <div
                       className="rounded-xl p-4"
                       style={{
-                        background: "rgba(255,255,255,0.03)",
+                        background: "var(--bg-secondary)",
                         border: "1px solid var(--border)",
                       }}
                     >
@@ -2164,7 +2164,7 @@ export default function ReplayPage() {
                     <div
                       className="rounded-xl p-4"
                       style={{
-                        background: "rgba(255,255,255,0.03)",
+                        background: "var(--bg-secondary)",
                         border: "1px solid var(--border)",
                       }}
                     >
@@ -2219,7 +2219,7 @@ export default function ReplayPage() {
                     <div
                       className="rounded-xl p-4"
                       style={{
-                        background: "rgba(255,255,255,0.03)",
+                        background: "var(--bg-secondary)",
                         border: "1px solid var(--border)",
                       }}
                     >
@@ -2279,7 +2279,7 @@ export default function ReplayPage() {
                   <div
                     className="mt-4 rounded-lg p-3 flex items-center justify-between flex-wrap gap-3"
                     style={{
-                      background: "rgba(255,255,255,0.03)",
+                      background: "var(--bg-secondary)",
                       border: "1px solid var(--border)",
                     }}
                   >
@@ -2355,7 +2355,7 @@ export default function ReplayPage() {
               <div
                 className="rounded-lg p-3 mb-3"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
+                  background: "var(--bg-secondary)",
                   border: "1px solid var(--border)",
                 }}
               >
@@ -2413,7 +2413,7 @@ export default function ReplayPage() {
                   <div
                     className="rounded-lg p-3 mb-3"
                     style={{
-                      background: "rgba(255,255,255,0.03)",
+                      background: "var(--bg-secondary)",
                       border: "1px solid var(--border)",
                     }}
                   >
@@ -2439,7 +2439,7 @@ export default function ReplayPage() {
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                   style={{
-                    background: "rgba(255,255,255,0.05)",
+                    background: "var(--bg-secondary)",
                     color: "var(--text-secondary)",
                   }}
                 >
@@ -2462,7 +2462,7 @@ export default function ReplayPage() {
               disabled={currentIndex <= 0}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-30"
               style={{
-                background: "rgba(255,255,255,0.05)",
+                background: "var(--bg-secondary)",
                 color: "var(--text-secondary)",
               }}
             >
@@ -2488,7 +2488,7 @@ export default function ReplayPage() {
               disabled={currentIndex >= closedTrades.length - 1}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-30"
               style={{
-                background: "rgba(255,255,255,0.05)",
+                background: "var(--bg-secondary)",
                 color: "var(--text-secondary)",
               }}
             >

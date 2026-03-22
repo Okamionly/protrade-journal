@@ -45,7 +45,7 @@ export function CommunityShareTradeModal({ onShare, onClose }: CommunityShareTra
             <Share2 className="w-5 h-5 text-cyan-400" />
             Partager dans la communauté
           </h3>
-          <button onClick={onClose} className="text-[--text-secondary] hover:text-white transition">
+          <button onClick={onClose} className="text-[--text-secondary] hover:text-[--text-primary] transition">
             <X className="w-5 h-5" />
           </button>
         </div>

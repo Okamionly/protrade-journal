@@ -204,8 +204,8 @@ function IndicatorCard({
       style={{
         border: expanded
           ? "1px solid rgba(168,85,247,0.3)"
-          : "1px solid var(--border, rgba(255,255,255,0.08))",
-        background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+          : "1px solid var(--border)",
+        background: "var(--bg-secondary)",
       }}
     >
       {/* Image header */}
@@ -387,8 +387,8 @@ function IndicatorCard({
         <div
           className="flex items-center gap-4 mb-4 py-3 px-4 rounded-xl"
           style={{
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid var(--border, rgba(255,255,255,0.06))",
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
           }}
         >
           <div className="flex items-center gap-1.5">
@@ -405,7 +405,7 @@ function IndicatorCard({
           </div>
           <div
             className="w-px h-4"
-            style={{ background: "var(--border, rgba(255,255,255,0.08))" }}
+            style={{ background: "var(--border)" }}
           />
           <div className="flex items-center gap-1.5">
             <Timer
@@ -421,7 +421,7 @@ function IndicatorCard({
           </div>
           <div
             className="w-px h-4"
-            style={{ background: "var(--border, rgba(255,255,255,0.08))" }}
+            style={{ background: "var(--border)" }}
           />
           <div className="flex items-center gap-1.5">
             <LayoutDashboard
@@ -727,8 +727,8 @@ function IndicateursPage() {
             <div
               className="glass rounded-2xl p-12 text-center"
               style={{
-                border: "1px solid var(--border, rgba(255,255,255,0.08))",
-                background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+                border: "1px solid var(--border)",
+                background: "var(--bg-secondary)",
               }}
             >
               <Code

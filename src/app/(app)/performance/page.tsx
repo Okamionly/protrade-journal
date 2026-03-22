@@ -69,7 +69,7 @@ function CategoryBar({ label, score, icon: Icon, details }: {
         </div>
         <span className={`text-xs sm:text-sm font-bold mono whitespace-nowrap ${colors.text}`}>{score}/100</span>
       </div>
-      <div className="relative h-2.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+      <div className="relative h-2.5 rounded-full" style={{ background: "var(--bg-secondary)" }}>
         <div className={`h-full rounded-full transition-all duration-700 ${colors.bar}`}
           style={{ width: `${Math.max(score, 2)}%` }} />
       </div>
@@ -203,7 +203,7 @@ function BenchmarkBar({ label, userValue, medianValue, unit, higherIsBetter = tr
           {userValue.toFixed(unit === "%" ? 1 : 2)}{unit}
         </span>
       </div>
-      <div className="relative h-3 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+      <div className="relative h-3 rounded-full" style={{ background: "var(--bg-secondary)" }}>
         <div className="absolute top-0 h-full w-0.5 bg-amber-400 z-10 rounded" style={{ left: `${medianPct}%` }} title={`Median: ${medianValue}${unit}`} />
         <div className={`h-full rounded-full transition-all duration-700 ${isBetter ? "bg-emerald-500/60" : "bg-rose-500/60"}`}
           style={{ width: `${userPct}%` }} />

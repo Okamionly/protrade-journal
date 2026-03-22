@@ -52,7 +52,7 @@ export function ShortcutsHelpModal({ open, onClose }: ShortcutsHelpModalProps) {
             <div
               key={s.keys}
               className="flex items-center justify-between py-2 px-3 rounded-xl"
-              style={{ background: "rgba(255,255,255,0.03)" }}
+              style={{ background: "var(--bg-secondary)" }}
             >
               <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
                 {s.description}
@@ -60,8 +60,8 @@ export function ShortcutsHelpModal({ open, onClose }: ShortcutsHelpModalProps) {
               <kbd
                 className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold"
                 style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--border)",
                   color: "var(--text-primary)",
                 }}
               >
@@ -73,7 +73,7 @@ export function ShortcutsHelpModal({ open, onClose }: ShortcutsHelpModalProps) {
 
         {/* Footer hint */}
         <p className="text-xs mt-5 text-center" style={{ color: "var(--text-muted)" }}>
-          Appuyez sur <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>Esc</kbd> ou <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>Ctrl + /</kbd> pour fermer
+          Appuyez sur <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>Esc</kbd> ou <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>Ctrl + /</kbd> pour fermer
         </p>
       </div>
     </div>

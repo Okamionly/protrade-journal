@@ -316,7 +316,7 @@ function VipPage() {
             className="glass relative rounded-2xl overflow-hidden group transition-all hover:scale-[1.01]"
             style={{
               border: "1px solid rgba(168,85,247,0.15)",
-              background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+              background: "var(--bg-secondary)",
             }}
           >
             {/* Card illustration */}
@@ -465,9 +465,9 @@ function VipPage() {
                 <div
                   className="rounded-xl p-3 mb-3"
                   style={{
-                    background: "rgba(255,255,255,0.03)",
+                    background: "var(--bg-secondary)",
                     border:
-                      "1px solid var(--border, rgba(255,255,255,0.06))",
+                      "1px solid var(--border)",
                   }}
                 >
                   <p
@@ -501,7 +501,7 @@ function VipPage() {
             className="glass relative rounded-2xl overflow-hidden group transition-all hover:scale-[1.01]"
             style={{
               border: "1px solid rgba(59,130,246,0.15)",
-              background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+              background: "var(--bg-secondary)",
             }}
           >
             {/* Card illustration */}
@@ -648,9 +648,9 @@ function VipPage() {
                 <div
                   className="rounded-xl p-3 mb-3"
                   style={{
-                    background: "rgba(255,255,255,0.03)",
+                    background: "var(--bg-secondary)",
                     border:
-                      "1px solid var(--border, rgba(255,255,255,0.06))",
+                      "1px solid var(--border)",
                   }}
                 >
                   <p
@@ -687,7 +687,7 @@ function VipPage() {
             className="glass max-w-lg w-full rounded-2xl overflow-hidden"
             style={{
               border: "1px solid rgba(245,158,11,0.2)",
-              background: "var(--bg-secondary, rgba(255,255,255,0.03))",
+              background: "var(--bg-secondary)",
             }}
           >
             {/* Pricing header */}
