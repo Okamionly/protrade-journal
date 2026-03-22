@@ -104,7 +104,7 @@ function buildTVWidget(
     hide_side_toolbar: false,
     details: true,
     hotlist: true,
-    studies: ["Volume@tv-basicstudies"],
+    studies: [],
     withdateranges: true,
   });
 
