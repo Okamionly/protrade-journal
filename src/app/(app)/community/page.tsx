@@ -2218,7 +2218,7 @@ export default function CommunityPage() {
       const rooms = await res.json();
       const community = rooms.find(
         (r: { name: string }) =>
-          r.name === "Communauté" || r.name === "community" || r.name === "Communauté"
+          r.name === "Communauté" || r.name === "Communaute" || r.name === "community" || r.name === "Général" || r.name === "General"
       );
       if (community) {
         setCommunityRoomId(community.id);
