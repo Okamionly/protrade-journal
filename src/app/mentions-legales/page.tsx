@@ -50,10 +50,10 @@ export default function MentionsLegales() {
             <li>
               <strong>Email de contact :</strong>{" "}
               <a
-                href="mailto:contact@marketphase.fr"
+                href="mailto:contact@marketphase.com"
                 className="underline hover:text-gray-600"
               >
-                contact@marketphase.fr
+                contact@marketphase.com
               </a>
             </li>
           </ul>
@@ -163,10 +163,10 @@ export default function MentionsLegales() {
             Pour toute question relative aux presentes mentions legales, vous
             pouvez nous contacter par email a l&apos;adresse :{" "}
             <a
-              href="mailto:contact@marketphase.fr"
+              href="mailto:contact@marketphase.com"
               className="underline hover:text-gray-600"
             >
-              contact@marketphase.fr
+              contact@marketphase.com
             </a>
           </p>
         </section>

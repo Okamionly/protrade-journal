@@ -234,10 +234,10 @@ export default function Confidentialite() {
           <p className="mt-4 leading-relaxed text-gray-700">
             Pour exercer vos droits, contactez-nous a l&apos;adresse :{" "}
             <a
-              href="mailto:contact@marketphase.fr"
+              href="mailto:contact@marketphase.com"
               className="underline hover:text-gray-600"
             >
-              contact@marketphase.fr
+              contact@marketphase.com
             </a>
             . Nous nous engageons a repondre dans un delai de 30 jours.
           </p>
@@ -279,10 +279,10 @@ export default function Confidentialite() {
             confidentialite ou a la protection de vos donnees, contactez-nous
             a :{" "}
             <a
-              href="mailto:contact@marketphase.fr"
+              href="mailto:contact@marketphase.com"
               className="underline hover:text-gray-600"
             >
-              contact@marketphase.fr
+              contact@marketphase.com
             </a>
           </p>
           <p className="mt-3 leading-relaxed text-gray-700">
