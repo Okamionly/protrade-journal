@@ -145,10 +145,12 @@ export default function ChartPage() {
   return (
     <div
       ref={wrapperRef}
-      className="flex flex-col h-full"
+      className="flex flex-col"
       style={{
-        padding: isFullscreen ? 0 : "4px 6px 4px",
+        padding: isFullscreen ? 0 : "0",
         background: isFullscreen ? "rgba(15,15,20,1)" : undefined,
+        margin: isFullscreen ? 0 : "-1.5rem -1rem -2.5rem -1rem",
+        height: isFullscreen ? "100vh" : "calc(100vh - 56px)",
       }}
     >
       {/* ── Top bar ─────────────────────────────────── */}
@@ -272,7 +274,7 @@ export default function ChartPage() {
         ref={containerRef}
         className="tradingview-widget-container rounded-xl overflow-hidden flex-1"
         style={{
-          height: isFullscreen ? "calc(100vh - 40px)" : "calc(100vh - 56px)",
+          height: "100%",
           border: "1px solid var(--border)",
         }}
       />
