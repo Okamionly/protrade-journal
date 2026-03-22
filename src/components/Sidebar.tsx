@@ -168,7 +168,6 @@ const sections: SectionDef[] = [
       { href: "/custom-dashboard", labelKey: "sidebarMyDashboard", icon: Layers },
       { href: "/reports", labelKey: "sidebarPdfReports", icon: FileText },
       { href: "/screenshots", labelKey: "sidebarScreenshots", icon: Camera },
-      { href: "/webhook-docs", labelKey: "sidebarWebhooks", icon: Webhook },
     ],
   },
   // MON ESPACE (always expanded)
