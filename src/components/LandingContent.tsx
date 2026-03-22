@@ -290,12 +290,13 @@ export default function LandingContent() {
 
   return (
     <div className="bg-white text-gray-900">
+      <h1 className="sr-only">Journal de Trading Gratuit — MarketPhase</h1>
       {/* ==================== NAVBAR ==================== */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
         <div className="max-w-[100vw] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             <Link href="/" className="flex items-center gap-2" onClick={() => goToSlide(0)}>
-              <Image src="/logo-icon.png" alt="MarketPhase" width={40} height={40} sizes="40px" className="w-10 h-10 rounded-xl" />
+              <Image src="/logo-icon.png" alt="MarketPhase journal de trading gratuit" width={40} height={40} sizes="40px" className="w-10 h-10 rounded-xl" />
               <span className="text-lg font-bold text-gray-900 hidden sm:inline">MarketPhase</span>
             </Link>
 
@@ -349,7 +350,7 @@ export default function LandingContent() {
                 )}
               </div>
               <Link href="/login" className="hidden sm:inline-flex text-sm text-gray-500 hover:text-gray-900 px-3 py-2 transition">{t("landing_login")}</Link>
-              <Link href="/register" className="text-xs sm:text-sm font-semibold text-white px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-lg hover:shadow-blue-500/25 transition-all whitespace-nowrap">
+              <Link href="/register" title="Ouvrir un journal de trading gratuit" className="text-xs sm:text-sm font-semibold text-white px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-lg hover:shadow-blue-500/25 transition-all whitespace-nowrap">
                 {t("landing_cta")}
               </Link>
             </div>
@@ -407,6 +408,7 @@ export default function LandingContent() {
       )}
 
       {/* ==================== SLIDE CONTAINER ==================== */}
+      <main>
       <div
         ref={scrollRef}
         className={
@@ -430,7 +432,7 @@ export default function LandingContent() {
               <div className="flex-1 max-w-2xl lg:max-w-none text-center lg:text-left">
                 {/* Logo text design */}
                 <div className="mb-8 flex justify-center lg:justify-start">
-                  <Image src="/logo-icon.png" alt="MarketPhase" width={56} height={56} sizes="56px" className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl drop-shadow-lg" priority />
+                  <Image src="/logo-icon.png" alt="Logo MarketPhase journal de trading gratuit" width={56} height={56} sizes="56px" className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl drop-shadow-lg" priority />
                   <div>
                     <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight"><span className="text-gray-900">Market</span><span className="bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">Phase</span></span>
                     <p className="text-[10px] sm:text-xs tracking-[0.3em] uppercase text-gray-400 font-medium mt-0.5">Time Creates Opportunity</p>
@@ -442,20 +444,20 @@ export default function LandingContent() {
                   {t("landing_badge")}
                 </div>
 
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-[1.05] text-gray-900">
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-[1.05] text-gray-900">
                   {t("landing_heroTitle1")}{" "}
                   <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 bg-clip-text text-transparent">
                     {t("landing_heroTitle2")}
                   </span>{" "}
                   {t("landing_heroTitle3")}
-                </h1>
+                </h2>
 
                 <p className="mt-5 text-base sm:text-lg text-gray-500 max-w-xl mx-auto lg:mx-0 leading-relaxed">
                   {t("landing_heroSub")}
                 </p>
 
                 <div className="mt-8 flex flex-col sm:flex-row items-center lg:items-start gap-4">
-                  <Link href="/register" className="group inline-flex items-center gap-2 text-base font-bold text-white px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all hover:-translate-y-0.5">
+                  <Link href="/register" title="Creer mon journal de trading gratuit" className="group inline-flex items-center gap-2 text-base font-bold text-white px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all hover:-translate-y-0.5">
                     {t("landing_ctaPrimary")}
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -493,7 +495,7 @@ export default function LandingContent() {
                 <div className="relative animate-hero-float">
                   <div className="absolute -inset-1 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 rounded-2xl opacity-20 blur-sm" />
                   <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50 bg-white">
-                    <Image src="/screenshots/dashboard.png" alt="MarketPhase Dashboard" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 50vw" className="w-full h-auto" priority />
+                    <Image src="/screenshots/dashboard.png" alt="Tableau de bord du journal de trading gratuit MarketPhase" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 50vw" className="w-full h-auto" priority />
                   </div>
                   <div className="hidden sm:block absolute -bottom-4 -left-4 sm:-bottom-6 sm:-left-8 p-3 sm:p-4 rounded-xl bg-white/95 backdrop-blur-sm border border-gray-200 shadow-xl">
                     <div className="flex items-center gap-3">
@@ -608,7 +610,7 @@ export default function LandingContent() {
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
-                    <Image src="/screenshots/dashboard.png" alt="Journal" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
+                    <Image src="/screenshots/dashboard.png" alt="Journal de trading saisie et suivi des trades" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
                   </div>
                 </div>
               </div>
@@ -649,7 +651,7 @@ export default function LandingContent() {
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
-                    <Image src="/screenshots/analytics.png" alt="Analytics" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
+                    <Image src="/screenshots/analytics.png" alt="Analyse trading et statistiques avancees MarketPhase" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
                   </div>
                 </div>
               </div>
@@ -690,7 +692,7 @@ export default function LandingContent() {
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
-                    <Image src="/screenshots/ai-coach.png" alt="AI Coach" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
+                    <Image src="/screenshots/ai-coach.png" alt="Coach IA pour ameliorer votre trading" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
                   </div>
                 </div>
               </div>
@@ -761,7 +763,7 @@ export default function LandingContent() {
                     <th className="text-left px-3 sm:px-6 py-3 sm:py-4 text-gray-400 font-medium w-1/4"></th>
                     <th className="px-3 sm:px-6 py-3 sm:py-4 text-center">
                       <div className="inline-flex items-center gap-1.5 sm:gap-2">
-                        <Image src="/logo-icon.png" alt="MP" width={24} height={24} sizes="24px" className="w-5 h-5 sm:w-6 sm:h-6 rounded-md" />
+                        <Image src="/logo-icon.png" alt="MarketPhase journal de trading" width={24} height={24} sizes="24px" className="w-5 h-5 sm:w-6 sm:h-6 rounded-md" />
                         <span className="font-bold text-gray-900 text-xs sm:text-sm">MarketPhase</span>
                       </div>
                     </th>
@@ -959,7 +961,7 @@ export default function LandingContent() {
               <p className="text-sm sm:text-lg text-gray-500 mb-8 max-w-xl mx-auto">
                 {t("landing_finalSub")}
               </p>
-              <Link href="/register" className="group inline-flex items-center gap-2 text-base sm:text-lg font-bold text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all hover:-translate-y-1">
+              <Link href="/register" title="Demarrer le journal de trading gratuit" className="group inline-flex items-center gap-2 text-base sm:text-lg font-bold text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all hover:-translate-y-1">
                 {t("landing_finalCta")}
                 <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -971,7 +973,7 @@ export default function LandingContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12">
                   <div>
                     <div className="flex items-center gap-2 mb-4">
-                      <Image src="/logo-icon.png" alt="MarketPhase" width={28} height={28} sizes="28px" className="w-7 h-7 rounded-lg" />
+                      <Image src="/logo-icon.png" alt="MarketPhase journal de trading" width={28} height={28} sizes="28px" className="w-7 h-7 rounded-lg" />
                       <span className="font-bold text-gray-900">MarketPhase</span>
                     </div>
                     <p className="text-xs text-gray-400 max-w-xs">{t("landing_footerDesc")}</p>
@@ -1018,6 +1020,7 @@ export default function LandingContent() {
         </div>
       </div>
 
+      </main>
       {/* ==================== SLIDE COUNTER (bottom center, desktop) ==================== */}
       {!isMobile && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur border border-gray-200 shadow-lg">
