@@ -496,7 +496,7 @@ export default function LandingContent() {
                 <div className="relative animate-hero-float">
                   <div className="absolute -inset-1 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 rounded-2xl opacity-20 blur-sm" />
                   <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50 bg-white">
-                    <Image src="/screenshots/dashboard.png" alt="Tableau de bord du journal de trading gratuit MarketPhase" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 50vw" className="w-full h-auto" priority />
+                    <img src="/screenshots/dashboard.gif" alt="Tableau de bord du journal de trading gratuit MarketPhase" className="w-full h-auto" loading="eager" />
                   </div>
                   <div className="hidden sm:block absolute -bottom-4 -left-4 sm:-bottom-6 sm:-left-8 p-3 sm:p-4 rounded-xl bg-white/95 backdrop-blur-sm border border-gray-200 shadow-xl">
                     <div className="flex items-center gap-3">
@@ -611,7 +611,7 @@ export default function LandingContent() {
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
-                    <Image src="/screenshots/dashboard.png" alt="Journal de trading saisie et suivi des trades" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
+                    <img src="/screenshots/dashboard.gif" alt="Journal de trading saisie et suivi des trades" className="w-full h-auto" loading="lazy" />
                   </div>
                 </div>
               </div>
@@ -652,7 +652,7 @@ export default function LandingContent() {
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
-                    <Image src="/screenshots/analytics.png" alt="Analyse trading et statistiques avancees MarketPhase" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
+                    <img src="/screenshots/analytics.gif" alt="Analyse trading et statistiques avancées MarketPhase" className="w-full h-auto" loading="lazy" />
                   </div>
                 </div>
               </div>
@@ -693,7 +693,7 @@ export default function LandingContent() {
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
-                    <Image src="/screenshots/ai-coach.png" alt="Coach IA pour ameliorer votre trading" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
+                    <img src="/screenshots/ai-coach.gif" alt="Coach IA pour améliorer votre trading" className="w-full h-auto" loading="lazy" />
                   </div>
                 </div>
               </div>
