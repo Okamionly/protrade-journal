@@ -539,131 +539,298 @@ function MiniEquityCurve({ trades }: { trades: Trade[] }) {
   );
 }
 
-// ─── Geographic Market Map SVG ──────────────────────────────────────────────
+// ─── FOMC Countdown Timer ────────────────────────────────────────────────────
 
-function GeographicMarketMap({ now }: { now: Date }) {
-  const markets = useMemo(() => {
-    return MARKET_CENTERS.map((center) => ({
-      ...center,
-      ...getMarketStatus(center, now),
-    }));
-  }, [now]);
+const FOMC_DATES_2026 = [
+  new Date(Date.UTC(2026, 0, 28, 19, 0)), // Jan 28-29 (decision day 2, 14:00 EST = 19:00 UTC)
+  new Date(Date.UTC(2026, 2, 18, 18, 0)), // Mar 18-19
+  new Date(Date.UTC(2026, 4, 6, 18, 0)),  // May 6-7
+  new Date(Date.UTC(2026, 5, 17, 18, 0)), // Jun 17-18
+  new Date(Date.UTC(2026, 6, 29, 18, 0)), // Jul 29-30
+  new Date(Date.UTC(2026, 8, 16, 18, 0)), // Sep 16-17
+  new Date(Date.UTC(2026, 10, 4, 19, 0)), // Nov 4-5
+  new Date(Date.UTC(2026, 11, 16, 19, 0)), // Dec 16-17
+];
 
-  const statusColor = (status: "open" | "closed" | "pre_post") => {
-    if (status === "open") return "#22c55e";
-    if (status === "pre_post") return "#f59e0b";
-    return "#ef4444";
-  };
+const FOMC_DISPLAY_LABELS = [
+  "28-29 Janvier", "18-19 Mars", "6-7 Mai", "17-18 Juin",
+  "29-30 Juillet", "16-17 Septembre", "4-5 Novembre", "16-17 Décembre",
+];
 
-  const statusLabel = (status: "open" | "closed" | "pre_post") => {
-    if (status === "open") return "Ouvert";
-    if (status === "pre_post") return "Pre/Post";
-    return "Fermé";
-  };
+function getNextFomc(now: Date): { date: Date; label: string } | null {
+  for (let i = 0; i < FOMC_DATES_2026.length; i++) {
+    if (FOMC_DATES_2026[i].getTime() > now.getTime()) {
+      return { date: FOMC_DATES_2026[i], label: FOMC_DISPLAY_LABELS[i] };
+    }
+  }
+  return null; // All 2026 dates passed
+}
+
+function FomcCountdown({ now }: { now: Date }) {
+  const next = useMemo(() => getNextFomc(now), [now]);
+
+  if (!next) return null;
+
+  const diff = next.date.getTime() - now.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+  const isImminent = days <= 3;
 
   return (
-    <div>
-      <svg viewBox="0 0 800 400" className="w-full" style={{ maxHeight: "280px" }}>
-        {/* Simplified world map paths */}
-        <defs>
-          <radialGradient id="glowGreen" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#22c55e" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="glowRed" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="glowYellow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-
-        {/* Continents simplified outlines */}
-        {/* North America */}
-        <path d="M120,80 L280,70 L300,100 L290,140 L270,170 L250,200 L220,210 L200,250 L170,230 L160,200 L130,180 L100,140 L90,110 Z"
-          fill="var(--border)" opacity="0.3" stroke="var(--text-muted)" strokeWidth="0.5" />
-        {/* South America */}
-        <path d="M220,250 L260,250 L280,280 L290,320 L270,360 L240,370 L220,350 L210,310 L200,280 Z"
-          fill="var(--border)" opacity="0.3" stroke="var(--text-muted)" strokeWidth="0.5" />
-        {/* Europe */}
-        <path d="M360,80 L430,70 L450,90 L440,120 L420,150 L400,160 L380,150 L370,130 L360,100 Z"
-          fill="var(--border)" opacity="0.3" stroke="var(--text-muted)" strokeWidth="0.5" />
-        {/* Africa */}
-        <path d="M370,170 L430,170 L450,200 L460,250 L440,300 L410,330 L380,310 L360,270 L355,220 L360,190 Z"
-          fill="var(--border)" opacity="0.3" stroke="var(--text-muted)" strokeWidth="0.5" />
-        {/* Asia */}
-        <path d="M450,70 L550,60 L650,80 L700,100 L700,140 L680,170 L650,190 L600,200 L550,190 L500,170 L470,150 L450,120 Z"
-          fill="var(--border)" opacity="0.3" stroke="var(--text-muted)" strokeWidth="0.5" />
-        {/* Australia */}
-        <path d="M640,280 L720,270 L740,290 L730,330 L700,340 L660,330 L640,310 Z"
-          fill="var(--border)" opacity="0.3" stroke="var(--text-muted)" strokeWidth="0.5" />
-
-        {/* Connection lines between markets */}
-        {markets.map((m, i) => {
-          const next = markets[(i + 1) % markets.length];
-          return (
-            <line key={`line-${i}`}
-              x1={m.x} y1={m.y} x2={next.x} y2={next.y}
-              stroke="var(--border)" strokeWidth="0.5" strokeDasharray="4,4" opacity="0.4"
-            />
-          );
-        })}
-
-        {/* Market center dots and labels */}
-        {markets.map((m) => {
-          const color = statusColor(m.status);
-          const glowId = m.status === "open" ? "glowGreen" : m.status === "pre_post" ? "glowYellow" : "glowRed";
-          return (
-            <g key={m.name}>
-              {/* Glow effect */}
-              <circle cx={m.x} cy={m.y} r="20" fill={`url(#${glowId})`} />
-              {/* Pulsing ring for open markets */}
-              {m.status === "open" && (
-                <circle cx={m.x} cy={m.y} r="10" fill="none" stroke={color} strokeWidth="1" opacity="0.5">
-                  <animate attributeName="r" values="8;16;8" dur="2s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite" />
-                </circle>
-              )}
-              {/* Main dot */}
-              <circle cx={m.x} cy={m.y} r="6" fill={color} stroke="var(--bg-primary)" strokeWidth="2" />
-              {/* City label */}
-              <text x={m.x} y={m.y - 14} textAnchor="middle" fill="var(--text-primary)" fontSize="9" fontWeight="600">
-                {m.city}
-              </text>
-              {/* Exchange + time label */}
-              <text x={m.x} y={m.y + 20} textAnchor="middle" fill={color} fontSize="8" fontWeight="500">
-                {m.name} {m.localTime}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Legend */}
-        <g transform="translate(20, 365)">
-          <circle cx="0" cy="0" r="4" fill="#22c55e" />
-          <text x="8" y="3" fill="var(--text-muted)" fontSize="8">Ouvert</text>
-          <circle cx="55" cy="0" r="4" fill="#f59e0b" />
-          <text x="63" y="3" fill="var(--text-muted)" fontSize="8">Pre/Post</text>
-          <circle cx="120" cy="0" r="4" fill="#ef4444" />
-          <text x="128" y="3" fill="var(--text-muted)" fontSize="8">Fermé</text>
-        </g>
-      </svg>
-
-      {/* Compact market status grid below map */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-1.5 mt-2">
-        {markets.map((m) => (
-          <div key={m.name} className="text-center p-1.5 rounded-lg" style={{
-            background: `${statusColor(m.status)}10`,
-            border: `1px solid ${statusColor(m.status)}25`,
-          }}>
-            <div className="text-[10px] font-bold" style={{ color: statusColor(m.status) }}>{m.name}</div>
-            <div className="text-[9px] mono" style={{ color: "var(--text-muted)" }}>{m.localTime}</div>
-            <div className="text-[8px]" style={{ color: statusColor(m.status) }}>{statusLabel(m.status)}</div>
+    <div
+      className="glass rounded-xl overflow-hidden"
+      style={{
+        border: "1px solid rgba(99, 102, 241, 0.3)",
+        background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)",
+      }}
+    >
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
+              style={{
+                background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                color: "#fff",
+              }}
+            >
+              F
+            </div>
+            <div>
+              <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                Prochain FOMC
+              </div>
+              <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                {next.label} 2026
+              </div>
+            </div>
           </div>
-        ))}
+          <a
+            href="https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[9px] flex items-center gap-1 hover:underline"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Source: CME FedWatch <ExternalLink size={8} />
+          </a>
+        </div>
+
+        {/* Countdown */}
+        <div className="flex items-center gap-3 mb-3">
+          {[
+            { value: days, unit: "j" },
+            { value: hours, unit: "h" },
+            { value: minutes, unit: "m" },
+            { value: seconds, unit: "s" },
+          ].map((item, i) => (
+            <div key={i} className="flex items-baseline gap-0.5">
+              <span
+                className="text-2xl font-bold mono"
+                style={{
+                  color: isImminent ? "#f59e0b" : "var(--text-primary)",
+                }}
+              >
+                {item.value.toString().padStart(2, "0")}
+              </span>
+              <span className="text-[10px] font-medium" style={{ color: "var(--text-muted)" }}>
+                {item.unit}
+              </span>
+              {i < 3 && (
+                <span className="text-lg ml-1" style={{ color: "var(--text-muted)", opacity: 0.4 }}>
+                  :
+                </span>
+              )}
+            </div>
+          ))}
+          {isImminent && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-medium ml-auto">
+              IMMINENT
+            </span>
+          )}
+        </div>
+
+        {/* Info pills */}
+        <div className="flex flex-wrap gap-2">
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px]"
+            style={{
+              background: "rgba(59, 130, 246, 0.1)",
+              border: "1px solid rgba(59, 130, 246, 0.2)",
+              color: "#60a5fa",
+            }}
+          >
+            <Target size={10} />
+            <span className="font-medium">Taux actuel: 4.25-4.50%</span>
+          </div>
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px]"
+            style={{
+              background: "rgba(139, 92, 246, 0.1)",
+              border: "1px solid rgba(139, 92, 246, 0.2)",
+              color: "#a78bfa",
+            }}
+          >
+            <TrendingUp size={10} />
+            <span className="font-medium">Le marché anticipe: Maintien</span>
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Market Status Grid ─────────────────────────────────────────────────────
+
+interface MarketStatusInfo {
+  flag: string;
+  name: string;
+  exchange: string;
+  openUtc: number;  // UTC hour
+  closeUtc: number; // UTC hour
+}
+
+const MAJOR_MARKETS: MarketStatusInfo[] = [
+  { flag: "\ud83c\uddfa\ud83c\uddf8", name: "NYSE", exchange: "New York", openUtc: 14.5, closeUtc: 21 },
+  { flag: "\ud83c\uddec\ud83c\udde7", name: "LSE", exchange: "Londres", openUtc: 8, closeUtc: 16.5 },
+  { flag: "\ud83c\uddef\ud83c\uddf5", name: "TSE", exchange: "Tokyo", openUtc: 0, closeUtc: 6 },
+  { flag: "\ud83c\udded\ud83c\uddf0", name: "HKSE", exchange: "Hong Kong", openUtc: 1.5, closeUtc: 8 },
+];
+
+function MarketStatusGrid({ now }: { now: Date }) {
+  const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
+  const utcDay = now.getUTCDay();
+  const isWeekend = utcDay === 0 || utcDay === 6;
+
+  function getStatus(m: MarketStatusInfo): { isOpen: boolean; progress: number; timeLabel: string } {
+    if (isWeekend) {
+      return { isOpen: false, progress: 0, timeLabel: "Week-end" };
+    }
+
+    const { openUtc, closeUtc } = m;
+    let isOpen: boolean;
+    let progress: number;
+    let timeLabel: string;
+
+    if (openUtc < closeUtc) {
+      // Normal session (e.g., LSE 08:00-16:30)
+      isOpen = utcH >= openUtc && utcH < closeUtc;
+      if (isOpen) {
+        const elapsed = utcH - openUtc;
+        const total = closeUtc - openUtc;
+        progress = (elapsed / total) * 100;
+        const remaining = (closeUtc - utcH) * 60;
+        const rH = Math.floor(remaining / 60);
+        const rM = Math.floor(remaining % 60);
+        timeLabel = `Ferme dans ${rH}h${rM.toString().padStart(2, "0")}m`;
+      } else {
+        progress = 0;
+        const untilOpen = utcH < openUtc ? (openUtc - utcH) * 60 : (24 - utcH + openUtc) * 60;
+        const uH = Math.floor(untilOpen / 60);
+        const uM = Math.floor(untilOpen % 60);
+        timeLabel = `Ouvre dans ${uH}h${uM.toString().padStart(2, "0")}m`;
+      }
+    } else {
+      // Overnight session (e.g., TSE 00:00-06:00 UTC)
+      isOpen = utcH >= openUtc || utcH < closeUtc;
+      if (isOpen) {
+        const totalDuration = (24 - openUtc + closeUtc);
+        const elapsed = utcH >= openUtc ? (utcH - openUtc) : (24 - openUtc + utcH);
+        progress = (elapsed / totalDuration) * 100;
+        const remaining = utcH >= openUtc
+          ? ((24 - utcH) + closeUtc) * 60
+          : (closeUtc - utcH) * 60;
+        const rH = Math.floor(remaining / 60);
+        const rM = Math.floor(remaining % 60);
+        timeLabel = `Ferme dans ${rH}h${rM.toString().padStart(2, "0")}m`;
+      } else {
+        progress = 0;
+        const untilOpen = (openUtc - utcH) * 60;
+        const uH = Math.floor(untilOpen / 60);
+        const uM = Math.floor(untilOpen % 60);
+        timeLabel = `Ouvre dans ${uH}h${uM.toString().padStart(2, "0")}m`;
+      }
+    }
+
+    return { isOpen, progress: Math.max(0, Math.min(100, progress)), timeLabel };
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {MAJOR_MARKETS.map((m) => {
+        const { isOpen, progress, timeLabel } = getStatus(m);
+        const accentColor = isOpen ? "#22c55e" : "#6b7280";
+
+        return (
+          <div
+            key={m.name}
+            className="rounded-xl p-3"
+            style={{
+              background: isOpen ? "rgba(34, 197, 94, 0.06)" : "var(--bg-secondary)",
+              border: `1px solid ${isOpen ? "rgba(34, 197, 94, 0.2)" : "var(--border)"}`,
+            }}
+          >
+            {/* Header: flag + name + badge */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-base">{m.flag}</span>
+                <div>
+                  <div className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>
+                    {m.name}
+                  </div>
+                  <div className="text-[9px]" style={{ color: "var(--text-muted)" }}>
+                    {m.exchange}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{
+                    background: accentColor,
+                    boxShadow: isOpen ? "0 0 6px rgba(34, 197, 94, 0.5)" : "none",
+                    animation: isOpen ? "pulse 2s ease-in-out infinite" : "none",
+                  }}
+                />
+                <span
+                  className="text-[10px] font-semibold"
+                  style={{ color: accentColor }}
+                >
+                  {isOpen ? "Ouvert" : "Fermé"}
+                </span>
+              </div>
+            </div>
+
+            {/* Time info */}
+            <div className="text-[10px] mb-2" style={{ color: "var(--text-muted)" }}>
+              {timeLabel}
+            </div>
+
+            {/* Progress bar */}
+            <div
+              className="w-full rounded-full overflow-hidden"
+              style={{
+                height: "4px",
+                background: "var(--border)",
+              }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-1000"
+                style={{
+                  width: `${progress}%`,
+                  background: isOpen
+                    ? "linear-gradient(90deg, #22c55e, #4ade80)"
+                    : "var(--text-muted)",
+                  opacity: isOpen ? 1 : 0.3,
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1274,6 +1441,9 @@ export default function WarRoomPage() {
           </div>
         );
       })()}
+
+      {/* ═══ FOMC COUNTDOWN ═══ */}
+      <FomcCountdown now={currentTime} />
 
       {/* ═══ BREAKING NEWS TICKER ═══ */}
       <CollapsibleSection title="Breaking News" icon={Newspaper} sectionKey="news-ticker"
@@ -1988,9 +2158,9 @@ export default function WarRoomPage() {
         </div>
       </CollapsibleSection>
 
-      {/* ═══ GEOGRAPHIC MARKET MAP ═══ */}
-      <CollapsibleSection title="Carte des Marchés Mondiaux" icon={Map} sectionKey="market-map">
-        <GeographicMarketMap now={currentTime} />
+      {/* ═══ STATUT DES MARCHÉS MONDIAUX ═══ */}
+      <CollapsibleSection title="Statut des Marchés Mondiaux" icon={Globe} sectionKey="market-status">
+        <MarketStatusGrid now={currentTime} />
       </CollapsibleSection>
 
       {/* ═══ Second Grid: Performance + Key Levels + Correlation ═══ */}
