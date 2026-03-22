@@ -147,13 +147,13 @@ export default function ChartPage() {
       ref={wrapperRef}
       className="flex flex-col h-full"
       style={{
-        padding: isFullscreen ? 0 : "6px 8px 8px",
+        padding: isFullscreen ? 0 : "4px 6px 4px",
         background: isFullscreen ? "rgba(15,15,20,1)" : undefined,
       }}
     >
       {/* ── Top bar ─────────────────────────────────── */}
       <div
-        className="flex flex-wrap items-center gap-2 mb-1.5"
+        className="flex flex-wrap items-center gap-1.5 mb-1"
         style={{ minHeight: 36 }}
       >
         {/* Current symbol name */}
@@ -272,7 +272,7 @@ export default function ChartPage() {
         ref={containerRef}
         className="tradingview-widget-container rounded-xl overflow-hidden flex-1"
         style={{
-          height: isFullscreen ? "calc(100vh - 44px)" : "calc(100vh - 80px)",
+          height: isFullscreen ? "calc(100vh - 40px)" : "calc(100vh - 56px)",
           border: "1px solid var(--border)",
         }}
       />
