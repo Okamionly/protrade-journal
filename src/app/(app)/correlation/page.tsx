@@ -21,6 +21,8 @@ import {
   Lock,
   Crown,
   Check,
+  Layers,
+  Crosshair,
 } from "lucide-react";
 
 // ─── Period Filter ──────────────────────────────────────────────────
@@ -106,6 +108,25 @@ interface CorrelationPair {
   assetA: string;
   assetB: string;
   correlation: number;
+}
+
+interface CorrelationAlert {
+  assetA: string;
+  assetB: string;
+  correlation: number;
+  type: "high" | "inverse";
+  message: string;
+}
+
+interface OptimalPortfolio {
+  assets: string[];
+  avgCorrelation: number;
+}
+
+interface ScatterPoint {
+  x: number;
+  y: number;
+  date: string;
 }
 
 // ─── Main Component ─────────────────────────────────────────────────
@@ -473,6 +494,78 @@ export default function CorrelationPage() {
     return recs;
   }, [topPositive, topNegative, divScore, assets, allPairs, trades]);
 
+  // ─── Correlation Alerts (|r| > 0.8) ─────────────────────────────
+
+  const correlationAlerts = useMemo((): CorrelationAlert[] => {
+    const alerts: CorrelationAlert[] = [];
+    for (const p of allPairs) {
+      if (p.correlation > 0.8) {
+        alerts.push({
+          assetA: p.assetA,
+          assetB: p.assetB,
+          correlation: p.correlation,
+          type: "high",
+          message: `${p.assetA} et ${p.assetB} sont très corrélés (${fmt(p.correlation)}) — Attention à la surexposition`,
+        });
+      } else if (p.correlation < -0.8) {
+        alerts.push({
+          assetA: p.assetA,
+          assetB: p.assetB,
+          correlation: p.correlation,
+          type: "inverse",
+          message: `${p.assetA} et ${p.assetB} sont inversement corrélés (${fmt(p.correlation)}) — Opportunité de hedge`,
+        });
+      }
+    }
+    // Sort by absolute correlation descending, take top 3
+    alerts.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
+    return alerts.slice(0, 3);
+  }, [allPairs]);
+
+  // ─── Optimal Portfolio (3 assets, lowest avg pairwise corr) ─────
+
+  const optimalPortfolio = useMemo((): OptimalPortfolio | null => {
+    if (assets.length < 3) return null;
+
+    let bestCombo: string[] = [];
+    let bestAvg = Infinity;
+
+    // Try all combinations of 3 assets
+    for (let i = 0; i < assets.length; i++) {
+      for (let j = i + 1; j < assets.length; j++) {
+        for (let k = j + 1; k < assets.length; k++) {
+          const a = assets[i], b = assets[j], c = assets[k];
+          const ab = Math.abs(corrMatrix[a]?.[b] ?? 0);
+          const ac = Math.abs(corrMatrix[a]?.[c] ?? 0);
+          const bc = Math.abs(corrMatrix[b]?.[c] ?? 0);
+          const avg = (ab + ac + bc) / 3;
+          if (avg < bestAvg) {
+            bestAvg = avg;
+            bestCombo = [a, b, c];
+          }
+        }
+      }
+    }
+
+    if (bestCombo.length === 0) return null;
+    return { assets: bestCombo, avgCorrelation: Math.round(bestAvg * 100) / 100 };
+  }, [assets, corrMatrix]);
+
+  // ─── Scatter Data for selected pair ─────────────────────────────
+
+  const scatterData = useMemo((): ScatterPoint[] => {
+    if (!selectedPair) return [];
+    const points: ScatterPoint[] = [];
+    for (const d of filteredDates) {
+      const pnlA = dailyPnl[selectedPair.assetA]?.[d];
+      const pnlB = dailyPnl[selectedPair.assetB]?.[d];
+      if (pnlA !== undefined && pnlB !== undefined) {
+        points.push({ x: pnlA, y: pnlB, date: d });
+      }
+    }
+    return points;
+  }, [selectedPair, filteredDates, dailyPnl]);
+
   // ─── SVG Sparkline Builder ──────────────────────────────────────
 
   function buildSparklinePath(
@@ -676,6 +769,107 @@ export default function CorrelationPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Correlation Alerts ─────────────────────────────────── */}
+      {correlationAlerts.length > 0 && (
+        <div className="space-y-2">
+          {correlationAlerts.map((alert, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-3 rounded-xl p-4 cursor-pointer transition-all hover:scale-[1.01]"
+              style={{
+                background: alert.type === "high"
+                  ? "rgba(245,158,11,0.08)"
+                  : "rgba(59,130,246,0.08)",
+                border: `1px solid ${
+                  alert.type === "high"
+                    ? "rgba(245,158,11,0.25)"
+                    : "rgba(59,130,246,0.25)"
+                }`,
+              }}
+              onClick={() => handleCellClick(alert.assetA, alert.assetB)}
+            >
+              <span className="text-lg shrink-0 mt-0.5">
+                {alert.type === "high" ? "\u26A0\uFE0F" : "\uD83D\uDCA1"}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p
+                  className="text-sm font-medium leading-relaxed"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {alert.message}
+                </p>
+                <p
+                  className="text-xs mt-1 mono"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Cliquez pour analyser cette paire en détail
+                </p>
+              </div>
+              <div
+                className="text-lg font-bold mono shrink-0"
+                style={{
+                  color: alert.type === "high" ? "#f59e0b" : "#3b82f6",
+                }}
+              >
+                {fmt(alert.correlation)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Optimal Portfolio Suggestion ──────────────────────────── */}
+      {optimalPortfolio && (
+        <div
+          className="glass rounded-2xl p-5 flex items-start gap-4"
+          style={{
+            border: "1px solid rgba(16,185,129,0.2)",
+            background: "rgba(16,185,129,0.04)",
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "rgba(16,185,129,0.12)" }}
+          >
+            <Layers className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4
+              className="text-sm font-semibold mb-1"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Portefeuille optimal suggéré
+            </h4>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Pour une diversification optimale, combinez :{" "}
+              <span className="font-semibold text-emerald-400 mono">
+                {optimalPortfolio.assets.join(", ")}
+              </span>
+            </p>
+            <div
+              className="flex items-center gap-4 mt-2 text-xs"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <span className="flex items-center gap-1">
+                <Crosshair className="w-3 h-3" />
+                Corrélation moyenne : <span className="mono font-semibold text-emerald-400">{fmt(optimalPortfolio.avgCorrelation)}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                {optimalPortfolio.avgCorrelation < 0.3
+                  ? "Excellente diversification"
+                  : optimalPortfolio.avgCorrelation < 0.5
+                  ? "Bonne diversification"
+                  : "Diversification modérée"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Correlation Heatmap Matrix ───────────────────────────── */}
       <div className="glass rounded-2xl p-6">
@@ -1007,6 +1201,143 @@ export default function CorrelationPage() {
               </div>
             </div>
           </div>
+
+          {/* Scatter Plot: Asset A returns vs Asset B returns */}
+          {scatterData.length >= 2 && (
+            <div className="mt-4">
+              <div
+                className="text-xs font-medium mb-2 flex items-center gap-2"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                Nuage de points — Rendements journaliers {selectedPair.assetA} vs {selectedPair.assetB}
+              </div>
+              <div
+                className="rounded-xl p-4"
+                style={{ background: "var(--bg-secondary)" }}
+              >
+                <svg viewBox="0 0 400 300" className="w-full" style={{ maxWidth: 500, margin: "0 auto", display: "block" }}>
+                  {/* Background grid */}
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <line key={`h${i}`} x1={50} y1={30 + i * 55} x2={380} y2={30 + i * 55} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
+                  ))}
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <line key={`v${i}`} x1={50 + i * 82.5} y1={30} x2={50 + i * 82.5} y2={250} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
+                  ))}
+
+                  {/* Axes */}
+                  {(() => {
+                    const xs = scatterData.map((p) => p.x);
+                    const ys = scatterData.map((p) => p.y);
+                    const xMin = Math.min(...xs);
+                    const xMax = Math.max(...xs);
+                    const yMin = Math.min(...ys);
+                    const yMax = Math.max(...ys);
+                    const xRange = xMax - xMin || 1;
+                    const yRange = yMax - yMin || 1;
+                    // Padding for scatter area
+                    const sx = (v: number) => 50 + ((v - xMin) / xRange) * 330;
+                    const sy = (v: number) => 250 - ((v - yMin) / yRange) * 220;
+
+                    // Zero lines
+                    const zeroXVisible = xMin <= 0 && xMax >= 0;
+                    const zeroYVisible = yMin <= 0 && yMax >= 0;
+
+                    // Regression line
+                    const n = scatterData.length;
+                    const meanX = xs.reduce((a, b) => a + b, 0) / n;
+                    const meanY = ys.reduce((a, b) => a + b, 0) / n;
+                    let num = 0, den = 0;
+                    for (let i = 0; i < n; i++) {
+                      num += (xs[i] - meanX) * (ys[i] - meanY);
+                      den += (xs[i] - meanX) * (xs[i] - meanX);
+                    }
+                    const slope = den !== 0 ? num / den : 0;
+                    const intercept = meanY - slope * meanX;
+                    const regY1 = slope * xMin + intercept;
+                    const regY2 = slope * xMax + intercept;
+
+                    return (
+                      <>
+                        {/* Zero reference lines */}
+                        {zeroXVisible && (
+                          <line x1={sx(0)} y1={30} x2={sx(0)} y2={250} stroke="rgba(255,255,255,0.12)" strokeWidth={1} strokeDasharray="4 3" />
+                        )}
+                        {zeroYVisible && (
+                          <line x1={50} y1={sy(0)} x2={380} y2={sy(0)} stroke="rgba(255,255,255,0.12)" strokeWidth={1} strokeDasharray="4 3" />
+                        )}
+
+                        {/* Regression line */}
+                        <line
+                          x1={sx(xMin)} y1={sy(regY1)}
+                          x2={sx(xMax)} y2={sy(regY2)}
+                          stroke={selectedPair.correlation >= 0 ? "rgba(16,185,129,0.4)" : "rgba(239,68,68,0.4)"}
+                          strokeWidth={2}
+                          strokeDasharray="6 4"
+                        />
+
+                        {/* Data points */}
+                        {scatterData.map((pt, idx) => (
+                          <circle
+                            key={idx}
+                            cx={sx(pt.x)}
+                            cy={sy(pt.y)}
+                            r={4}
+                            fill={
+                              pt.x + pt.y >= 0
+                                ? "rgba(16,185,129,0.7)"
+                                : "rgba(239,68,68,0.7)"
+                            }
+                            stroke={
+                              pt.x + pt.y >= 0
+                                ? "#10b981"
+                                : "#ef4444"
+                            }
+                            strokeWidth={1}
+                          >
+                            <title>{pt.date}: {selectedPair.assetA}={fmt(pt.x)}€, {selectedPair.assetB}={fmt(pt.y)}€</title>
+                          </circle>
+                        ))}
+
+                        {/* Axis labels */}
+                        <text x={215} y={290} textAnchor="middle" fill="var(--text-muted)" fontSize="10" fontFamily="monospace">
+                          {selectedPair.assetA} (€)
+                        </text>
+                        <text x={15} y={140} textAnchor="middle" fill="var(--text-muted)" fontSize="10" fontFamily="monospace" transform="rotate(-90, 15, 140)">
+                          {selectedPair.assetB} (€)
+                        </text>
+
+                        {/* Min/Max labels on axes */}
+                        <text x={50} y={268} textAnchor="middle" fill="var(--text-muted)" fontSize="8" fontFamily="monospace">
+                          {fmt(xMin, 0)}
+                        </text>
+                        <text x={380} y={268} textAnchor="middle" fill="var(--text-muted)" fontSize="8" fontFamily="monospace">
+                          {fmt(xMax, 0)}
+                        </text>
+                        <text x={44} y={252} textAnchor="end" fill="var(--text-muted)" fontSize="8" fontFamily="monospace">
+                          {fmt(yMin, 0)}
+                        </text>
+                        <text x={44} y={35} textAnchor="end" fill="var(--text-muted)" fontSize="8" fontFamily="monospace">
+                          {fmt(yMax, 0)}
+                        </text>
+
+                        {/* Point count label */}
+                        <text x={380} y={20} textAnchor="end" fill="var(--text-muted)" fontSize="9" fontFamily="monospace">
+                          {scatterData.length} points
+                        </text>
+                      </>
+                    );
+                  })()}
+                </svg>
+              </div>
+              <p
+                className="text-[10px] text-center mt-2"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Chaque point = 1 jour où les deux actifs ont été tradés. Ligne = régression linéaire (r = {fmt(selectedPair.correlation)}).
+              </p>
+            </div>
+          )}
         </div>
       )}
 
