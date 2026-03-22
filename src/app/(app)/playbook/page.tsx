@@ -29,6 +29,16 @@ import {
   Star,
   AlertTriangle,
   ArrowUpDown,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Image,
+  Trophy,
+  Check,
+  Square,
+  CheckSquare,
+  PlusCircle,
+  GitCompare,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -140,7 +150,6 @@ function computeStats(trades: Trade[]): StrategyStats {
   let maxLossStreak = 0;
 
   if (sorted.length > 0) {
-    // Current streak from most recent
     const firstType = sorted[0].result >= 0 ? "win" : "loss";
     let count = 0;
     for (const t of sorted) {
@@ -150,7 +159,6 @@ function computeStats(trades: Trade[]): StrategyStats {
     }
     currentStreak = { type: firstType, count };
 
-    // Max streaks
     let ws = 0;
     let ls = 0;
     for (const t of sorted) {
@@ -187,7 +195,6 @@ function DonutChart({ winRate, size = 80 }: { winRate: number; size?: number }) 
 
   return (
     <svg width={size} height={size} className="shrink-0">
-      {/* Loss arc (background) */}
       <circle
         cx={center}
         cy={center}
@@ -199,7 +206,6 @@ function DonutChart({ winRate, size = 80 }: { winRate: number; size?: number }) 
         strokeDashoffset={0}
         opacity={0.3}
       />
-      {/* Win arc */}
       <circle
         cx={center}
         cy={center}
@@ -212,7 +218,6 @@ function DonutChart({ winRate, size = 80 }: { winRate: number; size?: number }) 
         strokeLinecap="round"
         style={{ transition: "stroke-dasharray 0.6s ease" }}
       />
-      {/* Center text */}
       <text
         x={center}
         y={center}
@@ -260,7 +265,6 @@ function MiniSparkline({ values }: { values: number[] }) {
         strokeWidth={1.5}
         strokeLinejoin="round"
       />
-      {/* Dot on last point */}
       {(() => {
         const lastPt = points[points.length - 1].split(",");
         return (
@@ -272,7 +276,7 @@ function MiniSparkline({ values }: { values: number[] }) {
 }
 
 // ---------------------------------------------------------------------------
-// Mini bar chart component (kept from original)
+// Mini bar chart component
 // ---------------------------------------------------------------------------
 
 function MiniChart({ values }: { values: number[] }) {
@@ -417,6 +421,347 @@ function NotesArea({ storageKey, label = "Notes", icon }: { storageKey: string; 
 }
 
 // ---------------------------------------------------------------------------
+// Screenshots Gallery Component
+// ---------------------------------------------------------------------------
+
+function ScreenshotsGallery({ strategyName, trades }: { strategyName: string; trades: Trade[] }) {
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightboxIdx, setLightboxIdx] = useState(0);
+
+  // Get winning trades with screenshots for this strategy
+  const screenshotTrades = useMemo(() => {
+    return trades
+      .filter(
+        (t) =>
+          t.strategy === strategyName &&
+          t.result > 0 &&
+          t.screenshots &&
+          t.screenshots.length > 0
+      )
+      .sort((a, b) => b.result - a.result);
+  }, [trades, strategyName]);
+
+  const allScreenshots = useMemo(() => {
+    const list: { url: string; tradeId: string; result: number; asset: string; date: string }[] = [];
+    for (const t of screenshotTrades) {
+      for (const s of t.screenshots) {
+        list.push({ url: s.url, tradeId: t.id, result: t.result, asset: t.asset, date: t.date });
+      }
+    }
+    return list;
+  }, [screenshotTrades]);
+
+  const openLightbox = (idx: number) => {
+    setLightboxIdx(idx);
+    setLightboxUrl(allScreenshots[idx]?.url || null);
+  };
+
+  const navLightbox = (dir: -1 | 1) => {
+    const next = lightboxIdx + dir;
+    if (next >= 0 && next < allScreenshots.length) {
+      setLightboxIdx(next);
+      setLightboxUrl(allScreenshots[next].url);
+    }
+  };
+
+  if (allScreenshots.length === 0) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+          <Image size={14} className="text-cyan-400" />
+          Captures des trades gagnants
+        </div>
+        <div
+          className="rounded-xl p-4 text-center"
+          style={{ backgroundColor: "var(--bg-hover)" }}
+        >
+          <Image size={24} className="mx-auto mb-2 opacity-30" style={{ color: "var(--text-muted)" }} />
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            Aucune capture pour les trades gagnants de cette strategie
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+        <Image size={14} className="text-cyan-400" />
+        Captures des trades gagnants
+        <span
+          className="text-xs px-1.5 py-0.5 rounded-full"
+          style={{ backgroundColor: "rgba(16,185,129,0.12)", color: "#10b981" }}
+        >
+          {allScreenshots.length}
+        </span>
+      </div>
+
+      {/* Horizontal scrollable row */}
+      <div
+        className="flex gap-3 overflow-x-auto pb-2"
+        style={{ scrollbarWidth: "thin" }}
+      >
+        {allScreenshots.map((shot, idx) => (
+          <button
+            key={`${shot.tradeId}-${idx}`}
+            onClick={() => openLightbox(idx)}
+            className="shrink-0 group relative rounded-xl overflow-hidden transition-transform hover:scale-[1.03]"
+            style={{
+              width: 140,
+              height: 90,
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--bg-hover)",
+            }}
+          >
+            <img
+              src={shot.url}
+              alt={`${shot.asset} trade`}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+            {/* Overlay with trade info */}
+            <div
+              className="absolute inset-0 flex flex-col justify-end p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ background: "linear-gradient(transparent 30%, rgba(0,0,0,0.75))" }}
+            >
+              <span className="text-[10px] text-white font-medium">{shot.asset}</span>
+              <span className="text-[10px] font-bold" style={{ color: "#10b981" }}>
+                +{shot.result.toFixed(2)}
+              </span>
+            </div>
+            {/* Expand icon */}
+            <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Eye size={12} className="text-white drop-shadow" />
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Lightbox overlay */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.85)" }}
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <X size={24} />
+          </button>
+
+          {/* Nav buttons */}
+          {lightboxIdx > 0 && (
+            <button
+              className="absolute left-4 p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+              onClick={(e) => { e.stopPropagation(); navLightbox(-1); }}
+            >
+              <ChevronLeft size={28} />
+            </button>
+          )}
+          {lightboxIdx < allScreenshots.length - 1 && (
+            <button
+              className="absolute right-4 p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+              onClick={(e) => { e.stopPropagation(); navLightbox(1); }}
+            >
+              <ChevronRight size={28} />
+            </button>
+          )}
+
+          {/* Image */}
+          <div onClick={(e) => e.stopPropagation()} className="max-w-[90vw] max-h-[85vh]">
+            <img
+              src={lightboxUrl}
+              alt="Trade screenshot"
+              className="max-w-full max-h-[85vh] rounded-xl object-contain"
+            />
+            {/* Info bar */}
+            <div className="flex items-center justify-center gap-4 mt-3 text-sm text-white/70">
+              <span>{allScreenshots[lightboxIdx]?.asset}</span>
+              <span>{allScreenshots[lightboxIdx]?.date}</span>
+              <span style={{ color: "#10b981", fontWeight: 700 }}>
+                +{allScreenshots[lightboxIdx]?.result.toFixed(2)}
+              </span>
+              <span className="text-xs">
+                {lightboxIdx + 1} / {allScreenshots.length}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Setup Checklist Component (with actual checkboxes, stored in localStorage)
+// ---------------------------------------------------------------------------
+
+interface ChecklistItem {
+  text: string;
+  checked: boolean;
+}
+
+function SetupChecklist({ strategyId }: { strategyId: string }) {
+  const storageKey = `playbook-checklist-${strategyId}`;
+  const [items, setItems] = useState<ChecklistItem[]>([]);
+  const [newItem, setNewItem] = useState("");
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setItems(loadJSON<ChecklistItem[]>(storageKey, []));
+  }, [storageKey]);
+
+  const persist = useCallback(
+    (next: ChecklistItem[]) => {
+      setItems(next);
+      saveJSON(storageKey, next);
+    },
+    [storageKey]
+  );
+
+  const addItem = () => {
+    const trimmed = newItem.trim();
+    if (!trimmed) return;
+    persist([...items, { text: trimmed, checked: false }]);
+    setNewItem("");
+  };
+
+  const toggleItem = (idx: number) => {
+    const next = items.map((item, i) =>
+      i === idx ? { ...item, checked: !item.checked } : item
+    );
+    persist(next);
+  };
+
+  const removeItem = (idx: number) => {
+    persist(items.filter((_, i) => i !== idx));
+  };
+
+  const resetAll = () => {
+    persist(items.map((item) => ({ ...item, checked: false })));
+  };
+
+  const checkedCount = items.filter((i) => i.checked).length;
+
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 text-sm font-medium w-full"
+        style={{ color: "var(--text-primary)" }}
+      >
+        <Check size={14} className="text-cyan-400" />
+        <span>Conditions d&apos;entree</span>
+        {items.length > 0 && (
+          <span
+            className="text-xs px-1.5 py-0.5 rounded-full ml-1"
+            style={{
+              backgroundColor: checkedCount === items.length && items.length > 0
+                ? "rgba(16,185,129,0.12)"
+                : "var(--bg-hover)",
+              color: checkedCount === items.length && items.length > 0
+                ? "#10b981"
+                : "var(--text-muted)",
+            }}
+          >
+            {checkedCount}/{items.length}
+          </span>
+        )}
+        <span className="ml-auto" style={{ color: "var(--text-muted)" }}>
+          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="space-y-2 pl-1">
+          {/* Progress bar */}
+          {items.length > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-hover)" }}>
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${items.length > 0 ? (checkedCount / items.length) * 100 : 0}%`,
+                    backgroundColor: checkedCount === items.length ? "#10b981" : "#06b6d4",
+                  }}
+                />
+              </div>
+              {checkedCount > 0 && (
+                <button
+                  onClick={resetAll}
+                  className="text-[10px] px-2 py-0.5 rounded-lg transition-colors hover:bg-red-400/10"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Reinitialiser
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Checklist items */}
+          <ul className="space-y-1">
+            {items.map((item, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-2 group text-sm rounded-lg px-3 py-2 cursor-pointer transition-colors"
+                style={{
+                  backgroundColor: item.checked ? "rgba(16,185,129,0.06)" : "var(--bg-hover)",
+                  border: item.checked ? "1px solid rgba(16,185,129,0.15)" : "1px solid transparent",
+                }}
+                onClick={() => toggleItem(i)}
+              >
+                {item.checked ? (
+                  <CheckSquare size={16} className="text-green-400 shrink-0" />
+                ) : (
+                  <Square size={16} className="shrink-0" style={{ color: "var(--text-muted)" }} />
+                )}
+                <span
+                  className="flex-1"
+                  style={{
+                    color: item.checked ? "var(--text-muted)" : "var(--text-secondary)",
+                    textDecoration: item.checked ? "line-through" : "none",
+                  }}
+                >
+                  {item.text}
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeItem(i); }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <XCircle size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {/* Add new item */}
+          <div className="flex gap-2">
+            <input
+              className="input-field flex-1 text-sm"
+              placeholder="Ajouter une condition..."
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addItem()}
+            />
+            <button
+              onClick={addItem}
+              className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg transition-colors text-cyan-400 hover:bg-cyan-400/10"
+            >
+              <PlusCircle size={14} />
+              Ajouter
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Playbook Entry Form
 // ---------------------------------------------------------------------------
 
@@ -468,7 +813,6 @@ function PlaybookEntryForm({ onSave }: { onSave: (entry: PlaybookEntry) => void 
 
   const handleSubmit = () => {
     if (!entry.strategyName.trim()) return;
-    // Save entry criteria to localStorage keyed by strategy name
     const key = `playbook-form-${entry.strategyName.replace(/\s+/g, "_")}`;
     saveJSON(key, { ...entry, entryCriteria: criteria });
     onSave(entry);
@@ -486,7 +830,6 @@ function PlaybookEntryForm({ onSave }: { onSave: (entry: PlaybookEntry) => void 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Strategy name */}
         <div className="space-y-1">
           <label className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
             Nom de la strategie
@@ -499,7 +842,6 @@ function PlaybookEntryForm({ onSave }: { onSave: (entry: PlaybookEntry) => void 
           />
         </div>
 
-        {/* Timeframe */}
         <div className="space-y-1">
           <label className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
             <Clock size={12} />
@@ -524,7 +866,6 @@ function PlaybookEntryForm({ onSave }: { onSave: (entry: PlaybookEntry) => void 
         </div>
       </div>
 
-      {/* Description */}
       <div className="space-y-1">
         <label className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
           Description du setup
@@ -537,7 +878,6 @@ function PlaybookEntryForm({ onSave }: { onSave: (entry: PlaybookEntry) => void 
         />
       </div>
 
-      {/* Setup rules */}
       <div className="space-y-1">
         <label className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
           Regles du setup
@@ -550,7 +890,6 @@ function PlaybookEntryForm({ onSave }: { onSave: (entry: PlaybookEntry) => void 
         />
       </div>
 
-      {/* Entry criteria checklist */}
       <div className="space-y-2">
         <label className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
           <CheckCircle2 size={12} className="text-cyan-400" />
@@ -592,7 +931,6 @@ function PlaybookEntryForm({ onSave }: { onSave: (entry: PlaybookEntry) => void 
         </div>
       </div>
 
-      {/* Exit rules */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1">
           <label className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
@@ -620,7 +958,6 @@ function PlaybookEntryForm({ onSave }: { onSave: (entry: PlaybookEntry) => void 
         </div>
       </div>
 
-      {/* Risk parameters */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1">
           <label className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
@@ -654,7 +991,6 @@ function PlaybookEntryForm({ onSave }: { onSave: (entry: PlaybookEntry) => void 
         </div>
       </div>
 
-      {/* Screenshot placeholder */}
       <div className="space-y-1">
         <label className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
           <ImagePlus size={12} />
@@ -680,7 +1016,6 @@ function PlaybookEntryForm({ onSave }: { onSave: (entry: PlaybookEntry) => void 
         />
       </div>
 
-      {/* Submit */}
       <div className="flex justify-end">
         <button
           onClick={handleSubmit}
@@ -801,7 +1136,7 @@ function GoldenRules({ strategyId }: { strategyId: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Enhanced Setup card with visual stats
+// Enhanced Setup card with visual stats + screenshots + checklist
 // ---------------------------------------------------------------------------
 
 function SetupCard({ strategy, trades }: { strategy: Strategy; trades: Trade[] }) {
@@ -835,7 +1170,6 @@ function SetupCard({ strategy, trades }: { strategy: Strategy; trades: Trade[] }
           >
             {stats.total} trade{stats.total !== 1 ? "s" : ""}
           </span>
-          {/* Streak badge */}
           {stats.currentStreak.count >= 2 && (
             <span
               className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
@@ -858,9 +1192,8 @@ function SetupCard({ strategy, trades }: { strategy: Strategy; trades: Trade[] }
         </button>
       </div>
 
-      {/* Visual stats row: donut + metrics + sparkline */}
+      {/* Performance metrics grid */}
       <div className="flex items-center gap-6 flex-wrap">
-        {/* Donut chart */}
         {stats.total > 0 && (
           <div className="flex flex-col items-center gap-1">
             <DonutChart winRate={stats.winRate} size={80} />
@@ -868,7 +1201,6 @@ function SetupCard({ strategy, trades }: { strategy: Strategy; trades: Trade[] }
           </div>
         )}
 
-        {/* Core metrics grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 flex-1 min-w-0">
           <div>
             <p className="text-xs mb-0.5" style={{ color: "var(--text-muted)" }}>R:R moyen</p>
@@ -918,7 +1250,6 @@ function SetupCard({ strategy, trades }: { strategy: Strategy; trades: Trade[] }
           </div>
         </div>
 
-        {/* Sparkline */}
         {stats.last10.length >= 2 && (
           <div className="flex flex-col items-center gap-1">
             <MiniSparkline values={stats.last10} />
@@ -937,12 +1268,18 @@ function SetupCard({ strategy, trades }: { strategy: Strategy; trades: Trade[] }
         </div>
       )}
 
+      {/* Screenshots gallery (always visible if there are screenshots) */}
+      <ScreenshotsGallery strategyName={strategy.name} trades={trades} />
+
+      {/* Setup checklist (always visible, expandable) */}
+      <SetupChecklist strategyId={strategy.id} />
+
       {/* Expanded section */}
       {expanded && (
         <div className="space-y-5 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
           <EditableList
             storageKey={`playbook-${strategy.id}`}
-            label="Conditions d'entree"
+            label="Regles d'entree"
             icon={<Target size={14} className="text-cyan-400" />}
           />
           <EditableList
@@ -951,10 +1288,8 @@ function SetupCard({ strategy, trades }: { strategy: Strategy; trades: Trade[] }
             icon={<Zap size={14} className="text-cyan-400" />}
           />
 
-          {/* Risk parameters (stored per strategy) */}
           <RiskParams strategyId={strategy.id} />
 
-          {/* Golden rules */}
           <GoldenRules strategyId={strategy.id} />
 
           <NotesArea storageKey={`playbook-notes-${strategy.id}`} />
@@ -1023,7 +1358,7 @@ function RiskParams({ strategyId }: { strategyId: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Strategy Comparison Table
+// Strategy Comparison Table (original overview)
 // ---------------------------------------------------------------------------
 
 function ComparisonTable({
@@ -1172,6 +1507,281 @@ function ComparisonTable({
 }
 
 // ---------------------------------------------------------------------------
+// Side-by-Side Strategy Comparison (new "Duel" mode)
+// ---------------------------------------------------------------------------
+
+function StrategySideBySide({
+  strategies,
+  tradesByStrategy,
+}: {
+  strategies: Strategy[];
+  tradesByStrategy: Map<string, StrategyStats>;
+}) {
+  const [stratA, setStratA] = useState<string>(strategies[0]?.name || "");
+  const [stratB, setStratB] = useState<string>(strategies[1]?.name || "");
+
+  const statsA = tradesByStrategy.get(stratA);
+  const statsB = tradesByStrategy.get(stratB);
+
+  const colorA = strategies.find((s) => s.name === stratA)?.color || "#06b6d4";
+  const colorB = strategies.find((s) => s.name === stratB)?.color || "#f59e0b";
+
+  // Metrics to compare: key, label, higherIsBetter, format function
+  const metrics: {
+    label: string;
+    getValue: (s: StrategyStats) => number;
+    format: (s: StrategyStats) => string;
+    higherIsBetter: boolean;
+  }[] = [
+    {
+      label: "Win Rate",
+      getValue: (s) => s.winRate,
+      format: (s) => s.winRate.toFixed(1) + "%",
+      higherIsBetter: true,
+    },
+    {
+      label: "R:R moyen",
+      getValue: (s) => s.avgRR,
+      format: (s) => s.avgRR.toFixed(2),
+      higherIsBetter: true,
+    },
+    {
+      label: "P&L total",
+      getValue: (s) => s.totalPnl,
+      format: (s) => (s.totalPnl >= 0 ? "+" : "") + s.totalPnl.toFixed(2),
+      higherIsBetter: true,
+    },
+    {
+      label: "Nb. trades",
+      getValue: (s) => s.total,
+      format: (s) => String(s.total),
+      higherIsBetter: true,
+    },
+    {
+      label: "Meilleur trade",
+      getValue: (s) => s.bestTrade,
+      format: (s) => (s.bestTrade >= 0 ? "+" : "") + s.bestTrade.toFixed(2),
+      higherIsBetter: true,
+    },
+    {
+      label: "Pire trade",
+      getValue: (s) => s.worstTrade,
+      format: (s) => s.worstTrade.toFixed(2),
+      higherIsBetter: true,
+    },
+    {
+      label: "Profit Factor",
+      getValue: (s) => s.profitFactor === Infinity ? 9999 : s.profitFactor,
+      format: (s) => s.profitFactor === Infinity ? "\u221E" : s.profitFactor.toFixed(2),
+      higherIsBetter: true,
+    },
+    {
+      label: "Esperance",
+      getValue: (s) => s.expectancy,
+      format: (s) => (s.expectancy >= 0 ? "+" : "") + s.expectancy.toFixed(2),
+      higherIsBetter: true,
+    },
+    {
+      label: "Serie max gains",
+      getValue: (s) => s.maxWinStreak,
+      format: (s) => String(s.maxWinStreak),
+      higherIsBetter: true,
+    },
+    {
+      label: "Serie max pertes",
+      getValue: (s) => s.maxLossStreak,
+      format: (s) => String(s.maxLossStreak),
+      higherIsBetter: false,
+    },
+  ];
+
+  // Verdict: count how many metrics each strategy wins
+  const verdict = useMemo(() => {
+    if (!statsA || !statsB) return null;
+    let winsA = 0;
+    let winsB = 0;
+    for (const m of metrics) {
+      const vA = m.getValue(statsA);
+      const vB = m.getValue(statsB);
+      if (m.higherIsBetter) {
+        if (vA > vB) winsA++;
+        else if (vB > vA) winsB++;
+      } else {
+        if (vA < vB) winsA++;
+        else if (vB < vA) winsB++;
+      }
+    }
+    return { winsA, winsB };
+  }, [statsA, statsB]);
+
+  if (strategies.length < 2) {
+    return (
+      <div className="metric-card rounded-2xl p-6 text-center">
+        <AlertTriangle size={24} className="mx-auto mb-2 text-yellow-400 opacity-60" />
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          Il faut au moins 2 strategies pour comparer.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="metric-card rounded-2xl p-6 space-y-5">
+      <div className="flex items-center gap-2">
+        <GitCompare size={18} className="text-cyan-400" />
+        <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+          Duel de strategies
+        </h2>
+      </div>
+
+      {/* Strategy selectors */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <label className="text-xs font-medium" style={{ color: colorA }}>
+            Strategie A
+          </label>
+          <select
+            className="input-field w-full text-sm"
+            value={stratA}
+            onChange={(e) => setStratA(e.target.value)}
+          >
+            {strategies.map((s) => (
+              <option key={s.id} value={s.name}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium" style={{ color: colorB }}>
+            Strategie B
+          </label>
+          <select
+            className="input-field w-full text-sm"
+            value={stratB}
+            onChange={(e) => setStratB(e.target.value)}
+          >
+            {strategies.map((s) => (
+              <option key={s.id} value={s.name}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Comparison rows */}
+      {statsA && statsB && stratA !== stratB && (
+        <div className="space-y-1">
+          {metrics.map((m) => {
+            const vA = m.getValue(statsA);
+            const vB = m.getValue(statsB);
+            let winnerSide: "a" | "b" | "tie" = "tie";
+            if (m.higherIsBetter) {
+              if (vA > vB) winnerSide = "a";
+              else if (vB > vA) winnerSide = "b";
+            } else {
+              if (vA < vB) winnerSide = "a";
+              else if (vB < vA) winnerSide = "b";
+            }
+
+            return (
+              <div
+                key={m.label}
+                className="grid grid-cols-3 items-center py-2 px-3 rounded-lg"
+                style={{ backgroundColor: "var(--bg-hover)" }}
+              >
+                {/* Value A */}
+                <div className="text-left">
+                  <span
+                    className="text-sm font-bold font-mono"
+                    style={{
+                      color: winnerSide === "a" ? "#10b981" : "var(--text-secondary)",
+                    }}
+                  >
+                    {m.format(statsA)}
+                    {winnerSide === "a" && (
+                      <Trophy size={11} className="inline ml-1 text-green-400" />
+                    )}
+                  </span>
+                </div>
+
+                {/* Label (center) */}
+                <div className="text-center">
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {m.label}
+                  </span>
+                </div>
+
+                {/* Value B */}
+                <div className="text-right">
+                  <span
+                    className="text-sm font-bold font-mono"
+                    style={{
+                      color: winnerSide === "b" ? "#10b981" : "var(--text-secondary)",
+                    }}
+                  >
+                    {winnerSide === "b" && (
+                      <Trophy size={11} className="inline mr-1 text-green-400" />
+                    )}
+                    {m.format(statsB)}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Verdict */}
+          {verdict && (
+            <div
+              className="rounded-xl p-4 mt-3 text-center"
+              style={{
+                backgroundColor: verdict.winsA > verdict.winsB
+                  ? "rgba(16,185,129,0.08)"
+                  : verdict.winsB > verdict.winsA
+                  ? "rgba(16,185,129,0.08)"
+                  : "var(--bg-hover)",
+                border: "1px solid rgba(16,185,129,0.15)",
+              }}
+            >
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Trophy size={16} className="text-yellow-400" />
+                <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Verdict
+                </span>
+              </div>
+              {verdict.winsA > verdict.winsB ? (
+                <p className="text-sm font-medium" style={{ color: "#10b981" }}>
+                  <span style={{ color: colorA, fontWeight: 700 }}>{stratA}</span>{" "}
+                  est plus performante ({verdict.winsA}/{metrics.length} metriques gagnees)
+                </p>
+              ) : verdict.winsB > verdict.winsA ? (
+                <p className="text-sm font-medium" style={{ color: "#10b981" }}>
+                  <span style={{ color: colorB, fontWeight: 700 }}>{stratB}</span>{" "}
+                  est plus performante ({verdict.winsB}/{metrics.length} metriques gagnees)
+                </p>
+              ) : (
+                <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+                  Les deux strategies sont a egalite ({verdict.winsA}/{metrics.length})
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {stratA === stratB && (
+        <div className="text-center py-4">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            Selectionnez deux strategies differentes pour comparer.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Global stats card
 // ---------------------------------------------------------------------------
 
@@ -1290,7 +1900,7 @@ export default function PlaybookPage() {
   const { trades, loading: tradesLoading } = useTrades();
   const { strategies, loading: strategiesLoading } = useStrategies();
   const [showForm, setShowForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<"cards" | "compare">("cards");
+  const [activeTab, setActiveTab] = useState<"cards" | "compare" | "duel">("cards");
 
   const loading = tradesLoading || strategiesLoading;
 
@@ -1387,6 +1997,17 @@ export default function PlaybookPage() {
               }}
             >
               <Columns3 size={13} className="inline mr-1" />
+              Tableau
+            </button>
+            <button
+              onClick={() => setActiveTab("duel")}
+              className="px-3 py-1.5 transition-colors"
+              style={{
+                backgroundColor: activeTab === "duel" ? "rgba(6,182,212,0.15)" : "transparent",
+                color: activeTab === "duel" ? "#06b6d4" : "var(--text-muted)",
+              }}
+            >
+              <GitCompare size={13} className="inline mr-1" />
               Comparer
             </button>
           </div>
@@ -1429,6 +2050,10 @@ export default function PlaybookPage() {
 
       {activeTab === "compare" && (
         <ComparisonTable strategies={strategies} tradesByStrategy={tradesByStrategy} />
+      )}
+
+      {activeTab === "duel" && (
+        <StrategySideBySide strategies={strategies} tradesByStrategy={tradesByStrategy} />
       )}
 
       {/* Global golden rules section */}

@@ -9,6 +9,8 @@ import {
   Activity, Gauge, Scale, ArrowDownRight, ArrowUpRight, Timer,
   Grid3X3, Heart, Crosshair, Flame,
   Lock, Crown, Check,
+  ShieldAlert, Eye, ListChecks, CircleGauge,
+  ThumbsUp, ThumbsDown, Star, Ban, Info, ChevronRight,
 } from "lucide-react";
 
 const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
@@ -62,6 +64,41 @@ function ConfidenceGauge({ score }: { score: number }) {
           style={{ width: `${clamp}%` }}
         />
       </div>
+    </div>
+  );
+}
+
+function CircularGauge({ score, size = 140 }: { score: number; size?: number }) {
+  const clamp = Math.max(0, Math.min(100, score));
+  const strokeWidth = 10;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (clamp / 100) * circumference;
+  const color = clamp >= 70 ? "#10b981" : clamp >= 40 ? "#f59e0b" : "#ef4444";
+  const textColor = clamp >= 70 ? "text-emerald-400" : clamp >= 40 ? "text-amber-400" : "text-rose-400";
+  const label = clamp >= 70 ? "Disciplin\u00e9" : clamp >= 40 ? "Am\u00e9liorable" : "Critique";
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke="var(--bg-hover)" strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="transition-all duration-1000"
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
+        <span className={`text-3xl font-bold mono ${textColor}`}>{clamp}</span>
+        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>/100</span>
+      </div>
+      <span className={`text-xs font-medium ${textColor}`}>{label}</span>
     </div>
   );
 }
@@ -333,6 +370,269 @@ export default function AICoachPage() {
       : 0;
     const mgmtGrade = mgmtScore >= 80 ? "A" : mgmtScore >= 65 ? "B" : mgmtScore >= 50 ? "C" : mgmtScore >= 35 ? "D" : "F";
 
+    // =========================================================
+    // === SECTION: Alerte Comportement (Behavior Alerts) ===
+    // =========================================================
+    type BehaviorAlert = { type: string; severity: "red" | "amber" | "blue"; description: string; recommendation: string };
+    const behaviorAlerts: BehaviorAlert[] = [];
+
+    // Revenge Trading: 2+ losing trades within 30 minutes of each other
+    const sortedByTime = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let revengeCount = 0;
+    for (let i = 1; i < sortedByTime.length; i++) {
+      if (sortedByTime[i].result < 0 && sortedByTime[i - 1].result < 0) {
+        const gap = Math.abs(new Date(sortedByTime[i].date).getTime() - new Date(sortedByTime[i - 1].date).getTime());
+        if (gap <= 30 * 60 * 1000) revengeCount++;
+      }
+    }
+    if (revengeCount > 0) {
+      behaviorAlerts.push({
+        type: "revenge",
+        severity: "red",
+        description: `${revengeCount} instance${revengeCount > 1 ? "s" : ""} de revenge trading d\u00e9tect\u00e9e${revengeCount > 1 ? "s" : ""} (2+ pertes en moins de 30 min)`,
+        recommendation: "Apr\u00e8s une perte, attendez au moins 30 minutes avant de reprendre un trade. Respirez, analysez, puis agissez.",
+      });
+    }
+
+    // Overtrading: More than avg * 1.5 trades in a day
+    const dailyCounts = Object.values(tradesByDate).map(d => d.total);
+    const avgDailyTrades = dailyCounts.length > 0 ? dailyCounts.reduce((s, v) => s + v, 0) / dailyCounts.length : 0;
+    const overtradingThreshold = Math.max(5, Math.ceil(avgDailyTrades * 1.5));
+    const overtradingDays = Object.entries(tradesByDate).filter(([, v]) => v.total > overtradingThreshold);
+    if (overtradingDays.length > 0) {
+      behaviorAlerts.push({
+        type: "overtrading",
+        severity: "amber",
+        description: `${overtradingDays.length} jour${overtradingDays.length > 1 ? "s" : ""} d\u2019overtrading (>${overtradingThreshold} trades/jour, votre moyenne est ${avgDailyTrades.toFixed(1)})`,
+        recommendation: `Fixez une limite de ${overtradingThreshold} trades par jour maximum. La qualit\u00e9 prime sur la quantit\u00e9.`,
+      });
+    }
+
+    // Tilt Detection: 3+ consecutive losses with increasing lot sizes
+    let tiltCount = 0;
+    for (let i = 2; i < sortedByTime.length; i++) {
+      if (
+        sortedByTime[i].result < 0 &&
+        sortedByTime[i - 1].result < 0 &&
+        sortedByTime[i - 2].result < 0 &&
+        sortedByTime[i].lots > sortedByTime[i - 1].lots &&
+        sortedByTime[i - 1].lots > sortedByTime[i - 2].lots
+      ) {
+        tiltCount++;
+      }
+    }
+    if (tiltCount > 0) {
+      behaviorAlerts.push({
+        type: "tilt",
+        severity: "red",
+        description: `Tilt d\u00e9tect\u00e9 : ${tiltCount} s\u00e9quence${tiltCount > 1 ? "s" : ""} de 3+ pertes cons\u00e9cutives avec lots croissants`,
+        recommendation: "Ne jamais augmenter la taille apr\u00e8s une perte. R\u00e9duisez vos lots ou arr\u00eatez de trader apr\u00e8s 2 pertes cons\u00e9cutives.",
+      });
+    }
+
+    // Weekend Holdover: Trades opened on Friday not closed
+    const fridayOpenTrades = trades.filter(tr => {
+      const d = new Date(tr.date);
+      return d.getDay() === 5 && (tr.exit === null || tr.exit === 0);
+    });
+    if (fridayOpenTrades.length > 0) {
+      behaviorAlerts.push({
+        type: "weekend",
+        severity: "blue",
+        description: `${fridayOpenTrades.length} trade${fridayOpenTrades.length > 1 ? "s" : ""} ouvert${fridayOpenTrades.length > 1 ? "s" : ""} le vendredi sans cl\u00f4ture`,
+        recommendation: "Le risque de gap du week-end est r\u00e9el. Cl\u00f4turez vos positions avant la fermeture du vendredi.",
+      });
+    }
+
+    // =========================================================
+    // === SECTION: Pattern Intelligence ===
+    // =========================================================
+
+    // Best day by WR and by P&L
+    const dayEntries = Object.entries(dayMap).filter(([, v]) => v.total >= 2);
+    const bestDayWR = dayEntries.length > 0
+      ? dayEntries.reduce((best, [k, v]) => {
+          const wr = v.total > 0 ? (v.wins / v.total) * 100 : 0;
+          return wr > best.wr ? { day: k, wr, total: v.total } : best;
+        }, { day: "", wr: -1, total: 0 })
+      : null;
+    const bestDayPnl = dayEntries.length > 0
+      ? dayEntries.reduce((best, [k, v]) => v.pnl > best.pnl ? { day: k, pnl: v.pnl, total: v.total } : best, { day: "", pnl: -Infinity, total: 0 })
+      : null;
+
+    // Best hour
+    const hourEntries = Object.entries(hourMap).filter(([, v]) => v.total >= 2);
+    const bestHourWR = hourEntries.length > 0
+      ? hourEntries.reduce((best, [k, v]) => {
+          const wr = v.total > 0 ? (v.wins / v.total) * 100 : 0;
+          return wr > best.wr ? { hour: k, wr, total: v.total } : best;
+        }, { hour: "", wr: -1, total: 0 })
+      : null;
+
+    // Best asset (highest profit factor)
+    const assetEntries = Object.entries(assetMap).filter(([, v]) => v.total >= 3);
+    let bestAssetPF: { asset: string; pf: number; total: number } | null = null;
+    for (const [asset, data] of assetEntries) {
+      const assetTrades = trades.filter(tr => tr.asset === asset);
+      const grossProfit = assetTrades.filter(tr => tr.result > 0).reduce((s, tr) => s + tr.result, 0);
+      const grossLoss = Math.abs(assetTrades.filter(tr => tr.result < 0).reduce((s, tr) => s + tr.result, 0));
+      const pf = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 99 : 0;
+      if (!bestAssetPF || pf > bestAssetPF.pf) {
+        bestAssetPF = { asset, pf, total: data.total };
+      }
+    }
+
+    // Worst emotional state (lowest win rate)
+    const emotionEntries = Object.entries(emotionMap).filter(([k, v]) => v.total >= 2 && k !== "N/A");
+    const worstEmotion = emotionEntries.length > 0
+      ? emotionEntries.reduce((worst, [k, v]) => {
+          const wr = v.total > 0 ? (v.wins / v.total) * 100 : 100;
+          return wr < worst.wr ? { emotion: k, wr, total: v.total } : worst;
+        }, { emotion: "", wr: 101, total: 0 })
+      : null;
+
+    // Average holding time: winners vs losers
+    const winningTrades = trades.filter(tr => tr.result > 0 && tr.exit !== null && tr.exit !== 0);
+    const losingTrades = trades.filter(tr => tr.result < 0 && tr.exit !== null && tr.exit !== 0);
+    // Use createdAt vs date as proxy for holding time (both are timestamps)
+    const avgHoldWin = winningTrades.length > 0
+      ? winningTrades.reduce((s, tr) => {
+          const open = new Date(tr.date).getTime();
+          const close = new Date(tr.createdAt).getTime();
+          return s + Math.abs(close - open);
+        }, 0) / winningTrades.length
+      : 0;
+    const avgHoldLoss = losingTrades.length > 0
+      ? losingTrades.reduce((s, tr) => {
+          const open = new Date(tr.date).getTime();
+          const close = new Date(tr.createdAt).getTime();
+          return s + Math.abs(close - open);
+        }, 0) / losingTrades.length
+      : 0;
+    const formatDuration = (ms: number) => {
+      if (ms === 0) return "N/A";
+      const minutes = Math.round(ms / 60000);
+      if (minutes < 60) return `${minutes}m`;
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      if (hours < 24) return `${hours}h${mins > 0 ? `${mins}m` : ""}`;
+      const days = Math.floor(hours / 24);
+      return `${days}j ${hours % 24}h`;
+    };
+
+    // =========================================================
+    // === SECTION: Plan d'Action Hebdomadaire ===
+    // =========================================================
+    const actionRecommendations: string[] = [];
+    const actionStrengths: string[] = [];
+    let actionRule = "";
+
+    // Recommendations based on data
+    if (bestDayWR) {
+      const worstDayEntry = dayEntries.reduce((w, [k, v]) => {
+        const wr = v.total > 0 ? (v.wins / v.total) * 100 : 100;
+        return wr < w.wr ? { day: k, wr, total: v.total } : w;
+      }, { day: "", wr: 101, total: 0 });
+      if (worstDayEntry.wr < 45 && worstDayEntry.total >= 3) {
+        actionRecommendations.push(`\u00c9vitez de trader le ${worstDayEntry.day} \u2014 votre WR est ${worstDayEntry.wr.toFixed(0)}%`);
+      }
+    }
+    if (worstEmotion && worstEmotion.wr < 40) {
+      actionRecommendations.push(`Quand vous \u00eates "${worstEmotion.emotion}", ne tradez pas \u2014 WR de ${worstEmotion.wr.toFixed(0)}%`);
+    }
+    if (revengeCount > 0) {
+      actionRecommendations.push("R\u00e8gle anti-revenge : attendez 30 min apr\u00e8s chaque perte avant de re-trader");
+    }
+    if (slUsage < 80) {
+      actionRecommendations.push(`Placez toujours un SL \u2014 seulement ${slUsage.toFixed(0)}% de vos trades en ont un`);
+    }
+    if (bestHourWR && bestHourWR.wr > 0) {
+      const worstHourEntry = hourEntries.reduce((w, [k, v]) => {
+        const wr = v.total > 0 ? (v.wins / v.total) * 100 : 100;
+        return wr < w.wr ? { hour: k, wr, total: v.total } : w;
+      }, { hour: "", wr: 101, total: 0 });
+      if (worstHourEntry.wr < 40 && worstHourEntry.total >= 3) {
+        actionRecommendations.push(`\u00c9vitez de trader \u00e0 ${worstHourEntry.hour}h \u2014 WR de ${worstHourEntry.wr.toFixed(0)}%`);
+      }
+    }
+    // Fallback recommendations
+    while (actionRecommendations.length < 3) {
+      if (actionRecommendations.length === 0) actionRecommendations.push("Revoyez votre journal chaque soir pour identifier vos erreurs r\u00e9currentes");
+      else if (actionRecommendations.length === 1) actionRecommendations.push("Prenez une capture d\u2019\u00e9cran de chaque setup avant d\u2019entrer en position");
+      else actionRecommendations.push("Notez votre \u00e9motion avant chaque trade pour am\u00e9liorer votre conscience");
+    }
+
+    // Strengths
+    if (bestAssetPF && bestAssetPF.pf > 1.5) {
+      actionStrengths.push(`Continuez \u00e0 trader ${bestAssetPF.asset} \u2014 PF de ${bestAssetPF.pf.toFixed(1)}`);
+    }
+    if (bestDayWR && bestDayWR.wr >= 60) {
+      actionStrengths.push(`Votre meilleur jour est ${bestDayWR.day} (${bestDayWR.wr.toFixed(0)}% WR) \u2014 concentrez-y vos efforts`);
+    }
+    if (bestHourWR && bestHourWR.wr >= 60) {
+      actionStrengths.push(`Cr\u00e9neau optimal : ${bestHourWR.hour}h avec ${bestHourWR.wr.toFixed(0)}% WR`);
+    }
+    if (slUsage >= 90) {
+      actionStrengths.push("Excellente discipline SL \u2014 continuez \u00e0 toujours prot\u00e9ger vos positions");
+    }
+    // Fallback strengths
+    while (actionStrengths.length < 2) {
+      if (actionStrengths.length === 0) actionStrengths.push("Vous maintenez un journal de trading r\u00e9gulier \u2014 c\u2019est un excellent r\u00e9flexe");
+      else actionStrengths.push("Continuez \u00e0 analyser vos trades pour progresser");
+    }
+
+    // Weekly rule
+    if (overtradingDays.length > 0) {
+      actionRule = `Maximum ${overtradingThreshold} trades par jour cette semaine`;
+    } else if (revengeCount > 0) {
+      actionRule = "Z\u00e9ro revenge trading cette semaine \u2014 pause obligatoire apr\u00e8s chaque perte";
+    } else if (slUsage < 100) {
+      actionRule = "100% de vos trades doivent avoir un Stop Loss cette semaine";
+    } else {
+      actionRule = "Maintenez votre discipline et suivez votre plan de trading chaque jour";
+    }
+
+    // =========================================================
+    // === SECTION: Score de Discipline (new weighted gauge) ===
+    // =========================================================
+    const slPct = weekTrades.length > 0 ? (weekTrades.filter(tr => tr.sl && tr.sl > 0).length / weekTrades.length) * 100 : 100;
+    // Position size consistency: std deviation of lots / mean
+    const weekLots = weekTrades.map(tr => tr.lots).filter(l => l > 0);
+    const meanLots = weekLots.length > 0 ? weekLots.reduce((s, v) => s + v, 0) / weekLots.length : 0;
+    const stdLots = weekLots.length > 1
+      ? Math.sqrt(weekLots.reduce((s, v) => s + (v - meanLots) ** 2, 0) / (weekLots.length - 1))
+      : 0;
+    const lotConsistencyPct = meanLots > 0 ? Math.max(0, 100 - (stdLots / meanLots) * 100) : 100;
+
+    // No revenge trading days (from past 7 days)
+    let revengeFreeDays = 0;
+    const last7Dates = [...new Set(weekTrades.map(tr => new Date(tr.date).toDateString()))];
+    for (const dateStr of last7Dates) {
+      const dayTrs = weekTrades
+        .filter(tr => new Date(tr.date).toDateString() === dateStr)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      let hasRevenge = false;
+      for (let i = 1; i < dayTrs.length; i++) {
+        if (dayTrs[i].result < 0 && dayTrs[i - 1].result < 0) {
+          const gap = Math.abs(new Date(dayTrs[i].date).getTime() - new Date(dayTrs[i - 1].date).getTime());
+          if (gap <= 30 * 60 * 1000) { hasRevenge = true; break; }
+        }
+      }
+      if (!hasRevenge) revengeFreeDays++;
+    }
+    const revengeFreePct = last7Dates.length > 0 ? (revengeFreeDays / last7Dates.length) * 100 : 100;
+
+    // Bias following: check if direction matches a hypothetical bias (use day performance as proxy)
+    // Since we don't have an explicit daily bias field, we use the percentage of trades that are winners as a proxy
+    const biasFollowPct = weekWR; // proxy: win rate itself shows alignment with correct direction
+
+    const disciplineScoreV2 = Math.round(
+      slPct * 0.30 +
+      biasFollowPct * 0.20 +
+      lotConsistencyPct * 0.20 +
+      revengeFreePct * 0.30
+    );
+
     return {
       dayBW: bestWorst(dayMap), hourBW: bestWorst(hourMap), assetBW: bestWorst(assetMap),
       stratBW: bestWorst(stratMap), emotionBW: bestWorst(emotionMap),
@@ -360,6 +660,17 @@ export default function AICoachPage() {
       // Trade Management Quality
       mgmtScore, mgmtGrade, avgTpCapture, tpReachedCount, prematureExitCount,
       managedTradesCount: managedTrades.length, tpCaptures,
+      // NEW: Behavior Alerts
+      behaviorAlerts,
+      // NEW: Pattern Intelligence
+      bestDayWR, bestDayPnl, bestHourWR, bestAssetPF, worstEmotion,
+      avgHoldWin: formatDuration(avgHoldWin), avgHoldLoss: formatDuration(avgHoldLoss),
+      // NEW: Weekly Action Plan
+      actionRecommendations: actionRecommendations.slice(0, 3),
+      actionStrengths: actionStrengths.slice(0, 2),
+      actionRule,
+      // NEW: Discipline Score V2
+      disciplineScoreV2, slPct, biasFollowPct, lotConsistencyPct, revengeFreePct,
     };
   }, [trades]);
 
@@ -1133,6 +1444,241 @@ export default function AICoachPage() {
               <span className="text-sm">{t("coachFillTpHint")}</span>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* =========================================================
+          === SECTION: Alerte Comportement ===
+          ========================================================= */}
+      {analysis.behaviorAlerts.length > 0 && (
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldAlert className="text-cyan-400" size={18} />
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Alerte Comportement</h2>
+            <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 mono">
+              {analysis.behaviorAlerts.length} alerte{analysis.behaviorAlerts.length > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="space-y-3">
+            {analysis.behaviorAlerts.map((alert, i) => {
+              const severityStyles = {
+                red: { border: "border-rose-500/40", bg: "bg-rose-500/10", icon: "text-rose-400", badge: "bg-rose-500/20 text-rose-400" },
+                amber: { border: "border-amber-500/40", bg: "bg-amber-500/10", icon: "text-amber-400", badge: "bg-amber-500/20 text-amber-400" },
+                blue: { border: "border-cyan-500/40", bg: "bg-cyan-500/10", icon: "text-cyan-400", badge: "bg-cyan-500/20 text-cyan-400" },
+              }[alert.severity];
+              const IconComp = alert.severity === "red" ? Ban : alert.severity === "amber" ? AlertTriangle : Info;
+              return (
+                <div key={i} className={`rounded-lg p-4 border ${severityStyles.border} ${severityStyles.bg}`}>
+                  <div className="flex items-start gap-3">
+                    <IconComp size={18} className={`${severityStyles.icon} shrink-0 mt-0.5`} />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${severityStyles.badge}`}>
+                          {alert.severity === "red" ? "Critique" : alert.severity === "amber" ? "Attention" : "Info"}
+                        </span>
+                        <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                          {alert.type === "revenge" ? "Revenge Trading" : alert.type === "overtrading" ? "Overtrading" : alert.type === "tilt" ? "Tilt" : "Week-end"}
+                        </span>
+                      </div>
+                      <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{alert.description}</p>
+                      <div className="flex items-start gap-2 p-2 rounded" style={{ background: "var(--bg-hover)" }}>
+                        <ChevronRight size={12} className="text-cyan-400 shrink-0 mt-0.5" />
+                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>{alert.recommendation}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          === SECTION: Pattern Intelligence ===
+          ========================================================= */}
+      <div className="metric-card p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Eye className="text-cyan-400" size={18} />
+          <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Pattern Intelligence</h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {/* Best Day WR */}
+          <div className="glass rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              <Calendar size={13} /> Meilleur jour (WR)
+            </div>
+            {analysis.bestDayWR ? (
+              <div>
+                <span className="text-emerald-400 mono font-semibold">{analysis.bestDayWR.day}</span>
+                <span className="text-xs ml-1" style={{ color: "var(--text-muted)" }}>{analysis.bestDayWR.wr.toFixed(0)}% ({analysis.bestDayWR.total} trades)</span>
+              </div>
+            ) : <span className="text-xs" style={{ color: "var(--text-muted)" }}>Pas assez de donn\u00e9es</span>}
+          </div>
+
+          {/* Best Day P&L */}
+          <div className="glass rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              <Calendar size={13} /> Meilleur jour (P&L)
+            </div>
+            {analysis.bestDayPnl ? (
+              <div>
+                <span className="text-emerald-400 mono font-semibold">{analysis.bestDayPnl.day}</span>
+                <span className="text-xs ml-1" style={{ color: "var(--text-muted)" }}>+&euro;{analysis.bestDayPnl.pnl.toFixed(0)}</span>
+              </div>
+            ) : <span className="text-xs" style={{ color: "var(--text-muted)" }}>Pas assez de donn\u00e9es</span>}
+          </div>
+
+          {/* Best Hour */}
+          <div className="glass rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              <Clock size={13} /> Meilleure heure
+            </div>
+            {analysis.bestHourWR ? (
+              <div>
+                <span className="text-emerald-400 mono font-semibold">{analysis.bestHourWR.hour}h</span>
+                <span className="text-xs ml-1" style={{ color: "var(--text-muted)" }}>{analysis.bestHourWR.wr.toFixed(0)}% WR ({analysis.bestHourWR.total} trades)</span>
+              </div>
+            ) : <span className="text-xs" style={{ color: "var(--text-muted)" }}>Pas assez de donn\u00e9es</span>}
+          </div>
+
+          {/* Best Asset PF */}
+          <div className="glass rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              <Star size={13} /> Meilleur actif (PF)
+            </div>
+            {analysis.bestAssetPF ? (
+              <div>
+                <span className="text-emerald-400 mono font-semibold">{analysis.bestAssetPF.asset}</span>
+                <span className="text-xs ml-1" style={{ color: "var(--text-muted)" }}>PF {analysis.bestAssetPF.pf.toFixed(1)} ({analysis.bestAssetPF.total} trades)</span>
+              </div>
+            ) : <span className="text-xs" style={{ color: "var(--text-muted)" }}>Pas assez de donn\u00e9es</span>}
+          </div>
+
+          {/* Worst Emotion */}
+          <div className="glass rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              <Heart size={13} /> Pire \u00e9motion (WR)
+            </div>
+            {analysis.worstEmotion ? (
+              <div>
+                <span className="text-rose-400 mono font-semibold">{analysis.worstEmotion.emotion}</span>
+                <span className="text-xs ml-1" style={{ color: "var(--text-muted)" }}>{analysis.worstEmotion.wr.toFixed(0)}% WR ({analysis.worstEmotion.total} trades)</span>
+              </div>
+            ) : <span className="text-xs" style={{ color: "var(--text-muted)" }}>Pas assez de donn\u00e9es</span>}
+          </div>
+
+          {/* Avg Hold Time */}
+          <div className="glass rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              <Timer size={13} /> Dur\u00e9e moyenne
+            </div>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1">
+                <ThumbsUp size={11} className="text-emerald-400" />
+                <span className="text-xs mono text-emerald-400">{analysis.avgHoldWin}</span>
+                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>gagnants</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <ThumbsDown size={11} className="text-rose-400" />
+                <span className="text-xs mono text-rose-400">{analysis.avgHoldLoss}</span>
+                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>perdants</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================
+          === SECTION: Plan d'Action + Score de Discipline ===
+          ========================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Plan d'Action Hebdomadaire */}
+        <div className="metric-card p-5 lg:col-span-2">
+          <div className="flex items-center gap-2 mb-4">
+            <ListChecks className="text-cyan-400" size={18} />
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Plan d&apos;Action Hebdomadaire</h2>
+          </div>
+          <div className="space-y-4">
+            {/* Recommendations */}
+            <div>
+              <div className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                <AlertTriangle size={12} className="text-amber-400" />
+                <span style={{ color: "var(--text-muted)" }}>\u00c0 am\u00e9liorer cette semaine</span>
+              </div>
+              <div className="space-y-2">
+                {analysis.actionRecommendations.map((rec, i) => (
+                  <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg" style={{ background: "var(--bg-hover)" }}>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-amber-500/20 text-amber-400 text-[10px] font-bold mt-0.5">
+                      {i + 1}
+                    </div>
+                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{rec}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Strengths */}
+            <div>
+              <div className="text-xs font-semibold mb-2 flex items-center gap-1.5">
+                <TrendingUp size={12} className="text-emerald-400" />
+                <span style={{ color: "var(--text-muted)" }}>Points forts \u00e0 maintenir</span>
+              </div>
+              <div className="space-y-2">
+                {analysis.actionStrengths.map((str, i) => (
+                  <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg" style={{ background: "var(--bg-hover)" }}>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-emerald-500/20">
+                      <Check size={12} className="text-emerald-400" />
+                    </div>
+                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{str}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Weekly Rule */}
+            <div className="p-3 rounded-lg border border-cyan-500/30 bg-cyan-500/10">
+              <div className="flex items-center gap-2">
+                <Shield size={14} className="text-cyan-400 shrink-0" />
+                <div>
+                  <div className="text-[10px] font-semibold uppercase text-cyan-400 mb-0.5">R\u00e8gle de la semaine</div>
+                  <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{analysis.actionRule}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Score de Discipline V2 */}
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <CircleGauge className="text-cyan-400" size={18} />
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>Score de Discipline</h2>
+          </div>
+          <div className="flex flex-col items-center relative">
+            <CircularGauge score={analysis.disciplineScoreV2} />
+          </div>
+          <div className="w-full space-y-2 mt-4 text-xs">
+            {[
+              { label: "Stop Loss (%)", val: analysis.slPct, weight: "30%" },
+              { label: "Biais directionnel", val: analysis.biasFollowPct, weight: "20%" },
+              { label: "Consistance lots", val: analysis.lotConsistencyPct, weight: "20%" },
+              { label: "Sans revenge trading", val: analysis.revengeFreePct, weight: "30%" },
+            ].map(({ label, val, weight }) => (
+              <div key={label} className="space-y-0.5">
+                <div className="flex items-center justify-between">
+                  <span style={{ color: "var(--text-muted)" }}>{label}</span>
+                  <span className="mono" style={{ color: "var(--text-secondary)" }}>{Math.round(val)}% <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>({weight})</span></span>
+                </div>
+                <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "var(--bg-hover)" }}>
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${val >= 70 ? "bg-emerald-500" : val >= 40 ? "bg-amber-500" : "bg-rose-500"}`}
+                    style={{ width: `${Math.min(100, Math.max(0, val))}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
