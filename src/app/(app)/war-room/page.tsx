@@ -542,19 +542,19 @@ function MiniEquityCurve({ trades }: { trades: Trade[] }) {
 // ─── FOMC Countdown Timer ────────────────────────────────────────────────────
 
 const FOMC_DATES_2026 = [
-  new Date(Date.UTC(2026, 0, 28, 19, 0)), // Jan 28-29 (decision day 2, 14:00 EST = 19:00 UTC)
-  new Date(Date.UTC(2026, 2, 18, 18, 0)), // Mar 18-19
-  new Date(Date.UTC(2026, 4, 6, 18, 0)),  // May 6-7
-  new Date(Date.UTC(2026, 5, 17, 18, 0)), // Jun 17-18
-  new Date(Date.UTC(2026, 6, 29, 18, 0)), // Jul 29-30
-  new Date(Date.UTC(2026, 8, 16, 18, 0)), // Sep 16-17
-  new Date(Date.UTC(2026, 10, 4, 19, 0)), // Nov 4-5
-  new Date(Date.UTC(2026, 11, 16, 19, 0)), // Dec 16-17
+  new Date(Date.UTC(2026, 0, 28, 19, 0)), // Jan 27-28 (decision day 2, 14:00 EST = 19:00 UTC)
+  new Date(Date.UTC(2026, 2, 18, 18, 0)), // Mar 17-18 (projections)
+  new Date(Date.UTC(2026, 3, 29, 18, 0)), // Apr 28-29
+  new Date(Date.UTC(2026, 5, 17, 18, 0)), // Jun 16-17 (projections)
+  new Date(Date.UTC(2026, 6, 29, 18, 0)), // Jul 28-29
+  new Date(Date.UTC(2026, 8, 16, 18, 0)), // Sep 15-16 (projections)
+  new Date(Date.UTC(2026, 9, 28, 18, 0)), // Oct 27-28
+  new Date(Date.UTC(2026, 11, 9, 19, 0)), // Dec 8-9 (projections)
 ];
 
 const FOMC_DISPLAY_LABELS = [
-  "28-29 Janvier", "18-19 Mars", "6-7 Mai", "17-18 Juin",
-  "29-30 Juillet", "16-17 Septembre", "4-5 Novembre", "16-17 Décembre",
+  "27-28 Janvier", "17-18 Mars ★", "28-29 Avril", "16-17 Juin ★",
+  "28-29 Juillet", "15-16 Septembre ★", "27-28 Octobre", "8-9 Décembre ★",
 ];
 
 function getNextFomc(now: Date): { date: Date; label: string } | null {
