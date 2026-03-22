@@ -18,6 +18,7 @@ export async function GET() {
         role: true,
         balance: true,
         publicProfile: true,
+        apiKey: true,
         createdAt: true,
       },
     });
@@ -190,7 +191,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, balance, email, publicProfile } = body;
+    const { name, balance, email, publicProfile, apiKey } = body;
 
     const updateData: Record<string, unknown> = {};
 
@@ -220,6 +221,10 @@ export async function PATCH(request: NextRequest) {
       updateData.email = email.trim();
     }
 
+    if (typeof apiKey === "string" && apiKey.startsWith("mp_") && apiKey.length === 35) {
+      updateData.apiKey = apiKey;
+    }
+
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: "Aucune donnée à mettre à jour" }, { status: 400 });
     }
@@ -234,6 +239,7 @@ export async function PATCH(request: NextRequest) {
         role: true,
         balance: true,
         publicProfile: true,
+        apiKey: true,
         createdAt: true,
       },
     });

@@ -29,6 +29,7 @@ model User {
   monthlyGoals MonthlyGoal[]
   tradingRules TradingRule[]
   reactions    Reaction[]
+  apiKey         String?       @unique
   banned         Boolean       @default(false)
   publicProfile  Boolean       @default(false)
   resetToken       String?

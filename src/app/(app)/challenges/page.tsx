@@ -6,6 +6,7 @@ import {
   TrendingUp, Clock, Crosshair, BarChart3,
   Crown, Gem, Sunrise, Sparkles, Ban,
   Timer, CheckCircle2, Check, Gift, Loader2,
+  Calendar, Medal, Users, ChevronUp, Diamond,
 } from "lucide-react";
 
 /* ─── types ────────────────────────────────────────────── */
@@ -28,7 +29,107 @@ interface ChallengeData {
   reward: { xp: number; badge: string };
 }
 
-type TabId = "daily" | "weekly" | "monthly" | "special";
+type TabId = "daily" | "weekly" | "monthly" | "special" | "saison";
+
+/* ─── season config ───────────────────────────────────── */
+
+interface SeasonRank {
+  id: string;
+  name: string;
+  minXp: number;
+  maxXp: number;
+  color: string;
+  cssClass: string;
+  icon: React.ReactNode;
+}
+
+const SEASON_CONFIG = {
+  id: "s1",
+  name: "Saison 1 — Printemps 2026",
+  startDate: "2026-03-01",
+  endDate: "2026-05-29",
+  totalDays: 90,
+};
+
+const SEASON_RANKS: SeasonRank[] = [
+  { id: "bronze",  name: "Bronze",  minXp: 0,    maxXp: 500,  color: "#CD7F32", cssClass: "season-rank-bronze",  icon: <Medal size={24} /> },
+  { id: "argent",  name: "Argent",  minXp: 500,  maxXp: 1500, color: "#C0C0C0", cssClass: "season-rank-argent",  icon: <Shield size={24} /> },
+  { id: "or",      name: "Or",      minXp: 1500, maxXp: 3000, color: "#FFD700", cssClass: "season-rank-or",      icon: <Crown size={24} /> },
+  { id: "platine", name: "Platine", minXp: 3000, maxXp: 5000, color: "#E5E4E2", cssClass: "season-rank-platine", icon: <Gem size={24} /> },
+  { id: "diamant", name: "Diamant", minXp: 5000, maxXp: Infinity, color: "#B9F2FF", cssClass: "season-rank-diamant", icon: <Diamond size={24} /> },
+];
+
+function getSeasonRankIcon(rankId: string, size: number): React.ReactNode {
+  const icons: Record<string, React.ReactNode> = {
+    bronze: <Medal size={size} />,
+    argent: <Shield size={size} />,
+    or: <Crown size={size} />,
+    platine: <Gem size={size} />,
+    diamant: <Diamond size={size} />,
+  };
+  return icons[rankId] || <Star size={size} />;
+}
+
+function getSeasonRank(xp: number): SeasonRank {
+  for (let i = SEASON_RANKS.length - 1; i >= 0; i--) {
+    if (xp >= SEASON_RANKS[i].minXp) return SEASON_RANKS[i];
+  }
+  return SEASON_RANKS[0];
+}
+
+function getNextSeasonRank(xp: number): SeasonRank | null {
+  const current = getSeasonRank(xp);
+  const idx = SEASON_RANKS.indexOf(current);
+  return idx < SEASON_RANKS.length - 1 ? SEASON_RANKS[idx + 1] : null;
+}
+
+function getSeasonDaysElapsed(): number {
+  const start = new Date(SEASON_CONFIG.startDate).getTime();
+  const now = Date.now();
+  const elapsed = Math.floor((now - start) / 86400000);
+  return Math.max(0, Math.min(elapsed, SEASON_CONFIG.totalDays));
+}
+
+function getSeasonDaysRemaining(): number {
+  return SEASON_CONFIG.totalDays - getSeasonDaysElapsed();
+}
+
+/* ─── mock leaderboard ────────────────────────────────── */
+
+interface LeaderboardEntry {
+  rank: number;
+  name: string;
+  xp: number;
+  challengesCompleted: number;
+  isCurrentUser: boolean;
+}
+
+function generateLeaderboard(currentUserXp: number, currentUserCompleted: number): LeaderboardEntry[] {
+  const mockNames = [
+    "TraderPro_92", "AlphaFX", "SwingKing", "PipMaster",
+    "NeoTrader", "BullRunFR", "ScalpQueen", "RiskWise",
+    "ChartNinja", "MomentumX",
+  ];
+  const entries: LeaderboardEntry[] = mockNames.map((name, i) => ({
+    rank: 0,
+    name,
+    xp: Math.max(100, Math.floor(5500 - i * 480 + (Math.sin(i * 7) * 300))),
+    challengesCompleted: Math.max(1, Math.floor(12 - i + (Math.sin(i * 3) * 3))),
+    isCurrentUser: false,
+  }));
+  // Insert current user
+  entries.push({
+    rank: 0,
+    name: "Vous",
+    xp: currentUserXp,
+    challengesCompleted: currentUserCompleted,
+    isCurrentUser: true,
+  });
+  // Sort by XP desc
+  entries.sort((a, b) => b.xp - a.xp);
+  // Assign ranks and take top 10
+  return entries.slice(0, 10).map((e, i) => ({ ...e, rank: i + 1 }));
+}
 
 /* ─── icon map ─────────────────────────────────────────── */
 
@@ -131,6 +232,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[]
   { id: "weekly", label: "Hebdomadaire", icon: <Flame size={16} />, color: "#f97316" },
   { id: "monthly", label: "Mensuel", icon: <BarChart3 size={16} />, color: "#3b82f6" },
   { id: "special", label: "Spécial", icon: <Sparkles size={16} />, color: "#a855f7" },
+  { id: "saison", label: "Classement Saison", icon: <Users size={16} />, color: "#06b6d4" },
 ];
 
 /* ─── page ─────────────────────────────────────────────── */
@@ -253,6 +355,37 @@ export default function ChallengesPage() {
       title,
       xpInLevel: totalXp % 500,
       xpForLevel: 500,
+    };
+  }, [challenges]);
+
+  // Season data
+  const seasonData = useMemo(() => {
+    const seasonStart = new Date(SEASON_CONFIG.startDate).getTime();
+    const seasonEnd = new Date(SEASON_CONFIG.endDate).getTime();
+    const seasonCompleted = challenges.filter((c) => {
+      if (!c.completed || !c.joined || !c.completedAt) return false;
+      const t = new Date(c.completedAt).getTime();
+      return t >= seasonStart && t <= seasonEnd;
+    });
+    const seasonXp = seasonCompleted.reduce((s, c) => s + c.reward.xp, 0);
+    const rank = getSeasonRank(seasonXp);
+    const nextRank = getNextSeasonRank(seasonXp);
+    const daysElapsed = getSeasonDaysElapsed();
+    const daysRemaining = getSeasonDaysRemaining();
+    const progressToNextRank = nextRank
+      ? ((seasonXp - rank.minXp) / (nextRank.minXp - rank.minXp)) * 100
+      : 100;
+    const leaderboard = generateLeaderboard(seasonXp, seasonCompleted.length);
+    return {
+      seasonXp,
+      rank,
+      nextRank,
+      daysElapsed,
+      daysRemaining,
+      seasonProgress: (daysElapsed / SEASON_CONFIG.totalDays) * 100,
+      progressToNextRank: Math.min(100, Math.max(0, progressToNextRank)),
+      challengesCompleted: seasonCompleted.length,
+      leaderboard,
     };
   }, [challenges]);
 
@@ -397,6 +530,106 @@ export default function ChallengesPage() {
         </div>
       </div>
 
+      {/* ─── Season Banner ─────────────────────────────────── */}
+      <div className="glass rounded-2xl overflow-hidden" style={{ border: `1px solid ${seasonData.rank.color}30` }}>
+        {/* Season Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 pb-4">
+          <div className="flex items-center gap-4">
+            <div
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center season-rank-badge season-rank-badge-animated ${seasonData.rank.cssClass}`}
+              style={{ color: seasonData.rank.color }}
+            >
+              {seasonData.rank.icon}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar size={14} style={{ color: "var(--text-muted)" }} />
+                <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+                  {SEASON_CONFIG.name}
+                </span>
+              </div>
+              <p className="text-lg font-bold" style={{ color: seasonData.rank.color }}>
+                Rang {seasonData.rank.name}
+              </p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {seasonData.seasonXp.toLocaleString()} XP cette saison
+                {" · "}
+                {seasonData.challengesCompleted} challenges
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+              style={{ backgroundColor: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)" }}
+            >
+              <Timer size={15} className="text-red-400" />
+              <span className="mono text-sm font-bold text-red-400">
+                {seasonData.daysRemaining} jours restants
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Season Progress Bar */}
+        <div className="px-6 pb-3">
+          <div className="flex justify-between mb-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+            <span>Progression de la saison</span>
+            <span className="mono">{Math.round(seasonData.seasonProgress)}% ({seasonData.daysElapsed}/{SEASON_CONFIG.totalDays} jours)</span>
+          </div>
+          <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-primary)" }}>
+            <div
+              className="h-full rounded-full season-progress-bar transition-all duration-700"
+              style={{ width: `${seasonData.seasonProgress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Rank Progress */}
+        <div className="px-6 pb-5">
+          <div className="flex justify-between mb-1.5 text-xs">
+            <span style={{ color: seasonData.rank.color }} className="font-medium">
+              {seasonData.rank.name}
+            </span>
+            {seasonData.nextRank ? (
+              <span style={{ color: seasonData.nextRank.color }} className="font-medium flex items-center gap-1">
+                <ChevronUp size={12} />
+                {seasonData.nextRank.name} ({seasonData.nextRank.minXp} XP)
+              </span>
+            ) : (
+              <span style={{ color: seasonData.rank.color }} className="font-medium">
+                Rang maximum atteint !
+              </span>
+            )}
+          </div>
+          <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-primary)" }}>
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{
+                width: `${seasonData.progressToNextRank}%`,
+                backgroundColor: seasonData.rank.color,
+              }}
+            />
+          </div>
+          {seasonData.nextRank && (
+            <p className="text-[11px] mt-1.5" style={{ color: "var(--text-muted)" }}>
+              {seasonData.nextRank.minXp - seasonData.seasonXp} XP restants pour atteindre {seasonData.nextRank.name}
+            </p>
+          )}
+        </div>
+
+        {/* Season Reward Preview */}
+        <div
+          className="flex items-center gap-3 px-6 py-3"
+          style={{ backgroundColor: `${seasonData.rank.color}08`, borderTop: `1px solid ${seasonData.rank.color}15` }}
+        >
+          <Gift size={16} style={{ color: seasonData.rank.color }} />
+          <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
+            Terminez la saison en <strong style={{ color: seasonData.rank.color }}>{seasonData.rank.name}</strong> ou plus pour d&eacute;bloquer le badge <strong style={{ color: seasonData.rank.color }}>Saison 1 {seasonData.rank.name}</strong>
+          </span>
+        </div>
+      </div>
+
       {/* Completed Badges Row */}
       {completedChallenges.length > 0 && (
         <div>
@@ -430,8 +663,9 @@ export default function ChallengesPage() {
       {/* Category Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2">
         {TABS.map((tab) => {
-          const count = challenges.filter((c) => c.category === tab.id).length;
-          const completedCount = challenges.filter((c) => c.category === tab.id && c.completed && c.joined).length;
+          const isSeason = tab.id === "saison";
+          const count = isSeason ? 10 : challenges.filter((c) => c.category === tab.id).length;
+          const completedCount = isSeason ? seasonData.challengesCompleted : challenges.filter((c) => c.category === tab.id && c.completed && c.joined).length;
           return (
             <button
               key={tab.id}
@@ -463,7 +697,114 @@ export default function ChallengesPage() {
         })}
       </div>
 
+      {/* ─── Season Leaderboard ─────────────────────────────── */}
+      {activeTab === "saison" && (
+        <div className="space-y-6">
+          {/* Rank overview cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {SEASON_RANKS.map((r) => {
+              const isActive = seasonData.rank.id === r.id;
+              return (
+                <div
+                  key={r.id}
+                  className={`glass rounded-xl p-3 text-center transition-all ${isActive ? "scale-[1.03]" : "opacity-60"}`}
+                  style={{
+                    border: `1px solid ${isActive ? r.color + "60" : "var(--border)"}`,
+                    ...(isActive ? { boxShadow: `0 0 15px ${r.color}20` } : {}),
+                  }}
+                >
+                  <div className="flex justify-center mb-1.5" style={{ color: r.color }}>
+                    {r.icon}
+                  </div>
+                  <p className="text-xs font-bold" style={{ color: r.color }}>{r.name}</p>
+                  <p className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>
+                    {r.maxXp === Infinity ? `${r.minXp}+` : `${r.minXp}-${r.maxXp}`} XP
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Leaderboard Table */}
+          <div className="glass rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-3 px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+              <Users size={18} className="text-cyan-400" />
+              <h2 className="font-bold" style={{ color: "var(--text-primary)" }}>
+                Classement Saison
+              </h2>
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(6, 182, 212, 0.1)", color: "#06b6d4" }}>
+                Top 10
+              </span>
+            </div>
+
+            <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+              {seasonData.leaderboard.map((entry) => {
+                const entryRank = getSeasonRank(entry.xp);
+                return (
+                  <div
+                    key={entry.rank}
+                    className={`flex items-center gap-4 px-6 py-3.5 transition-colors ${
+                      entry.isCurrentUser ? "season-leaderboard-highlight" : ""
+                    }`}
+                    style={{
+                      borderColor: "var(--border-subtle)",
+                    }}
+                  >
+                    {/* Rank number */}
+                    <div className="w-8 text-center">
+                      {entry.rank <= 3 ? (
+                        <span className="text-lg">
+                          {entry.rank === 1 ? "\u{1F947}" : entry.rank === 2 ? "\u{1F948}" : "\u{1F949}"}
+                        </span>
+                      ) : (
+                        <span className="mono text-sm font-bold" style={{ color: "var(--text-muted)" }}>
+                          #{entry.rank}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Rank badge */}
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${entryRank.cssClass}`}
+                      style={{ color: entryRank.color, border: `1px solid ${entryRank.color}40`, backgroundColor: `${entryRank.color}10` }}
+                    >
+                      {getSeasonRankIcon(entryRank.id, 14)}
+                    </div>
+
+                    {/* Name */}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-semibold truncate ${entry.isCurrentUser ? "" : ""}`}
+                        style={{ color: entry.isCurrentUser ? "#06b6d4" : "var(--text-primary)" }}
+                      >
+                        {entry.name}
+                        {entry.isCurrentUser && (
+                          <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "rgba(6, 182, 212, 0.15)", color: "#06b6d4" }}>
+                            vous
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                        {entryRank.name} · {entry.challengesCompleted} challenges
+                      </p>
+                    </div>
+
+                    {/* XP */}
+                    <div className="text-right flex-shrink-0">
+                      <p className="mono text-sm font-bold" style={{ color: entryRank.color }}>
+                        {entry.xp.toLocaleString()} XP
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Challenge Cards Grid */}
+      {activeTab !== "saison" && (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {filtered.map((c) => {
           const pct = c.progress;
@@ -639,6 +980,7 @@ export default function ChallengesPage() {
           );
         })}
       </div>
+      )}
 
       {/* Shimmer animation style */}
       <style>{`

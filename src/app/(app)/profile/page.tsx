@@ -41,6 +41,10 @@ import {
   ChevronRight,
   Mail,
   Calendar,
+  Key,
+  Copy,
+  RefreshCw,
+  Webhook,
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
@@ -75,6 +79,7 @@ interface UserProfile {
   role: string;
   balance: number;
   publicProfile: boolean;
+  apiKey: string | null;
   createdAt: string;
   stats: TradingStats;
 }
@@ -249,6 +254,11 @@ export default function ProfilePage() {
   const [showDeleteTradesModal, setShowDeleteTradesModal] = useState(false);
   const [deletingTrades, setDeletingTrades] = useState(false);
 
+  // API Key
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [keyCopied, setKeyCopied] = useState(false);
+
   // Preferences
   const [theme, setTheme] = useState("dark");
   const [notifications, setNotifications] = useState(true);
@@ -267,6 +277,7 @@ export default function ProfilePage() {
           setEmail(data.email || "");
           setBalance(String(data.balance));
           setPublicProfile(data.publicProfile || false);
+          setApiKey(data.apiKey || null);
         }
       } catch {
         toast(t("profileLoadError"), "error");
@@ -1274,6 +1285,76 @@ export default function ProfilePage() {
             >
               <Upload className="w-4 h-4" />
               {t("importCsv")}
+            </Link>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* ═══════════════════════════ API KEY ═══════════════════════════ */}
+      <GlassCard>
+        <SectionHeader icon={Key} title={t("profileApiKeyTitle")} subtitle={t("profileApiKeyDesc")} />
+        <div className="space-y-4">
+          {/* Current key display */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 font-mono text-sm text-gray-700 dark:text-gray-300">
+              {apiKey
+                ? `mp_****${apiKey.slice(-4)}`
+                : t("profileApiKeyNone")}
+            </div>
+            {apiKey && (
+              <button
+                onClick={async () => {
+                  await navigator.clipboard.writeText(apiKey);
+                  setKeyCopied(true);
+                  toast(t("profileApiKeyCopied"), "success");
+                  setTimeout(() => setKeyCopied(false), 2000);
+                }}
+                className="flex items-center gap-2 px-4 py-3 bg-white/5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition"
+              >
+                {keyCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                {t("profileApiKeyCopy")}
+              </button>
+            )}
+          </div>
+
+          {/* Generate button */}
+          <button
+            onClick={async () => {
+              setGeneratingKey(true);
+              try {
+                const hex = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+                  .map((b) => b.toString(16).padStart(2, "0"))
+                  .join("");
+                const newKey = `mp_${hex}`;
+                const res = await fetch("/api/user/profile", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ apiKey: newKey }),
+                });
+                if (res.ok) {
+                  setApiKey(newKey);
+                  toast(t("profileApiKeyGenerated"), "success");
+                } else {
+                  toast(t("profileApiKeyError"), "error");
+                }
+              } catch {
+                toast(t("profileApiKeyError"), "error");
+              } finally {
+                setGeneratingKey(false);
+              }
+            }}
+            disabled={generatingKey}
+            className="flex items-center gap-2 px-4 py-2.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-xl text-sm font-medium hover:bg-cyan-500/20 transition disabled:opacity-50"
+          >
+            {generatingKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {t("profileApiKeyGenerate")}
+          </button>
+
+          {/* Link to docs */}
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <Webhook className="w-4 h-4" />
+            <Link href="/webhook-docs" className="underline hover:text-cyan-400 transition">
+              {t("profileApiKeyDocsLink")}
             </Link>
           </div>
         </div>
