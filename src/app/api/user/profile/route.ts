@@ -153,6 +153,38 @@ export async function GET() {
     // Average trade result
     const avgResult = totalTrades > 0 ? totalPnl / totalTrades : 0;
 
+    // Activity heatmap data: { "YYYY-MM-DD": count }
+    const activityMap: Record<string, number> = {};
+    trades.forEach((t) => {
+      const key = new Date(t.date).toISOString().split("T")[0];
+      activityMap[key] = (activityMap[key] || 0) + 1;
+    });
+
+    // Best month ever (month with highest P&L)
+    const monthlyPnl: Record<string, number> = {};
+    trades.forEach((t) => {
+      const d = new Date(t.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      monthlyPnl[key] = (monthlyPnl[key] || 0) + t.result;
+    });
+    const bestMonthEntry = Object.entries(monthlyPnl)
+      .sort((a, b) => b[1] - a[1])[0] || null;
+    const bestMonth = bestMonthEntry
+      ? { month: bestMonthEntry[0], pnl: Math.round(bestMonthEntry[1] * 100) / 100 }
+      : null;
+
+    // Grade / rank based on win rate + profit factor
+    const getGrade = () => {
+      if (totalTrades < 10) return { grade: "Débutant", color: "gray" };
+      const pf = profitFactor === Infinity ? 10 : profitFactor;
+      const score = winRate * 0.4 + pf * 15 + (totalTrades > 100 ? 10 : totalTrades / 10);
+      if (score >= 80) return { grade: "Élite", color: "purple" };
+      if (score >= 60) return { grade: "Expert", color: "cyan" };
+      if (score >= 45) return { grade: "Avancé", color: "green" };
+      if (score >= 30) return { grade: "Intermédiaire", color: "amber" };
+      return { grade: "Apprenti", color: "blue" };
+    };
+
     return NextResponse.json({
       ...user,
       stats: {
@@ -175,6 +207,9 @@ export async function GET() {
         mostUsedStrategy: mostUsedStrategy ? { name: mostUsedStrategy[0], count: mostUsedStrategy[1] } : null,
         totalWins: wins.length,
         totalLosses: losses.length,
+        activityMap,
+        bestMonth,
+        rank: getGrade(),
       },
     });
   } catch (error) {

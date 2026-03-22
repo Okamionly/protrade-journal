@@ -15,6 +15,7 @@ import {
   ArrowDownRight,
   Activity,
   Clock,
+  Zap,
 } from "lucide-react";
 import { fetchMultipleFredSeries, type FredSeriesData } from "@/lib/market/fred";
 import { useTranslation } from "@/i18n/context";
@@ -360,6 +361,128 @@ export default function MacroPage() {
           </p>
         </div>
       )}
+
+      {/* ============================================================ */}
+      {/*  MACRO IMPACT SUMMARY — Key indicators as compact pills      */}
+      {/* ============================================================ */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* DXY pill */}
+        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border ${
+          DXY_DATA.changePct >= 0
+            ? "bg-emerald-500/10 border-emerald-500/30"
+            : "bg-rose-500/10 border-rose-500/30"
+        }`}>
+          <DollarSign className="w-4 h-4 text-cyan-400" />
+          <span className="text-xs font-semibold text-[--text-primary]">DXY</span>
+          <span className="text-sm font-bold mono text-[--text-primary]">{DXY_DATA.value.toFixed(1)}</span>
+          <span className={`flex items-center gap-0.5 text-xs font-medium ${DXY_DATA.changePct >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+            {DXY_DATA.changePct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            {DXY_DATA.changePct >= 0 ? "+" : ""}{DXY_DATA.changePct.toFixed(2)}%
+          </span>
+        </div>
+
+        {/* US 10Y yield pill */}
+        {(() => {
+          const us10y = BOND_YIELDS.us.find((b) => b.tenor === "10A");
+          if (!us10y) return null;
+          return (
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border ${
+              us10y.change >= 0
+                ? "bg-rose-500/10 border-rose-500/30"
+                : "bg-emerald-500/10 border-emerald-500/30"
+            }`}>
+              <BarChart3 className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-semibold text-[--text-primary]">US 10Y</span>
+              <span className="text-sm font-bold mono text-[--text-primary]">{us10y.value.toFixed(2)}%</span>
+              <span className={`flex items-center gap-0.5 text-xs font-medium ${us10y.change >= 0 ? "text-rose-400" : "text-emerald-400"}`}>
+                {us10y.change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                {us10y.change >= 0 ? "+" : ""}{us10y.change.toFixed(2)}
+              </span>
+            </div>
+          );
+        })()}
+
+        {/* Gold direction pill (derived from DXY inverse) */}
+        {(() => {
+          // Gold generally moves inverse to DXY
+          const goldUp = DXY_DATA.changePct < 0;
+          return (
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border ${
+              goldUp
+                ? "bg-amber-500/10 border-amber-500/30"
+                : "bg-rose-500/10 border-rose-500/30"
+            }`}>
+              <span className="text-base">🥇</span>
+              <span className="text-xs font-semibold text-[--text-primary]">Or (XAU)</span>
+              <span className={`flex items-center gap-0.5 text-xs font-medium ${goldUp ? "text-amber-400" : "text-rose-400"}`}>
+                {goldUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                {goldUp ? "Haussier" : "Baissier"}
+              </span>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* ============================================================ */}
+      {/*  IMPACT SUR LE TRADING — Simple rules-based analysis         */}
+      {/* ============================================================ */}
+      {(() => {
+        const impacts: { text: string; type: "bullish" | "bearish" | "neutral" }[] = [];
+
+        // DXY impact
+        if (DXY_DATA.changePct > 0.1) {
+          impacts.push({ text: "DXY en hausse → Pression baissiere sur EUR/USD, GBP/USD", type: "bearish" });
+          impacts.push({ text: "Dollar fort → Matieres premieres sous pression (or, petrole)", type: "bearish" });
+        } else if (DXY_DATA.changePct < -0.1) {
+          impacts.push({ text: "DXY en baisse → Support haussier pour EUR/USD, GBP/USD", type: "bullish" });
+          impacts.push({ text: "Dollar faible → Soutien aux matieres premieres (or, petrole)", type: "bullish" });
+        } else {
+          impacts.push({ text: "DXY stable → Pas de pression directionnelle forte sur le forex", type: "neutral" });
+        }
+
+        // Yields impact
+        const us10y = BOND_YIELDS.us.find((b) => b.tenor === "10A");
+        if (us10y) {
+          if (us10y.change > 0.03) {
+            impacts.push({ text: "Yields en hausse → Dollar fort, or sous pression", type: "bearish" });
+          } else if (us10y.change < -0.03) {
+            impacts.push({ text: "Yields en baisse → Dollar sous pression, or soutenu", type: "bullish" });
+          }
+        }
+
+        // Yield curve inversion
+        if (usYieldInverted) {
+          impacts.push({ text: "Courbe des taux inversee → Signal de recession, risk-off", type: "bearish" });
+        }
+
+        return (
+          <div className="glass rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="w-5 h-5 text-amber-400" />
+              <h2 className="font-semibold text-[--text-primary]">Impact sur le Trading</h2>
+            </div>
+            <div className="space-y-2">
+              {impacts.map((impact, i) => (
+                <div
+                  key={i}
+                  className={`flex items-start gap-2 px-3 py-2 rounded-xl text-xs font-medium ${
+                    impact.type === "bullish"
+                      ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                      : impact.type === "bearish"
+                      ? "bg-rose-500/10 border border-rose-500/20 text-rose-400"
+                      : "bg-[--bg-secondary]/30 border border-[--border-subtle] text-[--text-secondary]"
+                  }`}
+                >
+                  <span className="mt-0.5 flex-shrink-0">
+                    {impact.type === "bullish" ? <TrendingUp className="w-3.5 h-3.5" /> : impact.type === "bearish" ? <TrendingDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
+                  </span>
+                  <span>{impact.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ============================================================ */}
       {/*  SECTION 1 — Central Bank Rates                              */}

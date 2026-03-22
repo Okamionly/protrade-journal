@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useToast } from "@/components/Toast";
 import { signOut } from "next-auth/react";
 import {
@@ -45,6 +45,11 @@ import {
   Copy,
   RefreshCw,
   Webhook,
+  Package,
+  Settings2,
+  Hash,
+  Percent,
+  FileSpreadsheet,
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
@@ -70,6 +75,9 @@ interface TradingStats {
   mostUsedStrategy: { name: string; count: number } | null;
   totalWins: number;
   totalLosses: number;
+  activityMap: Record<string, number>;
+  bestMonth: { month: string; pnl: number } | null;
+  rank: { grade: string; color: string };
 }
 
 interface UserProfile {
@@ -211,6 +219,138 @@ function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementTyp
   );
 }
 
+// ── Activity Heatmap (GitHub-style) ──────────────────────────────────
+function ActivityHeatmap({ activityMap, totalThisYear }: { activityMap: Record<string, number>; totalThisYear: number }) {
+  const weeks = useMemo(() => {
+    const today = new Date();
+    const result: { date: string; count: number; day: number }[][] = [];
+    const start = new Date(today);
+    start.setDate(start.getDate() - 364);
+    // Align to Sunday
+    start.setDate(start.getDate() - start.getDay());
+
+    let currentWeek: { date: string; count: number; day: number }[] = [];
+    const cursor = new Date(start);
+
+    while (cursor <= today) {
+      const key = cursor.toISOString().split("T")[0];
+      currentWeek.push({
+        date: key,
+        count: activityMap[key] || 0,
+        day: cursor.getDay(),
+      });
+      if (currentWeek.length === 7) {
+        result.push(currentWeek);
+        currentWeek = [];
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    if (currentWeek.length > 0) result.push(currentWeek);
+    return result;
+  }, [activityMap]);
+
+  const monthLabels = useMemo(() => {
+    const labels: { label: string; index: number }[] = [];
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(start.getDate() - 364);
+    start.setDate(start.getDate() - start.getDay());
+
+    let lastMonth = -1;
+    const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+    const cursor = new Date(start);
+    let weekIdx = 0;
+
+    while (cursor <= today) {
+      const m = cursor.getMonth();
+      if (m !== lastMonth && cursor.getDay() === 0) {
+        labels.push({ label: monthNames[m], index: weekIdx });
+        lastMonth = m;
+      }
+      if (cursor.getDay() === 6) weekIdx++;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return labels;
+  }, [activityMap]);
+
+  const getColor = (count: number) => {
+    if (count === 0) return "bg-gray-200 dark:bg-gray-800";
+    if (count <= 2) return "bg-emerald-300 dark:bg-emerald-700";
+    if (count <= 5) return "bg-emerald-500 dark:bg-emerald-500";
+    return "bg-emerald-700 dark:bg-emerald-300";
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {totalThisYear} trades cette année
+        </p>
+        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+          <span>Moins</span>
+          <div className="w-2.5 h-2.5 rounded-sm bg-gray-200 dark:bg-gray-800" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-emerald-300 dark:bg-emerald-700" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500 dark:bg-emerald-500" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-emerald-700 dark:bg-emerald-300" />
+          <span>Plus</span>
+        </div>
+      </div>
+      {/* Month labels */}
+      <div className="overflow-x-auto pb-2">
+        <div className="min-w-[720px]">
+          <div className="flex gap-[3px] ml-8 mb-1">
+            {monthLabels.map((m, i) => (
+              <div
+                key={i}
+                className="text-[10px] text-gray-500 dark:text-gray-400"
+                style={{ position: "relative", left: `${m.index * 13}px`, marginRight: `-${(monthLabels[i + 1]?.index ?? weeks.length) - m.index > 4 ? 0 : 8}px` }}
+              >
+                {m.label}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-[3px]">
+            {/* Day labels */}
+            <div className="flex flex-col gap-[3px] shrink-0 w-6">
+              <div className="h-[11px]" />
+              <div className="h-[11px] text-[9px] text-gray-500 dark:text-gray-400 flex items-center">Lun</div>
+              <div className="h-[11px]" />
+              <div className="h-[11px] text-[9px] text-gray-500 dark:text-gray-400 flex items-center">Mer</div>
+              <div className="h-[11px]" />
+              <div className="h-[11px] text-[9px] text-gray-500 dark:text-gray-400 flex items-center">Ven</div>
+              <div className="h-[11px]" />
+            </div>
+            {weeks.map((week, wi) => (
+              <div key={wi} className="flex flex-col gap-[3px]">
+                {week.map((day, di) => (
+                  <div
+                    key={di}
+                    className={`w-[11px] h-[11px] rounded-sm ${getColor(day.count)} transition-colors hover:ring-1 hover:ring-gray-400 dark:hover:ring-gray-500 cursor-default`}
+                    title={`${day.date}: ${day.count} trade${day.count !== 1 ? "s" : ""}`}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Trading Preferences (localStorage) ──────────────────────────────
+const TRADING_SESSIONS = [
+  { value: "london", label: "Londres" },
+  { value: "newYork", label: "New York" },
+  { value: "asian", label: "Asiatique" },
+  { value: "overlap", label: "Overlap" },
+];
+
+const DEFAULT_ASSETS = [
+  "XAUUSD", "EURUSD", "GBPUSD", "USDJPY", "GBPJPY", "EURJPY",
+  "US30", "NAS100", "SPX500", "BTCUSD", "ETHUSD",
+];
+
 // ══════════════════════════════════════════════════════════════════════
 // PROFILE PAGE
 // ══════════════════════════════════════════════════════════════════════
@@ -265,6 +405,15 @@ export default function ProfilePage() {
   const [publicProfile, setPublicProfile] = useState(false);
   const [savingPublicProfile, setSavingPublicProfile] = useState(false);
 
+  // Trading preferences
+  const [defaultAsset, setDefaultAsset] = useState("");
+  const [defaultLotSize, setDefaultLotSize] = useState("");
+  const [riskPercentage, setRiskPercentage] = useState("");
+  const [preferredTradingSession, setPreferredTradingSession] = useState("");
+
+  // Export state
+  const [exportingAll, setExportingAll] = useState(false);
+
   // Load user profile
   useEffect(() => {
     const fetchProfile = async () => {
@@ -301,6 +450,12 @@ export default function ProfilePage() {
     setTimezone(savedTimezone);
     setNotifications(savedNotifications);
     if (savedAvatar) setAvatarUrl(savedAvatar);
+
+    // Trading preferences
+    setDefaultAsset(localStorage.getItem("trading-default-asset") || "");
+    setDefaultLotSize(localStorage.getItem("trading-default-lotsize") || "");
+    setRiskPercentage(localStorage.getItem("trading-risk-pct") || "");
+    setPreferredTradingSession(localStorage.getItem("trading-preferred-session") || "");
   }, []);
 
   // Save profile
@@ -393,6 +548,89 @@ export default function ProfilePage() {
     } catch {
       toast(t("exportError"), "error");
     }
+  };
+
+  // Export all data (CSV trades + CSV plans + stats JSON)
+  const handleExportAllData = async () => {
+    setExportingAll(true);
+    try {
+      // 1. Export trades CSV
+      const tradesRes = await fetch("/api/trades/export");
+      if (tradesRes.ok) {
+        const blob = await tradesRes.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `marketphase-trades-${new Date().toISOString().split("T")[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      // Small delay between downloads
+      await new Promise((r) => setTimeout(r, 500));
+
+      // 2. Export daily plans CSV
+      const plansRes = await fetch("/api/daily-plan/export");
+      if (plansRes.ok) {
+        const blob = await plansRes.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `marketphase-plans-${new Date().toISOString().split("T")[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      await new Promise((r) => setTimeout(r, 500));
+
+      // 3. Export stats summary JSON
+      if (profile?.stats) {
+        const statsData = {
+          exportDate: new Date().toISOString(),
+          totalTrades: profile.stats.totalTrades,
+          winRate: profile.stats.winRate,
+          profitFactor: profile.stats.profitFactor,
+          totalPnl: profile.stats.totalPnl,
+          bestTrade: profile.stats.bestTrade,
+          worstTrade: profile.stats.worstTrade,
+          bestWinStreak: profile.stats.bestWinStreak,
+          bestLossStreak: profile.stats.bestLossStreak,
+          avgRR: profile.stats.avgRR,
+          avgResult: profile.stats.avgResult,
+          favoriteAssets: profile.stats.favoriteAssets,
+          bestMonth: profile.stats.bestMonth,
+          rank: profile.stats.rank,
+        };
+        const blob = new Blob([JSON.stringify(statsData, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `marketphase-stats-${new Date().toISOString().split("T")[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      toast("Toutes les données ont été exportées", "success");
+    } catch {
+      toast("Erreur lors de l'export", "error");
+    } finally {
+      setExportingAll(false);
+    }
+  };
+
+  // Save trading preferences
+  const handleSaveTradingPreferences = () => {
+    localStorage.setItem("trading-default-asset", defaultAsset);
+    localStorage.setItem("trading-default-lotsize", defaultLotSize);
+    localStorage.setItem("trading-risk-pct", riskPercentage);
+    localStorage.setItem("trading-preferred-session", preferredTradingSession);
+    toast("Préférences de trading sauvegardées", "success");
   };
 
   // Delete account
@@ -583,6 +821,32 @@ export default function ProfilePage() {
 
   const stats = profile?.stats;
 
+  // Compute total trades this year for heatmap
+  const tradesThisYear = useMemo(() => {
+    if (!stats?.activityMap) return 0;
+    const year = new Date().getFullYear();
+    return Object.entries(stats.activityMap)
+      .filter(([date]) => date.startsWith(String(year)))
+      .reduce((sum, [, count]) => sum + count, 0);
+  }, [stats?.activityMap]);
+
+  // Format best month label
+  const formatMonth = useCallback((monthStr: string) => {
+    const [y, m] = monthStr.split("-");
+    const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+    return `${monthNames[parseInt(m, 10) - 1]} ${y}`;
+  }, []);
+
+  // Rank color mapping
+  const rankColorMap: Record<string, string> = {
+    gray: "from-gray-500/20 to-gray-500/5 text-gray-400 border-gray-500/20",
+    blue: "from-blue-500/20 to-blue-500/5 text-blue-400 border-blue-500/20",
+    amber: "from-amber-500/20 to-amber-500/5 text-amber-400 border-amber-500/20",
+    green: "from-emerald-500/20 to-emerald-500/5 text-emerald-400 border-emerald-500/20",
+    cyan: "from-cyan-500/20 to-cyan-500/5 text-cyan-400 border-cyan-500/20",
+    purple: "from-purple-500/20 to-purple-500/5 text-purple-400 border-purple-500/20",
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-12">
       {/* ═══════════════════════════ PAGE HEADER ═══════════════════════════ */}
@@ -710,6 +974,72 @@ export default function ProfilePage() {
           </div>
         </div>
       </GlassCard>
+
+      {/* ═══════════════════════════ TRADING SUMMARY CARD ═══════════════════════════ */}
+      {stats && stats.totalTrades > 0 && (
+        <GlassCard className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-purple-500/5" />
+          <div className="relative">
+            <SectionHeader icon={Award} title="Résumé de Performance" subtitle="Vue d'ensemble de votre parcours de trading" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {/* Total trades */}
+              <div className="bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border border-cyan-500/20 rounded-xl p-4 text-center">
+                <BarChart3 className="w-5 h-5 text-cyan-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalTrades}</p>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-1">Trades total</p>
+              </div>
+              {/* Account age */}
+              <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-xl p-4 text-center">
+                <Calendar className="w-5 h-5 text-blue-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {profile?.createdAt
+                    ? Math.max(1, Math.floor((Date.now() - new Date(profile.createdAt).getTime()) / (1000 * 60 * 60 * 24 * 30)))
+                    : 0}
+                </p>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-1">Mois d&apos;ancienneté</p>
+              </div>
+              {/* Best month */}
+              <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 text-center">
+                <TrendingUp className="w-5 h-5 text-emerald-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {stats.bestMonth ? `+${stats.bestMonth.pnl.toFixed(0)}` : "N/A"}
+                </p>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-1">
+                  {stats.bestMonth ? formatMonth(stats.bestMonth.month) : "Meilleur mois"}
+                </p>
+              </div>
+              {/* Longest win streak */}
+              <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 rounded-xl p-4 text-center">
+                <Flame className="w-5 h-5 text-amber-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.bestWinStreak}</p>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-1">Meilleure série</p>
+              </div>
+              {/* Favorite asset */}
+              <div className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 rounded-xl p-4 text-center">
+                <Star className="w-5 h-5 text-purple-400 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-gray-900 dark:text-white truncate">
+                  {stats.favoriteAssets[0]?.asset || "N/A"}
+                </p>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-1">Actif favori</p>
+              </div>
+              {/* Rank / Grade */}
+              <div className={`bg-gradient-to-br ${rankColorMap[stats.rank?.color] || rankColorMap.gray} border rounded-xl p-4 text-center`}>
+                <Shield className="w-5 h-5 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.rank?.grade || "N/A"}</p>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-1">Rang actuel</p>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      )}
+
+      {/* ═══════════════════════════ ACTIVITY HEATMAP ═══════════════════════════ */}
+      {stats && stats.activityMap && Object.keys(stats.activityMap).length > 0 && (
+        <GlassCard>
+          <SectionHeader icon={Activity} title="Activité de Trading" subtitle="Votre historique de trading sur 365 jours" />
+          <ActivityHeatmap activityMap={stats.activityMap} totalThisYear={tradesThisYear} />
+        </GlassCard>
+      )}
 
       {/* ═══════════════════════════ TRADING STATISTICS ═══════════════════════════ */}
       {stats && stats.totalTrades > 0 && (
@@ -1213,10 +1543,119 @@ export default function ProfilePage() {
         </div>
       </GlassCard>
 
+      {/* ═══════════════════════════ TRADING PREFERENCES ═══════════════════════════ */}
+      <GlassCard>
+        <SectionHeader icon={Settings2} title="Préférences de Trading" subtitle="Valeurs par défaut pour vos formulaires de trade" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Default Asset */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
+              <Star className="w-3.5 h-3.5 text-amber-400" />
+              Actif par défaut
+            </label>
+            <select
+              value={defaultAsset}
+              onChange={(e) => setDefaultAsset(e.target.value)}
+              className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition"
+            >
+              <option value="" className="bg-white dark:bg-gray-900">Aucun</option>
+              {DEFAULT_ASSETS.map((a) => (
+                <option key={a} value={a} className="bg-white dark:bg-gray-900">{a}</option>
+              ))}
+            </select>
+          </div>
+          {/* Default Lot Size */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
+              <Hash className="w-3.5 h-3.5 text-blue-400" />
+              Taille de lot par défaut
+            </label>
+            <input
+              type="number"
+              value={defaultLotSize}
+              onChange={(e) => setDefaultLotSize(e.target.value)}
+              className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition"
+              placeholder="0.01"
+              min="0.01"
+              step="0.01"
+            />
+          </div>
+          {/* Risk Percentage */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
+              <Percent className="w-3.5 h-3.5 text-red-400" />
+              Risque par trade (%)
+            </label>
+            <input
+              type="number"
+              value={riskPercentage}
+              onChange={(e) => setRiskPercentage(e.target.value)}
+              className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition"
+              placeholder="1"
+              min="0.1"
+              max="10"
+              step="0.1"
+            />
+          </div>
+          {/* Preferred Trading Session */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-purple-400" />
+              Session préférée
+            </label>
+            <select
+              value={preferredTradingSession}
+              onChange={(e) => setPreferredTradingSession(e.target.value)}
+              className="w-full bg-white dark:bg-white/5 border border-gray-300 dark:border-gray-700 rounded-xl px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition"
+            >
+              <option value="" className="bg-white dark:bg-gray-900">Aucune préférence</option>
+              {TRADING_SESSIONS.map((s) => (
+                <option key={s.value} value={s.value} className="bg-white dark:bg-gray-900">{s.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="mt-5 flex items-center justify-between">
+          <p className="text-xs text-gray-500 dark:text-gray-500">
+            Stocké localement sur votre navigateur
+          </p>
+          <button
+            onClick={handleSaveTradingPreferences}
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-medium hover:from-cyan-400 hover:to-blue-400 transition shadow-lg shadow-cyan-500/20"
+          >
+            <Save className="w-4 h-4" />
+            Sauvegarder
+          </button>
+        </div>
+      </GlassCard>
+
       {/* ═══════════════════════════ DATA & PRIVACY ═══════════════════════════ */}
       <GlassCard>
         <SectionHeader icon={Download} title={t("dataPrivacy")} subtitle={t("profileDataPrivacyDesc")} />
         <div className="space-y-4">
+          {/* Export ALL data */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 border border-cyan-500/20 rounded-xl">
+            <div>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                <Package className="w-4 h-4 text-cyan-400" />
+                Exporter toutes mes données
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Télécharge vos trades (CSV), plans journaliers (CSV) et statistiques (JSON)
+              </p>
+            </div>
+            <button
+              onClick={handleExportAllData}
+              disabled={exportingAll}
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-medium hover:from-cyan-400 hover:to-blue-400 transition disabled:opacity-50 shadow-lg shadow-cyan-500/20 shrink-0"
+            >
+              {exportingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+              Tout exporter
+            </button>
+          </div>
+
+          <div className="border-t border-gray-200 dark:border-gray-800" />
+
           {/* Export JSON */}
           <div className="flex items-center justify-between">
             <div>

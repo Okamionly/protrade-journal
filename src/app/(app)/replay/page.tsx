@@ -34,6 +34,8 @@ import {
   Flag,
   SkipBack,
   SkipForward,
+  MessageSquare,
+  Triangle,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -53,6 +55,33 @@ interface KeyMoment {
   label: string;
   color: string;
   icon: "entry" | "down" | "up" | "exit";
+}
+
+interface TradeAnnotation {
+  id: string;
+  candleIndex: number;
+  type: "entry" | "exit" | "note";
+  price: number;
+  text?: string;
+  timestamp: number;
+}
+
+/* ─── Annotation localStorage helpers ─── */
+
+function loadAnnotations(tradeId: string): TradeAnnotation[] {
+  try {
+    const raw = localStorage.getItem(`replay-annotations-${tradeId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveAnnotations(tradeId: string, annotations: TradeAnnotation[]) {
+  localStorage.setItem(
+    `replay-annotations-${tradeId}`,
+    JSON.stringify(annotations)
+  );
 }
 
 /* ─── Helpers ─── */
@@ -274,12 +303,14 @@ function AnimatedCandleChart({
   candles,
   keyMoments,
   onSeek,
+  annotations,
 }: {
   trade: Trade;
   progress: number;
   candles: PricePoint[];
   keyMoments: KeyMoment[];
   onSeek: (t: number) => void;
+  annotations: TradeAnnotation[];
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const isLong = trade.direction === "LONG";
@@ -734,6 +765,97 @@ function AnimatedCandleChart({
         </g>
       )}
 
+      {/* Trade annotations */}
+      {annotations
+        .filter((a) => a.candleIndex < visibleCount)
+        .map((a) => {
+          const candle = candles[a.candleIndex];
+          if (!candle) return null;
+          const cx = toX(candle.t);
+          const cy = toY(a.price);
+
+          if (a.type === "entry") {
+            // Green upward triangle
+            return (
+              <g key={a.id}>
+                <polygon
+                  points={`${cx},${cy - 10} ${cx + 7},${cy + 3} ${cx - 7},${cy + 3}`}
+                  fill="#10b981"
+                  stroke="rgba(0,0,0,0.4)"
+                  strokeWidth="0.5"
+                  opacity="0.95"
+                />
+                <text
+                  x={cx}
+                  y={cy - 14}
+                  textAnchor="middle"
+                  fontSize="7"
+                  fill="#10b981"
+                  fontFamily="monospace"
+                  fontWeight="bold"
+                >
+                  ENT
+                </text>
+              </g>
+            );
+          }
+          if (a.type === "exit") {
+            // Red downward triangle
+            return (
+              <g key={a.id}>
+                <polygon
+                  points={`${cx},${cy + 10} ${cx + 7},${cy - 3} ${cx - 7},${cy - 3}`}
+                  fill="#f43f5e"
+                  stroke="rgba(0,0,0,0.4)"
+                  strokeWidth="0.5"
+                  opacity="0.95"
+                />
+                <text
+                  x={cx}
+                  y={cy + 20}
+                  textAnchor="middle"
+                  fontSize="7"
+                  fill="#f43f5e"
+                  fontFamily="monospace"
+                  fontWeight="bold"
+                >
+                  SOR
+                </text>
+              </g>
+            );
+          }
+          // Note: yellow dot
+          return (
+            <g key={a.id}>
+              <circle cx={cx} cy={cy} r="5" fill="#eab308" opacity="0.9" />
+              <circle cx={cx} cy={cy} r="2.5" fill="#fef08a" opacity="0.9" />
+              {a.text && (
+                <>
+                  <rect
+                    x={cx + 8}
+                    y={cy - 14}
+                    width={Math.min(a.text.length * 5 + 8, 120)}
+                    height={16}
+                    rx="3"
+                    fill="rgba(0,0,0,0.75)"
+                    stroke="#eab308"
+                    strokeWidth="0.5"
+                  />
+                  <text
+                    x={cx + 12}
+                    y={cy - 3}
+                    fontSize="8"
+                    fill="#eab308"
+                    fontFamily="monospace"
+                  >
+                    {a.text.length > 20 ? a.text.slice(0, 20) + "..." : a.text}
+                  </text>
+                </>
+              )}
+            </g>
+          );
+        })}
+
       {/* Time axis labels */}
       {[0, 0.25, 0.5, 0.75, 1].map((t) => (
         <text
@@ -979,6 +1101,11 @@ export default function ReplayPage() {
   const animRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
 
+  // Annotation state
+  const [annotations, setAnnotations] = useState<TradeAnnotation[]>([]);
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [noteText, setNoteText] = useState("");
+
   // Load notes from localStorage
   useEffect(() => {
     try {
@@ -1050,7 +1177,12 @@ export default function ReplayPage() {
     setIsPlaying(false);
     setProgress(0);
     setShowAnalysis(false);
-    if (selected) setCurrentNote(notes[selected.id] || "");
+    setShowNoteInput(false);
+    setNoteText("");
+    if (selected) {
+      setCurrentNote(notes[selected.id] || "");
+      setAnnotations(loadAnnotations(selected.id));
+    }
   }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Animation loop
@@ -1116,6 +1248,113 @@ export default function ReplayPage() {
       return next;
     });
   };
+
+  // Annotation placement
+  const placeAnnotation = useCallback(
+    (type: "entry" | "exit" | "note", text?: string) => {
+      if (!selected || candles.length === 0) return;
+      const visibleCount = Math.max(1, Math.floor(progress * candles.length));
+      const candleIndex = Math.min(visibleCount - 1, candles.length - 1);
+      const candle = candles[candleIndex];
+      if (!candle) return;
+
+      const newAnnotation: TradeAnnotation = {
+        id: `${type}-${Date.now()}`,
+        candleIndex,
+        type,
+        price: candle.close,
+        text,
+        timestamp: Date.now(),
+      };
+
+      const updated = [...annotations, newAnnotation];
+      setAnnotations(updated);
+      saveAnnotations(selected.id, updated);
+    },
+    [selected, candles, progress, annotations]
+  );
+
+  const removeLastAnnotation = useCallback(() => {
+    if (!selected || annotations.length === 0) return;
+    const updated = annotations.slice(0, -1);
+    setAnnotations(updated);
+    saveAnnotations(selected.id, updated);
+  }, [selected, annotations]);
+
+  const clearAnnotations = useCallback(() => {
+    if (!selected) return;
+    setAnnotations([]);
+    saveAnnotations(selected.id, []);
+  }, [selected]);
+
+  // Session stats computed from annotations
+  const sessionStats = useMemo(() => {
+    if (!selected || candles.length === 0) return null;
+
+    const entryAnnotation = annotations.find((a) => a.type === "entry");
+    const exitAnnotation = annotations.find((a) => a.type === "exit");
+    const isLong = selected.direction === "LONG";
+    const visibleCount = Math.max(1, Math.floor(progress * candles.length));
+    const lastCandle = candles[Math.min(visibleCount - 1, candles.length - 1)];
+    if (!lastCandle) return null;
+
+    const currentPrice = lastCandle.close;
+    const entryPrice = entryAnnotation?.price ?? null;
+    const exitPrice = exitAnnotation?.price ?? null;
+
+    // P&L courant
+    let currentPnl: number | null = null;
+    if (entryPrice !== null) {
+      const refPrice = exitPrice ?? currentPrice;
+      currentPnl = isLong ? refPrice - entryPrice : entryPrice - refPrice;
+    }
+
+    // MFE / MAE from visible candles since entry annotation
+    let mfe = 0;
+    let mae = 0;
+    if (entryAnnotation) {
+      for (let i = entryAnnotation.candleIndex; i < visibleCount; i++) {
+        const c = candles[i];
+        if (!c) continue;
+        const favExcursion = isLong
+          ? c.high - entryAnnotation.price
+          : entryAnnotation.price - c.low;
+        const advExcursion = isLong
+          ? entryAnnotation.price - c.low
+          : c.high - entryAnnotation.price;
+        if (favExcursion > mfe) mfe = favExcursion;
+        if (advExcursion > mae) mae = advExcursion;
+      }
+    }
+
+    // Temps en trade (en bougies)
+    let timeInTrade: number | null = null;
+    if (entryAnnotation) {
+      const endIdx = exitAnnotation
+        ? exitAnnotation.candleIndex
+        : Math.min(visibleCount - 1, candles.length - 1);
+      timeInTrade = endIdx - entryAnnotation.candleIndex;
+    }
+
+    // R:R au prix courant
+    const riskDist = Math.abs(selected.entry - selected.sl);
+    let currentRR: number | null = null;
+    if (entryPrice !== null && riskDist > 0) {
+      const refPrice = exitPrice ?? currentPrice;
+      const pnl = isLong ? refPrice - entryPrice : entryPrice - refPrice;
+      currentRR = pnl / riskDist;
+    }
+
+    return {
+      currentPnl,
+      mfe,
+      mae,
+      timeInTrade,
+      currentRR,
+      hasEntry: entryPrice !== null,
+      hasExit: exitPrice !== null,
+    };
+  }, [selected, annotations, candles, progress]);
 
   const navigate = useCallback(
     (dir: number) => {
@@ -1361,11 +1600,11 @@ export default function ReplayPage() {
                     className="w-3.5 h-3.5"
                     style={{ color: "var(--text-muted)" }}
                   />
-                  {[1, 2, 5].map((s) => (
+                  {[0.5, 1, 2, 5, 10].map((s) => (
                     <button
                       key={s}
                       onClick={() => setSpeed(s)}
-                      className="px-2 py-0.5 rounded text-xs mono transition-all"
+                      className="px-2 py-0.5 rounded-full text-xs mono transition-all"
                       style={{
                         background:
                           speed === s
@@ -1536,8 +1775,260 @@ export default function ReplayPage() {
                 candles={candles}
                 keyMoments={keyMoments}
                 onSeek={handleSeek}
+                annotations={annotations}
               />
             </div>
+
+            {/* ─── Annotation Buttons ─── */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span
+                className="text-xs font-medium mr-1"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Annotations :
+              </span>
+              <button
+                onClick={() => placeAnnotation("entry")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-[1.03]"
+                style={{
+                  background: "rgba(16,185,129,0.12)",
+                  color: "#10b981",
+                  border: "1px solid rgba(16,185,129,0.25)",
+                }}
+              >
+                <Triangle className="w-3 h-3" style={{ transform: "rotate(0deg)" }} />
+                Entr\u00E9e
+              </button>
+              <button
+                onClick={() => placeAnnotation("exit")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-[1.03]"
+                style={{
+                  background: "rgba(244,63,94,0.12)",
+                  color: "#f43f5e",
+                  border: "1px solid rgba(244,63,94,0.25)",
+                }}
+              >
+                <Triangle className="w-3 h-3" style={{ transform: "rotate(180deg)" }} />
+                Sortie
+              </button>
+              {showNoteInput ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && noteText.trim()) {
+                        placeAnnotation("note", noteText.trim());
+                        setNoteText("");
+                        setShowNoteInput(false);
+                      }
+                      if (e.key === "Escape") {
+                        setShowNoteInput(false);
+                        setNoteText("");
+                      }
+                    }}
+                    placeholder="Texte de la note..."
+                    autoFocus
+                    className="px-2 py-1 rounded-lg text-xs outline-none"
+                    style={{
+                      background: "var(--bg-primary)",
+                      color: "var(--text-primary)",
+                      border: "1px solid #eab308",
+                      width: "160px",
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (noteText.trim()) {
+                        placeAnnotation("note", noteText.trim());
+                        setNoteText("");
+                      }
+                      setShowNoteInput(false);
+                    }}
+                    className="px-2 py-1 rounded-lg text-xs font-medium"
+                    style={{
+                      background: "rgba(234,179,8,0.15)",
+                      color: "#eab308",
+                    }}
+                  >
+                    OK
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowNoteInput(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-[1.03]"
+                  style={{
+                    background: "rgba(234,179,8,0.12)",
+                    color: "#eab308",
+                    border: "1px solid rgba(234,179,8,0.25)",
+                  }}
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  Note
+                </button>
+              )}
+              {annotations.length > 0 && (
+                <>
+                  <div
+                    className="w-px h-5 mx-1"
+                    style={{ background: "var(--border)" }}
+                  />
+                  <button
+                    onClick={removeLastAnnotation}
+                    className="px-2 py-1 rounded-lg text-[10px] transition-opacity hover:opacity-80"
+                    style={{
+                      color: "var(--text-muted)",
+                      background: "var(--bg-secondary)",
+                    }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={clearAnnotations}
+                    className="px-2 py-1 rounded-lg text-[10px] transition-opacity hover:opacity-80"
+                    style={{
+                      color: "#f43f5e",
+                      background: "rgba(244,63,94,0.08)",
+                    }}
+                  >
+                    Tout effacer
+                  </button>
+                  <span
+                    className="text-[10px] mono"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    ({annotations.length})
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* ─── Session Statistics Panel ─── */}
+            {sessionStats && sessionStats.hasEntry && (
+              <div
+                className="mt-4 rounded-xl p-4"
+                style={{
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--border)",
+                  animation: "fadeIn 0.3s ease-out",
+                }}
+              >
+                <p
+                  className="text-xs font-semibold mb-3 flex items-center gap-1.5"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                  Statistiques de session
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {/* P&L courant */}
+                  <div className="text-center">
+                    <p
+                      className="text-[10px] mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      P&L {sessionStats.hasExit ? "final" : "courant"}
+                    </p>
+                    <p
+                      className="text-sm font-bold mono"
+                      style={{
+                        color:
+                          sessionStats.currentPnl !== null &&
+                          sessionStats.currentPnl >= 0
+                            ? "#10b981"
+                            : "#f43f5e",
+                      }}
+                    >
+                      {sessionStats.currentPnl !== null
+                        ? `${sessionStats.currentPnl >= 0 ? "+" : ""}${sessionStats.currentPnl.toFixed(
+                            selected.entry > 100 ? 2 : selected.entry > 10 ? 3 : 5
+                          )}`
+                        : "\u2014"}
+                    </p>
+                  </div>
+
+                  {/* MFE */}
+                  <div className="text-center">
+                    <p
+                      className="text-[10px] mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      MFE
+                    </p>
+                    <p
+                      className="text-sm font-bold mono"
+                      style={{ color: "#10b981" }}
+                    >
+                      +{sessionStats.mfe.toFixed(
+                        selected.entry > 100 ? 2 : selected.entry > 10 ? 3 : 5
+                      )}
+                    </p>
+                  </div>
+
+                  {/* MAE */}
+                  <div className="text-center">
+                    <p
+                      className="text-[10px] mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      MAE
+                    </p>
+                    <p
+                      className="text-sm font-bold mono"
+                      style={{ color: "#f43f5e" }}
+                    >
+                      -{sessionStats.mae.toFixed(
+                        selected.entry > 100 ? 2 : selected.entry > 10 ? 3 : 5
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Temps en trade */}
+                  <div className="text-center">
+                    <p
+                      className="text-[10px] mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Temps en trade
+                    </p>
+                    <p
+                      className="text-sm font-bold mono"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {sessionStats.timeInTrade !== null
+                        ? `${sessionStats.timeInTrade} bougies`
+                        : "\u2014"}
+                    </p>
+                  </div>
+
+                  {/* R:R au prix courant */}
+                  <div className="text-center">
+                    <p
+                      className="text-[10px] mb-1"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      R:R actuel
+                    </p>
+                    <p
+                      className="text-sm font-bold mono"
+                      style={{
+                        color:
+                          sessionStats.currentRR !== null &&
+                          sessionStats.currentRR >= 0
+                            ? "#10b981"
+                            : "#f43f5e",
+                      }}
+                    >
+                      {sessionStats.currentRR !== null
+                        ? `${sessionStats.currentRR >= 0 ? "+" : ""}${sessionStats.currentRR.toFixed(2)}R`
+                        : "\u2014"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Key Moments Timeline */}
             <div className="mt-4">

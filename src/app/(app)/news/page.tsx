@@ -14,7 +14,10 @@ import {
   Filter,
   Zap,
   ChevronDown,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
+import { useTrades } from "@/hooks/useTrades";
 
 // --------------- Types ---------------
 
@@ -120,6 +123,76 @@ function extractTrendingTopics(articles: NewsItem[], count = 8): string[] {
     .map(([w]) => w);
 }
 
+// --------------- Sentiment Analysis ---------------
+
+const BULLISH_KEYWORDS = ["rally", "surge", "gain", "bullish", "rise", "buy", "up", "soar", "jump", "climb", "record", "high", "boom", "breakout"];
+const BEARISH_KEYWORDS = ["crash", "fall", "drop", "bearish", "decline", "sell", "down", "plunge", "sink", "tumble", "low", "slump", "collapse", "recession"];
+
+type Sentiment = "bullish" | "bearish" | "neutral";
+
+function analyzeSentiment(headline: string): Sentiment {
+  const lower = headline.toLowerCase();
+  const words = lower.split(/\s+/);
+  const hasBullish = words.some((w) => BULLISH_KEYWORDS.some((kw) => w.includes(kw)));
+  const hasBearish = words.some((w) => BEARISH_KEYWORDS.some((kw) => w.includes(kw)));
+  if (hasBullish && !hasBearish) return "bullish";
+  if (hasBearish && !hasBullish) return "bearish";
+  return "neutral";
+}
+
+function SentimentBadge({ sentiment }: { sentiment: Sentiment }) {
+  const config = {
+    bullish: { emoji: "\u{1F7E2}", label: "Haussier", bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/30" },
+    bearish: { emoji: "\u{1F534}", label: "Baissier", bg: "bg-rose-500/15", text: "text-rose-400", border: "border-rose-500/30" },
+    neutral: { emoji: "\u26AA", label: "Neutre", bg: "bg-[--bg-secondary]/40", text: "text-[--text-muted]", border: "border-[--border]" },
+  };
+  const c = config[sentiment];
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-px rounded-full text-[9px] font-semibold ${c.bg} ${c.text} border ${c.border}`}>
+      <span className="text-[8px]">{c.emoji}</span> {c.label}
+    </span>
+  );
+}
+
+// --------------- Bookmark Helpers ---------------
+
+const BOOKMARKS_STORAGE_KEY = "protrade_news_bookmarks";
+
+function getBookmarkedIds(): Set<number> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(BOOKMARKS_STORAGE_KEY);
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw) as number[]);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveBookmarkedIds(ids: Set<number>) {
+  try {
+    localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify([...ids]));
+  } catch { /* ignore quota errors */ }
+}
+
+// --------------- Position Impact Matching ---------------
+
+function findMatchingAssets(headline: string, tradedAssets: string[]): string[] {
+  if (tradedAssets.length === 0) return [];
+  const lower = headline.toLowerCase();
+  return tradedAssets.filter((asset) => {
+    const assetLower = asset.toLowerCase();
+    // Match exact asset name or common variants
+    if (lower.includes(assetLower)) return true;
+    // Match base/quote currencies individually for forex pairs like EUR/USD
+    const parts = assetLower.split("/");
+    if (parts.length === 2) {
+      return lower.includes(parts[0]) || lower.includes(parts[1]);
+    }
+    return false;
+  });
+}
+
 // --------------- Components ---------------
 
 function SkeletonRow() {
@@ -180,89 +253,128 @@ const SOURCE_GRADIENTS: Record<string, string> = {
   default: "from-slate-600 to-gray-800",
 };
 
-function NewsRow({ item }: { item: NewsItem }) {
+function NewsRow({
+  item,
+  isBookmarked,
+  onToggleBookmark,
+  matchingAssets,
+}: {
+  item: NewsItem;
+  isBookmarked: boolean;
+  onToggleBookmark: (id: number) => void;
+  matchingAssets: string[];
+}) {
   const colors = getSourceColor(item.source);
   const hasImage = isRealImage(item.image);
   const gradient = SOURCE_GRADIENTS[item.source.toLowerCase()] || SOURCE_GRADIENTS.default;
   const isNew = isBreakingNews(item.datetime);
+  const sentiment = analyzeSentiment(item.headline);
 
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors group border-b border-[--border]/40 last:border-b-0"
-      style={{ cursor: item.url === "#" ? "default" : "pointer" }}
-    >
-      {/* Thumbnail */}
-      <div className="w-[60px] h-[60px] rounded-lg overflow-hidden flex-shrink-0 mt-0.5">
-        {hasImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={item.image}
-            alt=""
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-            onError={(e) => {
-              const el = e.target as HTMLImageElement;
-              el.style.display = "none";
-              el.parentElement!.classList.add("bg-gradient-to-br", ...gradient.split(" "), "flex", "items-center", "justify-center");
-            }}
-          />
+    <div className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors group border-b border-[--border]/40 last:border-b-0 relative">
+      {/* Bookmark button */}
+      <button
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleBookmark(item.id); }}
+        className="absolute top-2 right-2 p-1 rounded-md hover:bg-[var(--bg-hover)] transition-colors z-10"
+        title={isBookmarked ? "Retirer des favoris" : "Sauvegarder"}
+      >
+        {isBookmarked ? (
+          <BookmarkCheck className="w-3.5 h-3.5 text-cyan-400" />
         ) : (
-          <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-            <Newspaper className="w-5 h-5 text-white/20" />
-          </div>
+          <Bookmark className="w-3.5 h-3.5 text-[--text-muted] opacity-0 group-hover:opacity-60 transition-opacity" />
         )}
-      </div>
+      </button>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        {/* Headline */}
-        <h3 className="text-[13px] font-semibold leading-snug line-clamp-2 group-hover:text-cyan-400 transition-colors">
-          {isNew && (
-            <span className="inline-flex items-center px-1.5 py-0 rounded text-[9px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 mr-1.5 align-middle">
-              NEW
-            </span>
-          )}
-          {item.headline}
-        </h3>
-
-        {/* Summary — single line */}
-        {item.summary && (
-          <p className="text-[11px] text-[--text-muted] line-clamp-1 mt-0.5 leading-relaxed">{item.summary}</p>
-        )}
-
-        {/* Meta row: source + category + time + link */}
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-          {/* Source pill */}
-          <span
-            className="px-2 py-px rounded-full text-[10px] font-bold uppercase tracking-wide leading-none"
-            style={{
-              background: colors.bg,
-              color: colors.text,
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            {item.source}
-          </span>
-
-          {item.category && (
-            <span className="text-[10px] text-[--text-muted] uppercase tracking-wide font-medium">
-              {item.category}
-            </span>
-          )}
-
-          <span className="text-[10px] text-[--text-muted] flex items-center gap-0.5">
-            <Clock className="w-2.5 h-2.5" />
-            {timeAgo(item.datetime)}
-          </span>
-
-          {item.url !== "#" && (
-            <ExternalLink className="w-3 h-3 text-[--text-muted] opacity-0 group-hover:opacity-60 transition-opacity ml-auto flex-shrink-0" />
+      <a
+        href={item.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-start gap-3 flex-1 min-w-0"
+        style={{ cursor: item.url === "#" ? "default" : "pointer" }}
+      >
+        {/* Thumbnail */}
+        <div className="w-[60px] h-[60px] rounded-lg overflow-hidden flex-shrink-0 mt-0.5">
+          {hasImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.image}
+              alt=""
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              onError={(e) => {
+                const el = e.target as HTMLImageElement;
+                el.style.display = "none";
+                el.parentElement!.classList.add("bg-gradient-to-br", ...gradient.split(" "), "flex", "items-center", "justify-center");
+              }}
+            />
+          ) : (
+            <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+              <Newspaper className="w-5 h-5 text-white/20" />
+            </div>
           )}
         </div>
-      </div>
-    </a>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Headline */}
+          <h3 className="text-[13px] font-semibold leading-snug line-clamp-2 group-hover:text-cyan-400 transition-colors pr-6">
+            {isNew && (
+              <span className="inline-flex items-center px-1.5 py-0 rounded text-[9px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 mr-1.5 align-middle">
+                NEW
+              </span>
+            )}
+            {item.headline}
+          </h3>
+
+          {/* Summary — single line */}
+          {item.summary && (
+            <p className="text-[11px] text-[--text-muted] line-clamp-1 mt-0.5 leading-relaxed">{item.summary}</p>
+          )}
+
+          {/* Meta row: sentiment + source + category + time + position impact + link */}
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {/* Sentiment badge */}
+            <SentimentBadge sentiment={sentiment} />
+
+            {/* Source pill */}
+            <span
+              className="px-2 py-px rounded-full text-[10px] font-bold uppercase tracking-wide leading-none"
+              style={{
+                background: colors.bg,
+                color: colors.text,
+                border: `1px solid ${colors.border}`,
+              }}
+            >
+              {item.source}
+            </span>
+
+            {item.category && (
+              <span className="text-[10px] text-[--text-muted] uppercase tracking-wide font-medium">
+                {item.category}
+              </span>
+            )}
+
+            <span className="text-[10px] text-[--text-muted] flex items-center gap-0.5">
+              <Clock className="w-2.5 h-2.5" />
+              {timeAgo(item.datetime)}
+            </span>
+
+            {/* Position impact badges */}
+            {matchingAssets.map((asset) => (
+              <span
+                key={asset}
+                className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-full text-[9px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30"
+              >
+                Concerne: {asset}
+              </span>
+            ))}
+
+            {item.url !== "#" && (
+              <ExternalLink className="w-3 h-3 text-[--text-muted] opacity-0 group-hover:opacity-60 transition-opacity ml-auto flex-shrink-0" />
+            )}
+          </div>
+        </div>
+      </a>
+    </div>
   );
 }
 
@@ -353,6 +465,36 @@ export default function NewsPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [lastUpdatedText, setLastUpdatedText] = useState("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<number>>(new Set());
+
+  // Load bookmarks from localStorage on mount
+  useEffect(() => {
+    setBookmarkedIds(getBookmarkedIds());
+  }, []);
+
+  const toggleBookmark = useCallback((id: number) => {
+    setBookmarkedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      saveBookmarkedIds(next);
+      return next;
+    });
+  }, []);
+
+  // Get unique traded assets from user's trades
+  const { trades } = useTrades();
+  const tradedAssets = useMemo(() => {
+    const assets = new Set<string>();
+    trades.forEach((trade) => {
+      if (trade.asset) assets.add(trade.asset);
+    });
+    return [...assets];
+  }, [trades]);
 
   // --------------- Fetch ---------------
 
@@ -409,6 +551,7 @@ export default function NewsPage() {
 
   const filtered = useMemo(() => {
     return news.filter((item) => {
+      if (showSavedOnly && !bookmarkedIds.has(item.id)) return false;
       if (categoryFilter !== "all" && item.category !== categoryFilter) return false;
       if (sourceFilter !== "all" && item.source.toLowerCase() !== sourceFilter.toLowerCase()) return false;
       if (searchQuery) {
@@ -421,7 +564,7 @@ export default function NewsPage() {
       }
       return true;
     });
-  }, [news, categoryFilter, sourceFilter, searchQuery]);
+  }, [news, categoryFilter, sourceFilter, searchQuery, showSavedOnly, bookmarkedIds]);
 
   // --------------- Render ---------------
 
@@ -515,8 +658,23 @@ export default function NewsPage() {
         <SourceDropdown sources={sources} sourceFilter={sourceFilter} setSourceFilter={setSourceFilter} />
       </div>
 
-      {/* Category tabs */}
+      {/* Category tabs + Saved filter */}
       <div className="flex gap-1 overflow-x-auto scrollbar-none pb-0.5">
+        {/* Saved articles tab */}
+        <button
+          onClick={() => setShowSavedOnly(!showSavedOnly)}
+          className={`px-3 py-1 rounded-full text-[11px] font-medium transition whitespace-nowrap flex-shrink-0 flex items-center gap-1 ${
+            showSavedOnly
+              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
+              : "text-[--text-secondary] hover:text-[--text-primary] border border-[--border] hover:border-[--text-muted]"
+          }`}
+        >
+          <BookmarkCheck className="w-3 h-3" />
+          Mes articles sauvegardes ({bookmarkedIds.size})
+        </button>
+
+        <div className="w-px bg-[--border] mx-1 flex-shrink-0" />
+
         {CATEGORY_TABS.map((tab) => {
           const count = tab.key === "all" ? news.length : news.filter((n) => n.category === tab.key).length;
           return (
@@ -524,7 +682,7 @@ export default function NewsPage() {
               key={tab.key}
               onClick={() => setCategoryFilter(tab.key)}
               className={`px-3 py-1 rounded-full text-[11px] font-medium transition whitespace-nowrap flex-shrink-0 ${
-                categoryFilter === tab.key
+                categoryFilter === tab.key && !showSavedOnly
                   ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
                   : "text-[--text-secondary] hover:text-[--text-primary] border border-[--border] hover:border-[--text-muted]"
               }`}
@@ -556,6 +714,7 @@ export default function NewsPage() {
               setSearchQuery("");
               setCategoryFilter("all");
               setSourceFilter("all");
+              setShowSavedOnly(false);
             }}
             className="mt-3 px-4 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 text-xs font-medium hover:bg-cyan-500/30 transition"
           >
@@ -585,7 +744,13 @@ export default function NewsPage() {
           {/* Vertical news feed */}
           <div className="glass rounded-xl overflow-hidden">
             {filtered.map((item) => (
-              <NewsRow key={item.id} item={item} />
+              <NewsRow
+                key={item.id}
+                item={item}
+                isBookmarked={bookmarkedIds.has(item.id)}
+                onToggleBookmark={toggleBookmark}
+                matchingAssets={findMatchingAssets(item.headline, tradedAssets)}
+              />
             ))}
           </div>
         </>
