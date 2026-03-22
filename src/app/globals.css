@@ -1145,3 +1145,12 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     padding: 0.25rem 0 !important;
   }
 }
+
+/* ── Hero screenshot floating animation ── */
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-hero-float {
+  animation: hero-float 6s ease-in-out infinite;
+}
