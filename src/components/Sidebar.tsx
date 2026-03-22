@@ -17,7 +17,6 @@ import {
   Gauge,
   Trophy,
   Grid3x3,
-  Upload,
   Crosshair,
   Clock,
   Activity,
@@ -82,7 +81,7 @@ type SectionDef = {
 };
 
 const sections: SectionDef[] = [
-  // TRADING (always expanded)
+  // TRADING — core daily workflow (always expanded)
   {
     id: "trading",
     labelKey: "sidebarSecTrading",
@@ -90,15 +89,11 @@ const sections: SectionDef[] = [
     items: [
       { href: "/dashboard", labelKey: "sidebarDashboard", icon: LayoutDashboard },
       { href: "/journal", labelKey: "sidebarJournal", icon: BookOpen },
-      { href: "/import", labelKey: "sidebarImportCsv", icon: Upload },
-      { href: "/checklist", labelKey: "sidebarChecklist", icon: CheckSquare },
       { href: "/daily-bias", labelKey: "sidebarDailyBias", icon: Target },
-      { href: "/playbook", labelKey: "sidebarPlaybook", icon: BookOpen },
-      { href: "/risk", labelKey: "sidebarRiskManager", icon: Shield },
-      { href: "/mistakes", labelKey: "sidebarErrors", icon: AlertCircle },
+      { href: "/checklist", labelKey: "sidebarChecklist", icon: CheckSquare },
     ],
   },
-  // ANALYTICS (collapsible)
+  // ANALYTICS — analysis tools (collapsible)
   {
     id: "analytics",
     labelKey: "sidebarSecAnalytics",
@@ -109,19 +104,23 @@ const sections: SectionDef[] = [
       { href: "/heatmap", labelKey: "sidebarHeatmap", icon: Grid3x3 },
       { href: "/recaps", labelKey: "sidebarRecaps", icon: FileBarChart },
       { href: "/analytics/distribution", labelKey: "sidebarDistribution", icon: Clock },
+      { href: "/analytics/sessions", labelKey: "sidebarSessions", icon: Clock },
     ],
   },
-  // PERFORMANCE (collapsible)
+  // PERFORMANCE — deeper performance analysis (collapsible)
   {
     id: "performance",
     labelKey: "sidebarSecPerformance",
     items: [
       { href: "/performance/grading", labelKey: "sidebarGrading", icon: GraduationCap },
       { href: "/badges", labelKey: "sidebarBadges", icon: Medal },
-      { href: "/analytics/sessions", labelKey: "sidebarSessions", icon: Clock },
+      { href: "/playbook", labelKey: "sidebarPlaybook", icon: BookOpen },
+      { href: "/strategies", labelKey: "sidebarStrategies", icon: Crosshair },
+      { href: "/mistakes", labelKey: "sidebarErrors", icon: AlertCircle },
+      { href: "/risk", labelKey: "sidebarRiskManager", icon: Shield },
     ],
   },
-  // MARCHÉ (collapsible, collapsed by default)
+  // MARCHÉ — market data (collapsible, collapsed by default)
   {
     id: "market",
     labelKey: "sidebarSecMarket",
@@ -143,7 +142,7 @@ const sections: SectionDef[] = [
       { href: "/flow", labelKey: "sidebarOptionsFlow", icon: GitBranch },
     ],
   },
-  // AVANCÉ (collapsible, collapsed by default)
+  // AVANCÉ — advanced tools (collapsible, collapsed by default)
   {
     id: "advanced",
     labelKey: "sidebarSecAdvanced",
@@ -158,7 +157,7 @@ const sections: SectionDef[] = [
       { href: "/compare", labelKey: "sidebarComparison", icon: GitCompare },
     ],
   },
-  // OUTILS (collapsible)
+  // OUTILS — utility tools (collapsible)
   {
     id: "tools",
     labelKey: "sidebarSecTools",
@@ -166,7 +165,6 @@ const sections: SectionDef[] = [
       { href: "/custom-dashboard", labelKey: "sidebarMyDashboard", icon: Layers },
       { href: "/reports", labelKey: "sidebarPdfReports", icon: FileText },
       { href: "/screenshots", labelKey: "sidebarScreenshots", icon: Camera },
-      { href: "/strategies", labelKey: "sidebarStrategies", icon: Crosshair },
     ],
   },
   // MON ESPACE (always expanded)
@@ -179,7 +177,7 @@ const sections: SectionDef[] = [
       { href: "/pricing", labelKey: "sidebarPricing", icon: CreditCard },
     ],
   },
-  // PREMIUM (always expanded, highlighted)
+  // PREMIUM (always expanded, highlighted in amber)
   {
     id: "premium",
     labelKey: "sidebarSecPremium",

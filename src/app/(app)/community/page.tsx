@@ -2138,7 +2138,7 @@ export default function CommunityPage() {
   const { bookmarks, toggleBookmark } = useBookmarks();
   const { vote: pollVote, getVoteData: getPollVoteData } = usePollVotes();
 
-  type TabId = "foryou" | "following" | "classement" | "defis" | "discussions" | "bestof" | "mentorat" | "comparer";
+  type TabId = "foryou" | "following";
   const [activeTab, setActiveTab] = useState<TabId>("foryou");
   const [messages, setMessages] = useState<FeedMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2471,12 +2471,6 @@ export default function CommunityPage() {
               {([
                 { id: "foryou" as TabId, label: "Pour toi" },
                 { id: "following" as TabId, label: "Suivis" },
-                { id: "classement" as TabId, label: "Classement" },
-                { id: "defis" as TabId, label: "Défis" },
-                { id: "discussions" as TabId, label: "Discussions" },
-                { id: "bestof" as TabId, label: "Best Of" },
-                { id: "mentorat" as TabId, label: "Mentorat" },
-                { id: "comparer" as TabId, label: "Comparer" },
               ]).map((tab) => (
                 <button
                   key={tab.id}
@@ -2731,39 +2725,7 @@ export default function CommunityPage() {
                 </>
               )}
             </div>
-          ) : (
-            /* Other tabs — redirect to dedicated pages */
-            <div className="py-16 text-center px-8">
-              {(() => {
-                const tabConfig: Record<string, { icon: typeof BarChart3; color: string; bg: string; title: string; desc: string; href: string }> = {
-                  classement: { icon: BarChart3, color: "#eab308", bg: "rgba(234,179,8,0.1)", title: "Classement des Traders", desc: "Consultez le classement des meilleurs traders de la communauté.", href: "/leaderboard" },
-                  defis: { icon: BarChart2, color: "#ef4444", bg: "rgba(239,68,68,0.1)", title: "Défis Trading", desc: "Participez à des défis hebdomadaires et mensuels entre traders.", href: "/challenges" },
-                  discussions: { icon: MessageCircle, color: "#3b82f6", bg: "rgba(59,130,246,0.1)", title: "Discussions", desc: "Rejoignez les salons de discussion thématiques.", href: "/chat" },
-                  bestof: { icon: Heart, color: "#a855f7", bg: "rgba(168,85,247,0.1)", title: "Best Of", desc: "Les meilleurs trades et analyses de la communauté.", href: "/community" },
-                  mentorat: { icon: Users, color: "#10b981", bg: "rgba(16,185,129,0.1)", title: "Mentorat", desc: "Trouvez un mentor ou partagez votre expérience.", href: "/community" },
-                  comparer: { icon: BarChart3, color: "#ec4899", bg: "rgba(236,72,153,0.1)", title: "Comparer", desc: "Comparez vos performances avec d'autres traders.", href: "/compare" },
-                };
-                const cfg = tabConfig[activeTab] || tabConfig.classement;
-                const Icon = cfg.icon;
-                return (
-                  <>
-                    <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: cfg.bg }}>
-                      <Icon className="w-8 h-8" style={{ color: cfg.color }} />
-                    </div>
-                    <h2 className="text-xl font-extrabold mb-2" style={{ color: "var(--text-primary)" }}>{cfg.title}</h2>
-                    <p className="text-[15px] mb-4" style={{ color: "var(--text-secondary)" }}>{cfg.desc}</p>
-                    <a
-                      href={cfg.href}
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105"
-                      style={{ background: `linear-gradient(135deg, ${cfg.color}, ${cfg.color}dd)` }}
-                    >
-                      Accéder →
-                    </a>
-                  </>
-                );
-              })()}
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* ═══════════════════════════════════════════════════════════ */}
