@@ -349,7 +349,7 @@ export default function PricingPage() {
                   Free
                 </th>
                 <th className="text-center py-4 px-4 text-sm font-bold text-amber-400">
-                  VIP — {getPrice(9)}€/mois
+                  VIP — {getPrice(9.99)}€/mois
                 </th>
               </tr>
             </thead>

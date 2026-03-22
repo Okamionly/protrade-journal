@@ -19,7 +19,7 @@ export async function GET() {
   // Map role to plan
   const planMap: Record<string, { plan: string; price: number }> = {
     USER: { plan: "free", price: 0 },
-    VIP: { plan: "vip", price: 9 },
+    VIP: { plan: "vip", price: 9.99 },
     ADMIN: { plan: "vip", price: 0 }, // admins get VIP for free
   };
 

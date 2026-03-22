@@ -2218,8 +2218,8 @@ export default function CommunityPage() {
       const rooms = await res.json();
       const community = rooms.find(
         (r: { name: string }) =>
-          r.name === "Communauté" || r.name === "Communaute" || r.name === "community" || r.name === "Général" || r.name === "General"
-      );
+          r.name === "Général" || r.name === "General" || r.name === "Communauté" || r.name === "Communaute" || r.name === "community"
+      ) || rooms[0];
       if (community) {
         setCommunityRoomId(community.id);
       } else {

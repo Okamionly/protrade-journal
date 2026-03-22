@@ -289,7 +289,7 @@ function VipPage() {
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  Débloquer l&apos;accès VIP — 9€/mois
+                  Débloquer l&apos;accès VIP — 9,99€/mois
                 </>
               )}
             </button>
@@ -716,7 +716,7 @@ function VipPage() {
                   className="text-4xl font-bold"
                   style={{ color: "var(--text-primary, #e5e7eb)" }}
                 >
-                  9&euro;
+                  9,99&euro;
                 </span>
                 <span
                   className="text-sm"

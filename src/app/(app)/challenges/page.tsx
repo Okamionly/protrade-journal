@@ -148,7 +148,10 @@ export default function ChallengesPage() {
   // Check VIP
   useEffect(() => {
     fetch("/api/user/role")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Not OK");
+        return r.json();
+      })
       .then((d) => setIsVip(d.role === "VIP" || d.role === "ADMIN"))
       .catch(() => setIsVip(false));
   }, []);
@@ -168,7 +171,8 @@ export default function ChallengesPage() {
   }, []);
 
   useEffect(() => {
-    if (isVip) fetchChallenges();
+    if (isVip === true) fetchChallenges();
+    else if (isVip === false) setLoading(false);
   }, [isVip, fetchChallenges]);
 
   // Auto-refresh every 30s
