@@ -668,8 +668,8 @@ function TradeDuJour({ messages }: { messages: FeedMessage[] }) {
       <div
         className="mx-4 mt-3 mb-1 rounded-2xl p-4 text-center"
         style={{
-          background: "linear-gradient(135deg, rgba(234,179,8,0.08), rgba(245,158,11,0.05))",
-          border: "1px solid rgba(234,179,8,0.25)",
+          background: "linear-gradient(135deg, #fefce8, #fef9c3)",
+          border: "1px solid #fde68a",
         }}
       >
         <div className="flex items-center justify-center gap-2 mb-2">
@@ -694,9 +694,9 @@ function TradeDuJour({ messages }: { messages: FeedMessage[] }) {
     <div
       className="mx-4 mt-3 mb-1 rounded-2xl overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, rgba(234,179,8,0.06), rgba(245,158,11,0.03))",
-        border: "1px solid rgba(234,179,8,0.3)",
-        boxShadow: "0 0 20px rgba(234,179,8,0.08), inset 0 1px 0 rgba(234,179,8,0.1)",
+        background: "linear-gradient(135deg, #fefce8, #fef9c3)",
+        border: "1px solid #fde68a",
+        boxShadow: "0 2px 8px rgba(234,179,8,0.15)",
       }}
     >
       <div className="px-4 pt-3 pb-2 flex items-center gap-2">
@@ -811,9 +811,9 @@ function WeeklyRecap({ messages }: { messages: FeedMessage[] }) {
     <div
       className="mx-4 mt-2 mb-1 rounded-2xl overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.04))",
-        border: "1px solid rgba(99,102,241,0.25)",
-        boxShadow: "0 0 15px rgba(99,102,241,0.06)",
+        background: "linear-gradient(135deg, #eef2ff, #e8e0ff)",
+        border: "1px solid #c7d2fe",
+        boxShadow: "0 2px 8px rgba(99,102,241,0.12)",
       }}
     >
       <div className="px-4 pt-3 pb-2 flex items-center gap-2">
