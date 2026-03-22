@@ -52,6 +52,7 @@ import {
   Search,
   LayoutGrid,
   GitBranch,
+  LineChart,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@/i18n/context";
@@ -89,6 +90,7 @@ const sections: SectionDef[] = [
     items: [
       { href: "/dashboard", labelKey: "sidebarDashboard", icon: LayoutDashboard },
       { href: "/journal", labelKey: "sidebarJournal", icon: BookOpen },
+      { href: "/chart", labelKey: "sidebarChart", icon: LineChart },
       { href: "/daily-bias", labelKey: "sidebarDailyBias", icon: Target },
       { href: "/checklist", labelKey: "sidebarChecklist", icon: CheckSquare },
     ],
