@@ -6,7 +6,7 @@ import {
   Activity, TrendingUp, TrendingDown, Clock, Shield, Target,
   AlertTriangle, CheckSquare, Square, Smile, Meh,
   Zap, BarChart3, ArrowUpRight, ArrowDownRight, Bell, Timer,
-  Globe, Moon, Crosshair, Settings, X,
+  Globe, Moon, Crosshair, Settings, X, Plus, Trash2,
   ChevronDown, ChevronUp, Newspaper, Tv, Map, Layers,
   ExternalLink, RefreshCw, Radio,
 } from "lucide-react";
@@ -400,26 +400,108 @@ const LIVE_STREAMS = [
   { name: "Yahoo Finance", url: "https://www.youtube.com/watch?v=sZhCdLBQShw", color: "#6001d2", icon: "Y", embedId: "sZhCdLBQShw" },
 ];
 
-// ─── Checklist Storage ──────────────────────────────────────────────────────
+// ─── Règles du Jour Storage ─────────────────────────────────────────────────
 
-const CHECKLIST_ITEMS = [
-  "Plan vérifié",
-  "Risque < 2%",
-  "Pas de revenge trading",
-  "Stop après 3 pertes",
+const DEFAULT_RULES = [
+  "J'ai vérifié le calendrier économique",
+  "J'ai défini mon biais du jour",
+  "Mon risque max par trade est défini",
+  "J'ai identifié mes niveaux clés",
+  "Je suis dans un état émotionnel neutre",
 ];
+
+// Legacy compat
+const CHECKLIST_ITEMS = DEFAULT_RULES;
+
+function getRulesKey(): string {
+  return "warroom-custom-rules";
+}
 
 function getChecklistKey(): string {
   return `warroom-checklist-${today()}`;
 }
 
-function loadChecklist(): boolean[] {
-  if (typeof window === "undefined") return CHECKLIST_ITEMS.map(() => false);
+function loadCustomRules(): string[] {
+  if (typeof window === "undefined") return DEFAULT_RULES;
+  try {
+    const saved = localStorage.getItem(getRulesKey());
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_RULES;
+}
+
+function saveCustomRules(rules: string[]): void {
+  localStorage.setItem(getRulesKey(), JSON.stringify(rules));
+}
+
+function loadChecklist(rulesCount?: number): boolean[] {
+  const count = rulesCount ?? DEFAULT_RULES.length;
+  if (typeof window === "undefined") return Array(count).fill(false);
   try {
     const saved = localStorage.getItem(getChecklistKey());
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Pad or trim to match rules count
+      if (parsed.length < count) return [...parsed, ...Array(count - parsed.length).fill(false)];
+      if (parsed.length > count) return parsed.slice(0, count);
+      return parsed;
+    }
   } catch { /* ignore */ }
-  return CHECKLIST_ITEMS.map(() => false);
+  return Array(count).fill(false);
+}
+
+// ─── Session Countdown Helpers ──────────────────────────────────────────────
+
+interface SessionCountdown {
+  name: string;
+  emoji: string;
+  color: string;
+  minutesUntil: number;
+  type: "open" | "close";
+}
+
+function getUpcomingSessionCountdowns(now: Date, sessions: SessionInfo[]): SessionCountdown[] {
+  const utcH = now.getUTCHours();
+  const utcM = now.getUTCMinutes();
+  const nowMinutes = utcH * 60 + utcM;
+  const countdowns: SessionCountdown[] = [];
+
+  for (const s of sessions) {
+    const openMin = s.start * 60;
+    const closeMin = s.end * 60;
+
+    // Minutes until open (handle wrap-around midnight)
+    let untilOpen = openMin - nowMinutes;
+    if (untilOpen < 0) untilOpen += 1440;
+    // Only show if session is NOT currently active
+    const isActive =
+      s.start < s.end
+        ? nowMinutes >= openMin && nowMinutes < closeMin
+        : nowMinutes >= openMin || nowMinutes < closeMin;
+
+    if (!isActive && untilOpen > 0 && untilOpen <= 720) {
+      countdowns.push({
+        name: s.name,
+        emoji: s.emoji,
+        color: s.color,
+        minutesUntil: untilOpen,
+        type: "open",
+      });
+    }
+  }
+
+  countdowns.sort((a, b) => a.minutesUntil - b.minutesUntil);
+  return countdowns.slice(0, 2);
+}
+
+function formatCountdown(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h > 0) return `${h}h ${m.toString().padStart(2, "0")}min`;
+  return `${m}min`;
 }
 
 // ─── Alert Settings Storage ─────────────────────────────────────────────────
@@ -1478,7 +1560,10 @@ export default function WarRoomPage() {
   const { t } = useTranslation();
   const [currentTime, setCurrentTime] = useState<Date>(new Date(0));
   const [mounted, setMounted] = useState(false);
-  const [checklist, setChecklist] = useState<boolean[]>(CHECKLIST_ITEMS.map(() => false));
+  const [customRules, setCustomRules] = useState<string[]>(DEFAULT_RULES);
+  const [checklist, setChecklist] = useState<boolean[]>(DEFAULT_RULES.map(() => false));
+  const [newRuleInput, setNewRuleInput] = useState("");
+  const [showAddRule, setShowAddRule] = useState(false);
   const [currentMood, setCurrentMood] = useState<string | null>(null);
   const [moodTimeline, setMoodTimeline] = useState<{ time: string; mood: string }[]>([]);
   const [alertSettings, setAlertSettings] = useState<AlertSettings>(DEFAULT_ALERT_SETTINGS);
@@ -1501,7 +1586,9 @@ export default function WarRoomPage() {
 
   // Load checklist, moods, and alert settings from localStorage
   useEffect(() => {
-    setChecklist(loadChecklist());
+    const rules = loadCustomRules();
+    setCustomRules(rules);
+    setChecklist(loadChecklist(rules.length));
     const savedMoods = localStorage.getItem(`warroom-moods-${today()}`);
     if (savedMoods) {
       try {
@@ -1555,6 +1642,35 @@ export default function WarRoomPage() {
     setChecklist((prev) => {
       const next = [...prev];
       next[index] = !next[index];
+      localStorage.setItem(getChecklistKey(), JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const addRule = useCallback((rule: string) => {
+    if (!rule.trim()) return;
+    setCustomRules((prev) => {
+      const next = [...prev, rule.trim()];
+      saveCustomRules(next);
+      return next;
+    });
+    setChecklist((prev) => {
+      const next = [...prev, false];
+      localStorage.setItem(getChecklistKey(), JSON.stringify(next));
+      return next;
+    });
+    setNewRuleInput("");
+    setShowAddRule(false);
+  }, []);
+
+  const removeRule = useCallback((index: number) => {
+    setCustomRules((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      saveCustomRules(next);
+      return next;
+    });
+    setChecklist((prev) => {
+      const next = prev.filter((_, i) => i !== index);
       localStorage.setItem(getChecklistKey(), JSON.stringify(next));
       return next;
     });
@@ -1680,7 +1796,16 @@ export default function WarRoomPage() {
     return list;
   }, [todayTrades, todayPnl, activeSessions, alertSettings]);
 
-  const checklistProgress = checklist.filter(Boolean).length / CHECKLIST_ITEMS.length;
+  const rulesChecked = checklist.filter(Boolean).length;
+  const rulesTotal = customRules.length;
+  const checklistProgress = rulesTotal > 0 ? rulesChecked / rulesTotal : 0;
+  const allRulesValidated = rulesTotal > 0 && rulesChecked === rulesTotal;
+
+  // Upcoming session countdowns
+  const upcomingCountdowns = useMemo(
+    () => getUpcomingSessionCountdowns(currentTime, sessions),
+    [currentTime, sessions]
+  );
 
   // ─── Performance par Session ──────────────────────────────────────────
   const sessionPerformance = useMemo(() => {
@@ -2333,38 +2458,155 @@ export default function WarRoomPage() {
           )}
         </div>
 
-        {/* ═══ 7. Daily Rules Checklist ═══ */}
+        {/* ═══ 7. Règles du Jour Checklist ═══ */}
         <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-2 mb-3">
-            <CheckSquare size={14} style={{ color: "var(--text-secondary)" }} />
-            <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Checklist du jour</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <CheckSquare size={14} style={{ color: "var(--text-secondary)" }} />
+              <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
+                Règles du Jour
+              </span>
+            </div>
+            <span className="text-[11px] mono font-medium px-2 py-0.5 rounded-full" style={{
+              background: allRulesValidated ? "#22c55e20" : "var(--border)",
+              color: allRulesValidated ? "#22c55e" : "var(--text-muted)",
+            }}>
+              {rulesChecked}/{rulesTotal} validées
+            </span>
           </div>
+
+          {/* Progress bar */}
           <div className="w-full h-1.5 rounded-full mb-3" style={{ background: "var(--border)" }}>
             <div
               className="h-full rounded-full"
               style={{
                 width: `${checklistProgress * 100}%`,
-                background: checklistProgress === 1 ? "#22c55e" : "#f59e0b",
+                background: allRulesValidated ? "#22c55e" : "#f59e0b",
                 transition: "width 0.3s ease",
               }}
             />
           </div>
-          <div className="space-y-2">
-            {CHECKLIST_ITEMS.map((item, i) => (
-              <button
-                key={item}
-                className="flex items-center gap-2 w-full text-left text-xs py-1 hover:opacity-80 transition-opacity"
-                onClick={() => toggleChecklist(i)}
-                style={{ color: checklist[i] ? "var(--text-muted)" : "var(--text-primary)" }}
-              >
-                {checklist[i]
-                  ? <CheckSquare size={14} style={{ color: "#22c55e" }} />
-                  : <Square size={14} style={{ color: "var(--text-muted)" }} />}
-                <span style={{ textDecoration: checklist[i] ? "line-through" : "none" }}>{item}</span>
-              </button>
+
+          {/* Unlock message */}
+          {allRulesValidated && (
+            <div className="flex items-center gap-2 mb-3 p-2 rounded-lg text-xs font-medium"
+              style={{ background: "#22c55e15", color: "#22c55e", border: "1px solid #22c55e30" }}>
+              <Zap size={14} />
+              <span>{"\u{1F680}"} Prêt à trader !</span>
+            </div>
+          )}
+
+          {/* Rules list */}
+          <div className="space-y-1.5">
+            {customRules.map((rule, i) => (
+              <div key={`${rule}-${i}`} className="flex items-center gap-2 group">
+                <button
+                  className="flex items-center gap-2 flex-1 text-left text-xs py-1 hover:opacity-80 transition-opacity"
+                  onClick={() => toggleChecklist(i)}
+                  style={{ color: checklist[i] ? "var(--text-muted)" : "var(--text-primary)" }}
+                >
+                  {checklist[i]
+                    ? <CheckSquare size={14} style={{ color: "#22c55e", flexShrink: 0 }} />
+                    : <Square size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />}
+                  <span style={{ textDecoration: checklist[i] ? "line-through" : "none" }}>{rule}</span>
+                </button>
+                {/* Only show delete for non-default or if more than 1 rule */}
+                {customRules.length > 1 && (
+                  <button
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[--bg-secondary]"
+                    onClick={() => removeRule(i)}
+                    title="Supprimer cette règle"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
+
+          {/* Add rule */}
+          {showAddRule ? (
+            <div className="flex items-center gap-2 mt-3">
+              <input
+                type="text"
+                value={newRuleInput}
+                onChange={(e) => setNewRuleInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") addRule(newRuleInput); if (e.key === "Escape") setShowAddRule(false); }}
+                placeholder="Nouvelle règle..."
+                autoFocus
+                className="flex-1 px-2 py-1 rounded-lg text-xs"
+                style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", color: "var(--text-primary)", outline: "none" }}
+              />
+              <button
+                onClick={() => addRule(newRuleInput)}
+                className="px-2 py-1 rounded-lg text-xs font-medium"
+                style={{ background: "#22c55e20", color: "#22c55e", border: "1px solid #22c55e40" }}
+              >
+                OK
+              </button>
+              <button
+                onClick={() => { setShowAddRule(false); setNewRuleInput(""); }}
+                className="p-1 rounded-lg"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddRule(true)}
+              className="flex items-center gap-1.5 mt-3 text-xs hover:opacity-80 transition-opacity"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <Plus size={12} />
+              <span>Ajouter une règle</span>
+            </button>
+          )}
         </div>
+
+        {/* ═══ 7b. Compte à Rebours Sessions ═══ */}
+        {mounted && upcomingCountdowns.length > 0 && (
+          <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Timer size={14} style={{ color: "var(--text-secondary)" }} />
+              <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
+                Prochaines sessions
+              </span>
+            </div>
+            <div className="space-y-2.5">
+              {upcomingCountdowns.map((cd) => {
+                const isPulsing = cd.minutesUntil <= 15;
+                return (
+                  <div
+                    key={`${cd.name}-${cd.type}`}
+                    className="flex items-center justify-between p-2.5 rounded-lg"
+                    style={{
+                      background: `${cd.color}10`,
+                      border: `1px solid ${cd.color}${isPulsing ? "60" : "25"}`,
+                      animation: isPulsing ? "countdown-pulse 1.5s ease-in-out infinite" : "none",
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{cd.emoji}</span>
+                      <span className="text-xs font-medium" style={{ color: cd.color }}>
+                        {cd.name} Open
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {isPulsing && (
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: cd.color, animation: "countdown-pulse 1s ease-in-out infinite" }} />
+                      )}
+                      <span className="text-xs mono font-bold" style={{ color: isPulsing ? cd.color : "var(--text-primary)" }}>
+                        dans {formatCountdown(cd.minutesUntil)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ═══ 8. Emotion Tracker ═══ */}
         <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
@@ -2741,6 +2983,10 @@ export default function WarRoomPage() {
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.7; }
+        }
+        @keyframes countdown-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
         }
       `}</style>
     </div>

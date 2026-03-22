@@ -1,6 +1,6 @@
 "use client";
 
-import { X, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { X, GripVertical, ChevronUp, ChevronDown, Maximize2, Minimize2 } from "lucide-react";
 
 interface WidgetWrapperProps {
   title: string;
@@ -10,6 +10,7 @@ interface WidgetWrapperProps {
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   wide?: boolean;
+  onToggleSize?: () => void;
   children: React.ReactNode;
 }
 
@@ -21,6 +22,7 @@ export default function WidgetWrapper({
   onMoveUp,
   onMoveDown,
   wide,
+  onToggleSize,
   children,
 }: WidgetWrapperProps) {
   return (
@@ -71,6 +73,23 @@ export default function WidgetWrapper({
         </span>
         {editMode && (
           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {onToggleSize && (
+              <button
+                onClick={onToggleSize}
+                style={{
+                  background: "rgba(6,182,212,0.1)",
+                  border: "none",
+                  color: "#06b6d4",
+                  cursor: "pointer",
+                  padding: 2,
+                  display: "flex",
+                  borderRadius: 4,
+                }}
+                title={wide ? "Réduire" : "Agrandir"}
+              >
+                {wide ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              </button>
+            )}
             {onMoveUp && (
               <button
                 onClick={onMoveUp}

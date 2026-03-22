@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useTrades } from "@/hooks/useTrades";
-import { Calendar, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, Clock, Loader2, RefreshCw } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, Clock, Loader2, RefreshCw, Star, Filter } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 
 interface EarningsEvent {
@@ -21,6 +21,37 @@ interface EarningsResponse {
   lastUpdated: string;
 }
 
+// ---------- Mega-cap / large-cap impact classification ----------
+const MEGA_CAP_SYMBOLS = new Set([
+  "AAPL", "MSFT", "GOOGL", "GOOG", "AMZN", "NVDA", "TSLA", "META",
+  "BRK.B", "BRK.A", "JPM", "V", "UNH", "MA", "JNJ", "WMT", "PG",
+  "XOM", "HD", "BAC", "AVGO", "COST", "LLY", "ABBV", "KO", "PEP",
+  "MRK", "CRM", "TMO", "ORCL", "NFLX", "AMD", "ADBE",
+]);
+
+const LARGE_CAP_SYMBOLS = new Set([
+  "INTC", "QCOM", "GS", "MS", "PYPL", "SBUX", "NKE", "DIS", "T",
+  "VZ", "IBM", "GE", "CAT", "BA", "RTX", "UPS", "FDX", "LOW",
+  "TGT", "AMAT", "MU", "LRCX", "PANW", "NOW", "SHOP", "SQ",
+  "SNAP", "UBER", "LYFT", "COIN", "ROKU", "ZM", "DDOG", "NET",
+  "PLTR", "ABNB", "RIVN", "LCID", "SOFI", "HOOD", "ARM",
+  "SNOW", "CRWD", "MRVL", "SMCI", "DELL", "HPQ", "CSCO",
+]);
+
+type ImpactLevel = "high" | "medium" | "low";
+
+function getImpactLevel(symbol: string): ImpactLevel {
+  if (MEGA_CAP_SYMBOLS.has(symbol)) return "high";
+  if (LARGE_CAP_SYMBOLS.has(symbol)) return "medium";
+  return "low";
+}
+
+const IMPACT_CONFIG: Record<ImpactLevel, { emoji: string; color: string; bg: string }> = {
+  high:   { emoji: "\uD83D\uDD34", color: "text-rose-400",   bg: "bg-rose-500/15" },
+  medium: { emoji: "\uD83D\uDFE1", color: "text-amber-400",  bg: "bg-amber-500/15" },
+  low:    { emoji: "\u26AA",       color: "text-[--text-muted]", bg: "bg-[--bg-secondary]/40" },
+};
+
 function formatRevenue(value: number | null): string {
   if (value == null) return "—";
   if (value >= 1e9) return `${(value / 1e9).toFixed(1)}B`;
@@ -37,6 +68,7 @@ export default function EarningsCalendarPage() {
   const [dataSource, setDataSource] = useState<"live" | "fallback">("fallback");
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [myAssetsOnly, setMyAssetsOnly] = useState(false);
 
   const TIME_LABELS: Record<string, { label: string; color: string }> = {
     bmo: { label: t("beforeOpen"), color: "text-amber-400 bg-amber-500/20" },
@@ -76,8 +108,11 @@ export default function EarningsCalendarPage() {
 
   const weekLabel = `${weekDays[0].toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} — ${weekDays[4].toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`;
 
-  // Check if user trades any of the earnings symbols
-  const tradedSymbols = new Set(trades.map((tr) => tr.asset.toUpperCase()));
+  // Cross-reference earnings symbols with user's traded assets
+  const tradedSymbols = useMemo(
+    () => new Set(trades.map((tr) => tr.asset.toUpperCase())),
+    [trades]
+  );
 
   const earningsByDate = useMemo(() => {
     const map: Record<string, EarningsEvent[]> = {};
@@ -88,6 +123,12 @@ export default function EarningsCalendarPage() {
     return map;
   }, [earningsData]);
 
+  // Filtered earnings list (respects "my assets only" toggle)
+  const filteredEarnings = useMemo(
+    () => myAssetsOnly ? earningsData.filter((e) => tradedSymbols.has(e.symbol)) : earningsData,
+    [earningsData, tradedSymbols, myAssetsOnly]
+  );
+
   const alertEarnings = useMemo(
     () => earningsData.filter((e) => tradedSymbols.has(e.symbol)),
     [earningsData, tradedSymbols]
@@ -97,6 +138,38 @@ export default function EarningsCalendarPage() {
     const dateStr = d.toISOString().split("T")[0];
     return earningsByDate[dateStr] || [];
   });
+
+  // ---------- Countdown to next major earnings ----------
+  const nextMajorEarning = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const majorEvents = earningsData
+      .filter((e) => e.date >= todayStr && MEGA_CAP_SYMBOLS.has(e.symbol))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    return majorEvents.length > 0 ? majorEvents[0] : null;
+  }, [earningsData]);
+
+  const countdownText = useMemo(() => {
+    if (!nextMajorEarning) return null;
+    const eventDate = new Date(nextMajorEarning.date + "T00:00:00");
+    const now = new Date();
+    const diffTime = eventDate.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return t("earningsToday");
+    if (diffDays === 1) return t("inOneDay");
+    return t("inDays").replace("{days}", String(diffDays));
+  }, [nextMajorEarning, t]);
+
+  const getTimingLabel = (hour: string): string => {
+    if (hour === "bmo") return t("beforeMarket");
+    if (hour === "amc") return t("afterMarket");
+    return t("duringSession");
+  };
+
+  const getImpactLabel = (level: ImpactLevel): string => {
+    if (level === "high") return t("highImpact");
+    if (level === "medium") return t("mediumImpact");
+    return t("lowImpact");
+  };
 
   if (loading && earningsData.length === 0) {
     return (
@@ -138,27 +211,82 @@ export default function EarningsCalendarPage() {
         </div>
       </div>
 
+      {/* Countdown to next major earnings */}
+      {nextMajorEarning && countdownText && (
+        <div className="glass rounded-2xl p-5 border border-cyan-500/30 bg-gradient-to-r from-cyan-500/5 to-violet-500/5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-cyan-400" />
+              </div>
+              <div>
+                <p className="text-xs text-[--text-muted] uppercase tracking-wider">{t("nextMajorEarnings")}</p>
+                <p className="text-lg font-bold text-[--text-primary]">
+                  <span className="text-cyan-400">{nextMajorEarning.symbol}</span>
+                  {" "}{countdownText}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-right">
+              <div>
+                <p className="text-sm font-medium text-[--text-primary]">
+                  {new Date(nextMajorEarning.date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+                </p>
+                <p className="text-xs text-[--text-secondary]">
+                  {getTimingLabel(nextMajorEarning.hour)}
+                </p>
+              </div>
+              <span className="text-2xl">{IMPACT_CONFIG.high.emoji}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* My Assets Only Toggle */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setMyAssetsOnly(!myAssetsOnly)}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            myAssetsOnly
+              ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+              : "glass text-[--text-secondary] hover:text-[--text-primary] border border-[--border-subtle]"
+          }`}
+        >
+          <Filter className="w-4 h-4" />
+          {t("myAssetsOnly")}
+          {myAssetsOnly && tradedSymbols.size > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] bg-amber-500/30 text-amber-300">
+              {alertEarnings.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Alerts for traded symbols */}
-      {alertEarnings.length > 0 && (
+      {alertEarnings.length > 0 && !myAssetsOnly && (
         <div className="glass rounded-2xl p-5 border-2 border-amber-500/30">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-5 h-5 text-amber-400" />
             <h3 className="font-semibold text-amber-400">{t("attentionEarnings")}</h3>
           </div>
           <div className="space-y-2">
-            {alertEarnings.map((e, idx) => (
-              <div key={`alert-${e.symbol}-${e.date}-${idx}`} className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10">
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-[--text-primary]">{e.symbol}</span>
+            {alertEarnings.map((e, idx) => {
+              const impact = getImpactLevel(e.symbol);
+              return (
+                <div key={`alert-${e.symbol}-${e.date}-${idx}`} className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm">{IMPACT_CONFIG[impact].emoji}</span>
+                    <span className="font-bold text-[--text-primary]">{e.symbol}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-[--text-secondary]">{new Date(e.date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
+                    {TIME_LABELS[e.hour] && (
+                      <span className={`text-xs px-2 py-1 rounded-lg ${TIME_LABELS[e.hour].color}`}>{TIME_LABELS[e.hour].label}</span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-[--text-secondary]">{new Date(e.date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
-                  {TIME_LABELS[e.hour] && (
-                    <span className={`text-xs px-2 py-1 rounded-lg ${TIME_LABELS[e.hour].color}`}>{TIME_LABELS[e.hour].label}</span>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -221,8 +349,15 @@ export default function EarningsCalendarPage() {
                       <div className="flex flex-wrap gap-2">
                         {dayEarnings.map((e, idx) => {
                           const isTraded = tradedSymbols.has(e.symbol);
+                          const impact = getImpactLevel(e.symbol);
                           return (
                             <div key={`${e.symbol}-${e.hour}-${idx}`} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs ${isTraded ? "bg-amber-500/15 border border-amber-500/30" : "bg-[--bg-card]/60 border border-[--border-subtle]"}`}>
+                              <span className="text-sm" title={getImpactLabel(impact)}>{IMPACT_CONFIG[impact].emoji}</span>
+                              {isTraded && (
+                                <span title={t("youTradedThis")}>
+                                  <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                </span>
+                              )}
                               <span className="font-bold text-[--text-primary]">{e.symbol}</span>
                               {TIME_LABELS[e.hour] && (
                                 <span className={`px-1 py-0.5 rounded text-[9px] ${TIME_LABELS[e.hour].color}`}>
@@ -255,6 +390,7 @@ export default function EarningsCalendarPage() {
             <thead>
               <tr className="border-b border-[--border-subtle]">
                 <th className="text-left text-xs font-semibold text-[--text-muted] p-4">{t("symbol")}</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4">{t("impact")}</th>
                 <th className="text-left text-xs font-semibold text-[--text-muted] p-4">{t("date")}</th>
                 <th className="text-center text-xs font-semibold text-[--text-muted] p-4">{t("timing")}</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">EPS Est.</th>
@@ -264,17 +400,30 @@ export default function EarningsCalendarPage() {
               </tr>
             </thead>
             <tbody>
-              {earningsData.sort((a, b) => a.date.localeCompare(b.date)).map((e, idx) => {
+              {filteredEarnings.sort((a, b) => a.date.localeCompare(b.date)).map((e, idx) => {
                 const isTraded = tradedSymbols.has(e.symbol);
                 const timeInfo = TIME_LABELS[e.hour];
                 const epsBeat = e.epsActual != null && e.epsEstimate != null ? e.epsActual >= e.epsEstimate : null;
+                const impact = getImpactLevel(e.symbol);
                 return (
                   <tr key={`${e.symbol}-${e.date}-${idx}`} className={`border-b border-[--border-subtle] hover:bg-[--bg-hover] ${isTraded ? "bg-amber-500/5" : ""}`}>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        {isTraded && <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />}
+                        {isTraded && (
+                          <span title={t("youTradedThis")}>
+                            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                          </span>
+                        )}
                         <span className="font-bold text-sm text-[--text-primary]">{e.symbol}</span>
                       </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg ${IMPACT_CONFIG[impact].bg} ${IMPACT_CONFIG[impact].color}`}
+                        title={getImpactLabel(impact)}
+                      >
+                        <span>{IMPACT_CONFIG[impact].emoji}</span>
+                      </span>
                     </td>
                     <td className="p-4 text-sm text-[--text-primary]">
                       {new Date(e.date + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
@@ -316,8 +465,20 @@ export default function EarningsCalendarPage() {
             <span className="text-xs text-[--text-muted]">AMC = {t("amcLabel")}</span>
           </div>
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
             <span className="text-xs text-[--text-muted]">= {t("youTradeThis")}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">{IMPACT_CONFIG.high.emoji}</span>
+            <span className="text-xs text-[--text-muted]">{t("highImpact")}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">{IMPACT_CONFIG.medium.emoji}</span>
+            <span className="text-xs text-[--text-muted]">{t("mediumImpact")}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">{IMPACT_CONFIG.low.emoji}</span>
+            <span className="text-xs text-[--text-muted]">{t("lowImpact")}</span>
           </div>
         </div>
         <div className="flex items-center justify-center mt-3 pt-3 border-t border-[--border-subtle]">
