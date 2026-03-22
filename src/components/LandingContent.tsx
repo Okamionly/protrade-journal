@@ -327,7 +327,7 @@ export default function LandingContent() {
                   aria-label="Select language"
                 >
                   <span className="text-base leading-none">{LOCALE_FLAGS[locale].flag}</span>
-                  <span className="hidden sm:inline text-xs font-medium">{locale.toUpperCase()}</span>
+                  
                 </button>
                 {langOpen && (
                   <div className="absolute right-0 top-full mt-1 w-44 rounded-xl overflow-hidden shadow-xl z-50 bg-white border border-gray-200">
@@ -428,9 +428,13 @@ export default function LandingContent() {
 
             <div className="relative flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
               <div className="flex-1 max-w-2xl lg:max-w-none text-center lg:text-left">
-                {/* Logo full */}
+                {/* Logo text design */}
                 <div className="mb-8 flex justify-center lg:justify-start">
-                  <Image src="/logo-full.png" alt="MarketPhase" width={500} height={125} sizes="(max-width: 640px) 200px, (max-width: 1024px) 250px, 300px" className="h-20 sm:h-24 lg:h-28 w-auto drop-shadow-lg" priority />
+                  <Image src="/logo-icon.png" alt="MarketPhase" width={56} height={56} sizes="56px" className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl drop-shadow-lg" priority />
+                  <div>
+                    <span className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight"><span className="text-gray-900">Market</span><span className="bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">Phase</span></span>
+                    <p className="text-[10px] sm:text-xs tracking-[0.3em] uppercase text-gray-400 font-medium mt-0.5">Time Creates Opportunity</p>
+                  </div>
                 </div>
 
                 <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full border border-blue-200 bg-blue-50 text-blue-600 text-xs sm:text-sm font-medium mb-6">
@@ -769,13 +773,13 @@ export default function LandingContent() {
                   {[
                     { f: t("landing_comparePrice"), mp: t("landing_compareFree"), tz: "49$/mo", tv: "49$/mo" },
                     { f: t("landing_compareTools"), mp: "35+", tz: "~15", tv: "~10" },
-                    { f: "AI Coach", mp: true, tz: false, tv: false },
-                    { f: "War Room", mp: true, tz: false, tv: false },
-                    { f: "Backtesting What-If", mp: true, tz: false, tv: false },
+                    { f: "Coach IA", mp: true, tz: false, tv: false },
+                    { f: "War Room (cockpit)", mp: true, tz: false, tv: false },
+                    { f: "Backtesting « Et si »", mp: true, tz: false, tv: false },
                     { f: "Gamification / XP", mp: true, tz: false, tv: false },
-                    { f: "Correlation Matrix", mp: true, tz: false, tv: false },
-                    { f: "Market Data Live", mp: true, tz: false, tv: false },
-                    { f: "Trade Replay", mp: true, tz: true, tv: false },
+                    { f: "Matrice de corrélation", mp: true, tz: false, tv: false },
+                    { f: "Données de marché live", mp: true, tz: false, tv: false },
+                    { f: "Replay de trades", mp: true, tz: true, tv: false },
                     { f: t("landing_compareThemes"), mp: true, tz: false, tv: false },
                   ].map((r) => (
                     <tr key={r.f} className="border-b border-gray-50 last:border-0">
