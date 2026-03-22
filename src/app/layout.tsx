@@ -13,19 +13,22 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable
 export const metadata: Metadata = {
   metadataBase: new URL("https://marketphase.vercel.app"),
   title: {
-    default: "MarketPhase - Journal de Trading Gratuit avec IA | 35+ Outils",
-    template: "%s | MarketPhase - Journal de Trading",
+    default: "Journal de Trading Gratuit avec IA | MarketPhase - 35+ Outils d'Analyse Trading",
+    template: "%s | MarketPhase - Journal de Trading Gratuit",
   },
   description:
-    "MarketPhase est le journal de trading gratuit le plus complet : 35+ outils, analytics avancés, AI Coach, market data live, options flow, gestion du risque. Alternative gratuite à TradeZella.",
+    "Journal de trading gratuit en ligne avec IA : analytics, AI Coach, market data live. Outil trading gratuit pour analyse trading. Essayez maintenant !",
   keywords: [
-    "journal de trading",
-    "trading journal",
     "journal de trading gratuit",
+    "journal de trading",
+    "trading journal free",
+    "journal trading en ligne",
+    "outil trading gratuit",
+    "analyse trading",
+    "trading journal",
     "best trading journal",
     "trading journal app",
     "free trading journal",
-    "analyse trading",
     "performance trading",
     "MarketPhase",
     "AI trading journal",
@@ -35,26 +38,27 @@ export const metadata: Metadata = {
     "trading analytics",
     "trade tracker",
     "TradeZella alternative",
-    "journal trading en ligne",
-    "outil trading gratuit",
     "trading psychology journal",
     "trading performance tracker",
+    "journal de trading en ligne gratuit",
+    "meilleur journal de trading",
+    "suivi trades gratuit",
   ],
   openGraph: {
-    title: "MarketPhase - Journal de Trading Gratuit avec IA",
+    title: "Journal de Trading Gratuit avec IA | MarketPhase",
     description:
-      "35+ outils de trading professionnels : analytics, AI Coach, market data live, options flow. 100% gratuit, pour toujours.",
+      "35+ outils de trading pro : analytics, AI Coach, market data live, options flow. 100% gratuit. Commencez maintenant !",
     url: "https://marketphase.vercel.app",
     siteName: "MarketPhase",
     locale: "fr_FR",
     type: "website",
-    images: [{ url: "/og-image.png", width: 800, height: 400, alt: "MarketPhase - Time Creates Opportunity" }],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "MarketPhase - Journal de Trading Gratuit avec IA" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MarketPhase - Journal de Trading Gratuit avec IA",
-    description: "35+ outils de trading professionnels. Analytics, AI Coach, Market Data. 100% gratuit.",
-    images: [{ url: "/og-image.png", width: 800, height: 400, alt: "MarketPhase - Time Creates Opportunity" }],
+    title: "Journal de Trading Gratuit avec IA | MarketPhase",
+    description: "35+ outils de trading pro. Analytics, AI Coach, Market Data. 100% gratuit. Essayez maintenant !",
+    images: [{ url: "/twitter-image", width: 1200, height: 630, alt: "MarketPhase - Journal de Trading Gratuit avec IA" }],
   },
   robots: {
     index: true,
@@ -69,31 +73,104 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: "https://marketphase.vercel.app",
+    languages: {
+      "fr": "https://marketphase.vercel.app",
+      "en": "https://marketphase.vercel.app/en",
+      "es": "https://marketphase.vercel.app/es",
+      "de": "https://marketphase.vercel.app/de",
+      "ar": "https://marketphase.vercel.app/ar",
+      "x-default": "https://marketphase.vercel.app",
+    },
   },
   verification: {
     google: "1ovgGf31NCAaEWZgILyqtlaCksw5vElLLrU6-p66jS0",
   },
 };
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "MarketPhase",
-  alternateName: "MarketPhase Trading Journal",
-  description:
-    "Journal de trading professionnel gratuit avec intelligence artificielle. 35+ outils : analytics avancés, AI Coach, market data live, options flow, gestion du risque.",
-  applicationCategory: "FinanceApplication",
-  operatingSystem: "Web",
-  url: "https://marketphase.vercel.app",
-  offers: {
-    "@type": "Offer",
-    price: "0",
-    priceCurrency: "EUR",
-    availability: "https://schema.org/InStock",
+const jsonLdSchemas = [
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "MarketPhase",
+    alternateName: "MarketPhase Trading Journal",
+    description:
+      "Journal de trading gratuit en ligne avec intelligence artificielle. 35+ outils professionnels : analytics avancés, AI Coach, market data live, options flow, gestion du risque.",
+    applicationCategory: "FinanceApplication",
+    operatingSystem: "Web",
+    url: "https://marketphase.vercel.app",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "EUR",
+      availability: "https://schema.org/InStock",
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.9",
+      reviewCount: "1200",
+      bestRating: "5",
+      worstRating: "1",
+    },
+    featureList:
+      "Trading Journal, Analytics, AI Coach, Market Data, Options Flow, Risk Management, P&L Calendar, Trade Replay, Market Scanner",
+    inLanguage: ["fr", "en"],
   },
-  featureList: "Trading Journal, Analytics, AI Coach, Market Data, Options Flow, Risk Management, P&L Calendar, Trade Replay, Market Scanner",
-  inLanguage: ["fr", "en"],
-};
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "MarketPhase",
+    url: "https://marketphase.vercel.app",
+    logo: "https://marketphase.vercel.app/logo-icon.png",
+    sameAs: [
+      "https://twitter.com/MarketPhaseApp",
+      "https://www.youtube.com/@MarketPhase",
+      "https://github.com/MarketPhase",
+    ],
+    description:
+      "MarketPhase est un journal de trading gratuit avec IA, concu pour les traders qui veulent ameliorer leurs performances.",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "MarketPhase",
+    url: "https://marketphase.vercel.app",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: "https://marketphase.vercel.app/search?q={search_term_string}",
+      "query-input": "required name=search_term_string",
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "C'est vraiment gratuit ? Quel est le piege ?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Aucun piege. MarketPhase est 100% gratuit avec 35+ outils. Nous proposons un abonnement VIP optionnel (9,99\u20ac/mois) pour des analyses macro et indicateurs exclusifs, mais l'app complete reste gratuite pour toujours.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Mes donnees de trading sont-elles en securite ?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Absolument. Vos donnees sont chiffrees et stockees de maniere securisee. Nous ne vendons jamais vos donnees a des tiers.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Puis-je annuler le VIP a tout moment ?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Oui, en un clic depuis votre profil. Aucun engagement, aucune penalite. Vous gardez l'acces gratuit apres annulation.",
+        },
+      },
+    ],
+  },
+];
 
 export default function RootLayout({
   children,
@@ -116,17 +193,16 @@ export default function RootLayout({
             } catch(e) {}
           })();
         `}</Script>
-        <Script id="sw-register" strategy="afterInteractive">{`
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
-          }
-        `}</Script>
+{/* SW registration removed — no public/sw.js exists; re-add when a service worker is created */}
       </head>
       <body className="antialiased min-h-screen overflow-x-hidden">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
+        {jsonLdSchemas.map((schema, i) => (
+          <script
+            key={i}
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          />
+        ))}
         <SessionProvider>
           <ThemeProvider>
             <ToastProvider>

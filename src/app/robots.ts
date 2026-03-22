@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
-        disallow: ["/api/", "/dashboard/", "/journal/", "/analytics/", "/calendar/", "/chat/", "/market/", "/screenshots/", "/import/", "/admin/"],
+        allow: ["/", "/features", "/about", "/pricing", "/blog", "/contact", "/login", "/register"],
+        disallow: ["/api/", "/dashboard/", "/journal/", "/analytics/", "/calendar/", "/chat/", "/market/", "/screenshots/", "/import/", "/admin/", "/settings/", "/profile/", "/trades/"],
       },
     ],
     sitemap: "https://marketphase.vercel.app/sitemap.xml",
