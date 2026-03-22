@@ -1678,5 +1678,24 @@
   "name": "Name",
   "noStrategies": "No strategies",
   "noStrategiesDesc": "Create your first strategy to analyze your performance",
-  "strategyDescriptionPlaceholder": "Describe your strategy..."
+  "strategyDescriptionPlaceholder": "Describe your strategy...",
+
+  "landing_pricingFreeLabel": "WHAT'S INCLUDED",
+  "landing_pricingVipBadge": "RECOMMENDED",
+  "landing_pricingVipLabel": "EVERYTHING IN FREE, PLUS:",
+  "landing_pricingVipPer": "i.e. €95.88/year — save €24",
+  "landing_pricingVip1": "Exclusive TradingView indicators (Pine Script)",
+  "landing_pricingVip2": "Weekly macro analyses (FOMC, DXY, geopolitics)",
+  "landing_pricingVip3": "Trading scenarios with probabilities",
+  "landing_pricingVip4": "GPS support/resistance levels",
+  "landing_pricingVip5": "Gold VIP badge + priority support",
+  "landing_pricingVipCta": "Try VIP →",
+
+  "landing_faqTitle": "Frequently Asked Questions",
+  "landing_faqQ1": "Is it really free? What's the catch?",
+  "landing_faqA1": "No catch. MarketPhase is 100% free with 35+ tools. We offer an optional VIP subscription (€9.99/month) for exclusive macro analyses and indicators, but the full app stays free forever.",
+  "landing_faqQ2": "Is my trading data safe?",
+  "landing_faqA2": "Absolutely. Your data is encrypted and stored securely. We never sell your data to third parties.",
+  "landing_faqQ3": "Can I cancel VIP anytime?",
+  "landing_faqA3": "Yes, in one click from your profile. No commitment, no penalty. You keep free access after cancellation."
 }
