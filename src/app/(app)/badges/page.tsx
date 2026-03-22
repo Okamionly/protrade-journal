@@ -53,8 +53,8 @@ const CATEGORIES: { key: string; label: string; emoji: string; icon: React.Eleme
   { key: "risk", label: "Gestion du risque", emoji: "\u{1F6E1}", icon: Shield },
   { key: "discipline", label: "Discipline", emoji: "\u{1F3AF}", icon: Target },
   { key: "milestones", label: "Jalons", emoji: "\u{1F48E}", icon: Gem },
-  { key: "community", label: "Communaute", emoji: "\u{1F31F}", icon: Users },
-  { key: "streaks", label: "Series", emoji: "\u{1F525}", icon: Flame },
+  { key: "community", label: "Communauté", emoji: "\u{1F31F}", icon: Users },
+  { key: "streaks", label: "Séries", emoji: "\u{1F525}", icon: Flame },
 ];
 
 /* ─── Quest icon map ─── */
@@ -70,8 +70,8 @@ const QUEST_ICON_MAP: Record<string, React.ElementType> = {
 const RARITY_CONFIG: Record<BadgeRarity, { label: string; color: string; border: string; bg: string; glow: string }> = {
   common: { label: "Commun", color: "text-gray-400", border: "border-gray-300 dark:border-gray-600", bg: "bg-gray-100 dark:bg-gray-800", glow: "" },
   rare: { label: "Rare", color: "text-blue-400", border: "border-blue-400 dark:border-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30", glow: "shadow-blue-500/20" },
-  epic: { label: "Epique", color: "text-purple-400", border: "border-purple-400 dark:border-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30", glow: "shadow-purple-500/20" },
-  legendary: { label: "Legendaire", color: "text-amber-400", border: "border-amber-400 dark:border-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", glow: "shadow-amber-500/30" },
+  epic: { label: "Épique", color: "text-purple-400", border: "border-purple-400 dark:border-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30", glow: "shadow-purple-500/20" },
+  legendary: { label: "Légendaire", color: "text-amber-400", border: "border-amber-400 dark:border-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", glow: "shadow-amber-500/30" },
 };
 
 /* ─── Showcase storage key ─── */

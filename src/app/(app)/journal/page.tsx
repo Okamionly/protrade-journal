@@ -203,7 +203,7 @@ function JournalPageContent() {
       addNotification(
         "TRADE_ALERT",
         "Trade enregistre",
-        `${asset} ${sign}$${result.toFixed(2)}`,
+        `${asset} ${sign}${result.toFixed(2)}€`,
         "/journal"
       );
     } else {

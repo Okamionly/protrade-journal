@@ -22,6 +22,109 @@ export default function AnalyticsPage() {
   const emotionPerf = computeEmotionPerformance(trades);
   const monthlyData = computeMonthlyComparison(trades);
 
+  const advancedStats = useMemo(() => {
+    if (!trades || trades.length === 0) {
+      return { sortino: 0, calmar: 0, recoveryTrades: 0, monthlyMomentum: [], tw: { pnl: 0, trades: 0, winRate: 0 }, lw: { pnl: 0, trades: 0, winRate: 0 }, tm: { pnl: 0, trades: 0, winRate: 0 }, lm: { pnl: 0, trades: 0, winRate: 0 }, pnlChange: () => 0 };
+    }
+    const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const results = sorted.map(t => t.result);
+    const mean = results.length > 0 ? results.reduce((a, b) => a + b, 0) / results.length : 0;
+
+    // Sortino Ratio
+    const downsideReturns = results.filter(r => r < 0);
+    const downsideVariance = downsideReturns.length > 1
+      ? downsideReturns.reduce((s, r) => s + Math.pow(r, 2), 0) / downsideReturns.length
+      : 0;
+    const downsideDev = Math.sqrt(downsideVariance);
+    const sortino = downsideDev > 0 ? (mean / downsideDev) * Math.sqrt(252) : 0;
+
+    // Calmar Ratio
+    const totalReturn = results.reduce((a, b) => a + b, 0);
+    const daysSpan = sorted.length >= 2
+      ? (new Date(sorted[sorted.length - 1].date).getTime() - new Date(sorted[0].date).getTime()) / (1000 * 60 * 60 * 24)
+      : 1;
+    const annualizedReturn = daysSpan > 0 ? (totalReturn / Math.max(daysSpan, 1)) * 365 : 0;
+    const calmar = stats.maxDrawdown > 0 ? annualizedReturn / stats.maxDrawdown : 0;
+
+    // Recovery Time
+    let peak = 0;
+    let maxDD = 0;
+    let ddStartIdx = 0;
+    let ddEndIdx = 0;
+    let cumulative = 0;
+    sorted.forEach((tr, i) => {
+      cumulative += tr.result;
+      if (cumulative > peak) peak = cumulative;
+      const dd = peak - cumulative;
+      if (dd > maxDD) { maxDD = dd; ddEndIdx = i; }
+    });
+    cumulative = 0;
+    let peakVal = 0;
+    for (let i = 0; i <= ddEndIdx; i++) {
+      cumulative += sorted[i].result;
+      if (cumulative >= peakVal) { peakVal = cumulative; ddStartIdx = i; }
+    }
+    let recoveryTrades = -1;
+    cumulative = 0;
+    for (let i = 0; i < sorted.length; i++) {
+      cumulative += sorted[i].result;
+      if (i > ddEndIdx && cumulative >= peakVal) { recoveryTrades = i - ddEndIdx; break; }
+    }
+
+    // Monthly momentum
+    const now = new Date();
+    const monthMap: Record<string, number> = {};
+    sorted.forEach(tr => {
+      const d = new Date(tr.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      monthMap[key] = (monthMap[key] || 0) + tr.result;
+    });
+    const monthKeys = Object.keys(monthMap).sort();
+    const monthlyMomentum = monthKeys.slice(-6).map((key, i, arr) => {
+      const prev = i > 0 ? monthMap[arr[i - 1]] : null;
+      const cur = monthMap[key];
+      const change = prev !== null && prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : null;
+      const [y, m] = key.split("-");
+      const label = new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+      return { key, label, pnl: cur, change };
+    });
+
+    // Period-over-period comparison
+    const startOfWeek = (d: Date) => {
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(d.getFullYear(), d.getMonth(), diff);
+    };
+    const thisWeekStart = startOfWeek(now);
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const periodTrades = (start: Date, end: Date) => {
+      return sorted.filter(t => { const d = new Date(t.date); return d >= start && d <= end; });
+    };
+
+    const periodStats = (arr: typeof trades) => {
+      const pnl = arr.reduce((s, t) => s + t.result, 0);
+      const w = arr.filter(t => t.result > 0).length;
+      const wr = arr.length > 0 ? (w / arr.length) * 100 : 0;
+      return { pnl, trades: arr.length, winRate: wr };
+    };
+
+    const tw = periodStats(periodTrades(thisWeekStart, now));
+    const lw = periodStats(periodTrades(lastWeekStart, new Date(thisWeekStart.getTime() - 1)));
+    const tm = periodStats(periodTrades(thisMonthStart, now));
+    const lm = periodStats(periodTrades(lastMonthStart, lastMonthEnd));
+
+    const pnlChange = (cur: number, prev: number) => prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : cur !== 0 ? 100 : 0;
+
+    void ddStartIdx; // used in computation above
+
+    return { sortino, calmar, recoveryTrades, monthlyMomentum, tw, lw, tm, lm, pnlChange };
+  }, [trades, stats.maxDrawdown]);
+
   if (loading) return <AnalyticsSkeleton />;
 
   if (trades.length === 0) {
@@ -84,121 +187,7 @@ export default function AnalyticsPage() {
 
       {/* Sortino Ratio, Calmar Ratio, Recovery Time */}
       {(() => {
-        const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        const results = sorted.map(t => t.result);
-        const mean = results.length > 0 ? results.reduce((a, b) => a + b, 0) / results.length : 0;
-
-        // Sortino Ratio: uses only downside deviation
-        const downsideReturns = results.filter(r => r < 0);
-        const downsideVariance = downsideReturns.length > 1
-          ? downsideReturns.reduce((s, r) => s + Math.pow(r, 2), 0) / downsideReturns.length
-          : 0;
-        const downsideDev = Math.sqrt(downsideVariance);
-        const sortino = downsideDev > 0 ? (mean / downsideDev) * Math.sqrt(252) : 0;
-
-        // Calmar Ratio: annualized return / max drawdown
-        const totalReturn = results.reduce((a, b) => a + b, 0);
-        const daysSpan = sorted.length >= 2
-          ? (new Date(sorted[sorted.length - 1].date).getTime() - new Date(sorted[0].date).getTime()) / (1000 * 60 * 60 * 24)
-          : 1;
-        const annualizedReturn = daysSpan > 0 ? (totalReturn / Math.max(daysSpan, 1)) * 365 : 0;
-        const calmar = stats.maxDrawdown > 0 ? annualizedReturn / stats.maxDrawdown : 0;
-
-        // Recovery Time: trades to recover from max drawdown
-        let peak = 0;
-        let maxDD = 0;
-        let ddStartIdx = 0;
-        let ddEndIdx = 0;
-        let cumulative = 0;
-        sorted.forEach((tr, i) => {
-          cumulative += tr.result;
-          if (cumulative > peak) {
-            peak = cumulative;
-          }
-          const dd = peak - cumulative;
-          if (dd > maxDD) {
-            maxDD = dd;
-            ddEndIdx = i;
-          }
-        });
-        // Find where peak was before this drawdown
-        cumulative = 0;
-        let peakVal = 0;
-        for (let i = 0; i <= ddEndIdx; i++) {
-          cumulative += sorted[i].result;
-          if (cumulative >= peakVal) {
-            peakVal = cumulative;
-            ddStartIdx = i;
-          }
-        }
-        // Find recovery: next time cumulative >= peakVal after ddEndIdx
-        let recoveryTrades = -1;
-        cumulative = 0;
-        for (let i = 0; i < sorted.length; i++) {
-          cumulative += sorted[i].result;
-          if (i > ddEndIdx && cumulative >= peakVal) {
-            recoveryTrades = i - ddEndIdx;
-            break;
-          }
-        }
-
-        // Monthly momentum
-        const now = new Date();
-        const monthMap: Record<string, number> = {};
-        sorted.forEach(tr => {
-          const d = new Date(tr.date);
-          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-          monthMap[key] = (monthMap[key] || 0) + tr.result;
-        });
-        const monthKeys = Object.keys(monthMap).sort();
-        const monthlyMomentum = monthKeys.slice(-6).map((key, i, arr) => {
-          const prev = i > 0 ? monthMap[arr[i - 1]] : null;
-          const cur = monthMap[key];
-          const change = prev !== null && prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : null;
-          const [y, m] = key.split("-");
-          const label = new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
-          return { key, label, pnl: cur, change };
-        });
-
-        // Period-over-period comparison
-        const startOfWeek = (d: Date) => {
-          const day = d.getDay();
-          const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-          return new Date(d.getFullYear(), d.getMonth(), diff);
-        };
-        const thisWeekStart = startOfWeek(now);
-        const lastWeekStart = new Date(thisWeekStart);
-        lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-
-        const periodTrades = (start: Date, end: Date) => {
-          return sorted.filter(t => {
-            const d = new Date(t.date);
-            return d >= start && d <= end;
-          });
-        };
-
-        const thisWeekTrades = periodTrades(thisWeekStart, now);
-        const lastWeekTrades = periodTrades(lastWeekStart, new Date(thisWeekStart.getTime() - 1));
-        const thisMonthTrades = periodTrades(thisMonthStart, now);
-        const lastMonthTrades = periodTrades(lastMonthStart, lastMonthEnd);
-
-        const periodStats = (arr: typeof trades) => {
-          const pnl = arr.reduce((s, t) => s + t.result, 0);
-          const w = arr.filter(t => t.result > 0).length;
-          const wr = arr.length > 0 ? (w / arr.length) * 100 : 0;
-          return { pnl, trades: arr.length, winRate: wr };
-        };
-
-        const tw = periodStats(thisWeekTrades);
-        const lw = periodStats(lastWeekTrades);
-        const tm = periodStats(thisMonthTrades);
-        const lm = periodStats(lastMonthTrades);
-
-        const pnlChange = (cur: number, prev: number) => prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : cur !== 0 ? 100 : 0;
-
+        const { sortino, calmar, recoveryTrades, monthlyMomentum, tw, lw, tm, lm, pnlChange } = advancedStats;
         return (
           <>
             {/* Sortino, Calmar, Recovery Time */}

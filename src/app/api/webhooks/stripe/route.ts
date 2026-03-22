@@ -63,12 +63,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Handle customer.subscription.deleted (cancellation)
+    // Handle customer.subscription.deleted (cancellation) — downgrade to USER
     if (event.type === "customer.subscription.deleted") {
-      const subscription = event.data.object;
-      // We'd need to find the user by Stripe customer ID
-      // For now, log it
-      console.log("[Stripe] Subscription cancelled:", subscription.id);
+      const sub = event.data.object;
+      const customerEmail = sub.customer_email || sub.metadata?.email;
+      if (customerEmail) {
+        await prisma.user.updateMany({
+          where: { email: customerEmail },
+          data: { role: "USER" },
+        });
+        console.log(`[Stripe] Downgraded ${customerEmail} to USER`);
+      } else {
+        console.log("[Stripe] Subscription cancelled but no email found:", sub.id);
+      }
     }
 
     return NextResponse.json({ received: true });

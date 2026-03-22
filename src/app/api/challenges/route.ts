@@ -298,11 +298,11 @@ const CHALLENGES: ChallengeDef[] = [
       const recent = ctx.allTrades.filter(
         (t) => new Date(t.date) >= twoWeeksAgo
       );
-      const negativeMoods = ["tilt", "frustration", "peur", "revenge", "colère", "anxiété"];
+      const negativeMoods = ["tilt", "frustration", "peur", "revenge", "colère", "anxiété", "frustrated", "fearful", "angry", "fomo", "anxious", "impatient", "stressed", "stressé"];
       const tiltTrades = recent.filter(
         (t) =>
           t.emotion &&
-          negativeMoods.some((m) => t.emotion!.toLowerCase().includes(m))
+          negativeMoods.some((m) => t.emotion!.toLowerCase().includes(m.toLowerCase()))
       );
       const days = [
         ...new Set(recent.map((t) => new Date(t.date).toISOString().slice(0, 10))),

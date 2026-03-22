@@ -123,7 +123,7 @@ function StatRow({ label, valueA, valueB, format = "number", invert = false }: {
 }) {
   const fmtVal = (v: number | string) => {
     if (typeof v === "string") return v;
-    if (format === "currency") return `${v >= 0 ? "+" : ""}${v.toFixed(2)} $`;
+    if (format === "currency") return `${v >= 0 ? "+" : ""}${v.toFixed(2)} €`;
     if (format === "percent") return `${v.toFixed(1)}%`;
     if (format === "ratio") return v === Infinity ? "∞" : v.toFixed(2);
     return v.toString();
@@ -174,7 +174,7 @@ function BarChart({ dailyA, dailyB, noDataLabel }: { dailyA: Record<string, numb
                   background: vA >= 0 ? "#06b6d4" : "#06b6d480",
                   opacity: 0.85,
                 }}
-                title={`A: ${vA.toFixed(2)} $ (${date})`}
+                title={`A: ${vA.toFixed(2)} € (${date})`}
               />
             </div>
             <div className="flex flex-col justify-end flex-1" style={{ height: "100%" }}>
@@ -185,7 +185,7 @@ function BarChart({ dailyA, dailyB, noDataLabel }: { dailyA: Record<string, numb
                   background: vB >= 0 ? "#8b5cf6" : "#8b5cf680",
                   opacity: 0.85,
                 }}
-                title={`B: ${vB.toFixed(2)} $ (${date})`}
+                title={`B: ${vB.toFixed(2)} € (${date})`}
               />
             </div>
           </div>

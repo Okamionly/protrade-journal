@@ -98,7 +98,7 @@ interface UserProfile {
   winRate: number | null;
   totalTrades: number | null;
   memberSince: string;
-  isOnline: boolean;
+  isOnline: boolean | null;
 }
 
 // ─── Utilities ────────────────────────────────────────────
@@ -429,12 +429,14 @@ function UserProfileCard({ profile, position }: { profile: UserProfile; position
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 mt-1">
-          <div className={`w-2 h-2 rounded-full ${profile.isOnline ? "bg-emerald-400" : "bg-gray-400"}`} />
-          <span className="text-[11px] text-[--text-muted]">
-            {profile.isOnline ? "En ligne" : "Hors ligne"}
-          </span>
-        </div>
+        {profile.isOnline !== null && (
+          <div className="flex items-center gap-1.5 mt-1">
+            <div className={`w-2 h-2 rounded-full ${profile.isOnline ? "bg-emerald-400" : "bg-gray-400"}`} />
+            <span className="text-[11px] text-[--text-muted]">
+              {profile.isOnline ? "En ligne" : "Hors ligne"}
+            </span>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
@@ -805,8 +807,6 @@ function MessageBubble({
           onClick={(e) => onShowProfile(msg.userId, e)}
         >
           {initial}
-          {/* Online indicator dot on avatar */}
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-white dark:border-gray-950" />
         </div>
       )}
 
@@ -1232,14 +1232,7 @@ function RightPanel({
     }
   });
 
-  // Simulated online status (random for demo, in production would come from presence system)
-  const onlineUsers = useMemo(() => {
-    const set = new Set<string>();
-    Array.from(uniqueUsers.keys()).forEach((id, i) => {
-      if (i % 3 !== 2) set.add(id); // ~66% online
-    });
-    return set;
-  }, [uniqueUsers.size]);
+  // Online status removed — no real-time presence system yet
 
   return (
     <div className="w-72 flex-shrink-0 border-l border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-950/50 flex flex-col">
@@ -1335,44 +1328,20 @@ function RightPanel({
               </div>
             )}
 
-            {/* Members - with online/offline grouping */}
+            {/* Members */}
             <div>
               <h4 className="text-[11px] font-bold text-[--text-muted] uppercase tracking-wider mb-2 px-1">
-                En ligne — {onlineUsers.size}
+                {t("members")} — {uniqueUsers.size}
               </h4>
-              <div className="space-y-1 mb-4">
-                {Array.from(uniqueUsers.entries())
-                  .filter(([id]) => onlineUsers.has(id))
-                  .map(([id, u]) => (
+              <div className="space-y-1">
+                {Array.from(uniqueUsers.entries()).map(([id, u]) => (
                   <div key={id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[var(--bg-hover)]">
-                    <div className="relative">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
-                        {u.initial}
-                      </div>
-                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white dark:border-gray-950" />
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
+                      {u.initial}
                     </div>
                     <span className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>{u.name}</span>
                     {u.role === "ADMIN" && <ShieldCheck className="w-3 h-3 text-amber-500 ml-auto flex-shrink-0" />}
                     {u.role === "VIP" && <Crown className="w-3 h-3 text-purple-400 ml-auto flex-shrink-0" />}
-                  </div>
-                ))}
-              </div>
-
-              <h4 className="text-[11px] font-bold text-[--text-muted] uppercase tracking-wider mb-2 px-1">
-                Hors ligne — {uniqueUsers.size - onlineUsers.size}
-              </h4>
-              <div className="space-y-1">
-                {Array.from(uniqueUsers.entries())
-                  .filter(([id]) => !onlineUsers.has(id))
-                  .map(([id, u]) => (
-                  <div key={id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[var(--bg-hover)] opacity-60">
-                    <div className="relative">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
-                        {u.initial}
-                      </div>
-                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-gray-400 border-2 border-white dark:border-gray-950" />
-                    </div>
-                    <span className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>{u.name}</span>
                   </div>
                 ))}
               </div>
@@ -1412,6 +1381,7 @@ export default function ChatPage() {
   const [showTradeModal, setShowTradeModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isBanned, setIsBanned] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const [isVip, setIsVip] = useState<boolean | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -1457,6 +1427,7 @@ export default function ChatPage() {
     fetch("/api/user/role")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
+        if (data?.id) setCurrentUserId(data.id);
         if (data?.role === "ADMIN") setIsAdmin(true);
         setIsVip(data?.role === "VIP" || data?.role === "ADMIN");
         if (data?.banned) setIsBanned(true);
@@ -1683,26 +1654,46 @@ export default function ChatPage() {
     await sendMessage(threadContent);
   };
 
-  const handleShowProfile = (userId: string, event: React.MouseEvent) => {
+  const handleShowProfile = async (userId: string, event: React.MouseEvent) => {
     const msg = messages.find((m) => m.userId === userId);
     if (!msg) return;
 
-    const profile: UserProfile = {
-      name: msg.user.name || msg.user.email.split("@")[0],
-      email: msg.user.email,
-      role: msg.user.role || "USER",
-      winRate: null,
-      totalTrades: null,
-      memberSince: "2024",
-      isOnline: true,
-    };
-
+    // Show loading state immediately with known data
+    const position = { x: event.clientX, y: event.clientY };
     setUserProfile({
-      profile,
-      position: { x: event.clientX, y: event.clientY },
+      profile: {
+        name: msg.user.name || msg.user.email.split("@")[0],
+        email: msg.user.email,
+        role: msg.user.role || "USER",
+        winRate: null,
+        totalTrades: null,
+        memberSince: "...",
+        isOnline: null,
+      },
+      position,
     });
 
-    // Auto-hide after 3 seconds
+    // Fetch real profile data
+    try {
+      const res = await fetch(`/api/users/${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUserProfile((prev) => prev ? {
+          ...prev,
+          profile: {
+            ...prev.profile,
+            winRate: data.winRate ?? null,
+            totalTrades: data.totalTrades ?? null,
+            memberSince: data.memberSince || prev.profile.memberSince,
+            isOnline: data.isOnline ?? null,
+          },
+        } : null);
+      }
+    } catch {
+      // Profile stays with partial data
+    }
+
+    // Auto-hide after 4 seconds
     setTimeout(() => setUserProfile(null), 4000);
   };
 
@@ -2308,7 +2299,7 @@ export default function ChatPage() {
                           <div id={`msg-${msg.id}`} className={`transition-all duration-500 ${searchHighlightIds.has(msg.id) ? "bg-amber-500/10 border-l-2 border-amber-400" : ""}`}>
                             <MessageBubble
                               msg={msg}
-                              isOwn={false}
+                              isOwn={msg.userId === currentUserId}
                               isAdmin={isAdmin}
                               onDelete={handleDelete}
                               onPin={handlePin}
@@ -2317,7 +2308,7 @@ export default function ChatPage() {
                               onReaction={handleReaction}
                               onReply={handleReply}
                               onOpenThread={handleOpenThread}
-                              currentUserId={undefined}
+                              currentUserId={currentUserId}
                               isConsecutive={isConsecutive}
                               threadInfo={threadInfoMap.get(msg.id)}
                               onShowProfile={handleShowProfile}
@@ -2359,7 +2350,7 @@ export default function ChatPage() {
                                       <div key={reply.id} className="pl-1">
                                         <MessageBubble
                                           msg={cleanReply}
-                                          isOwn={false}
+                                          isOwn={cleanReply.userId === currentUserId}
                                           isAdmin={isAdmin}
                                           onDelete={handleDelete}
                                           onPin={handlePin}
@@ -2368,7 +2359,7 @@ export default function ChatPage() {
                                           onReaction={handleReaction}
                                           onReply={handleReply}
                                           onOpenThread={() => {}}
-                                          currentUserId={undefined}
+                                          currentUserId={currentUserId}
                                           isConsecutive={replyConsecutive}
                                           threadInfo={undefined}
                                           showThreadButton={false}
@@ -2390,17 +2381,7 @@ export default function ChatPage() {
               </div>
             )}
 
-            {/* Typing indicator — client-side only */}
-            {isTyping && (
-              <div className="flex items-center gap-2 px-4 py-1.5 text-[11px] text-[--text-muted]">
-                <div className="flex gap-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-                <span className="italic">est en train d&apos;écrire...</span>
-              </div>
-            )}
+            {/* Typing indicator removed — shows own typing only, useless without WebSocket */}
 
             {/* New messages indicator with unread count */}
             {showNewMsgIndicator && (
@@ -2579,7 +2560,7 @@ export default function ChatPage() {
             onReaction={handleReaction}
             onImageClick={setLightboxUrl}
             isAdmin={isAdmin}
-            currentUserId={undefined}
+            currentUserId={currentUserId}
             onDelete={handleDelete}
             onPin={handlePin}
             onBan={handleBan}

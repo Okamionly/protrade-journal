@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "messageId et emoji requis" }, { status: 400 });
     }
 
-    if (!ALLOWED_EMOJIS.includes(emoji)) {
+    if (!emoji.startsWith("vote_") && !ALLOWED_EMOJIS.includes(emoji)) {
       return NextResponse.json({ error: "Emoji non autorisé" }, { status: 400 });
     }
 

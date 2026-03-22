@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BarChart3, Mail, ArrowLeft } from "lucide-react";
+import Image from "next/image";
+import { Mail, ArrowLeft } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -37,29 +38,31 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="glass rounded-2xl w-full max-w-md p-8">
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Background gradient blobs */}
+      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
+
+      <div className="glass rounded-2xl w-full max-w-md p-8 relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center mb-4">
-            <BarChart3 className="text-white w-8 h-8" />
-          </div>
+          <Image src="/logo-icon.png" alt="MarketPhase" width={80} height={80} className="w-20 h-20 rounded-2xl mb-4" />
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
             MarketPhase
           </h1>
-          <p className="text-gray-400 text-sm mt-2">Réinitialisation du mot de passe</p>
+          <p className="text-sm mt-2" style={{ color: "var(--text-muted)" }}>R&eacute;initialisation du mot de passe</p>
         </div>
 
         {sent ? (
           <div className="text-center">
             <div className="mb-4 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm">
-              Si un compte existe avec cet email, vous recevrez un lien de réinitialisation.
+              Si un compte existe avec cet email, vous recevrez un lien de r&eacute;initialisation.
             </div>
             <Link
               href="/login"
               className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm mt-4"
             >
               <ArrowLeft className="w-4 h-4" />
-              Retour à la connexion
+              Retour &agrave; la connexion
             </Link>
           </div>
         ) : (
@@ -72,14 +75,14 @@ export default function ForgotPasswordPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Email</label>
+                <label className="block text-sm mb-1" style={{ color: "var(--text-muted)" }}>Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-muted)" }} />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-gray-800/50 border border-gray-700 rounded-lg pl-10 pr-4 py-3 focus:border-blue-500 focus:outline-none"
+                    className="input-field w-full pl-10 pr-4 py-3"
                     placeholder="email@exemple.com"
                     required
                   />
@@ -91,7 +94,7 @@ export default function ForgotPasswordPage() {
                 disabled={loading}
                 className="w-full py-3 rounded-lg btn-primary text-white font-medium disabled:opacity-50"
               >
-                {loading ? "Envoi en cours..." : "Envoyer le lien de réinitialisation"}
+                {loading ? "Envoi en cours..." : "Envoyer le lien de r\u00e9initialisation"}
               </button>
             </form>
 
@@ -101,7 +104,7 @@ export default function ForgotPasswordPage() {
                 className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Retour à la connexion
+                Retour &agrave; la connexion
               </Link>
             </p>
           </>

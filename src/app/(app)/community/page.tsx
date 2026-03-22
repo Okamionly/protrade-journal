@@ -753,7 +753,7 @@ function TradeDuJour({ messages }: { messages: FeedMessage[] }) {
           </div>
           {trade.strategy && (
             <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
-              Strategie : {trade.strategy}
+              Stratégie : {trade.strategy}
             </p>
           )}
         </div>
@@ -819,17 +819,17 @@ function WeeklyRecap({ messages }: { messages: FeedMessage[] }) {
       <div className="px-4 pt-3 pb-2 flex items-center gap-2">
         <BarChart3 className="w-5 h-5" style={{ color: "#818cf8" }} />
         <span className="font-bold text-[15px]" style={{ color: "#818cf8" }}>
-          Recap de la semaine
+          Récap de la semaine
         </span>
       </div>
       <div className="px-4 pb-3">
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
-            <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Posts partages</p>
+            <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Posts partagés</p>
             <p className="text-lg font-bold" style={{ color: "#818cf8" }}>{stats.totalPosts}</p>
           </div>
           <div className="rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
-            <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Trades partages</p>
+            <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Trades partagés</p>
             <p className="text-lg font-bold" style={{ color: "#06b6d4" }}>{stats.tradesShared}</p>
           </div>
           {stats.mostActive && (
@@ -848,7 +848,7 @@ function WeeklyRecap({ messages }: { messages: FeedMessage[] }) {
           )}
           {stats.mostLiked && (
             <div className="col-span-2 rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
-              <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Post le plus aime</p>
+              <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Post le plus aimé</p>
               <p className="text-sm font-bold" style={{ color: "#f43f5e" }}>
                 {stats.mostLiked.name} — {stats.mostLiked.likes} <Heart className="inline w-3.5 h-3.5" style={{ fill: "#f43f5e", color: "#f43f5e" }} />
               </p>
@@ -1012,7 +1012,7 @@ function PollDisplay({
           <>
             <span style={{ color: "var(--text-muted)" }}>·</span>
             <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>
-              Termine
+              Terminé
             </span>
           </>
         )}
@@ -1228,7 +1228,7 @@ function TweetPost({
           {msg.trade && <InlineTradeCard trade={msg.trade} />}
 
           {/* Image if attached */}
-          {msg.imageUrl && /^(https?:\/\/|data:image\/)/.test(msg.imageUrl) && (
+          {msg.imageUrl && /^(https?:\/\/|data:image\/(?!svg))/.test(msg.imageUrl) && (
             <div
               className="mt-3 rounded-2xl overflow-hidden"
               style={{ border: "1px solid var(--border)" }}
@@ -1257,7 +1257,7 @@ function TweetPost({
                 e.currentTarget.style.color = "var(--text-muted)";
                 e.currentTarget.style.background = "transparent";
               }}
-              title="Repondre"
+              title="Répondre"
             >
               <MessageCircle className="w-[18px] h-[18px]" />
               {replyCount > 0 && <span className="text-[13px]">{replyCount}</span>}
@@ -1356,7 +1356,7 @@ function TweetPost({
                       color: "#fff",
                     }}
                   >
-                    Lien copie !
+                    Lien copié !
                   </span>
                 )}
               </button>
@@ -1406,7 +1406,7 @@ function PostComposer({
 
   const handleInputChange = (value: string) => {
     setInput(value.slice(0, MAX_POST_LENGTH + 20));
-    const cursorMatch = value.match(/$([A-Za-z]{0,10})$/);
+    const cursorMatch = value.match(/\$([A-Za-z]{0,10})$/);
     if (cursorMatch) {
       setAssetQuery(cursorMatch[1]);
       setShowAssetSuggestions(true);
@@ -1417,7 +1417,7 @@ function PostComposer({
   };
 
   const handleAssetSelect = (asset: string) => {
-    const newInput = input.replace(/$[A-Za-z]{0,10}$/, "$" + asset + " ");
+    const newInput = input.replace(/\$[A-Za-z]{0,10}$/, "$" + asset + " ");
     setInput(newInput);
     setShowAssetSuggestions(false);
     setAssetQuery("");
@@ -1489,7 +1489,7 @@ function PostComposer({
                 onSend();
               }
             }}
-            placeholder={pollDraft ? "Ajoutez un commentaire (optionnel)..." : "Quoi de neuf sur les marches ?"}
+            placeholder={pollDraft ? "Ajoutez un commentaire (optionnel)..." : "Quoi de neuf sur les marchés ?"}
             rows={2}
             className="w-full bg-transparent resize-none focus:outline-none"
             style={{
@@ -1615,7 +1615,7 @@ function PostComposer({
               {/* Duration selector */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>
-                  Duree :
+                  Durée :
                 </span>
                 {POLL_DURATIONS.map((d) => (
                   <button
@@ -1713,7 +1713,7 @@ function PostComposer({
                   if (!imagePreview) e.currentTarget.style.background = "rgba(6,182,212,0.1)";
                 }}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                title="Creer un sondage"
+                title="Créer un sondage"
               >
                 <BarChart2 className="w-5 h-5" />
               </button>
@@ -2218,7 +2218,7 @@ export default function CommunityPage() {
       const rooms = await res.json();
       const community = rooms.find(
         (r: { name: string }) =>
-          r.name === "Communaute" || r.name === "community" || r.name === "Communaute"
+          r.name === "Communauté" || r.name === "community" || r.name === "Communauté"
       );
       if (community) {
         setCommunityRoomId(community.id);
@@ -2462,7 +2462,7 @@ export default function CommunityPage() {
                 className="text-[20px] font-extrabold"
                 style={{ color: "var(--text-primary)" }}
               >
-                Communaute
+                Communauté
               </h1>
             </div>
 
@@ -2539,7 +2539,7 @@ export default function CommunityPage() {
                     border: sortMode === "recent" ? "1px solid rgba(6,182,212,0.3)" : "1px solid var(--border)",
                   }}
                 >
-                  Recent
+                  Récent
                 </button>
                 <button
                   onClick={() => setSortMode("populaire")}
@@ -2609,7 +2609,7 @@ export default function CommunityPage() {
                     className="text-lg font-bold mb-2"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    Communaute
+                    Communauté
                   </h2>
                   <p className="text-sm max-w-sm mx-auto" style={{ color: "var(--text-secondary)" }}>
                     Le salon communautaire n&apos;a pas encore ete cree. Contactez un administrateur.
@@ -2661,7 +2661,7 @@ export default function CommunityPage() {
                       onBookmark={toggleBookmark}
                       onReply={handleReply}
                       likeCount={getLikeCount(msg)}
-                      replyCount={msg.reactions?.filter((r) => r.emoji !== "\u2764\uFE0F").length || 0}
+                      replyCount={0}
                       pollVoteData={getPollVoteData(msg.id)}
                       onPollVote={pollVote}
                       onHashtagClick={handleTrendClick}
@@ -2718,7 +2718,7 @@ export default function CommunityPage() {
                         onBookmark={toggleBookmark}
                         onReply={handleReply}
                         likeCount={getLikeCount(msg)}
-                        replyCount={msg.reactions?.filter((r) => r.emoji !== "\u2764\uFE0F").length || 0}
+                        replyCount={0}
                         pollVoteData={getPollVoteData(msg.id)}
                         onPollVote={pollVote}
                         onHashtagClick={handleTrendClick}

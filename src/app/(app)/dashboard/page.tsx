@@ -116,11 +116,11 @@ export default function DashboardPage() {
   let currentStreak = 0;
   let streakType: "win" | "loss" | "none" = "none";
   const sortedForStreak = [...trades].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  for (const t of sortedForStreak) {
+  for (const tr of sortedForStreak) {
     if (currentStreak === 0) {
-      streakType = t.result > 0 ? "win" : t.result < 0 ? "loss" : "none";
+      streakType = tr.result > 0 ? "win" : tr.result < 0 ? "loss" : "none";
       if (streakType !== "none") currentStreak = 1;
-    } else if ((streakType === "win" && t.result > 0) || (streakType === "loss" && t.result < 0)) {
+    } else if ((streakType === "win" && tr.result > 0) || (streakType === "loss" && tr.result < 0)) {
       currentStreak++;
     } else {
       break;
@@ -150,7 +150,7 @@ export default function DashboardPage() {
   // Risk exposure today (sum of absolute risk on today's trades)
   const balance = user?.balance ?? 25000;
   const todayRiskExposure = todayTrades.reduce((s, t) => {
-    const risk = Math.abs(t.entry - t.sl) * t.lots;
+    const risk = t.sl && t.sl !== 0 ? Math.abs(t.entry - t.sl) * t.lots : 0;
     return s + risk;
   }, 0);
   const todayRiskPercent = balance > 0 ? (todayRiskExposure / balance) * 100 : 0;
@@ -419,9 +419,9 @@ export default function DashboardPage() {
         {/* Win/Loss Streak */}
         {(() => {
           let bestWin = 0, bestLoss = 0, tempWin = 0, tempLoss = 0;
-          for (const t of [...sortedForStreak].reverse()) {
-            if (t.result > 0) { tempWin++; tempLoss = 0; bestWin = Math.max(bestWin, tempWin); }
-            else if (t.result < 0) { tempLoss++; tempWin = 0; bestLoss = Math.max(bestLoss, tempLoss); }
+          for (const tr of [...sortedForStreak].reverse()) {
+            if (tr.result > 0) { tempWin++; tempLoss = 0; bestWin = Math.max(bestWin, tempWin); }
+            else if (tr.result < 0) { tempLoss++; tempWin = 0; bestLoss = Math.max(bestLoss, tempLoss); }
             else { tempWin = 0; tempLoss = 0; }
           }
           return (
@@ -490,7 +490,7 @@ export default function DashboardPage() {
         const worstTrade = sorted.length > 0 ? sorted[sorted.length - 1] : null;
         const avgRisk = trades.length > 0
           ? trades.reduce((s, t) => {
-              const risk = Math.abs(t.entry - t.sl) * t.lots;
+              const risk = t.sl && t.sl !== 0 ? Math.abs(t.entry - t.sl) * t.lots : 0;
               return s + (balance > 0 ? (risk / balance) * 100 : 0);
             }, 0) / trades.length
           : 0;

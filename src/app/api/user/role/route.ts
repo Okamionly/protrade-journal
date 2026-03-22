@@ -18,7 +18,7 @@ export async function GET() {
       return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
     }
 
-    return NextResponse.json({ role: user.role, banned: user.banned });
+    return NextResponse.json({ id: session.user.id, role: user.role, banned: user.banned });
   } catch (error) {
     console.error("GET user/role error:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
