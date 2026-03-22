@@ -27,9 +27,12 @@ function isSessionActive(session: Session, utcHour: number): boolean {
 }
 
 export default function TradingSessionsWidget() {
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date>(new Date(0));
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    setNow(new Date());
     const interval = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(interval);
   }, []);
@@ -53,9 +56,9 @@ export default function TradingSessionsWidget() {
         <span
           className="mono"
           style={{ fontSize: 13, color: "var(--text-secondary)" }}
+          suppressHydrationWarning
         >
-          {String(utcHour).padStart(2, "0")}:{String(utcMin).padStart(2, "0")}{" "}
-          UTC
+          {mounted ? `${String(utcHour).padStart(2, "0")}:${String(utcMin).padStart(2, "0")} UTC` : "--:-- UTC"}
         </span>
       </div>
 

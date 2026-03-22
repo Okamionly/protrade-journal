@@ -171,9 +171,12 @@ function MarketSnapshot() {
 // ---- Session Windows Indicator ----
 function SessionWindows() {
   const { t } = useTranslation();
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date>(new Date(0));
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    setNow(new Date());
     const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
@@ -191,8 +194,8 @@ function SessionWindows() {
         <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
           {t("tradingSessions")}
         </h3>
-        <span className="ml-auto text-[10px] mono" style={{ color: "var(--text-muted)" }}>
-          {now.toUTCString().slice(17, 25)} UTC
+        <span className="ml-auto text-[10px] mono" style={{ color: "var(--text-muted)" }} suppressHydrationWarning>
+          {mounted ? now.toUTCString().slice(17, 25) : "--:--:--"} UTC
         </span>
       </div>
 
@@ -1090,7 +1093,12 @@ export default function DailyBiasPage() {
     { value: "neutral", label: t("biasNeutral"), icon: Minus, color: "text-[--text-secondary]", bg: "bg-gray-500/15 border-gray-500/30", dotColor: "#64748b" },
   ];
 
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState("");
+
+  // Hydration-safe: set date on client only
+  useEffect(() => {
+    setDate(new Date().toISOString().slice(0, 10));
+  }, []);
   const [plan, setPlan] = useState<DailyPlan>({ date, bias: "", notes: "", pairs: "", keyLevels: "", review: "", grade: "" });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);

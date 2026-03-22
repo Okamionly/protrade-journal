@@ -1,7 +1,7 @@
 "use client";
 
 import { useTrades } from "@/hooks/useTrades";
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock, Target, ArrowRight, ArrowUpRight, ArrowDownRight, Zap, Award, Camera } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
@@ -20,11 +20,15 @@ export default function PnLCalendarPage() {
   const MONTH_NAMES = [t("monthJan"), t("monthFeb"), t("monthMar"), t("monthApr"), t("monthMay"), t("monthJun"), t("monthJul"), t("monthAug"), t("monthSep"), t("monthOct"), t("monthNov"), t("monthDec")];
   const DAY_NAMES = [t("dayMon"), t("dayTue"), t("dayWed"), t("dayThu"), t("dayFri"), t("daySat"), t("daySun")];
   const DAY_FULL = [t("dayMonFull"), t("dayTueFull"), t("dayWedFull"), t("dayThuFull"), t("dayFriFull"), t("daySatFull"), t("daySunFull")];
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [selectedDay, setSelectedDay] = useState<{ day: number; trades: typeof trades } | null>(null);
   const [view, setView] = useState<"month" | "year">("month");
   const [hoveredDay, setHoveredDay] = useState<HoverInfo | null>(null);
   const [capturing, setCapturing] = useState(false);
+
+  useEffect(() => { setCurrentDate(new Date()); }, []);
+
+  if (!currentDate) return null;
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();

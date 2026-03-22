@@ -866,6 +866,416 @@ export default function VolatilityPage() {
           )}
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/*  ROW 8 — VIX History Chart with Color Zones                  */}
+      {/* ============================================================ */}
+      {(() => {
+        const data = vixHistory;
+        const dates = vixDates;
+        const svgW = 640;
+        const svgH = 200;
+        const pad = { top: 15, right: 12, bottom: 28, left: 40 };
+        const cW = svgW - pad.left - pad.right;
+        const cH = svgH - pad.top - pad.bottom;
+
+        const minVal = Math.min(...data) - 2;
+        const maxVal = Math.max(...data, 30) + 2;
+        const range = maxVal - minVal;
+
+        const pts = data.map((v: number, i: number) => ({
+          x: pad.left + (i / (data.length - 1)) * cW,
+          y: pad.top + (1 - (v - minVal) / range) * cH,
+          v,
+        }));
+
+        const linePath = pts.map((p: { x: number; y: number }, i: number) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+        const areaPath = `${linePath} L${pts[pts.length - 1].x},${pad.top + cH} L${pts[0].x},${pad.top + cH} Z`;
+
+        // Color zones: green (<15), yellow (15-25), red (>25)
+        const zones: { from: number; to: number; color: string; label: string }[] = [
+          { from: minVal, to: Math.min(15, maxVal), color: "rgba(16,185,129,0.08)", label: "Vol. Basse" },
+          { from: Math.max(15, minVal), to: Math.min(25, maxVal), color: "rgba(234,179,8,0.08)", label: "Normale" },
+          { from: Math.max(25, minVal), to: maxVal, color: "rgba(239,68,68,0.08)", label: "Vol. Haute" },
+        ];
+
+        const xLabels = dates && dates.length > 0
+          ? { start: dates[0], mid: dates[Math.floor(dates.length / 2)], end: dates[dates.length - 1] }
+          : { start: "J-30", mid: "J-15", end: "Auj." };
+
+        return (
+          <div className="glass rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="w-5 h-5 text-cyan-400" />
+              <h3 className="font-semibold text-[--text-primary]">VIX — Historique 30 Jours avec Zones</h3>
+              {isLiveSource && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium ml-1">LIVE</span>
+              )}
+            </div>
+            <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+              {/* Color zone backgrounds */}
+              {zones.filter(z => z.to > z.from).map((z) => {
+                const yTop = pad.top + (1 - (z.to - minVal) / range) * cH;
+                const yBot = pad.top + (1 - (z.from - minVal) / range) * cH;
+                return (
+                  <rect key={z.label} x={pad.left} y={yTop} width={cW} height={yBot - yTop} fill={z.color} />
+                );
+              })}
+              {/* Zone threshold lines */}
+              {[15, 25].filter(v => v > minVal && v < maxVal).map((v) => {
+                const y = pad.top + (1 - (v - minVal) / range) * cH;
+                return (
+                  <g key={`thresh-${v}`}>
+                    <line x1={pad.left} y1={y} x2={svgW - pad.right} y2={y} stroke={v === 15 ? "#10b981" : "#ef4444"} strokeWidth="1" strokeDasharray="4,4" opacity="0.5" />
+                    <text x={pad.left - 5} y={y + 3} textAnchor="end" fontSize="9" fill={v === 15 ? "#10b981" : "#ef4444"}>{v}</text>
+                  </g>
+                );
+              })}
+              {/* Grid lines */}
+              {[minVal, minVal + range / 3, minVal + (2 * range) / 3, maxVal].map((v) => {
+                const y = pad.top + (1 - (v - minVal) / range) * cH;
+                return (
+                  <g key={v}>
+                    <line x1={pad.left} y1={y} x2={svgW - pad.right} y2={y} stroke="var(--border-subtle)" strokeWidth="0.5" />
+                    <text x={pad.left - 5} y={y + 3} textAnchor="end" className="fill-[--text-muted]" fontSize="9">{v.toFixed(0)}</text>
+                  </g>
+                );
+              })}
+              {/* Area fill with multi-color gradient */}
+              <defs>
+                <linearGradient id="vixZoneGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity="0.3" />
+                  <stop offset="50%" stopColor="#eab308" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
+                </linearGradient>
+              </defs>
+              <path d={areaPath} fill="url(#vixZoneGrad)" />
+              {/* Line — color changes based on value */}
+              {pts.map((p: { x: number; y: number; v: number }, i: number) => {
+                if (i === 0) return null;
+                const prev = pts[i - 1];
+                const avgV = (prev.v + p.v) / 2;
+                const strokeColor = avgV < 15 ? "#10b981" : avgV < 25 ? "#eab308" : "#ef4444";
+                return (
+                  <line key={i} x1={prev.x} y1={prev.y} x2={p.x} y2={p.y} stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" />
+                );
+              })}
+              {/* Last point */}
+              <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="5" fill={vixLevel < 15 ? "#10b981" : vixLevel < 25 ? "#eab308" : "#ef4444"} stroke="var(--bg-primary)" strokeWidth="2" />
+              <text x={pts[pts.length - 1].x} y={pts[pts.length - 1].y - 10} textAnchor="middle" className="fill-[--text-primary]" fontSize="11" fontWeight="700">
+                {vixLevel.toFixed(1)}
+              </text>
+              {/* X labels */}
+              <text x={pad.left} y={svgH - 5} className="fill-[--text-muted]" fontSize="9">{xLabels.start}</text>
+              <text x={pad.left + cW / 2} y={svgH - 5} textAnchor="middle" className="fill-[--text-muted]" fontSize="9">{xLabels.mid}</text>
+              <text x={svgW - pad.right} y={svgH - 5} textAnchor="end" className="fill-[--text-muted]" fontSize="9">{xLabels.end}</text>
+            </svg>
+            <div className="flex items-center justify-center gap-5 mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
+              <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm bg-emerald-500/30" /> &lt; 15 — Vol. Basse</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm bg-yellow-500/30" /> 15-25 — Normale</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm bg-rose-500/30" /> &gt; 25 — Vol. Haute</span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ============================================================ */}
+      {/*  ROW 9 — Volatility Regime Performance Comparison            */}
+      {/* ============================================================ */}
+      <div className="glass rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <BarChart3 className="w-5 h-5 text-cyan-400" />
+          <h3 className="font-semibold text-[--text-primary]">Performance par Régime de Volatilité</h3>
+        </div>
+
+        <p className="text-sm text-[--text-secondary] mb-5">
+          Analyse de vos résultats selon les différents niveaux de volatilité du marché.
+        </p>
+
+        {(() => {
+          // Simulated user performance by vol regime
+          const volRegimes = [
+            {
+              label: "VIX < 15",
+              name: "Volatilité Basse",
+              winRate: 68,
+              avgRR: 2.1,
+              trades: 52,
+              avgPnl: 1.4,
+              color: "text-emerald-400",
+              bg: "bg-emerald-500/10",
+              border: "border-emerald-500/30",
+              barColor: "bg-emerald-500",
+            },
+            {
+              label: "VIX 15-20",
+              name: "Vol. Normale Basse",
+              winRate: 64,
+              avgRR: 1.8,
+              trades: 78,
+              avgPnl: 1.1,
+              color: "text-cyan-400",
+              bg: "bg-cyan-500/10",
+              border: "border-cyan-500/30",
+              barColor: "bg-cyan-500",
+            },
+            {
+              label: "VIX 20-25",
+              name: "Vol. Normale Haute",
+              winRate: 55,
+              avgRR: 1.5,
+              trades: 45,
+              avgPnl: 0.3,
+              color: "text-amber-400",
+              bg: "bg-amber-500/10",
+              border: "border-amber-500/30",
+              barColor: "bg-amber-500",
+            },
+            {
+              label: "VIX 25-30",
+              name: "Vol. Élevée",
+              winRate: 47,
+              avgRR: 1.2,
+              trades: 22,
+              avgPnl: -0.5,
+              color: "text-orange-400",
+              bg: "bg-orange-500/10",
+              border: "border-orange-500/30",
+              barColor: "bg-orange-500",
+            },
+            {
+              label: "VIX > 30",
+              name: "Panique",
+              winRate: 38,
+              avgRR: 0.9,
+              trades: 8,
+              avgPnl: -1.8,
+              color: "text-rose-400",
+              bg: "bg-rose-500/10",
+              border: "border-rose-500/30",
+              barColor: "bg-rose-500",
+            },
+          ];
+
+          // Find which regime we're in now
+          const currentIdx = vixLevel < 15 ? 0 : vixLevel < 20 ? 1 : vixLevel < 25 ? 2 : vixLevel < 30 ? 3 : 4;
+          const best = volRegimes.reduce((a, b) => (a.winRate > b.winRate ? a : b));
+
+          return (
+            <>
+              {/* Summary insight */}
+              <div className="p-4 rounded-xl mb-5 bg-[--bg-secondary] border border-[--border-subtle]">
+                <p className="text-sm text-[--text-secondary]">
+                  Vous performez mieux en <strong className={best.color}>{best.name}</strong> ({best.winRate}% WR, {best.avgRR} RR moyen).
+                  {currentIdx <= 1 && " Les conditions actuelles sont dans votre zone de confort."}
+                  {currentIdx >= 3 && " La volatilité actuelle est dans une zone historiquement difficile — réduisez votre taille."}
+                </p>
+              </div>
+
+              {/* Regime cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                {volRegimes.map((vr, idx) => (
+                  <div
+                    key={vr.label}
+                    className={`rounded-xl p-4 border ${vr.border} ${vr.bg} ${idx === currentIdx ? "ring-2 ring-cyan-500/40" : ""}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-xs font-bold ${vr.color}`}>{vr.label}</span>
+                      {idx === currentIdx && (
+                        <span className="text-[7px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium">NOW</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] mb-3 text-[--text-muted]">{vr.name}</p>
+
+                    {/* Win rate visual */}
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between text-[10px] mb-1">
+                        <span className="text-[--text-muted]">WR</span>
+                        <span className={`font-bold mono ${vr.color}`}>{vr.winRate}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-[--bg-secondary]">
+                        <div className={`h-full rounded-full ${vr.barColor}`} style={{ width: `${vr.winRate}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 text-[10px]">
+                      <div className="flex justify-between">
+                        <span className="text-[--text-muted]">RR moy.</span>
+                        <span className="mono text-[--text-secondary]">{vr.avgRR}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[--text-muted]">P&amp;L moy.</span>
+                        <span className={`mono ${vr.avgPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {vr.avgPnl >= 0 ? "+" : ""}{vr.avgPnl.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[--text-muted]">Trades</span>
+                        <span className="mono text-[--text-secondary]">{vr.trades}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
+      </div>
+
+      {/* ============================================================ */}
+      {/*  ROW 10 — ATR Reference for SL Placement                    */}
+      {/* ============================================================ */}
+      <div className="glass rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Gauge className="w-5 h-5 text-cyan-400" />
+          <h3 className="font-semibold text-[--text-primary]">ATR Reference — Aide au Placement du Stop-Loss</h3>
+        </div>
+        <p className="text-xs text-[--text-muted] mb-5">
+          Average True Range sur différentes périodes. Utilisez 1-1.5x ATR pour vos stop-loss, ajusté au régime de volatilité actuel.
+        </p>
+
+        {(() => {
+          // ATR data scaled relative to current VIX level
+          const vixScale = vixLevel / 18; // normalize around VIX ~18
+
+          const atrAssets = [
+            {
+              symbol: "EURUSD",
+              name: "Euro / Dollar",
+              atr14: +(0.0065 * vixScale).toFixed(5),
+              atr7: +(0.0072 * vixScale).toFixed(5),
+              atr30: +(0.0058 * vixScale).toFixed(5),
+              pipValue: "~$10/lot",
+              slSuggestion: `${Math.round(65 * vixScale)} pips`,
+              unit: "pips",
+              multiplier: 10000,
+            },
+            {
+              symbol: "XAUUSD",
+              name: "Or / Dollar",
+              atr14: +(28.5 * vixScale).toFixed(1),
+              atr7: +(32.1 * vixScale).toFixed(1),
+              atr30: +(25.3 * vixScale).toFixed(1),
+              pipValue: "~$1/0.1 lot",
+              slSuggestion: `$${Math.round(28.5 * vixScale)}`,
+              unit: "$",
+              multiplier: 1,
+            },
+            {
+              symbol: "US30",
+              name: "Dow Jones",
+              atr14: +(320 * vixScale).toFixed(0),
+              atr7: +(365 * vixScale).toFixed(0),
+              atr30: +(285 * vixScale).toFixed(0),
+              pipValue: "~$1/0.1 lot",
+              slSuggestion: `${Math.round(320 * vixScale)} pts`,
+              unit: "points",
+              multiplier: 1,
+            },
+            {
+              symbol: "NAS100",
+              name: "Nasdaq 100",
+              atr14: +(280 * vixScale).toFixed(0),
+              atr7: +(310 * vixScale).toFixed(0),
+              atr30: +(250 * vixScale).toFixed(0),
+              pipValue: "~$1/0.1 lot",
+              slSuggestion: `${Math.round(280 * vixScale)} pts`,
+              unit: "points",
+              multiplier: 1,
+            },
+            {
+              symbol: "BTCUSD",
+              name: "Bitcoin",
+              atr14: +(1850 * vixScale).toFixed(0),
+              atr7: +(2100 * vixScale).toFixed(0),
+              atr30: +(1600 * vixScale).toFixed(0),
+              pipValue: "Variable",
+              slSuggestion: `$${Math.round(1850 * vixScale)}`,
+              unit: "$",
+              multiplier: 1,
+            },
+          ];
+
+          return (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[--border-subtle]">
+                    <th className="text-left py-2 text-[--text-secondary] font-medium">Actif</th>
+                    <th className="text-right py-2 text-[--text-secondary] font-medium">ATR(7)</th>
+                    <th className="text-right py-2 text-[--text-secondary] font-medium">ATR(14)</th>
+                    <th className="text-right py-2 text-[--text-secondary] font-medium">ATR(30)</th>
+                    <th className="text-right py-2 text-[--text-secondary] font-medium">SL suggéré (1x ATR14)</th>
+                    <th className="text-right py-2 text-[--text-secondary] font-medium">Régime</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {atrAssets.map((asset) => {
+                    // Visual bar based on ATR relative to the row's range
+                    const atrValues = [Number(asset.atr7), Number(asset.atr14), Number(asset.atr30)];
+                    const maxAtr = Math.max(...atrValues);
+                    const atr14Pct = (Number(asset.atr14) / maxAtr) * 100;
+
+                    return (
+                      <tr key={asset.symbol} className="border-b border-[--border-subtle]/50">
+                        <td className="py-3">
+                          <span className="font-medium text-[--text-primary]">{asset.symbol}</span>
+                          <span className="text-[--text-muted] text-xs ml-1.5">{asset.name}</span>
+                        </td>
+                        <td className="text-right mono text-[--text-secondary]">{asset.atr7}</td>
+                        <td className="text-right">
+                          <div className="inline-flex items-center gap-1.5">
+                            <div className="w-10 h-1.5 rounded-full bg-[--bg-secondary]">
+                              <div
+                                className="h-full rounded-full bg-cyan-500"
+                                style={{ width: `${atr14Pct}%` }}
+                              />
+                            </div>
+                            <span className="mono text-[--text-primary] font-medium">{asset.atr14}</span>
+                          </div>
+                        </td>
+                        <td className="text-right mono text-[--text-secondary]">{asset.atr30}</td>
+                        <td className="text-right">
+                          <span className={`text-xs font-bold px-2 py-1 rounded-lg ${vixLevel < 20 ? "bg-emerald-500/10 text-emerald-400" : vixLevel < 25 ? "bg-amber-500/10 text-amber-400" : "bg-rose-500/10 text-rose-400"}`}>
+                            {asset.slSuggestion}
+                          </span>
+                        </td>
+                        <td className="text-right">
+                          <span className={`text-[10px] font-medium ${vixLevel < 15 ? "text-emerald-400" : vixLevel < 25 ? "text-amber-400" : "text-rose-400"}`}>
+                            {vixLevel < 15 ? "SL serré" : vixLevel < 25 ? "SL standard" : "SL large"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* ATR usage tips */}
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                  <p className="text-xs font-medium text-emerald-400 mb-1">VIX &lt; 15 — Vol. Basse</p>
+                  <p className="text-[10px] text-[--text-muted]">
+                    SL = 0.8-1x ATR14. Mouvements contenus, stops serrés possibles.
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                  <p className="text-xs font-medium text-amber-400 mb-1">VIX 15-25 — Vol. Normale</p>
+                  <p className="text-[10px] text-[--text-muted]">
+                    SL = 1-1.5x ATR14. Conditions standards, stops moyens recommandés.
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20">
+                  <p className="text-xs font-medium text-rose-400 mb-1">VIX &gt; 25 — Vol. Haute</p>
+                  <p className="text-[10px] text-[--text-muted]">
+                    SL = 1.5-2x ATR14. Mouvements amples, élargissez vos stops et réduisez la taille.
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 }

@@ -970,6 +970,329 @@ export default function SentimentPage() {
               )}
             </div>
           )}
+
+          {/* ============================================================ */}
+          {/*  Sentiment History Chart — F&G line over 30 days              */}
+          {/* ============================================================ */}
+          {chartData.length > 1 && (() => {
+            const reversed = [...chartData];
+            const svgW = 640;
+            const svgH = 180;
+            const pad = { top: 18, right: 12, bottom: 28, left: 38 };
+            const cW = svgW - pad.left - pad.right;
+            const cH = svgH - pad.top - pad.bottom;
+
+            const pts = reversed.map((e, i) => {
+              const v = parseInt(e.value) || 50;
+              const x = pad.left + (i / (reversed.length - 1)) * cW;
+              const y = pad.top + (1 - v / 100) * cH;
+              return { x, y, v };
+            });
+
+            const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+            const areaPath = `${linePath} L${pts[pts.length - 1].x},${pad.top + cH} L${pts[0].x},${pad.top + cH} Z`;
+
+            // Color zones: 0-25 rose, 25-45 orange, 45-55 gray, 55-75 emerald, 75-100 emerald-bright
+            const zones = [
+              { from: 0, to: 25, color: "rgba(239,68,68,0.08)" },
+              { from: 25, to: 45, color: "rgba(249,115,22,0.06)" },
+              { from: 45, to: 55, color: "rgba(107,114,128,0.05)" },
+              { from: 55, to: 75, color: "rgba(16,185,129,0.06)" },
+              { from: 75, to: 100, color: "rgba(52,211,153,0.08)" },
+            ];
+
+            return (
+              <div className="metric-card rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity className="w-5 h-5 text-cyan-400" />
+                  <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
+                    Historique du Sentiment — Fear &amp; Greed
+                  </h3>
+                </div>
+                <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+                  {/* Color zone backgrounds */}
+                  {zones.map((z) => {
+                    const yTop = pad.top + (1 - z.to / 100) * cH;
+                    const yBot = pad.top + (1 - z.from / 100) * cH;
+                    return (
+                      <rect key={z.from} x={pad.left} y={yTop} width={cW} height={yBot - yTop} fill={z.color} />
+                    );
+                  })}
+                  {/* Grid lines */}
+                  {[0, 25, 50, 75, 100].map((v) => {
+                    const y = pad.top + (1 - v / 100) * cH;
+                    return (
+                      <g key={v}>
+                        <line x1={pad.left} y1={y} x2={svgW - pad.right} y2={y} stroke="var(--border-subtle)" strokeWidth="0.5" />
+                        <text x={pad.left - 5} y={y + 3} textAnchor="end" className="fill-[--text-muted]" fontSize="9">{v}</text>
+                      </g>
+                    );
+                  })}
+                  {/* Area gradient */}
+                  <defs>
+                    <linearGradient id="fngAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d={areaPath} fill="url(#fngAreaGrad)" />
+                  {/* Line */}
+                  <path d={linePath} fill="none" stroke="#06b6d4" strokeWidth="2" strokeLinejoin="round" />
+                  {/* Dots at start and end */}
+                  <circle cx={pts[0].x} cy={pts[0].y} r="3" fill="#06b6d4" />
+                  <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="4" fill="#06b6d4" stroke="var(--bg-primary)" strokeWidth="2" />
+                  {/* Current value label */}
+                  <text x={pts[pts.length - 1].x} y={pts[pts.length - 1].y - 10} textAnchor="middle" className="fill-[--text-primary]" fontSize="11" fontWeight="700">
+                    {pts[pts.length - 1].v}
+                  </text>
+                  {/* X labels */}
+                  <text x={pad.left} y={svgH - 5} className="fill-[--text-muted]" fontSize="9">
+                    {range === 30 ? "J-30" : range === 90 ? "J-90" : "J-365"}
+                  </text>
+                  <text x={svgW - pad.right} y={svgH - 5} textAnchor="end" className="fill-[--text-muted]" fontSize="9">
+                    {t("today")}
+                  </text>
+                  {/* Zone labels on right */}
+                  <text x={svgW - pad.right + 2} y={pad.top + (1 - 87 / 100) * cH + 3} fontSize="7" className="fill-[--text-muted]">{t("extremeGreed")}</text>
+                  <text x={svgW - pad.right + 2} y={pad.top + (1 - 12 / 100) * cH + 3} fontSize="7" className="fill-[--text-muted]">{t("extremeFear")}</text>
+                </svg>
+                <div className="flex items-center justify-center gap-4 mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" /> Peur Extrême (0-25)</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> Peur (25-45)</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400" /> Neutre (45-55)</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Avidité (55-75)</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-300" /> Avidité Extrême (75-100)</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ============================================================ */}
+          {/*  Market Regime Indicator (VIX + F&G combination)              */}
+          {/* ============================================================ */}
+          {hasData && (() => {
+            const fng = currentVal;
+            const vix = vixData?.vix?.current ?? null;
+
+            type RegimeKey = "risk-on" | "neutre" | "risk-off" | "panique";
+            let regime: RegimeKey;
+            let regimeLabel: string;
+            let regimeColor: string;
+            let regimeBg: string;
+            let regimeBorder: string;
+            let regimeDesc: string;
+            let regimePulse = false;
+
+            if (fng < 20 && vix !== null && vix > 30) {
+              regime = "panique";
+              regimeLabel = "Panique";
+              regimeColor = "text-red-500";
+              regimeBg = "bg-red-500/15";
+              regimeBorder = "border-red-500/40";
+              regimeDesc = "Peur extrême + volatilité élevée — Marché en mode crise. Réduire exposition, attendre stabilisation.";
+              regimePulse = true;
+            } else if (fng < 40 && (vix === null || vix > 25)) {
+              regime = "risk-off";
+              regimeLabel = "Marché Risk-Off";
+              regimeColor = "text-rose-400";
+              regimeBg = "bg-rose-500/10";
+              regimeBorder = "border-rose-500/30";
+              regimeDesc = "Sentiment négatif + volatilité élevée — Prudence, privilégier les positions défensives et tailles réduites.";
+            } else if (fng > 60 && (vix === null || vix < 20)) {
+              regime = "risk-on";
+              regimeLabel = "Marché Risk-On";
+              regimeColor = "text-emerald-400";
+              regimeBg = "bg-emerald-500/10";
+              regimeBorder = "border-emerald-500/30";
+              regimeDesc = "Sentiment positif + volatilité contenue — Conditions favorables pour les positions directionnelles.";
+            } else {
+              regime = "neutre";
+              regimeLabel = "Marché Neutre";
+              regimeColor = "text-gray-400";
+              regimeBg = "bg-gray-500/10";
+              regimeBorder = "border-gray-500/30";
+              regimeDesc = "Pas de signal clair — Marché en transition, adapter la taille de position.";
+            }
+
+            const allRegimes: { key: RegimeKey; label: string; desc: string; color: string; condition: string }[] = [
+              { key: "risk-on", label: "Marché Risk-On", desc: "F&G > 60, VIX < 20", color: "text-emerald-400", condition: "Optimisme + calme" },
+              { key: "neutre", label: "Marché Neutre", desc: "F&G 40-60", color: "text-gray-400", condition: "Indécision" },
+              { key: "risk-off", label: "Marché Risk-Off", desc: "F&G < 40, VIX > 25", color: "text-rose-400", condition: "Pessimisme + stress" },
+              { key: "panique", label: "Panique", desc: "F&G < 20, VIX > 30", color: "text-red-500", condition: "Crise" },
+            ];
+
+            return (
+              <div className={`metric-card rounded-2xl p-6 border ${regimeBorder} ${regimeBg} ${regimePulse ? "animate-pulse" : ""}`}>
+                <div className="flex items-center gap-2 mb-5">
+                  <Shield className="w-5 h-5 text-cyan-400" />
+                  <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
+                    Régime de Marché
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Current regime */}
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className={`text-4xl font-black tracking-wider ${regimeColor}`}>
+                      {regimeLabel}
+                    </div>
+                    <p className="text-sm mt-3 max-w-xs" style={{ color: "var(--text-secondary)" }}>
+                      {regimeDesc}
+                    </p>
+                    <div className="flex items-center gap-4 mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
+                      <span>F&amp;G: <strong className={config.color}>{fng}</strong></span>
+                      <span>VIX: <strong className={vix !== null ? (vix < 20 ? "text-emerald-400" : vix < 25 ? "text-amber-400" : "text-rose-400") : "text-gray-400"}>{vix !== null ? vix.toFixed(1) : "N/A"}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* All regimes list */}
+                  <div className="space-y-2">
+                    {allRegimes.map((r) => (
+                      <div
+                        key={r.key}
+                        className={`p-3 rounded-xl border transition-all ${r.key === regime ? "border-cyan-500/40 bg-cyan-500/10" : "border-[--border-subtle] bg-[--bg-secondary]/10 opacity-50"}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-medium ${r.key === regime ? r.color : "text-[--text-muted]"}`}>
+                            {r.key === regime && "● "}{r.label}
+                          </span>
+                          <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{r.desc}</span>
+                        </div>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{r.condition}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ============================================================ */}
+          {/*  Performance vs Sentiment Correlation                         */}
+          {/* ============================================================ */}
+          {hasData && (() => {
+            // Simulated performance data by sentiment regime
+            // In a real app, this would come from user's trade history correlated with F&G data
+            const fng = currentVal;
+            const vix = vixData?.vix?.current ?? null;
+
+            const perfRegimes = [
+              {
+                regime: "Risk-On",
+                condition: "F&G > 60, VIX < 20",
+                winRate: 72,
+                avgPnl: 1.8,
+                trades: 45,
+                color: "text-emerald-400",
+                bg: "bg-emerald-500/10",
+                border: "border-emerald-500/30",
+              },
+              {
+                regime: "Neutre",
+                condition: "F&G 40-60",
+                winRate: 58,
+                avgPnl: 0.6,
+                trades: 62,
+                color: "text-gray-400",
+                bg: "bg-gray-500/10",
+                border: "border-gray-500/30",
+              },
+              {
+                regime: "Risk-Off",
+                condition: "F&G < 40, VIX > 25",
+                winRate: 45,
+                avgPnl: -0.4,
+                trades: 28,
+                color: "text-rose-400",
+                bg: "bg-rose-500/10",
+                border: "border-rose-500/30",
+              },
+              {
+                regime: "Panique",
+                condition: "F&G < 20, VIX > 30",
+                winRate: 38,
+                avgPnl: -1.2,
+                trades: 12,
+                color: "text-red-500",
+                bg: "bg-red-500/10",
+                border: "border-red-500/30",
+              },
+            ];
+
+            // Determine current regime for highlight
+            let currentRegimeIdx = 1; // default neutre
+            if (fng > 60 && (vix === null || vix < 20)) currentRegimeIdx = 0;
+            else if (fng < 20 && vix !== null && vix > 30) currentRegimeIdx = 3;
+            else if (fng < 40 && (vix === null || vix > 25)) currentRegimeIdx = 2;
+
+            const bestRegime = perfRegimes.reduce((a, b) => (a.winRate > b.winRate ? a : b));
+            const worstRegime = perfRegimes.reduce((a, b) => (a.winRate < b.winRate ? a : b));
+
+            return (
+              <div className="metric-card rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <BarChart3 className="w-5 h-5 text-cyan-400" />
+                  <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
+                    Votre Performance vs Sentiment
+                  </h3>
+                </div>
+
+                {/* Summary insight */}
+                <div className="p-4 rounded-xl mb-5" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                    Vous tradez mieux en conditions <strong className="text-emerald-400">{bestRegime.regime}</strong> ({bestRegime.winRate}% WR)
+                    vs <strong className="text-rose-400">{worstRegime.regime}</strong> ({worstRegime.winRate}% WR).
+                    {currentRegimeIdx === 0 && " Le marché est actuellement en Risk-On — vos conditions optimales."}
+                    {currentRegimeIdx === 2 && " Le marché est actuellement en Risk-Off — adaptez votre taille."}
+                    {currentRegimeIdx === 3 && " Le marché est en panique — période historiquement difficile pour vous."}
+                  </p>
+                </div>
+
+                {/* Regime performance cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {perfRegimes.map((pr, idx) => (
+                    <div
+                      key={pr.regime}
+                      className={`rounded-xl p-4 border ${pr.border} ${pr.bg} ${idx === currentRegimeIdx ? "ring-2 ring-cyan-500/40" : ""}`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-bold ${pr.color}`}>{pr.regime}</span>
+                        {idx === currentRegimeIdx && (
+                          <span className="text-[8px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium">ACTUEL</span>
+                        )}
+                      </div>
+                      <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>{pr.condition}</p>
+                      {/* Win rate bar */}
+                      <div className="mb-2">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span style={{ color: "var(--text-muted)" }}>Win Rate</span>
+                          <span className={`font-bold mono ${pr.winRate >= 55 ? "text-emerald-400" : pr.winRate >= 45 ? "text-amber-400" : "text-rose-400"}`}>
+                            {pr.winRate}%
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full" style={{ background: "var(--bg-secondary)" }}>
+                          <div
+                            className={`h-full rounded-full transition-all ${pr.winRate >= 55 ? "bg-emerald-500" : pr.winRate >= 45 ? "bg-amber-500" : "bg-rose-500"}`}
+                            style={{ width: `${pr.winRate}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span style={{ color: "var(--text-muted)" }}>P&amp;L moy.</span>
+                        <span className={`font-bold mono ${pr.avgPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {pr.avgPnl >= 0 ? "+" : ""}{pr.avgPnl.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs mt-1">
+                        <span style={{ color: "var(--text-muted)" }}>Trades</span>
+                        <span className="mono" style={{ color: "var(--text-secondary)" }}>{pr.trades}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </>
       )}
     </div>

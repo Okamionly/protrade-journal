@@ -17,9 +17,12 @@ function isSessionActive(session: typeof SESSIONS[0], utcHour: number): boolean 
 }
 
 export function ForexSessions() {
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date>(new Date(0));
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    setNow(new Date());
     const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
@@ -44,7 +47,7 @@ export function ForexSessions() {
         })}
       </div>
       <div className="mt-3 pt-2 border-t border-gray-800 text-center">
-        <span className="text-[10px] text-gray-500">UTC: {now.toUTCString().slice(17, 25)}</span>
+        <span className="text-[10px] text-gray-500" suppressHydrationWarning>UTC: {mounted ? now.toUTCString().slice(17, 25) : "--:--:--"}</span>
       </div>
     </div>
   );

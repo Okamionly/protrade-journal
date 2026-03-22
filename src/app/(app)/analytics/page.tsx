@@ -990,6 +990,241 @@ export default function AnalyticsPage() {
         })()}
       </div>
 
+      {/* ═══════════════════════ EQUITY CURVE SVG ═══════════════════════ */}
+      {trades.length > 1 && (() => {
+        const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const points: { date: Date; cumPnl: number; peak: number }[] = [];
+        let cum = 0;
+        let peak = 0;
+        sorted.forEach((tr) => {
+          cum += getPnl(tr);
+          if (cum > peak) peak = cum;
+          points.push({ date: new Date(tr.date), cumPnl: cum, peak });
+        });
+
+        const svgW = 900;
+        const svgH = 320;
+        const padL = 70;
+        const padR = 20;
+        const padT = 20;
+        const padB = 40;
+        const chartW = svgW - padL - padR;
+        const chartH = svgH - padT - padB;
+
+        const minPnl = Math.min(...points.map((p) => p.cumPnl), 0);
+        const maxPnl = Math.max(...points.map((p) => p.cumPnl), 1);
+        const range = maxPnl - minPnl || 1;
+        const minTime = points[0].date.getTime();
+        const maxTime = points[points.length - 1].date.getTime();
+        const timeRange = maxTime - minTime || 1;
+
+        const px = (d: Date) => padL + ((d.getTime() - minTime) / timeRange) * chartW;
+        const py = (v: number) => padT + chartH - ((v - minPnl) / range) * chartH;
+
+        // Equity line path
+        const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${px(p.date).toFixed(1)},${py(p.cumPnl).toFixed(1)}`).join(" ");
+
+        // Drawdown fill: area between peak line and equity line where equity < peak
+        let ddPath = "";
+        const ddSegments: string[] = [];
+        let inDD = false;
+        let segStart = "";
+        const peakLine: string[] = [];
+        for (let i = 0; i < points.length; i++) {
+          const p = points[i];
+          const x = px(p.date).toFixed(1);
+          const yEquity = py(p.cumPnl).toFixed(1);
+          const yPeak = py(p.peak).toFixed(1);
+          if (p.cumPnl < p.peak) {
+            if (!inDD) {
+              segStart = `M${x},${yPeak} L${x},${yEquity}`;
+              peakLine.length = 0;
+              peakLine.push(`${x},${yPeak}`);
+              inDD = true;
+            } else {
+              segStart += ` L${x},${yEquity}`;
+              peakLine.push(`${x},${yPeak}`);
+            }
+          } else if (inDD) {
+            // Close the DD segment
+            segStart += ` L${x},${yEquity}`;
+            peakLine.push(`${x},${yPeak}`);
+            const peakBack = [...peakLine].reverse().map((pt) => `L${pt}`).join(" ");
+            ddSegments.push(`${segStart} ${peakBack} Z`);
+            inDD = false;
+          }
+        }
+        if (inDD && peakLine.length > 0) {
+          const lastX = px(points[points.length - 1].date).toFixed(1);
+          const lastYP = py(points[points.length - 1].peak).toFixed(1);
+          segStart += ` L${lastX},${lastYP}`;
+          const peakBack = [...peakLine].reverse().map((pt) => `L${pt}`).join(" ");
+          ddSegments.push(`${segStart} ${peakBack} Z`);
+        }
+        ddPath = ddSegments.join(" ");
+
+        // Month labels on X axis
+        const monthLabels: { x: number; label: string }[] = [];
+        const seenMonths = new Set<string>();
+        points.forEach((p) => {
+          const key = `${p.date.getFullYear()}-${p.date.getMonth()}`;
+          if (!seenMonths.has(key)) {
+            seenMonths.add(key);
+            monthLabels.push({
+              x: px(p.date),
+              label: p.date.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }),
+            });
+          }
+        });
+
+        // Y axis EUR labels
+        const ySteps = 5;
+        const yLabels: { y: number; label: string }[] = [];
+        for (let i = 0; i <= ySteps; i++) {
+          const val = minPnl + (range / ySteps) * i;
+          yLabels.push({ y: py(val), label: `${val >= 0 ? "+" : ""}${val.toFixed(0)}€` });
+        }
+
+        return (
+          <div className="glass rounded-2xl p-6">
+            <h3 className="text-lg font-semibold mb-4">{t("equityCurve")} — Courbe Détaillée</h3>
+            <div className="overflow-x-auto">
+              <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" style={{ minWidth: "600px" }}>
+                {/* Grid lines */}
+                {yLabels.map((yl, i) => (
+                  <g key={i}>
+                    <line x1={padL} y1={yl.y} x2={svgW - padR} y2={yl.y} stroke="var(--border-subtle, rgba(107,114,128,0.2))" strokeWidth="0.5" />
+                    <text x={padL - 8} y={yl.y + 4} textAnchor="end" fill="var(--text-muted, #6b7280)" fontSize="10" fontFamily="monospace">{yl.label}</text>
+                  </g>
+                ))}
+                {/* Zero line */}
+                {minPnl < 0 && maxPnl > 0 && (
+                  <line x1={padL} y1={py(0)} x2={svgW - padR} y2={py(0)} stroke="var(--text-muted, #6b7280)" strokeWidth="0.8" strokeDasharray="4,3" opacity="0.5" />
+                )}
+                {/* Drawdown fill */}
+                {ddPath && <path d={ddPath} fill="rgba(239, 68, 68, 0.15)" />}
+                {/* Equity line */}
+                <path d={linePath} fill="none" stroke="#10b981" strokeWidth="2" strokeLinejoin="round" />
+                {/* Month labels */}
+                {monthLabels.map((ml, i) => (
+                  <text key={i} x={ml.x} y={svgH - 8} textAnchor="middle" fill="var(--text-muted, #6b7280)" fontSize="10">{ml.label}</text>
+                ))}
+              </svg>
+            </div>
+            <div className="flex items-center justify-center gap-6 mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
+              <div className="flex items-center gap-1.5">
+                <div className="w-6 h-0.5 rounded-full" style={{ background: "#10b981" }} />
+                <span>Équité cumulée</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-3 rounded-sm" style={{ background: "rgba(239, 68, 68, 0.15)" }} />
+                <span>Drawdown</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ═══════════════════════ MONTHLY RETURNS TABLE ═══════════════════════ */}
+      {trades.length > 0 && (() => {
+        const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const monthMap: Record<string, number> = {};
+        const yearSet = new Set<number>();
+        sorted.forEach((tr) => {
+          const d = new Date(tr.date);
+          const y = d.getFullYear();
+          const m = d.getMonth(); // 0-11
+          yearSet.add(y);
+          const key = `${y}-${m}`;
+          monthMap[key] = (monthMap[key] || 0) + getPnl(tr);
+        });
+
+        const years = Array.from(yearSet).sort();
+        const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
+
+        // Year totals
+        const yearTotals: Record<number, number> = {};
+        years.forEach((y) => {
+          let total = 0;
+          for (let m = 0; m < 12; m++) {
+            const key = `${y}-${m}`;
+            total += monthMap[key] || 0;
+          }
+          yearTotals[y] = total;
+        });
+
+        const allVals = Object.values(monthMap).filter((v) => v !== 0);
+        const maxAbs = allVals.length > 0 ? Math.max(...allVals.map(Math.abs)) : 1;
+
+        const getCellBg = (val: number): string => {
+          if (val === 0) return "transparent";
+          const intensity = Math.min(Math.abs(val) / maxAbs, 1);
+          if (val > 0) return `rgba(16, 185, 129, ${0.1 + intensity * 0.4})`;
+          return `rgba(239, 68, 68, ${0.1 + intensity * 0.4})`;
+        };
+
+        return (
+          <div className="glass rounded-2xl p-6">
+            <h3 className="text-lg font-semibold mb-4">Rendements Mensuels</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr>
+                    <th className="text-left py-2 px-2 font-medium" style={{ color: "var(--text-secondary)" }}>Mois</th>
+                    {years.map((y) => (
+                      <th key={y} className="text-center py-2 px-2 font-medium" style={{ color: "var(--text-secondary)" }}>{y}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthNames.map((mName, mIdx) => (
+                    <tr key={mIdx} className="border-t" style={{ borderColor: "var(--border-subtle)" }}>
+                      <td className="py-2 px-2 font-medium" style={{ color: "var(--text-primary)" }}>{mName}</td>
+                      {years.map((y) => {
+                        const key = `${y}-${mIdx}`;
+                        const val = monthMap[key] || 0;
+                        const hasData = monthMap[key] !== undefined;
+                        return (
+                          <td
+                            key={y}
+                            className="py-2 px-2 text-center mono font-semibold rounded-sm"
+                            style={{
+                              background: hasData ? getCellBg(val) : "transparent",
+                              color: !hasData ? "var(--text-muted)" : val >= 0 ? "#10b981" : "#ef4444",
+                            }}
+                          >
+                            {hasData ? `${val >= 0 ? "+" : ""}${val.toFixed(0)}€` : "—"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                  {/* Total row */}
+                  <tr className="border-t-2" style={{ borderColor: "var(--border)" }}>
+                    <td className="py-2 px-2 font-bold" style={{ color: "var(--text-primary)" }}>Total</td>
+                    {years.map((y) => {
+                      const total = yearTotals[y];
+                      return (
+                        <td
+                          key={y}
+                          className="py-2 px-2 text-center mono font-bold rounded-sm"
+                          style={{
+                            background: getCellBg(total),
+                            color: total >= 0 ? "#10b981" : "#ef4444",
+                          }}
+                        >
+                          {total >= 0 ? "+" : ""}{total.toFixed(0)}€
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ═══════════════════════ VIP PREMIUM ANALYTICS ═══════════════════════ */}
       {isVip && <VipAnalyticsSections trades={trades} getPnl={getPnl} />}
     </div>

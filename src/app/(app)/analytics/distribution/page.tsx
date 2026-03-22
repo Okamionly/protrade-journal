@@ -3,8 +3,85 @@
 import { useTrades } from "@/hooks/useTrades";
 import { useMemo, useState } from "react";
 import { computeHourlyDistribution, computeDayDistribution, computeSessionDistribution, type Trade } from "@/lib/advancedStats";
-import { Clock, Calendar, Globe2, Crosshair, Grid3X3 } from "lucide-react";
+import { Clock, Calendar, Globe2, Crosshair, Grid3X3, PieChart, Brain, BarChart2 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+
+/* ─── Donut Chart Component ─── */
+const DONUT_COLORS = ["#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16"];
+
+function DonutChart({ segments, title, icon }: { segments: { label: string; value: number; color: string }[]; title: string; icon: React.ReactNode }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  if (total === 0) return null;
+
+  const radius = 80;
+  const stroke = 28;
+  const center = 100;
+  const circumference = 2 * Math.PI * radius;
+
+  let offset = 0;
+  const arcs = segments.map((seg, i) => {
+    const pct = seg.value / total;
+    const dash = pct * circumference;
+    const gap = circumference - dash;
+    const rotation = (offset / total) * 360 - 90;
+    offset += seg.value;
+    return { ...seg, pct, dash, gap, rotation, index: i };
+  });
+
+  return (
+    <div className="metric-card rounded-2xl p-6">
+      <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+        {icon} {title}
+      </h3>
+      <div className="flex flex-col md:flex-row items-center gap-6">
+        <div className="relative" style={{ width: 200, height: 200 }}>
+          <svg viewBox="0 0 200 200" width="200" height="200">
+            {arcs.map((arc) => (
+              <circle
+                key={arc.index}
+                cx={center}
+                cy={center}
+                r={radius}
+                fill="none"
+                stroke={arc.color}
+                strokeWidth={hovered === arc.index ? stroke + 6 : stroke}
+                strokeDasharray={`${arc.dash} ${arc.gap}`}
+                transform={`rotate(${arc.rotation} ${center} ${center})`}
+                style={{ transition: "stroke-width 0.2s", cursor: "pointer", opacity: hovered !== null && hovered !== arc.index ? 0.4 : 1 }}
+                onMouseEnter={() => setHovered(arc.index)}
+                onMouseLeave={() => setHovered(null)}
+              />
+            ))}
+            <text x={center} y={center - 6} textAnchor="middle" fill="var(--text-primary)" fontSize="22" fontWeight="bold" fontFamily="monospace">
+              {hovered !== null ? `${(arcs[hovered].pct * 100).toFixed(1)}%` : total}
+            </text>
+            <text x={center} y={center + 14} textAnchor="middle" fill="var(--text-muted)" fontSize="11">
+              {hovered !== null ? arcs[hovered].label : "trades"}
+            </text>
+          </svg>
+        </div>
+        <div className="flex-1 space-y-1.5 min-w-0">
+          {arcs.map((arc) => (
+            <div
+              key={arc.index}
+              className="flex items-center gap-2 px-2 py-1 rounded-lg cursor-default transition-colors"
+              style={{ background: hovered === arc.index ? "var(--bg-hover)" : "transparent" }}
+              onMouseEnter={() => setHovered(arc.index)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              <div className="w-3 h-3 rounded-full shrink-0" style={{ background: arc.color }} />
+              <span className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>{arc.label}</span>
+              <span className="text-xs mono ml-auto shrink-0" style={{ color: "var(--text-secondary)" }}>
+                {arc.value} ({(arc.pct * 100).toFixed(1)}%)
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function BarChart({ data, labelKey, valueKey, colorFn }: { data: Record<string, unknown>[]; labelKey: string; valueKey: string; colorFn: (v: number) => string }) {
   const maxVal = Math.max(...data.map((d) => Math.abs(d[valueKey] as number)), 1);
@@ -126,6 +203,65 @@ export default function DistributionPage() {
   const heatmapDayLabels = useMemo(() => [t("heatmapMon"), t("heatmapTue"), t("heatmapWed"), t("heatmapThu"), t("heatmapFri")], [t]);
   const heatmapData = useMemo(() => computeHourDayHeatmap(trades as unknown as Trade[], heatmapDayLabels), [trades, heatmapDayLabels]);
   const [hoveredCell, setHoveredCell] = useState<HeatmapCell | null>(null);
+
+  /* ─── Asset distribution donut ─── */
+  const assetSegments = useMemo(() => {
+    const map: Record<string, number> = {};
+    (trades as unknown as Trade[]).forEach((tr) => {
+      map[tr.asset] = (map[tr.asset] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, value], i) => ({ label, value, color: DONUT_COLORS[i % DONUT_COLORS.length] }));
+  }, [trades]);
+
+  /* ─── Strategy distribution donut ─── */
+  const strategySegments = useMemo(() => {
+    const map: Record<string, number> = {};
+    (trades as unknown as Trade[]).forEach((tr) => {
+      map[tr.strategy] = (map[tr.strategy] || 0) + 1;
+    });
+    return Object.entries(map)
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, value], i) => ({ label, value, color: DONUT_COLORS[(i + 3) % DONUT_COLORS.length] }));
+  }, [trades]);
+
+  /* ─── Emotion impact analysis ─── */
+  const emotionData = useMemo(() => {
+    const map: Record<string, { totalPnl: number; count: number }> = {};
+    (trades as unknown as Trade[]).forEach((tr) => {
+      const em = tr.emotion || "Non défini";
+      if (!map[em]) map[em] = { totalPnl: 0, count: 0 };
+      map[em].totalPnl += tr.result;
+      map[em].count++;
+    });
+    return Object.entries(map)
+      .map(([emotion, d]) => ({ emotion, avgPnl: d.count > 0 ? d.totalPnl / d.count : 0, count: d.count }))
+      .sort((a, b) => b.avgPnl - a.avgPnl);
+  }, [trades]);
+
+  /* ─── Win rate by day of week ─── */
+  const dayOfWeekWinRate = useMemo(() => {
+    const dayNames = [t("heatmapMon"), t("heatmapTue"), t("heatmapWed"), t("heatmapThu"), t("heatmapFri")];
+    const map: Record<number, { wins: number; total: number }> = {};
+    for (let i = 1; i <= 5; i++) map[i] = { wins: 0, total: 0 };
+    (trades as unknown as Trade[]).forEach((tr) => {
+      const dow = new Date(tr.date).getDay();
+      if (dow >= 1 && dow <= 5) {
+        map[dow].total++;
+        if (tr.result > 0) map[dow].wins++;
+      }
+    });
+    const entries = [1, 2, 3, 4, 5].map((dow, i) => ({
+      day: dayNames[i],
+      winRate: map[dow].total > 0 ? (map[dow].wins / map[dow].total) * 100 : 0,
+      trades: map[dow].total,
+    }));
+    const rates = entries.filter((e) => e.trades > 0).map((e) => e.winRate);
+    const bestRate = rates.length > 0 ? Math.max(...rates) : 0;
+    const worstRate = rates.length > 0 ? Math.min(...rates) : 0;
+    return { entries, bestRate, worstRate };
+  }, [trades, t]);
 
   const colorFn = (v: number) => v >= 0 ? "#10b981" : "#ef4444";
 
@@ -388,6 +524,128 @@ export default function DistributionPage() {
           </div>
         )}
       </div>
+
+      {/* ═══ Asset & Strategy Donut Charts ═══ */}
+      {trades.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <DonutChart
+            segments={assetSegments}
+            title="Répartition par Actif"
+            icon={<PieChart className="w-5 h-5 text-cyan-400" />}
+          />
+          <DonutChart
+            segments={strategySegments}
+            title="Répartition par Stratégie"
+            icon={<PieChart className="w-5 h-5 text-purple-400" />}
+          />
+        </div>
+      )}
+
+      {/* ═══ Emotion Impact Analysis ═══ */}
+      {trades.length > 0 && emotionData.length > 0 && (
+        <div className="metric-card rounded-2xl p-6">
+          <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+            <Brain className="w-5 h-5 text-pink-400" /> Impact Émotionnel — P&L Moyen par Émotion
+          </h3>
+          {(() => {
+            const maxAbsPnl = Math.max(...emotionData.map((d) => Math.abs(d.avgPnl)), 1);
+            return (
+              <div className="space-y-3">
+                {emotionData.map((d) => {
+                  const widthPct = (Math.abs(d.avgPnl) / maxAbsPnl) * 100;
+                  const isPositive = d.avgPnl >= 0;
+                  return (
+                    <div key={d.emotion} className="flex items-center gap-3">
+                      <span className="text-xs font-medium w-24 text-right shrink-0" style={{ color: "var(--text-secondary)" }}>
+                        {d.emotion}
+                      </span>
+                      <div className="flex-1 h-8 rounded-lg overflow-hidden relative" style={{ background: "var(--bg-hover)" }}>
+                        <div
+                          className="h-full rounded-lg transition-all duration-500"
+                          style={{
+                            width: `${Math.max(widthPct, 3)}%`,
+                            background: isPositive
+                              ? "linear-gradient(90deg, rgba(16,185,129,0.3), rgba(16,185,129,0.7))"
+                              : "linear-gradient(90deg, rgba(239,68,68,0.3), rgba(239,68,68,0.7))",
+                          }}
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold mono" style={{ color: "var(--text-primary)" }}>
+                          {isPositive ? "+" : ""}{d.avgPnl.toFixed(2)}€
+                        </span>
+                      </div>
+                      <span className="text-[10px] mono w-16 text-right shrink-0" style={{ color: "var(--text-muted)" }}>
+                        {d.count} trade{d.count > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ═══ Win Rate by Day of Week ═══ */}
+      {trades.length > 0 && (
+        <div className="metric-card rounded-2xl p-6">
+          <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+            <BarChart2 className="w-5 h-5 text-amber-400" /> Taux de Réussite par Jour
+          </h3>
+          <div className="flex items-end gap-3 h-52 px-4">
+            {dayOfWeekWinRate.entries.map((d) => {
+              const height = d.trades > 0 ? Math.max((d.winRate / 100) * 100, 4) : 2;
+              const isBest = d.trades > 0 && d.winRate === dayOfWeekWinRate.bestRate;
+              const isWorst = d.trades > 0 && d.winRate === dayOfWeekWinRate.worstRate && dayOfWeekWinRate.bestRate !== dayOfWeekWinRate.worstRate;
+              let barColor = "rgba(107, 114, 128, 0.3)";
+              if (d.trades > 0) {
+                barColor = isBest ? "#10b981" : isWorst ? "#ef4444" : "rgba(99, 102, 241, 0.6)";
+              }
+              return (
+                <div key={d.day} className="flex-1 flex flex-col items-center gap-1">
+                  {d.trades > 0 && (
+                    <span className="text-xs font-bold mono" style={{ color: isBest ? "#10b981" : isWorst ? "#ef4444" : "var(--text-primary)" }}>
+                      {d.winRate.toFixed(1)}%
+                    </span>
+                  )}
+                  <div
+                    className="w-full rounded-t-lg transition-all duration-500 relative group"
+                    style={{ height: `${height}%`, background: barColor, minHeight: d.trades > 0 ? "8px" : "4px" }}
+                    title={`${d.day}: ${d.winRate.toFixed(1)}% WR (${d.trades} trades)`}
+                  >
+                    {isBest && (
+                      <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#10b981", color: "#fff" }}>
+                        BEST
+                      </span>
+                    )}
+                    {isWorst && (
+                      <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#ef4444", color: "#fff" }}>
+                        PIRE
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>{d.day}</span>
+                  <span className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>{d.trades}t</span>
+                </div>
+              );
+            })}
+          </div>
+          {/* Reference lines */}
+          <div className="flex items-center justify-center gap-4 mt-4 text-[10px]" style={{ color: "var(--text-muted)" }}>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ background: "#10b981" }} />
+              <span>Meilleur jour</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ background: "#ef4444" }} />
+              <span>Pire jour</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(99, 102, 241, 0.6)" }} />
+              <span>Autres</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1476,7 +1476,8 @@ function CorrelationMatrix() {
 export default function WarRoomPage() {
   const { trades, loading } = useTrades();
   const { t } = useTranslation();
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date>(new Date(0));
+  const [mounted, setMounted] = useState(false);
   const [checklist, setChecklist] = useState<boolean[]>(CHECKLIST_ITEMS.map(() => false));
   const [currentMood, setCurrentMood] = useState<string | null>(null);
   const [moodTimeline, setMoodTimeline] = useState<{ time: string; mood: string }[]>([]);
@@ -1490,8 +1491,10 @@ export default function WarRoomPage() {
   const [livePrices, setLivePrices] = useState<LivePricesResponse | null>(null);
   const [activeStreamEmbed, setActiveStreamEmbed] = useState<string | null>(null);
 
-  // Real-time clock
+  // Real-time clock (hydration-safe)
   useEffect(() => {
+    setMounted(true);
+    setCurrentTime(new Date());
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
@@ -1841,9 +1844,9 @@ export default function WarRoomPage() {
           >
             <Settings size={16} />
           </button>
-          <div className="flex items-center gap-2 mono text-sm" style={{ color: "var(--text-muted)" }}>
+          <div className="flex items-center gap-2 mono text-sm" style={{ color: "var(--text-muted)" }} suppressHydrationWarning>
             <Clock size={14} />
-            {currentTime.toLocaleTimeString("fr-FR")}
+            {mounted ? currentTime.toLocaleTimeString("fr-FR") : "--:--:--"}
           </div>
         </div>
       </div>
