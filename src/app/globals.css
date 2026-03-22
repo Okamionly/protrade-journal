@@ -1148,3 +1148,56 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
 .animate-hero-float {
   animation: hero-float 6s ease-in-out infinite;
 }
+
+/* ========== STREAK COUNTER ANIMATIONS ========== */
+@keyframes streak-bounce {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.15); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes fire-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+.animate-streak-bounce {
+  animation: streak-bounce 0.5s ease-out both;
+}
+.animate-fire-pulse {
+  animation: fire-pulse 1s ease-in-out infinite;
+}
+.streak-glow-green {
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4), 0 0 24px rgba(16, 185, 129, 0.15);
+}
+.streak-glow-gold {
+  box-shadow: 0 0 16px rgba(234, 179, 8, 0.5), 0 0 32px rgba(234, 179, 8, 0.2);
+}
+.streak-glow-rainbow {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(59, 130, 246, 0.2), 0 0 60px rgba(236, 72, 153, 0.15);
+  background-image: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(59, 130, 246, 0.08), rgba(236, 72, 153, 0.08));
+}
+.streak-glow-ice {
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4), 0 0 24px rgba(56, 189, 248, 0.15);
+}
+.streak-text-rainbow {
+  background: linear-gradient(90deg, #a855f7, #3b82f6, #ec4899, #f59e0b);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbow-shift 3s linear infinite;
+}
+@keyframes rainbow-shift {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ========== ZEN MODE (BLUR P&L) ========== */
+.zen-mode .pnl-value {
+  filter: blur(8px);
+  user-select: none;
+  transition: filter 0.3s ease;
+}
+.zen-mode .pnl-value:hover {
+  filter: blur(0);
+}

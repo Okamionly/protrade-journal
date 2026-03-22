@@ -33,6 +33,8 @@ import {
   UserPlus,
   UserCheck,
   Trophy,
+  Star,
+  Crown,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -646,24 +648,64 @@ function getUserBadges(
   return badges.slice(0, 2);
 }
 
-/* ─── Trade du Jour Component ──────────────────────────── */
+/* ─── Trade du Jour Component (API-powered with voting) ── */
 
-function TradeDuJour({ messages }: { messages: FeedMessage[] }) {
-  const bestTrade = useMemo(() => {
-    const now = new Date();
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const recentTradeMessages = messages.filter(
-      (m) => m.trade && new Date(m.createdAt) >= oneDayAgo,
+interface TdjEntry {
+  messageId: string;
+  author: { id: string; name: string | null; email: string };
+  trade: {
+    id: string;
+    asset: string;
+    direction: string;
+    result: number;
+    strategy: string | null;
+  };
+  votes: number;
+  hasVoted: boolean;
+}
+
+function TradeDuJour({ messages: _messages }: { messages: FeedMessage[] }) {
+  const [top5, setTop5] = useState<TdjEntry[]>([]);
+  const [winner, setWinner] = useState<TdjEntry | null>(null);
+  const [loadingTdj, setLoadingTdj] = useState(true);
+  const [voting, setVoting] = useState<string | null>(null);
+
+  const fetchTdj = useCallback(() => {
+    fetch("/api/trade-of-day")
+      .then((r) => r.json())
+      .then((data) => {
+        setTop5(data.top5 || []);
+        setWinner(data.winner || null);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingTdj(false));
+  }, []);
+
+  useEffect(() => { fetchTdj(); }, [fetchTdj]);
+
+  const handleVote = async (messageId: string) => {
+    setVoting(messageId);
+    try {
+      const res = await fetch("/api/trade-of-day", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tradeMessageId: messageId }),
+      });
+      if (res.ok) fetchTdj();
+    } catch { /* ignore */ }
+    setVoting(null);
+  };
+
+  if (loadingTdj) {
+    return (
+      <div className="mx-4 mt-3 mb-1 rounded-2xl p-4 animate-pulse" style={{ background: "linear-gradient(135deg, #fefce8, #fef9c3)", border: "1px solid #fde68a" }}>
+        <div className="h-5 w-32 rounded bg-yellow-200/50 mb-2" />
+        <div className="h-4 w-48 rounded bg-yellow-200/30" />
+      </div>
     );
-    if (recentTradeMessages.length === 0) return null;
-    return recentTradeMessages.reduce((best, current) => {
-      if (!best.trade) return current;
-      if (!current.trade) return best;
-      return current.trade.result > best.trade.result ? current : best;
-    });
-  }, [messages]);
+  }
 
-  if (!bestTrade || !bestTrade.trade) {
+  if (top5.length === 0) {
     return (
       <div
         className="mx-4 mt-3 mb-1 rounded-2xl p-4 text-center"
@@ -673,7 +715,7 @@ function TradeDuJour({ messages }: { messages: FeedMessage[] }) {
         }}
       >
         <div className="flex items-center justify-center gap-2 mb-2">
-          <Trophy className="w-5 h-5" style={{ color: "#eab308" }} />
+          <Crown className="w-5 h-5" style={{ color: "#eab308" }} />
           <span className="font-bold text-[15px]" style={{ color: "#eab308" }}>
             Trade du jour
           </span>
@@ -685,11 +727,6 @@ function TradeDuJour({ messages }: { messages: FeedMessage[] }) {
     );
   }
 
-  const trade = bestTrade.trade;
-  const isBuy = trade.direction?.toUpperCase() === "BUY" || trade.direction?.toUpperCase() === "LONG";
-  const gradient = getAvatarGradient(bestTrade.user.name);
-  const handle = getHandle(bestTrade.user.email);
-
   return (
     <div
       className="mx-4 mt-3 mb-1 rounded-2xl overflow-hidden"
@@ -699,64 +736,92 @@ function TradeDuJour({ messages }: { messages: FeedMessage[] }) {
         boxShadow: "0 2px 8px rgba(234,179,8,0.15)",
       }}
     >
-      <div className="px-4 pt-3 pb-2 flex items-center gap-2">
-        <Trophy className="w-5 h-5" style={{ color: "#eab308" }} />
-        <span className="font-bold text-[15px]" style={{ color: "#eab308" }}>
-          Trade du jour
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Crown className="w-5 h-5" style={{ color: "#eab308" }} />
+          <span className="font-bold text-[15px]" style={{ color: "#eab308" }}>
+            Trade du jour
+          </span>
+        </div>
+        <span className="text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>
+          1 vote / jour
         </span>
       </div>
-      <div className="px-4 pb-3">
-        <div className="flex items-center gap-2.5 mb-3">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-            style={{ background: gradient }}
-          >
-            {getInitials(bestTrade.user.name)}
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-sm truncate" style={{ color: "var(--text-primary)" }}>
-                {bestTrade.user.name || "Anonyme"}
-              </span>
-              <span className="text-[13px] truncate" style={{ color: "var(--text-muted)" }}>
-                @{handle}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div
-          className="rounded-xl p-3"
-          style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(234,179,8,0.15)" }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-[15px]" style={{ color: "var(--text-primary)" }}>
-                {trade.asset}
-              </span>
-              <span
-                className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide"
-                style={{
-                  background: isBuy ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
-                  color: isBuy ? "#10b981" : "#ef4444",
-                  border: `1px solid ${isBuy ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
-                }}
-              >
-                {isBuy ? "LONG" : "SHORT"}
-              </span>
-            </div>
-            <span
-              className="text-lg font-bold"
-              style={{ color: trade.result >= 0 ? "#10b981" : "#ef4444" }}
+
+      <div className="px-4 pb-3 space-y-2">
+        {top5.map((entry, idx) => {
+          const trade = entry.trade;
+          const isBuy = trade.direction?.toUpperCase() === "BUY" || trade.direction?.toUpperCase() === "LONG";
+          const isWinner = idx === 0 && entry.votes > 0;
+          const gradient = getAvatarGradient(entry.author.name);
+
+          return (
+            <div
+              key={entry.messageId}
+              className="rounded-xl p-3 transition-all"
+              style={{
+                background: isWinner ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.15)",
+                border: isWinner ? "1px solid rgba(234,179,8,0.3)" : "1px solid rgba(234,179,8,0.1)",
+              }}
             >
-              {trade.result >= 0 ? "+" : ""}{trade.result.toFixed(2)}
-            </span>
-          </div>
-          {trade.strategy && (
-            <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
-              Stratégie : {trade.strategy}
-            </p>
-          )}
-        </div>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  {isWinner && <Trophy className="w-4 h-4" style={{ color: "#eab308" }} />}
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[8px] font-bold shrink-0"
+                    style={{ background: gradient }}
+                  >
+                    {getInitials(entry.author.name)}
+                  </div>
+                  <span className="font-semibold text-[13px]" style={{ color: "var(--text-primary)" }}>
+                    {entry.author.name || "Anonyme"}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleVote(entry.messageId)}
+                  disabled={voting !== null}
+                  className="flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold transition-all"
+                  style={{
+                    background: entry.hasVoted ? "rgba(234,179,8,0.25)" : "rgba(234,179,8,0.08)",
+                    color: entry.hasVoted ? "#eab308" : "var(--text-muted)",
+                    border: entry.hasVoted ? "1px solid rgba(234,179,8,0.4)" : "1px solid rgba(234,179,8,0.15)",
+                    cursor: voting ? "wait" : "pointer",
+                  }}
+                >
+                  <Star className="w-3 h-3" style={{ fill: entry.hasVoted ? "#eab308" : "none" }} />
+                  {entry.votes}
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-[13px]" style={{ color: "var(--text-primary)" }}>
+                    {trade.asset}
+                  </span>
+                  <span
+                    className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase"
+                    style={{
+                      background: isBuy ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
+                      color: isBuy ? "#10b981" : "#ef4444",
+                    }}
+                  >
+                    {isBuy ? "LONG" : "SHORT"}
+                  </span>
+                  {trade.strategy && (
+                    <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                      {trade.strategy}
+                    </span>
+                  )}
+                </div>
+                <span
+                  className="text-sm font-bold mono"
+                  style={{ color: trade.result >= 0 ? "#10b981" : "#ef4444" }}
+                >
+                  {trade.result >= 0 ? "+" : ""}{trade.result.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

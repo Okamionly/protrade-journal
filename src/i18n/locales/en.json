@@ -59,6 +59,8 @@
 
   "logout": "Logout",
   "theme": "Theme",
+  "zenModeOn": "Zen Mode ON — P&L hidden",
+  "zenModeOff": "Zen Mode OFF — P&L visible",
   "themeDark": "Dark",
   "themeLight": "Light",
   "themeOled": "OLED",

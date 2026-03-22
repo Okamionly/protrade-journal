@@ -9,9 +9,163 @@ import { useToast } from "@/components/Toast";
 import { ForexSessions } from "@/components/ForexSessions";
 import { calculateRR, formatDate, computeStats } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair, DollarSign, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair, DollarSign, AlertTriangle, Share2, Star, Crown, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
+import { ShareStatsCard } from "@/components/ShareStatsCard";
+
+
+/* ─── Trade du Jour Types ──────────────────────────────── */
+
+interface TradeDuJourData {
+  messageId: string;
+  author: { id: string; name: string | null; email: string };
+  trade: {
+    id: string;
+    asset: string;
+    direction: string;
+    result: number;
+    strategy: string | null;
+  };
+  votes: number;
+  hasVoted: boolean;
+}
+
+/* ─── Trade du Jour Dashboard Widget ───────────────────── */
+
+function TradeDuJourWidget() {
+  const [winner, setWinner] = useState<TradeDuJourData | null>(null);
+  const [loadingTdj, setLoadingTdj] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/trade-of-day")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.winner) setWinner(data.winner);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingTdj(false));
+  }, []);
+
+  if (loadingTdj) {
+    return (
+      <div className="glass rounded-2xl p-5 mb-6 animate-pulse">
+        <div className="h-4 w-32 rounded bg-[--bg-secondary] mb-3" />
+        <div className="h-6 w-48 rounded bg-[--bg-secondary]" />
+      </div>
+    );
+  }
+
+  if (!winner) {
+    return (
+      <div
+        className="rounded-2xl p-5 mb-6"
+        style={{
+          background: "linear-gradient(135deg, rgba(234,179,8,0.08), rgba(234,179,8,0.03))",
+          border: "1px solid rgba(234,179,8,0.2)",
+        }}
+      >
+        <div className="flex items-center gap-2.5 mb-2">
+          <Crown className="w-5 h-5" style={{ color: "#eab308" }} />
+          <span className="font-bold text-sm" style={{ color: "#eab308" }}>
+            Trade du Jour
+          </span>
+        </div>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          Pas encore de trade du jour
+        </p>
+        <Link
+          href="/community"
+          className="inline-flex items-center gap-1 text-xs mt-2 hover:underline"
+          style={{ color: "#eab308" }}
+        >
+          Voter dans la communauté
+          <ExternalLink className="w-3 h-3" />
+        </Link>
+      </div>
+    );
+  }
+
+  const trade = winner.trade;
+  const isBuy = trade.direction?.toUpperCase() === "BUY" || trade.direction?.toUpperCase() === "LONG";
+
+  return (
+    <div
+      className="rounded-2xl p-5 mb-6"
+      style={{
+        background: "linear-gradient(135deg, rgba(234,179,8,0.10), rgba(234,179,8,0.03))",
+        border: "1px solid rgba(234,179,8,0.25)",
+        boxShadow: "0 2px 12px rgba(234,179,8,0.08)",
+      }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{ background: "rgba(234,179,8,0.15)" }}
+          >
+            <Crown className="w-4 h-4" style={{ color: "#eab308" }} />
+          </div>
+          <div>
+            <span className="font-bold text-sm" style={{ color: "#eab308" }}>
+              Trade du Jour
+            </span>
+            <div className="flex items-center gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
+              <Star className="w-3 h-3" style={{ color: "#eab308" }} />
+              {winner.votes} vote{winner.votes > 1 ? "s" : ""}
+            </div>
+          </div>
+        </div>
+        <span
+          className="text-xl font-black mono"
+          style={{ color: trade.result >= 0 ? "#10b981" : "#ef4444" }}
+        >
+          {trade.result >= 0 ? "+" : ""}{trade.result.toFixed(2)}
+        </span>
+      </div>
+
+      <div
+        className="rounded-xl p-3 mb-3"
+        style={{ background: "rgba(0,0,0,0.15)", border: "1px solid rgba(234,179,8,0.1)" }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>
+              {trade.asset}
+            </span>
+            <span
+              className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
+              style={{
+                background: isBuy ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
+                color: isBuy ? "#10b981" : "#ef4444",
+                border: `1px solid ${isBuy ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
+              }}
+            >
+              {isBuy ? "LONG" : "SHORT"}
+            </span>
+          </div>
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            par {winner.author.name || "Anonyme"}
+          </span>
+        </div>
+        {trade.strategy && (
+          <p className="text-[11px] mt-1.5" style={{ color: "var(--text-muted)" }}>
+            Stratégie : {trade.strategy}
+          </p>
+        )}
+      </div>
+
+      <Link
+        href="/community"
+        className="inline-flex items-center gap-1.5 text-xs font-medium hover:underline transition"
+        style={{ color: "#eab308" }}
+      >
+        Voir dans la communauté
+        <ExternalLink className="w-3 h-3" />
+      </Link>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { trades, loading, addTrade, deleteTrade, updateTrade } = useTrades();
@@ -24,6 +178,7 @@ export default function DashboardPage() {
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [goalInput, setGoalInput] = useState("");
   const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
   const [balanceInput, setBalanceInput] = useState("");
 
   useEffect(() => {
@@ -171,7 +326,18 @@ export default function DashboardPage() {
 
   return (
     <>
-      {/* === PROMINENT DAILY P&L CARD === */}
+      {/* === Share button + PROMINENT DAILY P&L CARD === */}
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={() => setShowShareCard(true)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105"
+          style={{ background: "rgba(99,102,241,0.15)", color: "#818cf8", border: "1px solid rgba(99,102,241,0.2)" }}
+          title="Partager mes stats"
+        >
+          <Share2 className="w-3.5 h-3.5" />
+          Partager mes stats
+        </button>
+      </div>
       <div className="glass rounded-2xl p-6 mb-6" style={{ border: "1px solid", borderColor: todayPnL >= 0 ? "rgba(52,211,153,0.3)" : "rgba(248,113,113,0.3)" }}>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           {/* Left: Main P&L */}
@@ -183,7 +349,7 @@ export default function DashboardPage() {
               <div className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
                 {t("pnlToday")}
               </div>
-              <div className={`text-4xl font-black mono ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+              <div className={`text-4xl font-black mono pnl-value ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                 {todayPnL >= 0 ? "+" : ""}{todayPnL.toFixed(2)}
               </div>
               {/* vs hier */}
@@ -193,7 +359,7 @@ export default function DashboardPage() {
                 ) : (
                   <ArrowDownRight className="w-3.5 h-3.5 text-rose-400" />
                 )}
-                <span className={`text-xs font-semibold ${dailyDelta >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                <span className={`text-xs font-semibold pnl-value ${dailyDelta >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                   {dailyDelta >= 0 ? "+" : ""}{dailyDelta.toFixed(2)} {t("vsYesterday")}
                 </span>
               </div>
@@ -290,26 +456,53 @@ export default function DashboardPage() {
         </div>
 
         {/* Enhanced Streak with flame icon */}
-        <div className="glass rounded-2xl p-4">
+        <div className={`glass rounded-2xl p-4 transition-all duration-300 ${
+          streakType === "win" && currentStreak >= 10 ? "streak-glow-rainbow" :
+          streakType === "win" && currentStreak >= 5 ? "streak-glow-gold" :
+          streakType === "win" && currentStreak >= 3 ? "streak-glow-green" :
+          streakType === "loss" && currentStreak >= 3 ? "streak-glow-ice" : ""
+        }`}>
           <div className="flex items-center gap-2 mb-2">
             {streakType === "win" ? (
-              <Flame className="w-4 h-4 text-orange-400 animate-pulse" />
+              <span className={`inline-flex ${currentStreak >= 5 ? "animate-fire-pulse" : ""}`}>
+                <Flame className="w-4 h-4 text-orange-400" />
+              </span>
+            ) : streakType === "loss" && currentStreak >= 3 ? (
+              <span className="text-sm">❄️</span>
             ) : (
               <Zap className={`w-4 h-4 ${streakType === "loss" ? "text-rose-400" : "text-gray-400"}`} />
             )}
             <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{t("currentStreak")}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className={`text-2xl font-bold mono ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : ""}`}
+            <div className={`text-2xl font-bold mono animate-streak-bounce ${
+              streakType === "win" && currentStreak >= 10 ? "streak-text-rainbow" :
+              streakType === "win" && currentStreak >= 5 ? "text-yellow-400" :
+              streakType === "win" ? "text-emerald-400" :
+              streakType === "loss" && currentStreak >= 3 ? "text-sky-400" :
+              streakType === "loss" ? "text-rose-400" : ""
+            }`}
               style={streakType === "none" ? { color: "var(--text-muted)" } : {}}>
               {currentStreak > 0 ? `${currentStreak} ${streakType === "win" ? "W" : "L"}` : "---"}
             </div>
             {streakType === "win" && currentStreak >= 3 && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-bold animate-pulse">
+              <span className={`text-sm ${currentStreak >= 5 ? "animate-fire-pulse" : "animate-pulse"}`}>
                 🔥
               </span>
             )}
           </div>
+          {streakType === "win" && currentStreak >= 10 && (
+            <div className="text-[10px] font-bold mt-1 streak-text-rainbow">Légendaire !</div>
+          )}
+          {streakType === "win" && currentStreak >= 5 && currentStreak < 10 && (
+            <div className="text-[10px] font-bold mt-1 text-yellow-400">Inarrêtable !</div>
+          )}
+          {streakType === "win" && currentStreak >= 3 && currentStreak < 5 && (
+            <div className="text-[10px] font-bold mt-1 text-emerald-400">En feu !</div>
+          )}
+          {streakType === "loss" && currentStreak >= 3 && (
+            <div className="text-[10px] font-bold mt-1 text-sky-400">Restez discipliné</div>
+          )}
         </div>
 
         {/* Weekly Sparkline card */}
@@ -319,7 +512,7 @@ export default function DashboardPage() {
             <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{t("last7Days")}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className={`text-lg font-bold mono ${weeklyTotal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+            <div className={`text-lg font-bold mono pnl-value ${weeklyTotal >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
               {weeklyTotal >= 0 ? "+" : ""}{weeklyTotal.toFixed(0)}
             </div>
           </div>
@@ -375,7 +568,7 @@ export default function DashboardPage() {
           return (
             <>
               <div className="flex justify-between text-sm mb-2">
-                <span className={monthlyPnL >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                <span className={`pnl-value ${monthlyPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                   {monthlyPnL >= 0 ? "+" : ""}{monthlyPnL.toFixed(2)}€
                 </span>
                 <span className="text-[--text-muted]">{t("goalLabel")} {monthlyGoal.toFixed(2)}€</span>
@@ -425,18 +618,38 @@ export default function DashboardPage() {
             else { tempWin = 0; tempLoss = 0; }
           }
           return (
-            <div className="glass rounded-2xl p-4">
+            <div className={`glass rounded-2xl p-4 transition-all duration-300 ${
+              streakType === "win" && currentStreak >= 10 ? "streak-glow-rainbow" :
+              streakType === "win" && currentStreak >= 5 ? "streak-glow-gold" :
+              streakType === "win" && currentStreak >= 3 ? "streak-glow-green" :
+              streakType === "loss" && currentStreak >= 3 ? "streak-glow-ice" : ""
+            }`}>
               <h4 className="text-xs font-bold text-[--text-muted] uppercase tracking-wider mb-3">{t("currentStreak")}</h4>
               <div className="flex items-center gap-3 mb-3">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${streakType === "win" ? "bg-emerald-500/20" : streakType === "loss" ? "bg-rose-500/20" : "bg-gray-500/20"}`}>
-                  <Flame className={`w-6 h-6 ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-[--text-muted]"}`} />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${streakType === "win" ? "bg-emerald-500/20" : streakType === "loss" && currentStreak >= 3 ? "bg-sky-500/20" : streakType === "loss" ? "bg-rose-500/20" : "bg-gray-500/20"}`}>
+                  {streakType === "loss" && currentStreak >= 3 ? (
+                    <span className="text-xl">❄️</span>
+                  ) : (
+                    <Flame className={`w-6 h-6 ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-[--text-muted]"} ${streakType === "win" && currentStreak >= 5 ? "animate-fire-pulse" : ""}`} />
+                  )}
                 </div>
                 <div>
-                  <div className={`text-2xl font-bold mono ${streakType === "win" ? "text-emerald-400" : streakType === "loss" ? "text-rose-400" : "text-[--text-muted]"}`}>
+                  <div className={`text-2xl font-bold mono animate-streak-bounce ${
+                    streakType === "win" && currentStreak >= 10 ? "streak-text-rainbow" :
+                    streakType === "win" && currentStreak >= 5 ? "text-yellow-400" :
+                    streakType === "win" ? "text-emerald-400" :
+                    streakType === "loss" && currentStreak >= 3 ? "text-sky-400" :
+                    streakType === "loss" ? "text-rose-400" : "text-[--text-muted]"
+                  }`}>
                     {currentStreak}
+                    {streakType === "win" && currentStreak >= 3 && <span className={`ml-1 ${currentStreak >= 5 ? "animate-fire-pulse inline-block" : ""}`}>🔥</span>}
                   </div>
                   <div className="text-xs text-[--text-muted]">
-                    {streakType === "win" ? t("victories") : streakType === "loss" ? t("defeats") : "---"}
+                    {streakType === "win" && currentStreak >= 10 ? <span className="streak-text-rainbow font-bold">Légendaire !</span> :
+                     streakType === "win" && currentStreak >= 5 ? <span className="text-yellow-400 font-bold">Inarrêtable !</span> :
+                     streakType === "win" && currentStreak >= 3 ? <span className="text-emerald-400 font-bold">En feu !</span> :
+                     streakType === "loss" && currentStreak >= 3 ? <span className="text-sky-400 font-bold">Restez discipliné</span> :
+                     streakType === "win" ? t("victories") : streakType === "loss" ? t("defeats") : "---"}
                   </div>
                 </div>
               </div>
@@ -454,7 +667,7 @@ export default function DashboardPage() {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               {todayPnL >= 0 ? <TrendingUp className="w-5 h-5 text-emerald-400" /> : <TrendingDown className="w-5 h-5 text-rose-400" />}
-              <span className={`text-xl font-bold mono ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+              <span className={`text-xl font-bold mono pnl-value ${todayPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                 {todayPnL >= 0 ? "+" : ""}{todayPnL.toFixed(2)}
               </span>
             </div>
@@ -507,7 +720,7 @@ export default function DashboardPage() {
               </div>
               {bestTrade && bestTrade.result > 0 ? (
                 <>
-                  <div className="text-2xl font-bold mono text-emerald-400">+{bestTrade.result.toFixed(2)}</div>
+                  <div className="text-2xl font-bold mono text-emerald-400 pnl-value">+{bestTrade.result.toFixed(2)}</div>
                   <div className="text-xs text-[--text-muted] mt-1">
                     <Link href={`/journal?asset=${encodeURIComponent(bestTrade.asset)}`} className="text-cyan-400 hover:underline">{bestTrade.asset}</Link>
                     {" "}&mdash; {formatDate(bestTrade.date)}
@@ -528,7 +741,7 @@ export default function DashboardPage() {
               </div>
               {worstTrade && worstTrade.result < 0 ? (
                 <>
-                  <div className="text-2xl font-bold mono text-rose-400">{worstTrade.result.toFixed(2)}</div>
+                  <div className="text-2xl font-bold mono text-rose-400 pnl-value">{worstTrade.result.toFixed(2)}</div>
                   <div className="text-xs text-[--text-muted] mt-1">{worstTrade.asset} -- {formatDate(worstTrade.date)}</div>
                 </>
               ) : (
@@ -612,7 +825,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-[--text-muted]">WR {wr}%</span>
-                        <span className={`font-bold mono text-sm ${data.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        <span className={`font-bold mono text-sm pnl-value ${data.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                           {data.pnl >= 0 ? "+" : ""}{data.pnl.toFixed(2)}
                         </span>
                       </div>
@@ -698,6 +911,9 @@ export default function DashboardPage() {
           </div>
         );
       })()}
+
+      {/* Trade du Jour */}
+      <TradeDuJourWidget />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass rounded-2xl p-6">
@@ -790,7 +1006,7 @@ export default function DashboardPage() {
                         )}
                       </td>
                       <td className="py-4 mono text-[--text-muted]">1:{rr}</td>
-                      <td className={`py-4 mono font-bold ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
+                      <td className={`py-4 mono font-bold pnl-value ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
                         {isWin ? "+" : ""}{trade.result}
                       </td>
                       <td className="py-4 flex gap-2">
@@ -872,6 +1088,21 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Share Stats Card Modal */}
+      <ShareStatsCard
+        open={showShareCard}
+        onClose={() => setShowShareCard(false)}
+        stats={{
+          period: "month",
+          winRate: monthlyWinRate,
+          pnl: monthlyPnL,
+          tradesCount: monthlyTrades.length,
+          bestTrade: monthlyBestTrade,
+          streak: currentStreak,
+          streakType,
+        }}
+      />
     </>
   );
 }

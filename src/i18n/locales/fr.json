@@ -59,6 +59,8 @@
 
   "logout": "Déconnexion",
   "theme": "Thème",
+  "zenModeOn": "Mode Zen activé — P&L masqués",
+  "zenModeOff": "Mode Zen désactivé — P&L visibles",
   "themeDark": "Sombre",
   "themeLight": "Clair",
   "themeOled": "OLED",

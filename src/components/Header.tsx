@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { signOut } from "next-auth/react";
-import { Sun, Moon, LogOut, Monitor } from "lucide-react";
+import { Sun, Moon, LogOut, Monitor, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { NotificationCenter } from "./NotificationCenter";
 import { NewsTicker } from "./NewsTicker";
@@ -24,10 +24,17 @@ export function Header() {
   const { trades } = useTrades();
   const { t, locale, setLocale } = useTranslation();
   const [langOpen, setLangOpen] = useState(false);
+  const [zenMode, setZenMode] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
+    // Restore zen mode from localStorage
+    const saved = localStorage.getItem("zen-mode");
+    if (saved === "true") {
+      setZenMode(true);
+      document.documentElement.classList.add("zen-mode");
+    }
   }, []);
 
   useEffect(() => {
@@ -61,6 +68,24 @@ export function Header() {
           ) : (
             <Moon className="w-[18px] h-[18px] text-blue-500" />
           ))}
+        </button>
+
+        {/* Zen Mode toggle */}
+        <button
+          onClick={() => {
+            const next = !zenMode;
+            setZenMode(next);
+            localStorage.setItem("zen-mode", String(next));
+            if (next) {
+              document.documentElement.classList.add("zen-mode");
+            } else {
+              document.documentElement.classList.remove("zen-mode");
+            }
+          }}
+          className={`p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition ${zenMode ? "text-blue-500" : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"}`}
+          title={zenMode ? t("zenModeOn") : t("zenModeOff")}
+        >
+          {zenMode ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
         </button>
 
         {/* Notifications */}

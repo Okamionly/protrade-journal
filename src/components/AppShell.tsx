@@ -9,6 +9,8 @@ import { QuickTradeButton } from "./QuickTradeButton";
 import { OnboardingWizard } from "./OnboardingWizard";
 import { LocaleProvider } from "@/i18n/context";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { ShortcutsHelpModal } from "./ShortcutsHelpModal";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Menu, X } from "lucide-react";
 
 const SidebarContext = createContext({ collapsed: false });
@@ -21,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { showShortcutsHelp, setShowShortcutsHelp } = useKeyboardShortcuts();
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -99,6 +102,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <QuickTradeButton />
         <OnboardingWizard />
+        <ShortcutsHelpModal open={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
       </SidebarContext.Provider>
     </LocaleProvider>
   );
