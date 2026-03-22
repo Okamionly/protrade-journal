@@ -118,8 +118,11 @@ export default function ChartPage() {
       {/* Chart — takes 100% of space */}
       <div
         ref={containerRef}
-        className="flex-1 w-full"
-        style={{ height: "100%" }}
+        className="w-full"
+        style={{
+          height: isFullscreen ? "calc(100vh - 4px)" : "calc(100vh - 144px)",
+          minHeight: "400px",
+        }}
       />
     </div>
   );
