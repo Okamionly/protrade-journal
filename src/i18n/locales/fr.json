@@ -1802,5 +1802,20 @@
   "calHoverWorst": "Pire",
   "calWeekShort": "S",
   "calYearHeatmapTitle": "Heatmap Annuelle",
-  "calNoTrades": "Aucun trade"
+  "calNoTrades": "Aucun trade",
+  "wlNotes": "Notes",
+  "wlNotesPlaceholder": "Niveau cl\u00e9, setup, plan...",
+  "wlNotesSaved": "Note sauvegard\u00e9e",
+  "wlPerformance": "Performance",
+  "wlTradesCount": "Trades",
+  "wlWinRate": "Win Rate",
+  "wlPnl": "P&L",
+  "wlNoTrades": "Aucun trade",
+  "wlHeatTitle": "Activit\u00e9",
+  "wlHeatHot": "Tr\u00e8s actif (3+ trades / 7j)",
+  "wlHeatWarm": "Actif (1-2 trades / 7j)",
+  "wlHeatCold": "Inactif (30+ jours)",
+  "wlHeatNeutral": "Normal",
+  "wlAlertTriggered": "Alerte d\u00e9clench\u00e9e : {symbol} a atteint {price}",
+  "wlActiveAlerts": "{count} alerte(s) active(s)"
 }

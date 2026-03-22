@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, AlertTriangle, X, Clock, Flame, BellRing, History, Newspaper, Link2, ArrowUpDown, Trophy, ThumbsDown } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, AlertTriangle, X, Clock, Flame, BellRing, History, Newspaper, Link2, ArrowUpDown, Trophy, ThumbsDown, StickyNote, BarChart3 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import { useTrades, type Trade } from "@/hooks/useTrades";
+import { useToast } from "@/components/Toast";
 
 interface WatchItem {
   symbol: string;
@@ -40,6 +42,16 @@ interface NewsItem {
   source: string;
   publishedAt: string;
   symbols?: string[];
+}
+
+interface AssetPerformance {
+  tradesCount: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  totalPnl: number;
+  recentTrades7d: number;
+  lastTradeDate: number | null;
 }
 
 // ─── Correlation pairs definition ───────────────────────────────────────────
@@ -80,8 +92,58 @@ const POPULAR_SYMBOLS = [
   { symbol: "SOFI", name: "SoFi" }, { symbol: "NFLX", name: "Netflix" },
 ];
 
+// ─── Helper: compute per-asset performance from trades ───────────────────────
+function computeAssetPerformance(trades: Trade[]): Record<string, AssetPerformance> {
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+  const result: Record<string, AssetPerformance> = {};
+
+  for (const trade of trades) {
+    const asset = trade.asset?.toUpperCase();
+    if (!asset) continue;
+
+    if (!result[asset]) {
+      result[asset] = { tradesCount: 0, wins: 0, losses: 0, winRate: 0, totalPnl: 0, recentTrades7d: 0, lastTradeDate: null };
+    }
+
+    const perf = result[asset];
+    perf.tradesCount += 1;
+    perf.totalPnl += trade.result || 0;
+    if ((trade.result || 0) > 0) perf.wins += 1;
+    else if ((trade.result || 0) < 0) perf.losses += 1;
+
+    const tradeTs = new Date(trade.date).getTime();
+    if (tradeTs >= sevenDaysAgo) perf.recentTrades7d += 1;
+    if (!perf.lastTradeDate || tradeTs > perf.lastTradeDate) perf.lastTradeDate = tradeTs;
+  }
+
+  // Compute win rates
+  for (const key of Object.keys(result)) {
+    const p = result[key];
+    p.winRate = p.tradesCount > 0 ? (p.wins / p.tradesCount) * 100 : 0;
+  }
+
+  return result;
+}
+
+// ─── Helper: get heat indicator ──────────────────────────────────────────────
+function getHeatIndicator(perf: AssetPerformance | undefined): { emoji: string; level: "hot" | "warm" | "cold" | "neutral" } {
+  if (!perf) return { emoji: "\u2014", level: "neutral" };
+  const now = Date.now();
+  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+  if (perf.recentTrades7d >= 3) return { emoji: "\uD83D\uDD25", level: "hot" };
+  if (perf.recentTrades7d >= 1) return { emoji: "\u26A1", level: "warm" };
+  if (perf.lastTradeDate && perf.lastTradeDate < thirtyDaysAgo) return { emoji: "\u2744\uFE0F", level: "cold" };
+  if (!perf.lastTradeDate) return { emoji: "\u2744\uFE0F", level: "cold" };
+  return { emoji: "\u2014", level: "neutral" };
+}
+
 export default function WatchlistPage() {
   const { t } = useTranslation();
+  const { trades } = useTrades();
+  const { toast } = useToast();
   const [items, setItems] = useState<WatchItem[]>([]);
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [loading, setLoading] = useState(false);
@@ -104,7 +166,17 @@ export default function WatchlistPage() {
   const [newsLoading, setNewsLoading] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "change" | "relStrength">("name");
 
-  // Load items and alert history from localStorage
+  // ─── Notes state ───────────────────────────────────────────────────────────
+  const [notesOpen, setNotesOpen] = useState<string | null>(null);
+  const [notesMap, setNotesMap] = useState<Record<string, string>>({});
+
+  // ─── Triggered alerts visual state ─────────────────────────────────────────
+  const [triggeredSymbols, setTriggeredSymbols] = useState<Set<string>>(new Set());
+
+  // ─── Asset performance from trades ─────────────────────────────────────────
+  const assetPerformance = useMemo(() => computeAssetPerformance(trades), [trades]);
+
+  // Load items, alert history, and notes from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("watchlist-items");
     if (saved) {
@@ -130,6 +202,16 @@ export default function WatchlistPage() {
         // ignore
       }
     }
+
+    // Load notes
+    const savedNotes = localStorage.getItem("watchlist-notes");
+    if (savedNotes) {
+      try {
+        setNotesMap(JSON.parse(savedNotes));
+      } catch {
+        // ignore
+      }
+    }
   }, []);
 
   const saveItems = (newItems: WatchItem[]) => {
@@ -141,6 +223,15 @@ export default function WatchlistPage() {
     setAlertHistory(history);
     localStorage.setItem("watchlist-alert-history", JSON.stringify(history.slice(0, 50)));
   };
+
+  const saveNote = (symbol: string, note: string) => {
+    const updated = { ...notesMap, [symbol]: note };
+    setNotesMap(updated);
+    localStorage.setItem("watchlist-notes", JSON.stringify(updated));
+  };
+
+  // ─── Active alerts count ──────────────────────────────────────────────────
+  const activeAlertsCount = items.filter((i) => i.alertPrice !== undefined).length;
 
   // ─── Fetch with auto-retry (3 attempts, 5s delay) ────────────────────────
   const fetchQuotesWithRetry = useCallback(async (attempt = 0): Promise<boolean> => {
@@ -180,7 +271,6 @@ export default function WatchlistPage() {
       throw new Error("API error");
     } catch {
       if (attempt < 2) {
-        // Retry up to 3 times total (0, 1, 2)
         setRetrying(true);
         setRetryCount(attempt + 1);
         setError(null);
@@ -199,7 +289,7 @@ export default function WatchlistPage() {
         return false;
       }
     }
-  }, [items]);
+  }, [items, t]);
 
   const fetchQuotes = useCallback(() => {
     if (retryTimerRef.current) {
@@ -245,7 +335,7 @@ export default function WatchlistPage() {
 
   useEffect(() => {
     fetchNews();
-    const interval = setInterval(fetchNews, 300000); // refresh every 5 min
+    const interval = setInterval(fetchNews, 300000);
     return () => clearInterval(interval);
   }, [fetchNews]);
 
@@ -284,9 +374,10 @@ export default function WatchlistPage() {
     saveItems(items.map((i) => i.symbol === symbol ? { ...i, alertPrice: undefined, alertDirection: undefined } : i));
   };
 
-  // Check alerts and record history
+  // Check alerts, record history, and show toast notifications
   useEffect(() => {
     const newHistory: AlertHistoryEntry[] = [];
+    const newTriggered = new Set<string>();
     items.forEach((item) => {
       if (item.alertPrice && item.alertDirection && quotes[item.symbol]) {
         const q = quotes[item.symbol];
@@ -295,7 +386,7 @@ export default function WatchlistPage() {
           (item.alertDirection === "below" && q.last <= item.alertPrice);
 
         if (triggered) {
-          // Check if we already notified recently (within 5 min)
+          newTriggered.add(item.symbol);
           const recentlyNotified = alertHistory.some(
             (h) => h.symbol === item.symbol && Date.now() - h.timestamp < 300000
           );
@@ -307,6 +398,12 @@ export default function WatchlistPage() {
               direction: item.alertDirection,
               timestamp: Date.now(),
             });
+            // Toast notification
+            toast(
+              t("wlAlertTriggered", { symbol: item.symbol, price: q.last.toFixed(2) }),
+              "info"
+            );
+            // Browser notification
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
               const msg = item.alertDirection === "above"
                 ? t("alertNotifAbove", { symbol: item.symbol, price: q.last.toFixed(2), alertPrice: item.alertPrice })
@@ -317,6 +414,11 @@ export default function WatchlistPage() {
         }
       }
     });
+    if (newTriggered.size > 0) {
+      setTriggeredSymbols(newTriggered);
+      // Clear visual highlight after 10 seconds
+      setTimeout(() => setTriggeredSymbols(new Set()), 10000);
+    }
     if (newHistory.length > 0) {
       saveAlertHistory([...newHistory, ...alertHistory]);
     }
@@ -349,7 +451,7 @@ export default function WatchlistPage() {
   const getRelStrengthBps = (symbol: string): number => {
     const q = quotes[symbol];
     if (!q || q.last <= 0) return 0;
-    return Math.round((q.changepct - avgChangePct) * 100); // basis points
+    return Math.round((q.changepct - avgChangePct) * 100);
   };
 
   // Sort filtered items
@@ -360,7 +462,6 @@ export default function WatchlistPage() {
       const bPct = quotes[b.symbol]?.changepct || 0;
       return bPct - aPct;
     }
-    // relStrength
     return getRelStrengthBps(b.symbol) - getRelStrengthBps(a.symbol);
   });
 
@@ -380,20 +481,17 @@ export default function WatchlistPage() {
 
   // ─── Mini Chart sparkline (5-day direction) ───────────────────────────────
   const MiniChartSparkline = ({ quote }: { quote: Quote }) => {
-    // Simulate a 5-day trend using current change direction and magnitude
     const changePct = quote.changepct;
     const prevClose = quote.previousClose || (quote.last - quote.change);
-    // Generate 5 synthetic data points showing trend direction
     const base = prevClose;
     const delta = quote.last - prevClose;
     const points: number[] = [];
-    // Day 1-4: interpolate with some variation, Day 5: actual price
     for (let i = 0; i < 5; i++) {
       const progress = i / 4;
       const noise = (Math.sin(i * 2.5 + changePct) * 0.3) * Math.abs(delta);
       points.push(base + delta * progress + noise);
     }
-    points[4] = quote.last; // ensure last point is actual
+    points[4] = quote.last;
 
     const minVal = Math.min(...points);
     const maxVal = Math.max(...points);
@@ -493,6 +591,13 @@ export default function WatchlistPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          {/* Active alerts badge */}
+          {activeAlertsCount > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium">
+              <BellRing className="w-3.5 h-3.5" />
+              {t("wlActiveAlerts", { count: activeAlertsCount })}
+            </div>
+          )}
           <button
             onClick={() => setShowAlertHistory(!showAlertHistory)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl glass text-sm ${alertHistory.length > 0 ? "text-amber-400" : "text-[--text-secondary]"}`}
@@ -602,7 +707,7 @@ export default function WatchlistPage() {
                   >
                     <span className="text-xs font-bold text-emerald-400">{item.symbol}</span>
                     <span className="text-[10px] font-medium text-emerald-300 mono">
-                      {q ? `${q.changepct >= 0 ? "+" : ""}${q.changepct.toFixed(2)}%` : "—"}
+                      {q ? `${q.changepct >= 0 ? "+" : ""}${q.changepct.toFixed(2)}%` : "\u2014"}
                     </span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium mono">
                       +{item.bps} {t("bpsVsAvg")}
@@ -628,7 +733,7 @@ export default function WatchlistPage() {
                   >
                     <span className="text-xs font-bold text-rose-400">{item.symbol}</span>
                     <span className="text-[10px] font-medium text-rose-300 mono">
-                      {q ? `${q.changepct >= 0 ? "+" : ""}${q.changepct.toFixed(2)}%` : "—"}
+                      {q ? `${q.changepct >= 0 ? "+" : ""}${q.changepct.toFixed(2)}%` : "\u2014"}
                     </span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-medium mono">
                       {item.bps} {t("bpsVsAvg")}
@@ -711,10 +816,12 @@ export default function WatchlistPage() {
       ) : (
         /* Watchlist Table */
         <div className="glass rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-[--border-subtle]">
                 <th className="text-left text-xs font-semibold text-[--text-muted] p-4">{t("symbol")}</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4 w-8" title={t("wlHeatTitle")}>{t("wlHeatTitle")}</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">{t("price")}</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">{t("change")}</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden md:table-cell">%</th>
@@ -723,6 +830,7 @@ export default function WatchlistPage() {
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">Bid/Ask</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4 hidden xl:table-cell">52W Range</th>
                 <th className="text-center text-xs font-semibold text-[--text-muted] p-4 hidden md:table-cell">{t("relativeStrength")}</th>
+                <th className="text-center text-xs font-semibold text-[--text-muted] p-4 hidden lg:table-cell">{t("wlPerformance")}</th>
                 <th className="text-center text-xs font-semibold text-[--text-muted] p-4">{t("actions")}</th>
               </tr>
             </thead>
@@ -738,8 +846,18 @@ export default function WatchlistPage() {
                 );
                 const barWidthPct = Math.min(Math.abs(relBps) / maxAbsBps * 100, 100);
                 const isOutperforming = relBps >= 0;
+                const perf = assetPerformance[item.symbol.toUpperCase()];
+                const heat = getHeatIndicator(perf);
+                const isTriggered = triggeredSymbols.has(item.symbol);
+                const hasNotes = !!notesMap[item.symbol]?.trim();
+
                 return (
-                  <tr key={item.symbol} className="border-b border-[--border-subtle] hover:bg-[--bg-hover] transition-colors">
+                  <tr
+                    key={item.symbol}
+                    className={`border-b border-[--border-subtle] hover:bg-[--bg-hover] transition-colors ${
+                      isTriggered ? "bg-amber-500/10 animate-pulse" : ""
+                    }`}
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${isUp ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
@@ -749,7 +867,9 @@ export default function WatchlistPage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-semibold text-sm text-[--text-primary]">{item.symbol}</p>
                             {item.alertPrice && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 flex items-center gap-1">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${
+                                isTriggered ? "bg-amber-500/40 text-amber-300 ring-1 ring-amber-400" : "bg-amber-500/20 text-amber-400"
+                              }`}>
                                 <Bell className="w-2.5 h-2.5" />
                                 ${item.alertPrice}
                               </span>
@@ -764,6 +884,24 @@ export default function WatchlistPage() {
                           <p className="text-xs text-[--text-muted]">{item.name}</p>
                         </div>
                       </div>
+                    </td>
+                    {/* Heat Indicator */}
+                    <td className="p-4 text-center">
+                      <span
+                        className={`text-base cursor-default ${
+                          heat.level === "hot" ? "drop-shadow-[0_0_4px_rgba(239,68,68,0.5)]" :
+                          heat.level === "warm" ? "drop-shadow-[0_0_4px_rgba(234,179,8,0.4)]" :
+                          heat.level === "cold" ? "opacity-50" : "opacity-40"
+                        }`}
+                        title={
+                          heat.level === "hot" ? t("wlHeatHot") :
+                          heat.level === "warm" ? t("wlHeatWarm") :
+                          heat.level === "cold" ? t("wlHeatCold") :
+                          t("wlHeatNeutral")
+                        }
+                      >
+                        {heat.emoji}
+                      </span>
                     </td>
                     <td className="p-4 text-right">
                       <span className="text-sm font-bold mono text-[--text-primary]">{q ? `$${q.last.toFixed(2)}` : "\u2014"}</span>
@@ -807,7 +945,6 @@ export default function WatchlistPage() {
                                     : { left: "50%", right: `${50 - barWidthPct / 2}%` }),
                                 }}
                               />
-                              {/* Center line */}
                               <div className="absolute top-0 left-1/2 w-px h-full bg-[--text-muted]/30" />
                             </div>
                           </div>
@@ -819,6 +956,25 @@ export default function WatchlistPage() {
                         <span className="text-xs text-[--text-muted]">{"\u2014"}</span>
                       )}
                     </td>
+                    {/* Performance Column */}
+                    <td className="p-4 hidden lg:table-cell">
+                      {perf && perf.tradesCount > 0 ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-[--text-muted]">{perf.tradesCount} {t("wlTradesCount")}</span>
+                            <span className={`text-[10px] font-bold mono ${perf.winRate >= 50 ? "text-emerald-400" : "text-rose-400"}`}>
+                              {perf.winRate.toFixed(0)}% WR
+                            </span>
+                          </div>
+                          <span className={`text-xs font-bold mono ${perf.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                            {perf.totalPnl >= 0 ? "+" : ""}{perf.totalPnl.toFixed(2)}$
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-[--text-muted]">{t("wlNoTrades")}</span>
+                      )}
+                    </td>
+                    {/* Actions */}
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
@@ -837,16 +993,36 @@ export default function WatchlistPage() {
                             <X className="w-3 h-3" />
                           </button>
                         )}
+                        <button
+                          onClick={() => setNotesOpen(notesOpen === item.symbol ? null : item.symbol)}
+                          className={`p-1.5 rounded-lg hover:bg-[--bg-secondary] ${hasNotes ? "text-cyan-400" : "text-[--text-muted]"}`}
+                          title={t("wlNotes")}
+                        >
+                          <StickyNote className="w-4 h-4" />
+                        </button>
                         <button onClick={() => removeItem(item.symbol)} className="p-1.5 rounded-lg hover:bg-[--bg-secondary] text-[--text-muted] hover:text-rose-400" title="Supprimer">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
+                      {/* Inline Notes Expand */}
+                      {notesOpen === item.symbol && (
+                        <div className="mt-2">
+                          <textarea
+                            value={notesMap[item.symbol] || ""}
+                            onChange={(e) => saveNote(item.symbol, e.target.value)}
+                            placeholder={t("wlNotesPlaceholder")}
+                            rows={2}
+                            className="input-field text-xs w-full resize-none"
+                          />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          </div>
           {sortedFiltered.length === 0 && (
             <div className="text-center py-12 text-[--text-muted]">
               <Eye className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -857,7 +1033,7 @@ export default function WatchlistPage() {
         </div>
       )}
 
-      {/* ═══ Dernières News ═══ */}
+      {/* News Section */}
       <div className="glass rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-[--text-primary] flex items-center gap-2">
@@ -938,7 +1114,6 @@ export default function WatchlistPage() {
                   min="0.01"
                 />
               </div>
-              {/* Alert validation error message */}
               {alertError && (
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-rose-500/10 text-rose-400">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
