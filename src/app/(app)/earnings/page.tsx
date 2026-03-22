@@ -32,7 +32,7 @@ export default function EarningsCalendarPage() {
   const { t } = useTranslation();
   const { trades } = useTrades();
   const [weekOffset, setWeekOffset] = useState(0);
-  const [view, setView] = useState<"calendar" | "list">("calendar");
+  const [view] = useState<"calendar" | "list">("list");
   const [earningsData, setEarningsData] = useState<EarningsEvent[]>([]);
   const [dataSource, setDataSource] = useState<"live" | "fallback">("fallback");
   const [loading, setLoading] = useState(true);
@@ -134,18 +134,6 @@ export default function EarningsCalendarPage() {
             title={t("refresh")}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-          <button
-            onClick={() => setView("calendar")}
-            className={`px-4 py-2 rounded-xl text-sm font-medium ${view === "calendar" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary]"}`}
-          >
-            {t("calendar")}
-          </button>
-          <button
-            onClick={() => setView("list")}
-            className={`px-4 py-2 rounded-xl text-sm font-medium ${view === "list" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary]"}`}
-          >
-            {t("list")}
           </button>
         </div>
       </div>

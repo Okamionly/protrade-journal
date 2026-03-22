@@ -760,7 +760,7 @@ function TradeDuJour({ messages: _messages }: { messages: FeedMessage[] }) {
               key={entry.messageId}
               className="rounded-xl p-3 transition-all"
               style={{
-                background: isWinner ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0.15)",
+                background: isWinner ? "rgba(234,179,8,0.12)" : "rgba(234,179,8,0.06)",
                 border: isWinner ? "1px solid rgba(234,179,8,0.3)" : "1px solid rgba(234,179,8,0.1)",
               }}
             >
@@ -889,30 +889,30 @@ function WeeklyRecap({ messages }: { messages: FeedMessage[] }) {
       </div>
       <div className="px-4 pb-3">
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+          <div className="rounded-xl p-2.5" style={{ background: "var(--bg-secondary)" }}>
             <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Posts partagés</p>
             <p className="text-lg font-bold" style={{ color: "#818cf8" }}>{stats.totalPosts}</p>
           </div>
-          <div className="rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+          <div className="rounded-xl p-2.5" style={{ background: "var(--bg-secondary)" }}>
             <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Trades partagés</p>
             <p className="text-lg font-bold" style={{ color: "#06b6d4" }}>{stats.tradesShared}</p>
           </div>
           {stats.mostActive && (
-            <div className="rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+            <div className="rounded-xl p-2.5" style={{ background: "var(--bg-secondary)" }}>
               <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Plus actif</p>
               <p className="text-sm font-bold truncate" style={{ color: "#f59e0b" }}>{stats.mostActive.name}</p>
               <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>{stats.mostActive.count} posts</p>
             </div>
           )}
           {stats.bestPnl && (
-            <div className="rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+            <div className="rounded-xl p-2.5" style={{ background: "var(--bg-secondary)" }}>
               <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Meilleur P&amp;L</p>
               <p className="text-sm font-bold truncate" style={{ color: "#10b981" }}>+{stats.bestPnl.pnl.toFixed(2)}</p>
               <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>par {stats.bestPnl.name}</p>
             </div>
           )}
           {stats.mostLiked && (
-            <div className="col-span-2 rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+            <div className="col-span-2 rounded-xl p-2.5" style={{ background: "var(--bg-secondary)" }}>
               <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Post le plus aimé</p>
               <p className="text-sm font-bold" style={{ color: "#f43f5e" }}>
                 {stats.mostLiked.name} — {stats.mostLiked.likes} <Heart className="inline w-3.5 h-3.5" style={{ fill: "#f43f5e", color: "#f43f5e" }} />
@@ -994,7 +994,7 @@ function PollDisplay({
                   style={{
                     background: isSelected
                       ? "rgba(6,182,212,0.2)"
-                      : "rgba(255,255,255,0.05)",
+                      : "var(--bg-secondary)",
                     border: isSelected
                       ? "1px solid rgba(6,182,212,0.4)"
                       : "1px solid var(--border)",
@@ -1007,7 +1007,7 @@ function PollDisplay({
                     width: `${pct}%`,
                     background: isSelected
                       ? "rgba(6,182,212,0.25)"
-                      : "rgba(255,255,255,0.05)",
+                      : "var(--bg-secondary)",
                   }}
                 />
                 {/* Text */}
@@ -1151,7 +1151,7 @@ function TweetPost({
       style={{
         borderBottom: "1px solid var(--border)",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary)")}
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
       id={`post-${msg.id}`}
     >
@@ -1597,7 +1597,7 @@ function PostComposer({
             <div
               className="mt-2 mb-2 rounded-2xl p-4 space-y-3"
               style={{
-                background: "rgba(255,255,255,0.03)",
+                background: "var(--bg-secondary)",
                 border: "1px solid var(--border)",
                 backdropFilter: "blur(8px)",
               }}
@@ -1747,7 +1747,8 @@ function PostComposer({
               </button>
               <button
                 className="p-2 rounded-full transition-all"
-                style={{ color: "#06b6d4", opacity: 0.5 }}
+                style={{ color: "#06b6d4", opacity: 0.5, cursor: "not-allowed" }}
+                disabled
                 title="Graphique (bientot)"
               >
                 <BarChart3 className="w-5 h-5" />
@@ -1764,7 +1765,8 @@ function PostComposer({
               </button>
               <button
                 className="p-2 rounded-full transition-all"
-                style={{ color: "#06b6d4", opacity: 0.5 }}
+                style={{ color: "#06b6d4", opacity: 0.5, cursor: "not-allowed" }}
+                disabled
                 title="Emoji (bientot)"
               >
                 <Smile className="w-5 h-5" />
@@ -1972,7 +1974,7 @@ function RightSidebar({
                   key={item.topic}
                   className="px-4 py-3 transition-colors cursor-pointer"
                   onClick={() => onTrendClick(item.topic)}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <div className="flex items-center justify-between">
@@ -2004,7 +2006,7 @@ function RightSidebar({
                 key={item.asset}
                 className="px-4 py-3 transition-colors cursor-pointer"
                 onClick={() => onTrendClick("$" + item.asset)}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
@@ -2054,7 +2056,7 @@ function RightSidebar({
                 <div
                   key={user.id}
                   className="px-4 py-3 flex items-center gap-3 transition-colors"
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <div
@@ -2279,8 +2281,13 @@ export default function CommunityPage() {
   const initRoom = useCallback(async () => {
     try {
       const res = await fetch("/api/chat/rooms");
-      if (!res.ok) return;
-      const rooms = await res.json();
+      if (!res.ok) {
+        console.error("Init room: bad status", res.status);
+        setLoading(false);
+        return;
+      }
+      const data = await res.json();
+      const rooms = Array.isArray(data) ? data : (data.rooms ?? []);
       const community = rooms.find(
         (r: { name: string }) =>
           r.name === "Général" || r.name === "General" || r.name === "Communauté" || r.name === "Communaute" || r.name === "community"
@@ -2515,7 +2522,7 @@ export default function CommunityPage() {
           <div
             className="sticky top-0 z-20"
             style={{
-              background: "rgba(var(--bg-primary-rgb, 10,10,20), 0.85)",
+              background: "color-mix(in srgb, var(--bg-primary) 85%, transparent)",
               backdropFilter: "blur(12px)",
               WebkitBackdropFilter: "blur(12px)",
               borderBottom: "1px solid var(--border)",
@@ -2546,7 +2553,7 @@ export default function CommunityPage() {
                     fontWeight: activeTab === tab.id ? 700 : 500,
                     fontSize: "14px",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   {tab.label}
