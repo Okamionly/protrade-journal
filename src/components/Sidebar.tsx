@@ -46,18 +46,8 @@ import {
   Users,
   CreditCard,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "@/i18n/context";
-import type { Locale } from "@/i18n/types";
-
-const LOCALE_FLAGS: Record<Locale, { flag: string; short: string }> = {
-  fr: { flag: "🇫🇷", short: "FR" },
-  en: { flag: "🇬🇧", short: "EN" },
-  ar: { flag: "🇸🇦", short: "AR" },
-  es: { flag: "🇪🇸", short: "ES" },
-  de: { flag: "🇩🇪", short: "DE" },
-};
-const LOCALE_STORAGE_KEY = "lbma-locale";
 
 // Admin nav item (shown only for ADMIN users)
 const adminItem = {
@@ -140,43 +130,11 @@ export function Sidebar() {
   const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [locale, setLocaleState] = useState<Locale>("fr");
-  const [langOpen, setLangOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("sidebar-collapsed");
     if (stored === "true") setCollapsed(true);
-    const storedLocale = localStorage.getItem(LOCALE_STORAGE_KEY) as Locale | null;
-    if (storedLocale && LOCALE_FLAGS[storedLocale]) setLocaleState(storedLocale);
   }, []);
-
-  // Sync locale from Header/LBMA changes
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === LOCALE_STORAGE_KEY && e.newValue && LOCALE_FLAGS[e.newValue as Locale]) {
-        setLocaleState(e.newValue as Locale);
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
-
-  // Close lang dropdown on outside click
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
-    };
-    if (langOpen) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [langOpen]);
-
-  const setLocale = (l: Locale) => {
-    setLocaleState(l);
-    localStorage.setItem(LOCALE_STORAGE_KEY, l);
-    window.dispatchEvent(new StorageEvent("storage", { key: LOCALE_STORAGE_KEY, newValue: l }));
-    setLangOpen(false);
-  };
 
   useEffect(() => {
     fetch("/api/user/role")

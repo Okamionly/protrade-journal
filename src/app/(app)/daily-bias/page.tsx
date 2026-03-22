@@ -844,14 +844,14 @@ export default function DailyBiasPage() {
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" }}>
             <Lock className="w-8 h-8 text-cyan-400" />
           </div>
-          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalite VIP</h2>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalité VIP</h2>
           <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-            Definissez votre biais quotidien et suivez votre discipline directionnelle
+            Définissez votre biais quotidien et suivez votre discipline directionnelle
           </p>
           <div className="space-y-3 text-left mb-8">
             {[
               "Planifiez votre biais directionnel chaque jour",
-              "Suivez vos regles de trading et votre discipline",
+              "Suivez vos règles de trading et votre discipline",
               "Historique complet et statistiques de vos biais",
             ].map((b, i) => (
               <div key={i} className="flex items-center gap-3">

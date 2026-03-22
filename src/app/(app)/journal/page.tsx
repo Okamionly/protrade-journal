@@ -6,9 +6,9 @@ import { JournalSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { calculateRR, formatDate } from "@/lib/utils";
 import { useState, useMemo, useCallback, Suspense } from "react";
-import { Plus, Search, Camera, Trash2, Pencil, FilterX, ArrowUpDown, Download, X, Copy, Brain, Share2 } from "lucide-react";
+import { Plus, Camera, Trash2, Pencil, ArrowUpDown, Download, X, Copy, Brain, Share2 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
-import { CommunityShareTradeModal } from "@/components/CommunityShareTradeModal";
+
 import { AdvancedFilters } from "@/components/AdvancedFilters";
 import { useAdvancedFilters } from "@/hooks/useAdvancedFilters";
 import { useNotificationSystem } from "@/hooks/useNotifications";
@@ -70,7 +70,6 @@ function JournalPageContent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [showCommunityShare, setShowCommunityShare] = useState(false);
   const [shareTradeId, setShareTradeId] = useState<string | null>(null);
 
   const filtered = useMemo(() => applyFilters(trades), [trades, applyFilters]);

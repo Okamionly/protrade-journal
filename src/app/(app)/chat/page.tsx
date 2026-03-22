@@ -883,7 +883,7 @@ function MessageBubble({
         )}
 
         {/* Image */}
-        {msg.imageUrl && (
+        {msg.imageUrl && /^(https?:\/\/|data:image\/)/.test(msg.imageUrl) && (
           <div className="mt-1.5">
             <img
               src={msg.imageUrl}
@@ -1833,15 +1833,15 @@ export default function ChatPage() {
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" }}>
             <Lock className="w-8 h-8 text-cyan-400" />
           </div>
-          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalite VIP</h2>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalité VIP</h2>
           <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-            Echangez en temps reel avec la communaute de traders MarketPhase
+            Échangez en temps réel avec la communauté de traders MarketPhase
           </p>
           <div className="space-y-3 text-left mb-8">
             {[
-              "Acces au chat communautaire en temps reel",
+              "Accès au chat communautaire en temps réel",
               "Partagez vos analyses et trades",
-              "Echangez avec des traders experimentes",
+              "Échangez avec des traders expérimentés",
             ].map((b, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(6,182,212,0.15)" }}>

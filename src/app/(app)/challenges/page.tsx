@@ -70,7 +70,7 @@ function daysRemaining(endDate: string) {
 
 function formatCountdown(endDate: string) {
   const { days, hours, minutes, expired } = daysRemaining(endDate);
-  if (expired) return "Termine";
+  if (expired) return "Terminé";
   if (days > 0) return `${days}j ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
@@ -315,7 +315,7 @@ export default function ChallengesPage() {
       {
         id: "semaine-rentable",
         title: "Semaine rentable",
-        description: "Etre profitable pendant 5 jours consecutifs",
+        description: "Être profitable pendant 5 jours consécutifs",
         icon: <TrendingUp size={20} />,
         iconName: "TrendingUp",
         current: bestProfitStreak,
@@ -411,7 +411,7 @@ export default function ChallengesPage() {
       {
         id: "consistency-king",
         title: "Consistency King",
-        description: "Trader 5 jours consecutifs",
+        description: "Trader 5 jours consécutifs",
         icon: <Crown size={20} />,
         iconName: "Crown",
         current: Math.min(consDays, 5),
@@ -501,10 +501,10 @@ export default function ChallengesPage() {
 
     const lvl = Math.floor(total / 500) + 1;
     const titles: [number, string][] = [
-      [50, "Legende"], [36, "Master"], [21, "Expert"],
-      [11, "Trader"], [6, "Apprenti"], [1, "Debutant"],
+      [50, "Légende"], [36, "Master"], [21, "Expert"],
+      [11, "Trader"], [6, "Apprenti"], [1, "Débutant"],
     ];
-    const t = titles.find(([min]) => lvl >= min)?.[1] || "Debutant";
+    const t = titles.find(([min]) => lvl >= min)?.[1] || "Débutant";
     const inLevel = total % 500;
     return { xp: total, level: lvl, title: t, xpInLevel: inLevel, xpForLevel: 500 };
   }, [sorted, challenges, completedChallenges]);
@@ -695,15 +695,15 @@ export default function ChallengesPage() {
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" }}>
             <Lock className="w-8 h-8 text-cyan-400" />
           </div>
-          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalite VIP</h2>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalité VIP</h2>
           <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-            Participez a des defis de trading et mesurez-vous aux meilleurs
+            Participez à des défis de trading et mesurez-vous aux meilleurs
           </p>
           <div className="space-y-3 text-left mb-8">
             {[
               "Challenges hebdomadaires et mensuels",
-              "Creez vos propres defis personnalises",
-              "Classement et badges de reussite",
+              "Créez vos propres défis personnalisés",
+              "Classement et badges de réussite",
             ].map((b, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(6,182,212,0.15)" }}>
@@ -1219,7 +1219,7 @@ export default function ChallengesPage() {
                   <option value="winrate">Win rate (%)</option>
                   <option value="profit">Profit (EUR)</option>
                   <option value="rr">R:R moyen</option>
-                  <option value="streak">Jours consecutifs</option>
+                  <option value="streak">Jours consécutifs</option>
                 </select>
               </div>
               <div>

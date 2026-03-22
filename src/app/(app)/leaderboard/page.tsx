@@ -8,7 +8,7 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     fetch("/api/user/role")
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
       .then(d => setIsVip(d.role === "VIP" || d.role === "ADMIN"))
       .catch(() => setIsVip(false));
   }, []);
@@ -56,15 +56,15 @@ export default function LeaderboardPage() {
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" }}>
             <Lock className="w-8 h-8 text-cyan-400" />
           </div>
-          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalite VIP</h2>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalité VIP</h2>
           <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-            Classement des meilleurs traders de la communaute MarketPhase
+            Classement des meilleurs traders de la communauté MarketPhase
           </p>
           <div className="space-y-3 text-left mb-8">
             {[
-              "Classement en temps reel des traders",
-              "Comparez vos performances avec la communaute",
-              "Badges et recompenses pour les meilleurs",
+              "Classement en temps réel des traders",
+              "Comparez vos performances avec la communauté",
+              "Badges et récompensés pour les meilleurs",
             ].map((b, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(6,182,212,0.15)" }}>

@@ -20,31 +20,36 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Erreur lors de l'inscription");
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Erreur lors de l'inscription");
+        setLoading(false);
+        return;
+      }
+
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
       setLoading(false);
-      return;
-    }
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    setLoading(false);
-
-    if (result?.error) {
-      setError("Compte créé mais erreur de connexion. Essayez de vous connecter.");
-    } else {
-      router.push("/dashboard");
+      if (result?.error) {
+        setError("Compte créé mais erreur de connexion. Essayez de vous connecter.");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch {
+      setError("Erreur de connexion");
+      setLoading(false);
     }
   };
 

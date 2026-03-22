@@ -20,18 +20,23 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      setLoading(false);
 
-    if (result?.error) {
-      setError("Email ou mot de passe incorrect");
-    } else {
-      router.push("/dashboard");
+      if (result?.error) {
+        setError("Email ou mot de passe incorrect");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch {
+      setError("Erreur de connexion");
+      setLoading(false);
     }
   };
 

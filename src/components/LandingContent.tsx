@@ -311,7 +311,7 @@ export default function LandingContent() {
                 )}
               </div>
               <Link href="/login" className="hidden sm:inline-flex text-sm text-gray-500 hover:text-gray-900 px-3 py-2 transition">{t("landing_login")}</Link>
-              <Link href="/register" className="text-xs sm:text-sm font-semibold text-white px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-lg hover:shadow-blue-500/25 transition-all">
+              <Link href="/register" className="text-xs sm:text-sm font-semibold text-white px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-lg hover:shadow-blue-500/25 transition-all whitespace-nowrap">
                 {t("landing_cta")}
               </Link>
             </div>
@@ -839,12 +839,12 @@ export default function LandingContent() {
                       <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{t("landing_footerProduct")}</h5>
                       <ul className="space-y-2">
                         {[
-                          { l: t("landing_navFeatures"), h: "#" },
-                          { l: t("landing_navPreview"), h: "#" },
-                          { l: t("landing_navPricing"), h: "#" },
-                          { l: t("landing_navCompare"), h: "#" },
-                        ].map(i => (
-                          <li key={i.l}><button onClick={() => goToSlide(i.l.includes("Feature") ? 6 : i.l.includes("Prev") ? 3 : i.l.includes("Pric") ? 9 : 7)} className="text-xs text-gray-400 hover:text-gray-900 transition">{i.l}</button></li>
+                          { l: t("landing_navFeatures"), slide: 6 },
+                          { l: t("landing_navPreview"), slide: 3 },
+                          { l: t("landing_navPricing"), slide: 9 },
+                          { l: t("landing_navCompare"), slide: 7 },
+                        ].map((i, idx) => (
+                          <li key={idx}><button onClick={() => goToSlide(i.slide)} className="text-xs text-gray-400 hover:text-gray-900 transition">{i.l}</button></li>
                         ))}
                       </ul>
                     </div>

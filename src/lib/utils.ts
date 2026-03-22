@@ -1,6 +1,7 @@
 export function calculateRR(entry: number, sl: number, tp: number): string {
-  if (!sl || entry === sl) return "-";
+  if (!entry || !sl || !tp || entry === sl) return "-";
   const risk = Math.abs(entry - sl);
+  if (risk === 0) return "-";
   const reward = Math.abs(tp - entry);
   return (reward / risk).toFixed(1);
 }

@@ -873,7 +873,7 @@ export default function RecapsPage() {
 
           {showGoalEditor && (
             <div className="mb-4 p-4 rounded-xl space-y-3" style={{ background: "var(--bg-hover)" }}>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs block mb-1" style={{ color: "var(--text-muted)" }}>{t("recapGoalMonthlyPnl")}</label>
                   <input

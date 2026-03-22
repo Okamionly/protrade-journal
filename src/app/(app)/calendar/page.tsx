@@ -38,12 +38,15 @@ export default function PnLCalendarPage() {
     });
   }, [trades, year, month]);
 
-  const tradesByDay: Record<number, typeof trades> = {};
-  monthTrades.forEach((t) => {
-    const day = new Date(t.date).getDate();
-    if (!tradesByDay[day]) tradesByDay[day] = [];
-    tradesByDay[day].push(t);
-  });
+  const tradesByDay = useMemo(() => {
+    const byDay: Record<number, typeof trades> = {};
+    monthTrades.forEach((t) => {
+      const day = new Date(t.date).getDate();
+      if (!byDay[day]) byDay[day] = [];
+      byDay[day].push(t);
+    });
+    return byDay;
+  }, [monthTrades]);
 
   // Monthly stats
   const stats = useMemo(() => {
@@ -234,19 +237,19 @@ export default function PnLCalendarPage() {
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
           <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("bestDay")}</p>
-          <p className="text-base font-bold text-emerald-400 mono truncate">
+          <p className="text-xs sm:text-base font-bold text-emerald-400 mono truncate">
             {stats.bestDay ? `+${(+stats.bestDay[1]).toFixed(0)}€` : "—"}
           </p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
           <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("worstDay")}</p>
-          <p className="text-base font-bold text-rose-400 mono truncate">
+          <p className="text-xs sm:text-base font-bold text-rose-400 mono truncate">
             {stats.worstDay ? `${(+stats.worstDay[1]).toFixed(0)}€` : "—"}
           </p>
         </div>
         <div className="metric-card rounded-xl p-3 text-center overflow-hidden">
           <p className="text-[10px] text-[--text-muted] mb-1 truncate">{t("streakW")}</p>
-          <p className="text-base font-bold text-amber-400 flex items-center justify-center gap-1">
+          <p className="text-xs sm:text-base font-bold text-amber-400 flex items-center justify-center gap-1">
             <Flame className="w-4 h-4" /> {stats.maxStreak}
           </p>
         </div>
@@ -625,7 +628,7 @@ export default function PnLCalendarPage() {
               ) : (
                 <>
                   {/* Summary Stats */}
-                  <div className="grid grid-cols-4 gap-3 mb-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
                     <div className="metric-card rounded-lg p-3 text-center">
                       <p className="text-[10px] text-[--text-muted]">Trades</p>
                       <p className="text-lg font-bold text-cyan-400 mono">{dt.length}</p>

@@ -313,7 +313,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Weekly Sparkline card */}
-        <div className="glass rounded-2xl p-4">
+        <div className="glass rounded-2xl p-4 col-span-2 sm:col-span-1">
           <div className="flex items-center gap-2 mb-2">
             <Activity className="w-4 h-4 text-purple-400" />
             <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{t("last7Days")}</span>
@@ -418,21 +418,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         {/* Win/Loss Streak */}
         {(() => {
-          let currentStreak = 0;
-          let streakType: "win" | "loss" | "none" = "none";
-          const sorted = [...trades].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          for (const t of sorted) {
-            if (currentStreak === 0) {
-              streakType = t.result > 0 ? "win" : t.result < 0 ? "loss" : "none";
-              currentStreak = 1;
-            } else if ((streakType === "win" && t.result > 0) || (streakType === "loss" && t.result < 0)) {
-              currentStreak++;
-            } else {
-              break;
-            }
-          }
           let bestWin = 0, bestLoss = 0, tempWin = 0, tempLoss = 0;
-          for (const t of sorted.reverse()) {
+          for (const t of [...sortedForStreak].reverse()) {
             if (t.result > 0) { tempWin++; tempLoss = 0; bestWin = Math.max(bestWin, tempWin); }
             else if (t.result < 0) { tempLoss++; tempWin = 0; bestLoss = Math.max(bestLoss, tempLoss); }
             else { tempWin = 0; tempLoss = 0; }

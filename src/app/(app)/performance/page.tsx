@@ -67,7 +67,7 @@ function CategoryBar({ label, score, icon: Icon, details }: {
           <Icon className={`w-4 h-4 ${colors.text}`} />
           <span className="text-sm font-medium">{label}</span>
         </div>
-        <span className={`text-sm font-bold mono ${colors.text}`}>{score}/100</span>
+        <span className={`text-xs sm:text-sm font-bold mono whitespace-nowrap ${colors.text}`}>{score}/100</span>
       </div>
       <div className="relative h-2.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
         <div className={`h-full rounded-full transition-all duration-700 ${colors.bar}`}
@@ -309,11 +309,13 @@ export default function PerformancePage() {
     const profitFactor = avgLoss > 0 ? (avgWin * wins.length) / (avgLoss * losses.length) : wins.length > 0 ? Infinity : 0;
     const expectancy = trades.length > 0 ? trades.reduce((s, t) => s + t.result, 0) / trades.length : 0;
 
-    const rrs = trades.map((tr) => {
-      const rr = calculateRR(tr.entry, tr.sl, tr.tp);
-      const rrNum = parseFloat(rr);
-      return tr.result > 0 && !isNaN(rrNum) ? rrNum : -1;
-    });
+    const rrs = trades
+      .map((tr) => {
+        const rr = calculateRR(tr.entry, tr.sl, tr.tp);
+        const rrNum = parseFloat(rr);
+        return tr.result > 0 && !isNaN(rrNum) ? rrNum : null;
+      })
+      .filter((r): r is number => r !== null);
     const avgRR = rrs.length > 0 ? rrs.reduce((s, r) => s + r, 0) / rrs.length : 0;
 
     // Consistency: std deviation of daily results
@@ -431,8 +433,8 @@ export default function PerformancePage() {
       const wAvgWin = wWins.length > 0 ? wWins.reduce((s, t) => s + t.result, 0) / wWins.length : 0;
       const wAvgLoss = wLosses.length > 0 ? Math.abs(wLosses.reduce((s, t) => s + t.result, 0) / wLosses.length) : 0;
       const wPF = wAvgLoss > 0 ? (wAvgWin * wWins.length) / (wAvgLoss * wLosses.length) : 0;
-      const wRRs = window.map((tr) => { const rr = calculateRR(tr.entry, tr.sl, tr.tp); const rrNum = parseFloat(rr); return tr.result > 0 && !isNaN(rrNum) ? rrNum : -1; });
-      const wAvgRR = wRRs.reduce((s, r) => s + r, 0) / wRRs.length;
+      const wRRs = window.map((tr) => { const rr = calculateRR(tr.entry, tr.sl, tr.tp); const rrNum = parseFloat(rr); return tr.result > 0 && !isNaN(rrNum) ? rrNum : null; }).filter((r): r is number => r !== null);
+      const wAvgRR = wRRs.length > 0 ? wRRs.reduce((s, r) => s + r, 0) / wRRs.length : 0;
       let wPeak = 0, wMaxDD = 0, wRun = 0;
       window.forEach((t) => { wRun += t.result; if (wRun > wPeak) wPeak = wRun; const dd = wPeak - wRun; if (dd > wMaxDD) wMaxDD = dd; });
       const wWRS = Math.min(wWR * 1.5, 100);

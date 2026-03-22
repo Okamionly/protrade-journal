@@ -718,14 +718,14 @@ function TweetPost({
           {msg.trade && <InlineTradeCard trade={msg.trade} />}
 
           {/* Image if attached */}
-          {msg.imageUrl && (
+          {msg.imageUrl && /^(https?:\/\/|data:image\/)/.test(msg.imageUrl) && (
             <div
               className="mt-3 rounded-2xl overflow-hidden"
               style={{ border: "1px solid var(--border)" }}
             >
               <img
                 src={msg.imageUrl}
-                alt="Image partagee"
+                alt="Image partagée"
                 className="w-full h-auto max-h-[400px] object-cover"
                 loading="lazy"
               />
@@ -900,6 +900,12 @@ function PostComposer({
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const allowedExtensions = /\.(jpe?g|png|gif|webp)$/i;
+    if (!file.type.startsWith("image/") || !allowedExtensions.test(file.name)) {
+      alert("Format non supporté. Utilisez JPG, PNG, GIF ou WebP.");
+      e.target.value = "";
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       alert("Image trop volumineuse (max 5 Mo)");
       return;
@@ -1483,6 +1489,7 @@ export default function CommunityPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [pollDraft, setPollDraft] = useState<PollDraft | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const feedRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1539,6 +1546,7 @@ export default function CommunityPage() {
       }
     } catch (error) {
       console.error("Init room error:", error);
+      setError("Impossible de charger le salon. Veuillez réessayer.");
       setLoading(false);
     }
   }, []);
@@ -1632,8 +1640,9 @@ export default function CommunityPage() {
         setImagePreview(null);
         setPollDraft(null);
       }
-    } catch (error) {
-      console.error("Send message error:", error);
+    } catch (err) {
+      console.error("Send message error:", err);
+      setError("Impossible d'envoyer le message. Veuillez réessayer.");
     } finally {
       setSending(false);
     }
@@ -1806,6 +1815,12 @@ export default function CommunityPage() {
                 />
               )}
 
+              {error && (
+                <div className="mx-4 mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm">
+                  {error}
+                </div>
+              )}
+
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20">
                   <Loader2 className="w-7 h-7 animate-spin mb-3" style={{ color: "#06b6d4" }} />
@@ -1844,7 +1859,7 @@ export default function CommunityPage() {
                     className="text-2xl font-extrabold mb-2"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    Bienvenue dans la communaute !
+                    Bienvenue dans la communauté !
                   </h2>
                   <p
                     className="text-[15px] max-w-md mx-auto mb-6"

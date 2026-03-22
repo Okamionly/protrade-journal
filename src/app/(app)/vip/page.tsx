@@ -93,6 +93,7 @@ function VipPage() {
   const [postsLoading, setPostsLoading] = useState(true);
   const [posts, setPosts] = useState<VipPost[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -111,14 +112,14 @@ function VipPage() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { setError("Impossible de vérifier votre abonnement."); });
   }, []);
 
   useEffect(() => {
     fetch("/api/vip/posts")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setPosts(data))
-      .catch(() => {})
+      .catch(() => { setError("Impossible de charger les contenus VIP."); })
       .finally(() => setPostsLoading(false));
   }, []);
 
@@ -153,6 +154,12 @@ function VipPage() {
 
   return (
     <div className="min-h-screen pb-20">
+      {/* Error Banner */}
+      {error && (
+        <div className="mx-4 mt-4 sm:mx-6 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm">
+          {error}
+        </div>
+      )}
       {/* Success Banner */}
       {showSuccess && (
         <div

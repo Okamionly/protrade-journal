@@ -38,7 +38,7 @@ export function ForexSessions() {
               <span className={`text-xs font-medium flex-1 ${active ? session.textColor : "text-gray-600"}`}>
                 {session.name}
               </span>
-              <span className="text-[10px] text-gray-500 mono">{session.open}:00-{session.close}:00 UTC</span>
+              <span className="text-[10px] text-gray-500 mono whitespace-nowrap">{session.open}:00-{session.close}:00 UTC</span>
             </div>
           );
         })}
