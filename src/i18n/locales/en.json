@@ -1290,6 +1290,7 @@
   "sidebarPlaybook": "Playbook",
   "sidebarChecklist": "Checklist",
   "sidebarImportCsv": "Import CSV",
+  "sidebarSecAnalytics": "ANALYTICS",
   "sidebarSecPerformance": "PERFORMANCE",
   "sidebarScore": "Score",
   "sidebarGrading": "Grading",

@@ -257,7 +257,7 @@ export default function LandingContent() {
         <div className="max-w-[100vw] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             <Link href="/" className="flex items-center gap-2" onClick={() => goToSlide(0)}>
-              <Image src="/logo-icon.png" alt="MarketPhase" width={40} height={40} className="w-10 h-10 rounded-xl" />
+              <Image src="/logo-icon.png" alt="MarketPhase" width={40} height={40} sizes="40px" className="w-10 h-10 rounded-xl" />
               <span className="text-lg font-bold text-gray-900 hidden sm:inline">MarketPhase</span>
             </Link>
 
@@ -392,7 +392,7 @@ export default function LandingContent() {
               <div className="flex-1 max-w-2xl lg:max-w-none text-center lg:text-left">
                 {/* Logo full */}
                 <div className="mb-8 flex justify-center lg:justify-start">
-                  <Image src="/logo-full.png" alt="MarketPhase" width={500} height={125} className="h-20 sm:h-24 lg:h-28 w-auto drop-shadow-lg" priority />
+                  <Image src="/logo-full.png" alt="MarketPhase" width={500} height={125} sizes="(max-width: 640px) 200px, (max-width: 1024px) 250px, 300px" className="h-20 sm:h-24 lg:h-28 w-auto drop-shadow-lg" priority />
                 </div>
 
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-200 bg-blue-50 text-blue-600 text-sm font-medium mb-6">
@@ -440,7 +440,7 @@ export default function LandingContent() {
                 <div className="relative">
                   <div className="absolute -inset-1 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 rounded-2xl opacity-20 blur-sm" />
                   <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50 bg-white">
-                    <Image src="/screenshots/dashboard.png" alt="MarketPhase Dashboard" width={1920} height={1080} className="w-full h-auto" priority />
+                    <Image src="/screenshots/dashboard.png" alt="MarketPhase Dashboard" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 50vw" className="w-full h-auto" priority />
                   </div>
                   <div className="absolute -bottom-4 -left-4 sm:-bottom-6 sm:-left-8 p-3 sm:p-4 rounded-xl bg-white/95 backdrop-blur-sm border border-gray-200 shadow-xl">
                     <div className="flex items-center gap-3">
@@ -544,7 +544,7 @@ export default function LandingContent() {
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
-                    <Image src="/screenshots/dashboard.png" alt="Journal" width={1920} height={1080} className="w-full h-auto" />
+                    <Image src="/screenshots/dashboard.png" alt="Journal" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
                   </div>
                 </div>
               </div>
@@ -585,7 +585,7 @@ export default function LandingContent() {
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
-                    <Image src="/screenshots/analytics.png" alt="Analytics" width={1920} height={1080} className="w-full h-auto" />
+                    <Image src="/screenshots/analytics.png" alt="Analytics" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
                   </div>
                 </div>
               </div>
@@ -626,7 +626,7 @@ export default function LandingContent() {
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
-                    <Image src="/screenshots/ai-coach.png" alt="AI Coach" width={1920} height={1080} className="w-full h-auto" />
+                    <Image src="/screenshots/ai-coach.png" alt="AI Coach" width={1920} height={1080} sizes="(max-width: 768px) 100vw, 600px" className="w-full h-auto" />
                   </div>
                 </div>
               </div>
@@ -697,7 +697,7 @@ export default function LandingContent() {
                     <th className="text-left px-3 sm:px-6 py-3 sm:py-4 text-gray-400 font-medium w-1/4"></th>
                     <th className="px-3 sm:px-6 py-3 sm:py-4 text-center">
                       <div className="inline-flex items-center gap-1.5 sm:gap-2">
-                        <Image src="/logo-icon.png" alt="MP" width={24} height={24} className="w-5 h-5 sm:w-6 sm:h-6 rounded-md" />
+                        <Image src="/logo-icon.png" alt="MP" width={24} height={24} sizes="24px" className="w-5 h-5 sm:w-6 sm:h-6 rounded-md" />
                         <span className="font-bold text-gray-900 text-xs sm:text-sm">MarketPhase</span>
                       </div>
                     </th>
@@ -829,7 +829,7 @@ export default function LandingContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12">
                   <div>
                     <div className="flex items-center gap-2 mb-4">
-                      <Image src="/logo-icon.png" alt="MarketPhase" width={28} height={28} className="w-7 h-7 rounded-lg" />
+                      <Image src="/logo-icon.png" alt="MarketPhase" width={28} height={28} sizes="28px" className="w-7 h-7 rounded-lg" />
                       <span className="font-bold text-gray-900">MarketPhase</span>
                     </div>
                     <p className="text-xs text-gray-400 max-w-xs">{t("landing_footerDesc")}</p>

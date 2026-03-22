@@ -35,50 +35,16 @@ export async function GET() {
   });
 }
 
-// POST /api/subscription — mock upgrade/downgrade
+// POST /api/subscription — disabled until Stripe integration is live
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id)
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const { prisma } = await import("@/lib/prisma");
-  const body = await req.json();
-  const { plan, billingCycle } = body as { plan: string; billingCycle?: string };
-
-  // Allowed plans: free and vip (mock mode — in production, vip requires Stripe)
-  const roleMap: Record<string, string> = {
-    free: "USER",
-    vip: "VIP",
-  };
-
-  const newRole = roleMap[plan];
-  if (!newRole) {
-    return NextResponse.json({ error: "Plan invalide" }, { status: 400 });
-  }
-
-  // Prevent non-admin users from setting themselves as ADMIN
-  if (newRole === "ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
-
-  // --- MOCK: In production, this would:
-  // 1. Create a Stripe Checkout Session
-  // 2. Redirect user to Stripe
-  // 3. Handle webhook to update role
-  // For now, we just update the role directly ---
-
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: { role: newRole },
-  });
-
-  return NextResponse.json({
-    success: true,
-    plan,
-    billingCycle: billingCycle ?? "monthly",
-    message: `Plan mis à jour vers ${plan.toUpperCase()}`,
-    // Mock Stripe response
-    stripeSessionId: `mock_cs_${Date.now()}`,
-    stripeSubscriptionId: plan !== "free" ? `mock_sub_${Date.now()}` : null,
-  });
+  // Subscription changes require a valid Stripe payment.
+  // This endpoint is disabled until Stripe checkout is integrated.
+  return NextResponse.json(
+    { error: "Paiement requis. Contactez le support." },
+    { status: 403 }
+  );
 }

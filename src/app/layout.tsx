@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ToastProvider } from "@/components/Toast";
 import { CommandPalette } from "@/components/CommandPalette";
+
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" });
+const jetbrains = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable: "--font-mono" });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://marketphase.vercel.app"),
@@ -50,6 +54,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MarketPhase - Journal de Trading Gratuit avec IA",
     description: "35+ outils de trading professionnels. Analytics, AI Coach, Market Data. 100% gratuit.",
+    images: [{ url: "/og-image.png", width: 800, height: 400, alt: "MarketPhase - Time Creates Opportunity" }],
   },
   robots: {
     index: true,
@@ -96,7 +101,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className="dark" suppressHydrationWarning>
+    <html lang="fr" className={`dark ${inter.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0ea5e9" />

@@ -7,12 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  VIP
+  ADMIN
+}
+
 model User {
   id           String        @id @default(cuid())
   email        String        @unique
   password     String
   name         String?
-  role         String        @default("USER")
+  role         Role          @default(USER)
   balance      Float         @default(25000)
   trades       Trade[]
   chatMessages ChatMessage[]
@@ -54,12 +60,16 @@ model Trade {
   strategyId   String?
   strategyRel  Strategy?    @relation(fields: [strategyId], references: [id])
   userId       String
-  user         User         @relation(fields: [userId], references: [id])
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   screenshots  Screenshot[]
   tradeTags    TradeTag[]
   chatMessages ChatMessage[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([userId, date])
+  @@index([date])
 }
 
 model Screenshot {
@@ -67,6 +77,8 @@ model Screenshot {
   url     String
   tradeId String
   trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  @@index([tradeId])
 }
 
 model Strategy {
@@ -75,11 +87,12 @@ model Strategy {
   color       String   @default("#0ea5e9")
   description String?
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   trades      Trade[]
   createdAt   DateTime @default(now())
 
   @@unique([userId, name])
+  @@index([userId])
 }
 
 model Tag {
@@ -87,10 +100,11 @@ model Tag {
   name   String
   color  String     @default("#6b7280")
   userId String
-  user   User       @relation(fields: [userId], references: [id])
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   trades TradeTag[]
 
   @@unique([userId, name])
+  @@index([userId])
 }
 
 model TradeTag {
@@ -110,9 +124,10 @@ model MonthlyGoal {
   targetTrades  Int?
   targetWinRate Float?
   userId        String
-  user          User   @relation(fields: [userId], references: [id])
+  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, month, year])
+  @@index([userId])
 }
 
 model TradingRule {
@@ -121,7 +136,9 @@ model TradingRule {
   category String @default("setup")
   order    Int    @default(0)
   userId   String
-  user     User   @relation(fields: [userId], references: [id])
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model DailyPlan {
@@ -136,11 +153,13 @@ model DailyPlan {
   screenshots String[] @default([])
   shared      Boolean  @default(false)
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@unique([userId, date])
+  @@index([userId])
+  @@index([userId, date])
 }
 
 model ChatRoom {
@@ -158,7 +177,7 @@ model ChatMessage {
   content   String
   imageUrl  String?
   userId    String
-  user      User       @relation(fields: [userId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   roomId    String
   room      ChatRoom   @relation(fields: [roomId], references: [id])
   tradeId   String?
@@ -166,6 +185,10 @@ model ChatMessage {
   isPinned  Boolean    @default(false)
   reactions Reaction[]
   createdAt DateTime   @default(now())
+
+  @@index([roomId])
+  @@index([roomId, createdAt])
+  @@index([userId])
 }
 
 model Reaction {
@@ -178,6 +201,7 @@ model Reaction {
   createdAt DateTime    @default(now())
 
   @@unique([userId, messageId, emoji])
+  @@index([messageId])
 }
 
 model VipPost {
@@ -192,4 +216,7 @@ model VipPost {
   updatedAt   DateTime @updatedAt
   authorId    String
   author      User     @relation(fields: [authorId], references: [id])
+
+  @@index([type])
+  @@index([published])
 }

@@ -6,6 +6,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { LiveTicker } from "./LiveTicker";
 import { QuickTradeButton } from "./QuickTradeButton";
+import { OnboardingWizard } from "./OnboardingWizard";
 import { LocaleProvider } from "@/i18n/context";
 import { Menu, X } from "lucide-react";
 
@@ -94,6 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
 
         <QuickTradeButton />
+        <OnboardingWizard />
       </SidebarContext.Provider>
     </LocaleProvider>
   );
