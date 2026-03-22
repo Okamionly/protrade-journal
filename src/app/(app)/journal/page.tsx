@@ -6,6 +6,7 @@ import { JournalSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { calculateRR, formatDate } from "@/lib/utils";
 import { useState, useMemo, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Plus, Camera, Trash2, Pencil, ArrowUpDown, Download, X, Copy, Brain, Share2 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 
@@ -57,6 +58,10 @@ function JournalPageContent() {
   const [sortBy, setSortBy] = useState<"date" | "result" | "rr">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const { applyFilters } = useAdvancedFilters();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const urlDate = searchParams.get("date");
+  const urlAsset = searchParams.get("asset");
 
   // Duplication state
   const [duplicatingTrade, setDuplicatingTrade] = useState<Trade | null>(null);
@@ -72,7 +77,16 @@ function JournalPageContent() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [shareTradeId, setShareTradeId] = useState<string | null>(null);
 
-  const filtered = useMemo(() => applyFilters(trades), [trades, applyFilters]);
+  const filtered = useMemo(() => {
+    let result = applyFilters(trades);
+    if (urlDate) {
+      result = result.filter((t) => new Date(t.date).toISOString().slice(0, 10) === urlDate);
+    }
+    if (urlAsset) {
+      result = result.filter((t) => t.asset.toLowerCase() === urlAsset.toLowerCase());
+    }
+    return result;
+  }, [trades, applyFilters, urlDate, urlAsset]);
 
   // Sort
   const sorted = [...filtered].sort((a, b) => {
@@ -117,41 +131,51 @@ function JournalPageContent() {
     setSelectedIds(new Set());
   }, []);
 
-  // CSV Export
+  // CSV Export (semicolon separator for French Excel compatibility)
   const exportCSV = useCallback(() => {
-    const headers = [t("dateCol"), t("assetCol"), t("directionCol"), t("entry"), t("exit"), t("resultCol"), t("emotionCol"), t("strategyCol"), "Commission", "Swap"];
+    const headers = ["Date", "Asset", "Direction", "Strategy", "Setup", "Entry", "Exit", "SL", "TP", "Lots", "Commission", "Swap", "Result", "R:R", "Emotion", "Tags"];
     const escapeCSV = (val: string | number | null | undefined) => {
       const str = val == null ? "" : String(val);
-      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+      if (str.includes(";") || str.includes('"') || str.includes("\n")) {
         return `"${str.replace(/"/g, '""')}"`;
       }
       return str;
     };
-    const rows = sorted.map((t) => [
-      formatDate(t.date),
-      t.asset,
-      t.direction,
-      t.entry,
-      t.exit ?? "",
-      t.result,
-      t.emotion ?? "",
-      t.strategy,
-      t.commission ?? 0,
-      t.swap ?? 0,
-    ].map(escapeCSV).join(","));
+    const rows = filtered.map((t) => {
+      const rr = calculateRR(t.entry, t.sl, t.tp);
+      return [
+        t.date ? t.date.slice(0, 10) : "",
+        t.asset,
+        t.direction,
+        t.strategy,
+        t.setup ?? "",
+        t.entry,
+        t.exit ?? "",
+        t.sl,
+        t.tp,
+        t.lots,
+        t.commission ?? 0,
+        t.swap ?? 0,
+        t.result,
+        rr ? `1:${rr}` : "",
+        t.emotion ?? "",
+        t.tags ?? "",
+      ].map(escapeCSV).join(";");
+    });
 
-    const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const csv = [headers.join(";"), ...rows].join("\n");
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `trades_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `marketphase-trades-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     toast(t("csvExported"), "success");
-  }, [sorted, toast, t]);
+  }, [filtered, toast, t]);
 
   // Bulk delete
   const handleBulkDelete = async () => {
@@ -246,6 +270,44 @@ function JournalPageContent() {
   return (
     <>
       <div className="glass rounded-2xl p-6">
+        {/* URL-based filter banners */}
+        {(urlDate || urlAsset) && (
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {urlDate && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                Filtr&eacute; par date : {urlDate}
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("date");
+                    const qs = params.toString();
+                    router.push(qs ? `/journal?${qs}` : "/journal");
+                  }}
+                  className="ml-1 hover:text-white transition"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            )}
+            {urlAsset && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                Filtr&eacute; par actif : {urlAsset}
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("asset");
+                    const qs = params.toString();
+                    router.push(qs ? `/journal?${qs}` : "/journal");
+                  }}
+                  className="ml-1 hover:text-white transition"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">{t("fullHistory")}</h3>
           <div className="flex items-center gap-2">

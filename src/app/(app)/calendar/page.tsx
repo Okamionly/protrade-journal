@@ -2,12 +2,14 @@
 
 import { useTrades } from "@/hooks/useTrades";
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock, Target, ArrowRight, ArrowUpRight, ArrowDownRight, Zap, Award } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 
 export default function PnLCalendarPage() {
   const { trades, loading } = useTrades();
   const { t } = useTranslation();
+  const router = useRouter();
 
   const MONTH_NAMES = [t("monthJan"), t("monthFeb"), t("monthMar"), t("monthApr"), t("monthMay"), t("monthJun"), t("monthJul"), t("monthAug"), t("monthSep"), t("monthOct"), t("monthNov"), t("monthDec")];
   const DAY_NAMES = [t("dayMon"), t("dayTue"), t("dayWed"), t("dayThu"), t("dayFri"), t("daySat"), t("daySun")];
@@ -618,9 +620,24 @@ export default function PnLCalendarPage() {
                     </p>
                   )}
                 </div>
-                <button onClick={() => setSelectedDay(null)} className="p-1 rounded-lg hover:bg-[var(--bg-hover)] text-[--text-secondary] hover:text-[--text-primary]">
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {dt.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(selectedDay.day).padStart(2, "0")}`;
+                        setSelectedDay(null);
+                        router.push(`/journal?date=${dateStr}`);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition"
+                    >
+                      Voir les trades
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button onClick={() => setSelectedDay(null)} className="p-1 rounded-lg hover:bg-[var(--bg-hover)] text-[--text-secondary] hover:text-[--text-primary]">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {dt.length === 0 ? (

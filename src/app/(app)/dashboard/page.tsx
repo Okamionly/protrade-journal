@@ -508,7 +508,10 @@ export default function DashboardPage() {
               {bestTrade && bestTrade.result > 0 ? (
                 <>
                   <div className="text-2xl font-bold mono text-emerald-400">+{bestTrade.result.toFixed(2)}</div>
-                  <div className="text-xs text-[--text-muted] mt-1">{bestTrade.asset} -- {formatDate(bestTrade.date)}</div>
+                  <div className="text-xs text-[--text-muted] mt-1">
+                    <Link href={`/journal?asset=${encodeURIComponent(bestTrade.asset)}`} className="text-cyan-400 hover:underline">{bestTrade.asset}</Link>
+                    {" "}&mdash; {formatDate(bestTrade.date)}
+                  </div>
                 </>
               ) : (
                 <div className="text-sm text-[--text-muted]">{t("noBestTrade")}</div>
