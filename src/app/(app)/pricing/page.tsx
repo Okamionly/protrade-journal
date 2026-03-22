@@ -40,32 +40,31 @@ const PLANS: PlanDef[] = [
     name: "Free",
     monthlyPrice: 0,
     features: [
-      { text: "Journal illimité", icon: FileText },
-      { text: "Analytics de base", icon: BarChart3 },
-      { text: "AI Coach (3 msg/jour)", icon: Zap },
+      { text: "Journal de trading illimité", icon: FileText },
+      { text: "35+ outils d'analyse", icon: BarChart3 },
       { text: "Calendrier P&L", icon: Calendar },
-      { text: "Heatmap", icon: BarChart3 },
-      { text: "Backtest (30 jours)", icon: FlaskConical },
-      { text: "1 rapport PDF/mois", icon: FileText },
-      { text: "Chat (lecture seule)", icon: MessageCircle },
+      { text: "Heatmap de performance", icon: BarChart3 },
+      { text: "Analytics avancées", icon: Zap },
+      { text: "Backtesting", icon: FlaskConical },
+      { text: "Communauté", icon: MessageCircle },
+      { text: "Biais du jour", icon: Star },
     ],
     cta: "Actuel",
   },
   {
     id: "vip",
     name: "VIP",
-    monthlyPrice: 9,
+    monthlyPrice: 9.99,
     vip: true,
     features: [
-      { text: "Tout le Free +", icon: Check },
-      { text: "AI Coach illimité", icon: Zap },
-      { text: "Challenges", icon: Trophy },
-      { text: "Chat (écriture + VIP rooms)", icon: MessageCircle },
-      { text: "Rapports PDF illimités", icon: FileText },
-      { text: "Backtest (1 an)", icon: FlaskConical },
+      { text: "Tout le plan Free +", icon: Check },
       { text: "Indicateurs TradingView exclusifs", icon: Star },
       { text: "Analyses macro hebdomadaires", icon: Globe },
-      { text: "Scénarios de trading", icon: BarChart3 },
+      { text: "Scénarios de trading avec probabilités", icon: BarChart3 },
+      { text: "Niveaux GPS supports/résistances", icon: Zap },
+      { text: "Chat & salons VIP privés", icon: MessageCircle },
+      { text: "Challenges & Classement", icon: Trophy },
+      { text: "AI Coach avancé", icon: FlaskConical },
       { text: "Badge VIP doré", icon: Crown },
       { text: "Support prioritaire", icon: Shield },
     ],
@@ -141,26 +140,21 @@ export default function PricingPage() {
   };
 
   const handleUpgrade = async (plan: Plan) => {
-    if (plan === currentPlan) return;
+    if (plan === currentPlan || plan === "free") return;
     setLoading(plan);
     setUpgradeSuccess(null);
     try {
-      const res = await fetch("/api/subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, billingCycle: billing }),
-      });
+      const res = await fetch("/api/checkout", { method: "POST" });
       if (res.ok) {
-        setCurrentPlan(plan);
-        setUpgradeSuccess(
-          plan === "free"
-            ? "Vous êtes repassé au plan Free."
-            : `Bienvenue dans le plan ${plan.toUpperCase()} !`
-        );
-        window.dispatchEvent(new Event("plan-changed"));
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+          return;
+        }
       }
+      setUpgradeSuccess("Erreur lors de la redirection vers le paiement.");
     } catch {
-      // silently fail for mock
+      setUpgradeSuccess("Erreur de connexion. Réessayez.");
     } finally {
       setLoading(null);
     }
