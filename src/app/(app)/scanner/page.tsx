@@ -5,6 +5,7 @@ import {
   Search, RefreshCw, TrendingUp, TrendingDown, Minus,
   ArrowUpDown, Filter, ChevronDown, ChevronUp, X,
   Zap, BarChart3, Clock, Radio, Activity, Eye,
+  Star, Bell, CheckCircle, XCircle, History,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -85,6 +86,65 @@ function computeVolume(change: number): "high" | "medium" | "low" {
   return "low";
 }
 
+// ─── Signal History & Accuracy Tracking ─────────────────────────────────────
+
+interface SignalRecord {
+  symbol: string;
+  signal: "buy" | "sell";
+  priceAtSignal: number;
+  timestamp: number;
+  priceAfter?: number;
+  correct?: boolean;
+  resolved: boolean;
+}
+
+function loadSignalHistory(): SignalRecord[] {
+  try {
+    const s = localStorage.getItem("scanner-signal-history");
+    return s ? JSON.parse(s) : [];
+  } catch { return []; }
+}
+
+function saveSignalHistory(records: SignalRecord[]) {
+  // Keep last 500
+  localStorage.setItem("scanner-signal-history", JSON.stringify(records.slice(-500)));
+}
+
+function loadFavorites(): string[] {
+  try {
+    const s = localStorage.getItem("scanner-favorites");
+    return s ? JSON.parse(s) : [];
+  } catch { return []; }
+}
+
+function saveFavorites(favs: string[]) {
+  localStorage.setItem("scanner-favorites", JSON.stringify(favs));
+}
+
+// ─── Signal Strength Bars (1-5) ─────────────────────────────────────────────
+
+function SignalStrengthBars({ strength, signal }: { strength: number; signal: "buy" | "sell" | "neutral" }) {
+  // Map 0-100 strength to 1-5 bars
+  const bars = Math.max(1, Math.min(5, Math.ceil(strength / 20)));
+  const color = signal === "buy" ? "rgb(16,185,129)" : signal === "sell" ? "rgb(239,68,68)" : "rgb(245,158,11)";
+  return (
+    <div className="flex items-end gap-0.5" title={`Force : ${strength}/100 (${bars}/5)`}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <div
+          key={i}
+          style={{
+            width: 4,
+            height: 6 + i * 3,
+            borderRadius: 1,
+            background: i < bars ? color : "var(--bg-hover)",
+            transition: "background 0.3s",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function ScannerPage() {
@@ -106,6 +166,18 @@ export default function ScannerPage() {
 
   // Detail panel
   const [selectedRow, setSelectedRow] = useState<ScannerRow | null>(null);
+
+  // Favorites
+  const [favorites, setFavorites] = useState<string[]>(() => loadFavorites());
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+
+  // Signal history & accuracy
+  const [signalHistory, setSignalHistory] = useState<SignalRecord[]>(() => loadSignalHistory());
+  const [showAccuracy, setShowAccuracy] = useState(false);
+
+  // Toast notifications
+  const [toasts, setToasts] = useState<{ id: string; message: string; symbol: string; signal: string }[]>([]);
+  const prevRowsRef = useRef<ScannerRow[]>([]);
 
   // Auto-refresh
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -218,6 +290,97 @@ export default function ScannerPage() {
     };
   }, [fetchData]);
 
+  // ─── Favorites persistence ───────────────────────────────────────────────
+  useEffect(() => { saveFavorites(favorites); }, [favorites]);
+
+  const toggleFavorite = useCallback((symbol: string) => {
+    setFavorites((prev) => prev.includes(symbol) ? prev.filter((s) => s !== symbol) : [...prev, symbol]);
+  }, []);
+
+  // ─── Signal history tracking & toast notifications ──────────────────────
+  useEffect(() => {
+    if (rows.length === 0) return;
+
+    // Record new signals
+    const now = Date.now();
+    const newRecords: SignalRecord[] = [];
+    for (const row of rows) {
+      if (row.signal === "neutral") continue;
+      // Only record if strong enough (strength >= 60)
+      if (row.strength < 60) continue;
+      // Check if we already have an unresolved record for this symbol+signal
+      const existing = signalHistory.find((r) => r.symbol === row.symbol && r.signal === row.signal && !r.resolved && (now - r.timestamp < 3600000));
+      if (!existing) {
+        newRecords.push({
+          symbol: row.symbol,
+          signal: row.signal,
+          priceAtSignal: row.price,
+          timestamp: now,
+          resolved: false,
+        });
+      }
+    }
+
+    // Resolve old signals (>30min old) by comparing price direction
+    const updated = signalHistory.map((record) => {
+      if (record.resolved) return record;
+      if (now - record.timestamp < 1800000) return record; // wait 30min
+      const currentRow = rows.find((r) => r.symbol === record.symbol);
+      if (!currentRow) return record;
+      const priceAfter = currentRow.price;
+      const correct = record.signal === "buy"
+        ? priceAfter > record.priceAtSignal
+        : priceAfter < record.priceAtSignal;
+      return { ...record, priceAfter, correct, resolved: true };
+    });
+
+    if (newRecords.length > 0 || updated !== signalHistory) {
+      const combined = [...updated, ...newRecords];
+      setSignalHistory(combined);
+      saveSignalHistory(combined);
+    }
+
+    // Toast for new strong signals on favorited assets
+    const prev = prevRowsRef.current;
+    if (prev.length > 0) {
+      for (const row of rows) {
+        if (!favorites.includes(row.symbol)) continue;
+        if (row.signal === "neutral" || row.strength < 65) continue;
+        const prevRow = prev.find((r) => r.symbol === row.symbol);
+        if (prevRow && (prevRow.signal !== row.signal || (prevRow.strength < 65 && row.strength >= 65))) {
+          setToasts((t) => [...t, {
+            id: `${row.symbol}-${Date.now()}`,
+            message: `${row.symbol} : signal ${row.signal === "buy" ? "ACHAT" : "VENTE"} fort (${row.strength}/100)`,
+            symbol: row.symbol,
+            signal: row.signal,
+          }]);
+        }
+      }
+    }
+    prevRowsRef.current = rows;
+  }, [rows, favorites, signalHistory]);
+
+  // Auto-dismiss toasts
+  useEffect(() => {
+    if (toasts.length === 0) return;
+    const t = setTimeout(() => setToasts((prev) => prev.slice(1)), 5000);
+    return () => clearTimeout(t);
+  }, [toasts]);
+
+  // ─── Accuracy stats ────────────────────────────────────────────────────
+  const accuracyStats = useMemo(() => {
+    const resolved = signalHistory.filter((r) => r.resolved);
+    const correct = resolved.filter((r) => r.correct).length;
+    const total = resolved.length;
+    const rate = total > 0 ? (correct / total) * 100 : 0;
+    // Per-signal breakdown
+    const buyResolved = resolved.filter((r) => r.signal === "buy");
+    const buyCorrect = buyResolved.filter((r) => r.correct).length;
+    const sellResolved = resolved.filter((r) => r.signal === "sell");
+    const sellCorrect = sellResolved.filter((r) => r.correct).length;
+    return { total, correct, rate, buyTotal: buyResolved.length, buyCorrect, sellTotal: sellResolved.length, sellCorrect };
+  }, [signalHistory]);
+
   // ─── Sort & Filter ────────────────────────────────────────────────────────
 
   const handleSort = (key: SortKey) => {
@@ -232,6 +395,9 @@ export default function ScannerPage() {
   const filteredRows = useMemo(() => {
     let result = rows;
 
+    if (showOnlyFavorites) {
+      result = result.filter((r) => favorites.includes(r.symbol));
+    }
     if (typeFilter !== "all") {
       result = result.filter((r) => r.type === typeFilter);
     }
@@ -271,7 +437,7 @@ export default function ScannerPage() {
     });
 
     return result;
-  }, [rows, typeFilter, signalFilter, minStrength, searchQuery, sortKey, sortDir]);
+  }, [rows, typeFilter, signalFilter, minStrength, searchQuery, sortKey, sortDir, showOnlyFavorites, favorites]);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -353,6 +519,7 @@ export default function ScannerPage() {
     typeFilter !== "all",
     signalFilter !== "all",
     minStrength > 0,
+    showOnlyFavorites,
   ].filter(Boolean).length;
 
   // ─── Stats ────────────────────────────────────────────────────────────────
@@ -385,6 +552,24 @@ export default function ScannerPage() {
 
   return (
     <div className="space-y-5">
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2" style={{ pointerEvents: "none" }}>
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className="glass rounded-xl px-4 py-3 flex items-center gap-3 animate-in fade-in slide-in-from-top-2"
+            style={{
+              border: `1px solid ${toast.signal === "buy" ? "rgba(16,185,129,0.4)" : "rgba(239,68,68,0.4)"}`,
+              background: toast.signal === "buy" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+              pointerEvents: "auto",
+            }}
+          >
+            <Bell className="w-4 h-4" style={{ color: toast.signal === "buy" ? "rgb(16,185,129)" : "rgb(239,68,68)" }} />
+            <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{toast.message}</span>
+          </div>
+        ))}
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -403,6 +588,30 @@ export default function ScannerPage() {
               {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </span>
           )}
+          <button
+            onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+            className="glass rounded-lg px-3 py-2 text-xs font-medium flex items-center gap-2 hover:opacity-80 transition-opacity"
+            style={{
+              color: showOnlyFavorites ? "#f59e0b" : "var(--text-secondary)",
+              border: showOnlyFavorites ? "1px solid rgba(245,158,11,0.3)" : "1px solid var(--border)",
+              background: showOnlyFavorites ? "rgba(245,158,11,0.08)" : undefined,
+            }}
+          >
+            <Star size={14} fill={showOnlyFavorites ? "#f59e0b" : "none"} />
+            Mes Favoris{favorites.length > 0 ? ` (${favorites.length})` : ""}
+          </button>
+          <button
+            onClick={() => setShowAccuracy(!showAccuracy)}
+            className="glass rounded-lg px-3 py-2 text-xs font-medium flex items-center gap-2 hover:opacity-80 transition-opacity"
+            style={{
+              color: showAccuracy ? "rgb(6,182,212)" : "var(--text-secondary)",
+              border: showAccuracy ? "1px solid rgba(6,182,212,0.3)" : "1px solid var(--border)",
+              background: showAccuracy ? "rgba(6,182,212,0.08)" : undefined,
+            }}
+          >
+            <History size={14} />
+            Precision
+          </button>
           <button
             onClick={() => fetchData()}
             disabled={loading}
@@ -446,6 +655,98 @@ export default function ScannerPage() {
           <div className="text-xl font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{stats.avgStrength}</div>
         </div>
       </div>
+
+      {/* Signal Accuracy Panel */}
+      {showAccuracy && (
+        <div className="glass rounded-xl p-4" style={{ border: "1px solid rgba(6,182,212,0.2)" }}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+              <History size={16} className="text-cyan-400" />
+              Precision Historique des Signaux
+            </h3>
+            {signalHistory.length > 0 && (
+              <button
+                onClick={() => { setSignalHistory([]); saveSignalHistory([]); }}
+                className="text-[10px] flex items-center gap-1 hover:opacity-70"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <X size={10} /> Reinitialiser
+              </button>
+            )}
+          </div>
+          {accuracyStats.total === 0 ? (
+            <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
+              Aucun signal resolu. Les signaux forts sont enregistres et verifies apres 30 minutes.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-lg p-3" style={{ background: "var(--bg-secondary)" }}>
+                <div className="text-[10px] font-semibold uppercase mb-1" style={{ color: "var(--text-muted)" }}>Taux de Precision</div>
+                <div className="text-xl font-bold mono" style={{ color: accuracyStats.rate >= 50 ? "rgb(16,185,129)" : "rgb(239,68,68)" }}>
+                  {accuracyStats.rate.toFixed(1)}%
+                </div>
+                <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>{accuracyStats.correct}/{accuracyStats.total} corrects</div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "var(--bg-secondary)" }}>
+                <div className="text-[10px] font-semibold uppercase mb-1" style={{ color: "var(--text-muted)" }}>Signaux Achat</div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={14} style={{ color: "rgb(16,185,129)" }} />
+                  <span className="text-sm font-bold mono" style={{ color: "var(--text-primary)" }}>
+                    {accuracyStats.buyTotal > 0 ? `${((accuracyStats.buyCorrect / accuracyStats.buyTotal) * 100).toFixed(0)}%` : "N/A"}
+                  </span>
+                  <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>({accuracyStats.buyCorrect}/{accuracyStats.buyTotal})</span>
+                </div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "var(--bg-secondary)" }}>
+                <div className="text-[10px] font-semibold uppercase mb-1" style={{ color: "var(--text-muted)" }}>Signaux Vente</div>
+                <div className="flex items-center gap-2">
+                  <XCircle size={14} style={{ color: "rgb(239,68,68)" }} />
+                  <span className="text-sm font-bold mono" style={{ color: "var(--text-primary)" }}>
+                    {accuracyStats.sellTotal > 0 ? `${((accuracyStats.sellCorrect / accuracyStats.sellTotal) * 100).toFixed(0)}%` : "N/A"}
+                  </span>
+                  <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>({accuracyStats.sellCorrect}/{accuracyStats.sellTotal})</span>
+                </div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background: "var(--bg-secondary)" }}>
+                <div className="text-[10px] font-semibold uppercase mb-1" style={{ color: "var(--text-muted)" }}>En Attente</div>
+                <div className="text-xl font-bold mono" style={{ color: "var(--text-primary)" }}>
+                  {signalHistory.filter((r) => !r.resolved).length}
+                </div>
+                <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>non resolus</div>
+              </div>
+            </div>
+          )}
+          {/* Recent resolved signals */}
+          {accuracyStats.total > 0 && (
+            <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+              <div className="text-[10px] font-semibold uppercase mb-2" style={{ color: "var(--text-muted)" }}>Derniers signaux resolus</div>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {signalHistory
+                  .filter((r) => r.resolved)
+                  .slice(-8)
+                  .reverse()
+                  .map((r, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      {r.correct ? (
+                        <CheckCircle size={12} style={{ color: "rgb(16,185,129)" }} />
+                      ) : (
+                        <XCircle size={12} style={{ color: "rgb(239,68,68)" }} />
+                      )}
+                      <span className="font-medium w-16" style={{ color: "var(--text-primary)" }}>{r.symbol}</span>
+                      <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                        style={{ background: r.signal === "buy" ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)", color: r.signal === "buy" ? "rgb(16,185,129)" : "rgb(239,68,68)" }}>
+                        {r.signal === "buy" ? "ACHAT" : "VENTE"}
+                      </span>
+                      <span className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>
+                        {r.priceAtSignal.toFixed(2)} → {r.priceAfter?.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Signal Distribution Visual */}
       {rows.length > 0 && (
@@ -693,12 +994,14 @@ export default function ScannerPage() {
             <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                  <th className="text-xs font-semibold" style={{ color: "var(--text-secondary)", padding: "10px 6px", width: 30 }} />
                   <SortHeader label="Symbole" sortKeyName="symbol" />
                   <SortHeader label="Prix" sortKeyName="price" className="text-right" />
                   <SortHeader label="Variation %" sortKeyName="change" className="text-right" />
                   <th className="text-left text-xs font-semibold px-3 py-2.5" style={{ color: "var(--text-secondary)", padding: "10px 12px" }}>Volume</th>
                   <SortHeader label="Signal" sortKeyName="signal" />
                   <SortHeader label="Force" sortKeyName="strength" />
+                  <th className="text-xs font-semibold text-center" style={{ color: "var(--text-secondary)", padding: "10px 8px" }}>Barres</th>
                   <th className="text-xs font-semibold" style={{ color: "var(--text-secondary)", padding: "10px 12px", width: 40 }} />
                 </tr>
               </thead>
@@ -721,6 +1024,18 @@ export default function ScannerPage() {
                       e.currentTarget.style.background = selectedRow?.symbol === row.symbol ? "rgba(6,182,212,0.04)" : "transparent";
                     }}
                   >
+                    <td style={{ padding: "10px 6px" }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(row.symbol); }}
+                        className="hover:opacity-70 transition"
+                      >
+                        <Star
+                          size={14}
+                          fill={favorites.includes(row.symbol) ? "#f59e0b" : "none"}
+                          style={{ color: favorites.includes(row.symbol) ? "#f59e0b" : "var(--text-muted)" }}
+                        />
+                      </button>
+                    </td>
                     <td style={{ padding: "10px 12px" }}>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-medium rounded px-1.5 py-0.5"
@@ -757,6 +1072,9 @@ export default function ScannerPage() {
                     </td>
                     <td style={{ padding: "10px 12px" }}>
                       {strengthBar(row.strength)}
+                    </td>
+                    <td style={{ padding: "10px 8px", textAlign: "center" }}>
+                      <SignalStrengthBars strength={row.strength} signal={row.signal} />
                     </td>
                     <td style={{ padding: "10px 12px" }}>
                       <Eye size={14} style={{ color: "var(--text-muted)", opacity: 0.5 }} />

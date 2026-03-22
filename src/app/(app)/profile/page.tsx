@@ -808,17 +808,6 @@ export default function ProfilePage() {
     return labels[session] || session;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-10 h-10 animate-spin text-cyan-400 mx-auto" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">{t("profileLoading")}</p>
-        </div>
-      </div>
-    );
-  }
-
   const stats = profile?.stats;
 
   // Compute total trades this year for heatmap
@@ -836,6 +825,17 @@ export default function ProfilePage() {
     const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
     return `${monthNames[parseInt(m, 10) - 1]} ${y}`;
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-cyan-400 mx-auto" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t("profileLoading")}</p>
+        </div>
+      </div>
+    );
+  }
 
   // Rank color mapping
   const rankColorMap: Record<string, string> = {

@@ -14,7 +14,11 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
+  StickyNote,
+  X,
+  AlertCircle,
 } from "lucide-react";
+import { useTrades } from "@/hooks/useTrades";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -177,6 +181,62 @@ function compareActualForecast(actual?: string, forecast?: string): "better" | "
   return "inline";
 }
 
+// ─── Quick Filter type ───────────────────────────────────────────────────────────
+
+type QuickFilter = "tous" | "high_only" | "today" | "this_week";
+
+// ─── Event Notes (localStorage) ──────────────────────────────────────────────────
+
+function getEventNoteKey(date: string, event: string): string {
+  return `eco_note_${date}_${event.replace(/\s+/g, "_").slice(0, 40)}`;
+}
+
+function getEventNote(date: string, event: string): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(getEventNoteKey(date, event)) || "";
+}
+
+function setEventNote(date: string, event: string, note: string): void {
+  if (typeof window === "undefined") return;
+  const key = getEventNoteKey(date, event);
+  if (note.trim()) {
+    localStorage.setItem(key, note);
+  } else {
+    localStorage.removeItem(key);
+  }
+}
+
+// ─── Next Event Countdown ────────────────────────────────────────────────────────
+
+function getNextEventCountdown(events: EcoEvent[]): { label: string; event: EcoEvent } | null {
+  const now = new Date();
+  let closest: { diff: number; event: EcoEvent } | null = null;
+
+  for (const e of events) {
+    if (!e.time) continue;
+    const [h, m] = e.time.split(":").map(Number);
+    const target = new Date(e.date + "T00:00:00");
+    target.setHours(h, m, 0, 0);
+    const diff = target.getTime() - now.getTime();
+    if (diff > 0 && (!closest || diff < closest.diff)) {
+      closest = { diff, event: e };
+    }
+  }
+
+  if (!closest) return null;
+  const hours = Math.floor(closest.diff / (1000 * 60 * 60));
+  const mins = Math.floor((closest.diff % (1000 * 60 * 60)) / (1000 * 60));
+  let label: string;
+  if (hours > 48) {
+    label = `${Math.floor(hours / 24)}j ${hours % 24}h`;
+  } else if (hours > 0) {
+    label = `${hours}h ${mins}min`;
+  } else {
+    label = `${mins}min`;
+  }
+  return { label, event: closest.event };
+}
+
 // ─── Skeleton Components ─────────────────────────────────────────────────────────
 
 function SkeletonUpcoming() {
@@ -240,6 +300,32 @@ export default function CalendarEcoPage() {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [, setTick] = useState(0);
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>("tous");
+  const [noteModal, setNoteModal] = useState<{ date: string; event: string } | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const { trades } = useTrades();
+
+  // Extract currencies the user actively trades
+  const userTradedCurrencies = useMemo(() => {
+    const currencies = new Set<string>();
+    for (const t of trades) {
+      const asset = (t.asset || "").toUpperCase();
+      // Extract currencies from forex pairs (e.g. EURUSD -> EUR, USD)
+      if (asset.length === 6 && !asset.includes("/")) {
+        currencies.add(asset.slice(0, 3));
+        currencies.add(asset.slice(3, 6));
+      } else if (asset.includes("/")) {
+        const parts = asset.split("/");
+        parts.forEach((p) => currencies.add(p.trim()));
+      }
+      // Also check if asset matches a known currency index/pair
+      const knownCurrencies = ["USD", "EUR", "GBP", "JPY", "CNY", "CHF", "AUD", "CAD", "NZD"];
+      for (const c of knownCurrencies) {
+        if (asset.includes(c)) currencies.add(c);
+      }
+    }
+    return currencies;
+  }, [trades]);
 
   // ─── Fetch calendar data ────────────────────────────────────────────────
 
@@ -290,16 +376,26 @@ export default function CalendarEcoPage() {
   // Week dates
   const weekDates = useMemo(() => getWeekDates(baseDate), [baseDate]);
 
-  // Filtered events
+  // Filtered events (includes quick filter logic)
   const filteredEvents = useMemo(() => {
+    const today = todayStr();
+    const weekStart = getWeekDates(today);
+    const weekDateSet = new Set(weekStart);
+
     return events.filter((e) => {
+      // Quick filter
+      if (quickFilter === "high_only" && e.impact !== "high") return false;
+      if (quickFilter === "today" && e.date !== today) return false;
+      if (quickFilter === "this_week" && !weekDateSet.has(e.date)) return false;
+
+      // Existing filters
       if (impactFilter === "high" && e.impact !== "high") return false;
       if (impactFilter === "medium+" && e.impact === "low") return false;
       if (countryFilter.length > 0 && !countryFilter.includes(e.country)) return false;
       if (currencyFilter.length > 0 && !currencyFilter.includes(e.currency)) return false;
       return true;
     });
-  }, [events, impactFilter, countryFilter, currencyFilter]);
+  }, [events, impactFilter, countryFilter, currencyFilter, quickFilter]);
 
   // Upcoming events (next 5 from now)
   const upcomingEvents = useMemo(() => {
@@ -417,11 +513,31 @@ export default function CalendarEcoPage() {
           </div>
         </td>
 
-        {/* Event name */}
+        {/* Event name + badges */}
         <td className="px-3 py-2.5">
-          <span className={`text-xs font-medium text-[--text-primary] ${e.impact === "high" ? "font-semibold" : ""}`}>
-            {e.event}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-medium text-[--text-primary] ${e.impact === "high" ? "font-semibold" : ""}`}>
+              {e.event}
+            </span>
+            {userTradedCurrencies.has(e.currency) && (
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-400 border border-violet-500/25 whitespace-nowrap">
+                <AlertCircle className="w-2.5 h-2.5" />
+                Concerne vos positions
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setNoteModal({ date: e.date, event: e.event });
+                setNoteText(getEventNote(e.date, e.event));
+              }}
+              className={`p-0.5 rounded transition hover:bg-[var(--bg-hover)] flex-shrink-0 ${
+                getEventNote(e.date, e.event) ? "text-amber-400" : "text-[--text-muted] opacity-0 group-hover:opacity-100"
+              }`}
+              title="Note personnelle"
+            >
+              <StickyNote className="w-3 h-3" />
+            </button>
+          </div>
         </td>
 
         {/* Previous */}
@@ -499,9 +615,27 @@ export default function CalendarEcoPage() {
             </span>
           )}
         </div>
-        <p className={`text-[11px] font-medium text-[--text-primary] leading-tight ${e.impact === "high" ? "font-semibold" : ""}`}>
-          {e.event}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className={`text-[11px] font-medium text-[--text-primary] leading-tight ${e.impact === "high" ? "font-semibold" : ""}`}>
+            {e.event}
+          </p>
+          {userTradedCurrencies.has(e.currency) && (
+            <span className="inline-flex items-center gap-0.5 text-[8px] font-bold px-1 py-0.5 rounded-full bg-violet-500/15 text-violet-400 border border-violet-500/25 whitespace-nowrap flex-shrink-0">
+              Vos positions
+            </span>
+          )}
+          <button
+            onClick={() => {
+              setNoteModal({ date: e.date, event: e.event });
+              setNoteText(getEventNote(e.date, e.event));
+            }}
+            className={`p-0.5 rounded transition flex-shrink-0 ${
+              getEventNote(e.date, e.event) ? "text-amber-400" : "text-[--text-muted]"
+            }`}
+          >
+            <StickyNote className="w-3 h-3" />
+          </button>
+        </div>
         {(e.previous || e.forecast || e.actual) && (
           <div className="flex items-center gap-3 mt-1 text-[10px]">
             <span className="text-[--text-muted]">Préc: {e.previous || "\u2014"}</span>
@@ -642,6 +776,56 @@ export default function CalendarEcoPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* ── Countdown to Next Event ──────────────────────────────── */}
+      {(() => {
+        const next = getNextEventCountdown(events);
+        if (!next) return null;
+        const cfg = IMPACT_CONFIG[next.event.impact];
+        return (
+          <div className={`glass rounded-xl px-4 py-2.5 flex items-center gap-3 ${cfg.bg} border ${cfg.border}`}>
+            <Clock className={`w-4 h-4 ${cfg.color} flex-shrink-0`} />
+            <span className="text-xs font-semibold text-[--text-primary]">
+              Prochain événement dans{" "}
+              <span className="text-amber-400 font-bold">{next.label}</span>
+            </span>
+            <span className="text-[10px] text-[--text-secondary]">
+              {COUNTRY_FLAGS[next.event.country] || ""} {next.event.currency} — {next.event.event}
+            </span>
+            <span className="ml-auto text-[10px] font-bold text-[--text-muted]">
+              {next.event.time}
+            </span>
+          </div>
+        );
+      })()}
+
+      {/* ── Quick Filter Pills ─────────────────────────────────────── */}
+      <div className="flex gap-2 flex-wrap">
+        {([
+          { key: "tous" as QuickFilter, label: "Tous" },
+          { key: "high_only" as QuickFilter, label: "Impact élevé seulement" },
+          { key: "today" as QuickFilter, label: "Aujourd\u2019hui" },
+          { key: "this_week" as QuickFilter, label: "Cette semaine" },
+        ]).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setQuickFilter(key)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              quickFilter === key
+                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 shadow-[0_0_8px_rgba(6,182,212,0.15)]"
+                : "glass text-[--text-secondary] hover:text-[--text-primary] border border-[--border]"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+        {userTradedCurrencies.size > 0 && (
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20">
+            <AlertCircle className="w-3 h-3" />
+            {userTradedCurrencies.size} devise{userTradedCurrencies.size > 1 ? "s" : ""} suivie{userTradedCurrencies.size > 1 ? "s" : ""}
+          </span>
+        )}
       </div>
 
       {/* ── Upcoming Events (compact horizontal strip) ─────────── */}
@@ -956,6 +1140,56 @@ export default function CalendarEcoPage() {
             </>
           )}
         </>
+      )}
+
+      {/* ── Note Modal ────────────────────────────────────────────── */}
+      {noteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setNoteModal(null)}>
+          <div
+            className="glass rounded-2xl p-5 w-full max-w-md mx-4 border border-[--border] shadow-xl"
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <StickyNote className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-semibold text-[--text-primary]">Note personnelle</h3>
+              </div>
+              <button onClick={() => setNoteModal(null)} className="p-1 rounded-lg hover:bg-[var(--bg-hover)] transition">
+                <X className="w-4 h-4 text-[--text-muted]" />
+              </button>
+            </div>
+            <p className="text-[10px] text-[--text-muted] mb-3 truncate">{noteModal.event}</p>
+            <textarea
+              value={noteText}
+              onChange={(ev) => setNoteText(ev.target.value)}
+              placeholder="Ajoutez votre note pour cet événement..."
+              className="w-full h-24 rounded-xl bg-[--bg-secondary]/50 border border-[--border] px-3 py-2 text-sm text-[--text-primary] placeholder:text-[--text-muted] resize-none focus:outline-none focus:border-cyan-500/50 transition"
+            />
+            <div className="flex justify-end gap-2 mt-3">
+              {noteText.trim() && (
+                <button
+                  onClick={() => {
+                    setEventNote(noteModal.date, noteModal.event, "");
+                    setNoteText("");
+                    setNoteModal(null);
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition"
+                >
+                  Supprimer
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setEventNote(noteModal.date, noteModal.event, noteText);
+                  setNoteModal(null);
+                }}
+                className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/30 transition"
+              >
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

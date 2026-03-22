@@ -14,7 +14,14 @@ import {
   BarChart3,
   Minus,
   Timer,
+  Bell,
+  BellOff,
+  Plus,
+  Trash2,
+  Target,
+  Award,
 } from "lucide-react";
+import { useTrades } from "@/hooks/useTrades";
 import { LocaleProvider, useTranslation } from "@/i18n/context";
 import { LOCALE_LABELS, Locale } from "@/i18n/types";
 
@@ -335,6 +342,375 @@ function SpreadBars({ spreads, currency, dateFmt }: { spreads: { date: string; s
         );
       })}
     </svg>
+  );
+}
+
+/* ─── Multi-Metal Price History (30 days overlay) ─── */
+function MultiMetalChart({
+  goldData,
+  silverData,
+  platData,
+  pallData,
+  currency,
+  dateFmt,
+}: {
+  goldData: number[];
+  silverData: number[];
+  platData: number[];
+  pallData: number[];
+  currency: Currency;
+  dateFmt: string;
+}) {
+  const [hoveredMetal, setHoveredMetal] = useState<string | null>(null);
+  const metals = [
+    { key: "gold", data: goldData, color: "#f59e0b", label: "Or" },
+    { key: "silver", data: silverData, color: "#94a3b8", label: "Argent" },
+    { key: "platinum", data: platData, color: "#06b6d4", label: "Platine" },
+    { key: "palladium", data: pallData, color: "#a855f7", label: "Palladium" },
+  ];
+
+  // Normalize all to 0-100 scale for overlay
+  const normalize = (data: number[]) => {
+    if (data.length < 2) return data;
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+    return data.map((v) => ((v - min) / range) * 100);
+  };
+
+  const w = 900;
+  const h = 200;
+  const padX = 10;
+  const padY = 10;
+  const chartW = w - padX * 2;
+  const chartH = h - padY * 2;
+
+  return (
+    <div>
+      <div className="flex items-center gap-4 mb-3 flex-wrap">
+        {metals.map((m) => (
+          <button
+            key={m.key}
+            className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition"
+            style={{
+              color: hoveredMetal === null || hoveredMetal === m.key ? m.color : "var(--text-muted)",
+              background: hoveredMetal === m.key ? `${m.color}15` : "transparent",
+            }}
+            onMouseEnter={() => setHoveredMetal(m.key)}
+            onMouseLeave={() => setHoveredMetal(null)}
+          >
+            <div className="w-2 h-2 rounded-full" style={{ background: m.color }} />
+            {m.label}
+            {m.data.length >= 2 && (
+              <span className={m.data[m.data.length - 1] >= m.data[0] ? "text-emerald-400" : "text-rose-400"}>
+                {((m.data[m.data.length - 1] - m.data[0]) / m.data[0] * 100).toFixed(1)}%
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: h }} preserveAspectRatio="none">
+        {metals.map((m) => {
+          const norm = normalize(m.data);
+          if (norm.length < 2) return null;
+          const points = norm.map((v, i) => `${padX + (i / (norm.length - 1)) * chartW},${padY + chartH - (v / 100) * chartH}`).join(" ");
+          const isActive = hoveredMetal === null || hoveredMetal === m.key;
+          return (
+            <polyline
+              key={m.key}
+              points={points}
+              fill="none"
+              stroke={m.color}
+              strokeWidth={hoveredMetal === m.key ? "3" : "2"}
+              strokeLinejoin="round"
+              opacity={isActive ? 1 : 0.15}
+              style={{ transition: "opacity 0.2s, stroke-width 0.2s" }}
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/* ─── Price Alerts ─── */
+interface PriceAlert {
+  id: string;
+  metal: Metal;
+  condition: "above" | "below";
+  price: number;
+  currency: Currency;
+  active: boolean;
+  triggered: boolean;
+}
+
+function PriceAlerts({ currency, currentPrices }: { currency: Currency; currentPrices: Record<Metal, number | null> }) {
+  const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newMetal, setNewMetal] = useState<Metal>("gold");
+  const [newCondition, setNewCondition] = useState<"above" | "below">("above");
+  const [newPrice, setNewPrice] = useState("");
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const prevPricesRef = useRef<Record<Metal, number | null>>({ gold: null, silver: null, platinum: null, palladium: null });
+
+  // Load from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("lbma-price-alerts");
+      if (saved) setAlerts(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, []);
+
+  // Save to localStorage
+  useEffect(() => {
+    localStorage.setItem("lbma-price-alerts", JSON.stringify(alerts));
+  }, [alerts]);
+
+  // Check alerts against current prices
+  useEffect(() => {
+    const prev = prevPricesRef.current;
+    setAlerts((prev2) =>
+      prev2.map((alert) => {
+        if (!alert.active || alert.triggered) return alert;
+        const price = currentPrices[alert.metal];
+        if (price == null) return alert;
+        const wasTriggered =
+          (alert.condition === "above" && price >= alert.price) ||
+          (alert.condition === "below" && price <= alert.price);
+        if (wasTriggered) {
+          const metalLabels: Record<Metal, string> = { gold: "Or", silver: "Argent", platinum: "Platine", palladium: "Palladium" };
+          setToastMsg(`${metalLabels[alert.metal]} ${alert.condition === "above" ? "au-dessus de" : "en-dessous de"} ${CURRENCY_SYMBOLS[alert.currency]}${alert.price}`);
+          return { ...alert, triggered: true };
+        }
+        return alert;
+      })
+    );
+    prevPricesRef.current = { ...currentPrices };
+  }, [currentPrices]);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toastMsg) {
+      const t = setTimeout(() => setToastMsg(null), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [toastMsg]);
+
+  const addAlert = () => {
+    const p = parseFloat(newPrice);
+    if (isNaN(p) || p <= 0) return;
+    setAlerts((prev) => [
+      ...prev,
+      { id: Date.now().toString(), metal: newMetal, condition: newCondition, price: p, currency, active: true, triggered: false },
+    ]);
+    setNewPrice("");
+    setShowAdd(false);
+  };
+
+  const removeAlert = (id: string) => setAlerts((prev) => prev.filter((a) => a.id !== id));
+  const toggleAlert = (id: string) =>
+    setAlerts((prev) => prev.map((a) => a.id === id ? { ...a, active: !a.active, triggered: false } : a));
+
+  const metalLabels: Record<Metal, string> = { gold: "Or", silver: "Argent", platinum: "Platine", palladium: "Palladium" };
+  const metalColors: Record<Metal, string> = { gold: "#f59e0b", silver: "#94a3b8", platinum: "#06b6d4", palladium: "#a855f7" };
+
+  return (
+    <div className="glass rounded-2xl p-6">
+      {/* Toast */}
+      {toastMsg && (
+        <div className="fixed top-4 right-4 z-50 glass rounded-xl px-4 py-3 flex items-center gap-3 animate-in fade-in slide-in-from-top-2"
+          style={{ border: "1px solid rgba(245,158,11,0.4)", background: "rgba(245,158,11,0.1)" }}>
+          <Bell className="w-4 h-4 text-amber-400" />
+          <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Alerte : {toastMsg}</span>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+          <Bell className="w-4 h-4 text-amber-400" />
+          Alertes de Prix
+        </h3>
+        <button
+          onClick={() => setShowAdd(!showAdd)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium hover:opacity-80 transition"
+          style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" }}
+        >
+          <Plus className="w-3 h-3" /> Nouvelle alerte
+        </button>
+      </div>
+
+      {/* Add alert form */}
+      {showAdd && (
+        <div className="flex items-end gap-3 mb-4 flex-wrap p-3 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
+          <div>
+            <label className="text-[10px] font-semibold uppercase block mb-1" style={{ color: "var(--text-muted)" }}>Metal</label>
+            <select
+              value={newMetal}
+              onChange={(e) => setNewMetal(e.target.value as Metal)}
+              className="rounded-lg px-2 py-1.5 text-xs"
+              style={{ background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
+            >
+              {(["gold", "silver", "platinum", "palladium"] as Metal[]).map((m) => (
+                <option key={m} value={m}>{metalLabels[m]}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold uppercase block mb-1" style={{ color: "var(--text-muted)" }}>Condition</label>
+            <select
+              value={newCondition}
+              onChange={(e) => setNewCondition(e.target.value as "above" | "below")}
+              className="rounded-lg px-2 py-1.5 text-xs"
+              style={{ background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
+            >
+              <option value="above">Au-dessus de</option>
+              <option value="below">En-dessous de</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold uppercase block mb-1" style={{ color: "var(--text-muted)" }}>Prix ({CURRENCY_SYMBOLS[currency]})</label>
+            <input
+              type="number"
+              value={newPrice}
+              onChange={(e) => setNewPrice(e.target.value)}
+              placeholder="ex: 2400"
+              className="rounded-lg px-2 py-1.5 text-xs w-28"
+              style={{ background: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border)", outline: "none" }}
+              onKeyDown={(e) => e.key === "Enter" && addAlert()}
+            />
+          </div>
+          <button
+            onClick={addAlert}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium"
+            style={{ background: "#f59e0b", color: "#000" }}
+          >
+            Ajouter
+          </button>
+        </div>
+      )}
+
+      {/* Alert list */}
+      {alerts.length === 0 ? (
+        <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
+          Aucune alerte configuree. Ajoutez-en une pour etre notifie quand un seuil est atteint.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {alerts.map((alert) => (
+            <div
+              key={alert.id}
+              className="flex items-center gap-3 px-3 py-2 rounded-xl"
+              style={{
+                background: alert.triggered ? "rgba(245,158,11,0.08)" : "var(--bg-secondary)",
+                border: alert.triggered ? "1px solid rgba(245,158,11,0.3)" : "1px solid transparent",
+                opacity: alert.active ? 1 : 0.5,
+              }}
+            >
+              <div className="w-2 h-2 rounded-full" style={{ background: metalColors[alert.metal] }} />
+              <span className="text-xs font-medium flex-1" style={{ color: "var(--text-primary)" }}>
+                {metalLabels[alert.metal]} {alert.condition === "above" ? ">" : "<"} {CURRENCY_SYMBOLS[alert.currency]}{alert.price.toLocaleString()}
+              </span>
+              {alert.triggered && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b" }}>
+                  Declenchee
+                </span>
+              )}
+              <button onClick={() => toggleAlert(alert.id)} className="hover:opacity-70 transition">
+                {alert.active ? <Bell className="w-3.5 h-3.5 text-amber-400" /> : <BellOff className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />}
+              </button>
+              <button onClick={() => removeAlert(alert.id)} className="hover:opacity-70 transition">
+                <Trash2 className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Trade Impact on Gold ─── */
+function TradeImpactSection({ goldDirection }: { goldDirection: "up" | "down" | "flat" }) {
+  const { trades } = useTrades();
+  const goldTrades = useMemo(() => {
+    return trades.filter((t) => {
+      const a = t.asset.toUpperCase();
+      return a.includes("XAUUSD") || a.includes("GOLD") || a.includes("XAU");
+    });
+  }, [trades]);
+
+  if (goldTrades.length === 0) return null;
+
+  const totalTrades = goldTrades.length;
+  const wins = goldTrades.filter((t) => t.result > 0).length;
+  const losses = goldTrades.filter((t) => t.result < 0).length;
+  const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
+  const totalPnl = goldTrades.reduce((sum, t) => sum + t.result, 0);
+  const avgPnl = totalTrades > 0 ? totalPnl / totalTrades : 0;
+
+  // Trades aligned with current gold direction
+  const alignedTrades = goldTrades.filter((t) => {
+    if (goldDirection === "up") return t.direction.toLowerCase() === "long" || t.direction.toLowerCase() === "buy";
+    if (goldDirection === "down") return t.direction.toLowerCase() === "short" || t.direction.toLowerCase() === "sell";
+    return false;
+  });
+  const alignedWins = alignedTrades.filter((t) => t.result > 0).length;
+  const alignedWinRate = alignedTrades.length > 0 ? (alignedWins / alignedTrades.length) * 100 : 0;
+
+  const directionLabels = { up: "haussiere", down: "baissiere", flat: "neutre" };
+
+  return (
+    <div className="glass rounded-2xl p-6">
+      <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+        <Target className="w-4 h-4 text-amber-400" />
+        Impact sur vos Trades
+      </h3>
+      <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
+        Tendance actuelle de l&apos;or : <span className={goldDirection === "up" ? "text-emerald-400" : goldDirection === "down" ? "text-rose-400" : ""} style={{ fontWeight: 600 }}>{directionLabels[goldDirection]}</span>
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="metric-card rounded-xl p-4">
+          <div className="text-[10px] font-semibold uppercase mb-1" style={{ color: "var(--text-muted)" }}>Trades XAUUSD</div>
+          <div className="text-xl font-bold mono" style={{ color: "var(--text-primary)" }}>{totalTrades}</div>
+        </div>
+        <div className="metric-card rounded-xl p-4">
+          <div className="text-[10px] font-semibold uppercase mb-1" style={{ color: "var(--text-muted)" }}>Win Rate</div>
+          <div className="text-xl font-bold mono" style={{ color: winRate >= 50 ? "#10b981" : "#ef4444" }}>{winRate.toFixed(1)}%</div>
+          <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>{wins}W / {losses}L</div>
+        </div>
+        <div className="metric-card rounded-xl p-4">
+          <div className="text-[10px] font-semibold uppercase mb-1" style={{ color: "var(--text-muted)" }}>P&L Total</div>
+          <div className={`text-xl font-bold mono ${totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+            {totalPnl >= 0 ? "+" : ""}{totalPnl.toFixed(2)}$
+          </div>
+          <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>Moy: {avgPnl >= 0 ? "+" : ""}{avgPnl.toFixed(2)}$</div>
+        </div>
+        <div className="metric-card rounded-xl p-4">
+          <div className="text-[10px] font-semibold uppercase mb-1" style={{ color: "var(--text-muted)" }}>
+            WR en tendance {directionLabels[goldDirection]}
+          </div>
+          <div className="text-xl font-bold mono" style={{ color: alignedWinRate >= 50 ? "#10b981" : alignedTrades.length === 0 ? "var(--text-muted)" : "#ef4444" }}>
+            {alignedTrades.length > 0 ? `${alignedWinRate.toFixed(1)}%` : "N/A"}
+          </div>
+          <div className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+            {alignedTrades.length > 0 ? `${alignedTrades.length} trades alignes` : "Aucun trade aligne"}
+          </div>
+        </div>
+      </div>
+      {/* Quick insight */}
+      {alignedTrades.length > 0 && (
+        <div className="mt-4 p-3 rounded-xl flex items-center gap-2" style={{ background: alignedWinRate >= 50 ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${alignedWinRate >= 50 ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}` }}>
+          <Award className="w-4 h-4" style={{ color: alignedWinRate >= 50 ? "#10b981" : "#ef4444" }} />
+          <span className="text-xs" style={{ color: "var(--text-primary)" }}>
+            {alignedWinRate >= 60
+              ? "Excellent ! Vous performez bien quand l'or suit cette tendance."
+              : alignedWinRate >= 50
+              ? "Performance correcte dans cette direction. Continuez a suivre votre plan."
+              : "Attention : votre win rate baisse quand vous tradez dans cette direction."}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -888,6 +1264,39 @@ function LBMAContent() {
               </div>
             </div>
           </div>
+
+          {/* Multi-Metal 30-Day Overlay Chart */}
+          <div className="glass rounded-2xl p-6">
+            <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+              <BarChart3 className="w-4 h-4 text-cyan-400" />
+              Comparatif 30 Jours (Normalise)
+            </h3>
+            <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+              Performance relative de chaque metal sur les 30 derniers jours
+            </p>
+            <MultiMetalChart
+              goldData={goldSparkline}
+              silverData={silverSparkline}
+              platData={platSparkline}
+              pallData={pallSparkline}
+              currency={currency}
+              dateFmt={dateFmt}
+            />
+          </div>
+
+          {/* Trade Impact */}
+          <TradeImpactSection goldDirection={goldSparkline.length >= 2 ? (goldSparkline[goldSparkline.length - 1] > goldSparkline[0] ? "up" : goldSparkline[goldSparkline.length - 1] < goldSparkline[0] ? "down" : "flat") : "flat"} />
+
+          {/* Price Alerts */}
+          <PriceAlerts
+            currency={currency}
+            currentPrices={{
+              gold: currentGoldPm?.v[idx] ?? null,
+              silver: currentSilver?.v[idx] ?? null,
+              platinum: currentPlatPm?.v[idx] ?? null,
+              palladium: currentPallPm?.v[idx] ?? null,
+            }}
+          />
 
           {/* Data Table — Last 30 entries */}
           <div className="glass rounded-2xl overflow-hidden">

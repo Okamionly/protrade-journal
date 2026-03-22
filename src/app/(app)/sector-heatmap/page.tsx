@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { RefreshCw, BarChart3, AlertTriangle, X, Clock, Globe, TrendingUp, TrendingDown, Info } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { RefreshCw, BarChart3, AlertTriangle, X, Clock, Globe, TrendingUp, TrendingDown, Info, ArrowUpCircle, ArrowDownCircle, Eye } from "lucide-react";
+import { useTrades } from "@/hooks/useTrades";
 
 interface SectorStock {
   symbol: string;
@@ -128,7 +129,32 @@ export default function SectorHeatmapPage() {
   const [globalLive, setGlobalLive] = useState(false);
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const { trades } = useTrades();
+
   const allSymbols = Object.values(SECTORS).flat().map((s) => s.symbol);
+
+  // Map user's trades to sectors for performance comparison
+  const userSectorPerformance = useMemo(() => {
+    const sectorPnl: Record<string, { totalPnl: number; tradeCount: number }> = {};
+    const allStocks = Object.entries(SECTORS).flatMap(([sector, stocks]) =>
+      stocks.map((s) => ({ ...s, sector }))
+    );
+    const symbolToSector: Record<string, string> = {};
+    for (const s of allStocks) {
+      symbolToSector[s.symbol.toUpperCase()] = s.sector;
+    }
+
+    for (const t of trades) {
+      const asset = (t.asset || "").toUpperCase();
+      const sector = symbolToSector[asset];
+      if (sector) {
+        if (!sectorPnl[sector]) sectorPnl[sector] = { totalPnl: 0, tradeCount: 0 };
+        sectorPnl[sector].totalPnl += t.result || 0;
+        sectorPnl[sector].tradeCount += 1;
+      }
+    }
+    return sectorPnl;
+  }, [trades]);
 
   const fetchGlobalData = useCallback(async () => {
     setGlobalLoading(true);
@@ -242,6 +268,24 @@ export default function SectorHeatmapPage() {
     const avg = totalWeight > 0 ? pcts.reduce((s, p, i) => s + p * (weights[i] / totalWeight), 0) : 0;
     return { name, avg, stocks };
   });
+
+  // Sector rotation: compare current avg to previous period avg
+  const sectorRotation = sectorPerf.map(({ name, avg, stocks }) => {
+    const prevPcts = stocks.map((s) => previousQuotes[s.symbol]?.changepct || 0);
+    const weights = stocks.map((s) => s.marketCap);
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    const prevAvg = totalWeight > 0 ? prevPcts.reduce((s, p, i) => s + p * (weights[i] / totalWeight), 0) : 0;
+    const delta = avg - prevAvg;
+    let direction: "in" | "out" | "stable" = "stable";
+    if (delta > 0.15) direction = "in";
+    else if (delta < -0.15) direction = "out";
+    return { name, avg, prevAvg, delta, direction };
+  });
+
+  // Top 3 biggest movers today ("Secteurs a surveiller")
+  const topMovers = [...sectorPerf]
+    .sort((a, b) => Math.abs(b.avg) - Math.abs(a.avg))
+    .slice(0, 3);
 
   const displaySectors = selectedSector ? sectorPerf.filter((s) => s.name === selectedSector) : sectorPerf;
 
@@ -459,6 +503,96 @@ export default function SectorHeatmapPage() {
         </div>
       )}
 
+      {/* Secteurs à surveiller */}
+      {hasSectorData && topMovers.length > 0 && (
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Eye className="w-5 h-5 text-amber-400" />
+            <h3 className="font-semibold text-[--text-primary] text-sm">Secteurs à surveiller</h3>
+            <span className="text-[10px] text-[--text-muted]">Top 3 mouvements du jour</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {topMovers.map(({ name, avg }, idx) => {
+              const isUp = avg >= 0;
+              const userPerf = userSectorPerformance[name];
+              return (
+                <div
+                  key={name}
+                  className={`rounded-xl p-3 border ${
+                    idx === 0
+                      ? isUp ? "bg-emerald-500/10 border-emerald-500/30" : "bg-rose-500/10 border-rose-500/30"
+                      : "bg-[--bg-secondary]/30 border-[--border]/30"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-bold text-[--text-primary]">{name}</span>
+                    {idx === 0 && (
+                      <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+                        isUp ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
+                      }`}>
+                        Plus fort mouvement
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-lg font-bold mono ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
+                    {isUp ? "+" : ""}{avg.toFixed(2)}%
+                  </p>
+                  {userPerf && (
+                    <p className="text-[10px] text-[--text-muted] mt-1">
+                      Votre P&L: <span className={userPerf.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                        {userPerf.totalPnl >= 0 ? "+" : ""}{userPerf.totalPnl.toFixed(2)}$
+                      </span> ({userPerf.tradeCount} trade{userPerf.tradeCount > 1 ? "s" : ""})
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Sector Rotation Indicator */}
+      {hasSectorData && Object.keys(previousQuotes).length > 0 && (
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <RefreshCw className="w-5 h-5 text-cyan-400" />
+            <h3 className="font-semibold text-[--text-primary] text-sm">Rotation sectorielle</h3>
+            <span className="text-[10px] text-[--text-muted]">Flux entrants/sortants basés sur les variations récentes</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {sectorRotation.map(({ name, direction, delta }) => (
+              <div
+                key={name}
+                className={`rounded-xl px-3 py-2 border flex items-center gap-2 ${
+                  direction === "in"
+                    ? "bg-emerald-500/10 border-emerald-500/25"
+                    : direction === "out"
+                    ? "bg-rose-500/10 border-rose-500/25"
+                    : "bg-[--bg-secondary]/20 border-[--border]/20"
+                }`}
+              >
+                {direction === "in" ? (
+                  <ArrowUpCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                ) : direction === "out" ? (
+                  <ArrowDownCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                ) : (
+                  <span className="w-4 h-4 flex items-center justify-center text-[--text-muted] text-xs">—</span>
+                )}
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-[--text-primary] truncate">{name}</p>
+                  <p className={`text-[10px] font-medium ${
+                    direction === "in" ? "text-emerald-400" : direction === "out" ? "text-rose-400" : "text-[--text-muted]"
+                  }`}>
+                    {direction === "in" ? "Flux entrant" : direction === "out" ? "Flux sortant" : "Stable"}
+                    <span className="ml-1 text-[--text-muted]">({delta >= 0 ? "+" : ""}{delta.toFixed(2)}%)</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Sector Pills */}
       <div className="flex flex-wrap gap-2">
         <button
@@ -502,6 +636,16 @@ export default function SectorHeatmapPage() {
                   <BarChart3 className="w-5 h-5 text-cyan-400" />
                   <h3 className="font-semibold text-[--text-primary]">{name}</h3>
                   <span className="text-xs text-[--text-muted]">({stocks.length} titres)</span>
+                  {userSectorPerformance[name] && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                      userSectorPerformance[name].totalPnl >= 0
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
+                        : "bg-rose-500/10 text-rose-400 border-rose-500/25"
+                    }`}>
+                      Votre P&L: {userSectorPerformance[name].totalPnl >= 0 ? "+" : ""}{userSectorPerformance[name].totalPnl.toFixed(2)}$
+                      <span className="text-[--text-muted] ml-1">({userSectorPerformance[name].tradeCount})</span>
+                    </span>
+                  )}
                 </div>
                 <span className={`text-sm font-medium ${avg >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                   {avg >= 0 ? "+" : ""}{avg.toFixed(2)}%
