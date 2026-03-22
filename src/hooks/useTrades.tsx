@@ -107,9 +107,12 @@ export function TradesProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const tradesRef = useRef<Trade[]>(trades);
+  tradesRef.current = trades;
+
   const deleteTrade = useCallback(
     async (id: string) => {
-      const previous = trades;
+      const previous = tradesRef.current;
       setTrades((prev) => prev.filter((t) => t.id !== id));
 
       const res = await fetch(`/api/trades/${id}`, { method: "DELETE" });
@@ -121,12 +124,12 @@ export function TradesProvider({ children }: { children: ReactNode }) {
       setTrades(previous);
       return false;
     },
-    [trades],
+    [],
   );
 
   const bulkDeleteTrades = useCallback(
     async (ids: string[]) => {
-      const previous = trades;
+      const previous = tradesRef.current;
       setTrades((prev) => prev.filter((t) => !ids.includes(t.id)));
 
       const res = await fetch("/api/trades", {
@@ -142,7 +145,7 @@ export function TradesProvider({ children }: { children: ReactNode }) {
       setTrades(previous);
       return false;
     },
-    [trades],
+    [],
   );
 
   const updateTrade = useCallback(

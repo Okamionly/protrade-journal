@@ -46,7 +46,8 @@ function startOfToday() {
 
 function startOfWeek() {
   const d = new Date();
-  d.setDate(d.getDate() - d.getDay() + 1); // Monday
+  const day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1)); // Monday
   d.setHours(0, 0, 0, 0);
   return d;
 }

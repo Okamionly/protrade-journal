@@ -1,5 +1,16 @@
-export function calculateRR(entry: number, sl: number, tp: number): string {
+export function calculateRR(entry: number, sl: number, tp: number, direction?: string): string {
   if (!entry || !sl || !tp || entry === sl) return "-";
+  // Validate SL/TP placement against trade direction when direction is provided
+  if (direction) {
+    const dir = direction.toUpperCase();
+    if (dir === "LONG" || dir === "BUY") {
+      // For LONG: SL should be below entry, TP should be above entry
+      if (sl >= entry || tp <= entry) return "-";
+    } else if (dir === "SHORT" || dir === "SELL") {
+      // For SHORT: SL should be above entry, TP should be below entry
+      if (sl <= entry || tp >= entry) return "-";
+    }
+  }
   const risk = Math.abs(entry - sl);
   if (risk === 0) return "-";
   const reward = Math.abs(tp - entry);
@@ -32,7 +43,7 @@ export interface TradeStats {
 }
 
 export function computeStats(
-  trades: { result: number; entry: number; sl: number; tp: number }[]
+  trades: { result: number; entry: number; sl: number; tp: number; commission?: number; swap?: number }[]
 ): TradeStats {
   const total = trades.reduce((sum, t) => sum + t.result, 0);
   const wins = trades.filter((t) => t.result > 0);
@@ -52,14 +63,14 @@ export function computeStats(
 
   const grossWins = wins.reduce((s, t) => s + t.result, 0);
   const grossLosses = Math.abs(losses.reduce((s, t) => s + t.result, 0));
-  const profitFactor = grossLosses > 0 ? grossWins / grossLosses : grossWins > 0 ? Infinity : 0;
+  const profitFactor = grossLosses > 0 ? grossWins / grossLosses : grossWins > 0 ? 999 : 0;
 
   // Max drawdown
   let peak = 0;
   let maxDD = 0;
   let cumulative = 0;
   trades.forEach((t) => {
-    cumulative += t.result;
+    cumulative += t.result - (t.commission || 0) - (t.swap || 0);
     if (cumulative > peak) peak = cumulative;
     const dd = peak - cumulative;
     if (dd > maxDD) maxDD = dd;

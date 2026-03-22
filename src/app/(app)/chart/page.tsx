@@ -241,7 +241,7 @@ function TradeRow({ trade }: { trade: Trade }) {
         <span style={{ color: "var(--text-muted, #666)" }}>→</span>
         <span>{fmtPrice(trade.exit)}</span>
         <a
-          href={`/trades`}
+          href={`/journal`}
           className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors"
           style={{ color: "var(--accent, #6366f1)" }}
         >
