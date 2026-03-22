@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 export async function POST() {
   try {
@@ -30,7 +31,8 @@ export async function POST() {
       });
     }
 
-    const hashedPassword = await bcrypt.hash("demo1234", 10);
+    const demoPassword = process.env.DEMO_PASSWORD || crypto.randomUUID().slice(0, 12);
+    const hashedPassword = await bcrypt.hash(demoPassword, 10);
 
     const demoUser = await prisma.user.create({
       data: {
@@ -75,9 +77,13 @@ export async function POST() {
 
     await prisma.trade.createMany({ data: trades });
 
-    return NextResponse.json({
+    const response: Record<string, string> = {
       message: `Seed terminé : utilisateur demo créé avec ${trades.length} trades.`,
-    });
+    };
+    if (!process.env.DEMO_PASSWORD) {
+      response.generatedPassword = demoPassword;
+    }
+    return NextResponse.json(response);
   } catch (error) {
     console.error("POST admin/seed error:", error);
     return NextResponse.json({ error: "Erreur lors du seed" }, { status: 500 });

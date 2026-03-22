@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || "protrade-admin-2026";
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 export async function GET() {
   try {
@@ -43,8 +43,8 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const secret = req.headers.get("x-admin-secret");
-    if (secret !== ADMIN_SECRET) {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    if (!ADMIN_SECRET || secret !== ADMIN_SECRET) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
     const body = await req.json();

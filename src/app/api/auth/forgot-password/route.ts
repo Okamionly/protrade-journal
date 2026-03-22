@@ -25,10 +25,8 @@ export async function POST(req: Request) {
       });
 
       const resetUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/reset-password?token=${resetToken}`;
-      console.log("=== RESET PASSWORD ===");
-      console.log("User:", email);
-      console.log("Reset URL:", resetUrl);
-      console.log("======================");
+      // TODO: Send email with resetUrl via Resend/SendGrid
+      // For now, the token is saved in DB but not delivered
     }
 
     // Always return success for security (don't reveal if email exists)
