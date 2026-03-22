@@ -706,23 +706,7 @@ export default function ChartPage() {
     };
   }, []);
 
-  /* ── Listen for symbol changes from TradingView ───── */
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      if (typeof e.data === "string") {
-        try {
-          const msg = JSON.parse(e.data);
-          if (msg.name === "symbolChange" && msg.data?.symbol) {
-            setCurrentSymbol(msg.data.symbol);
-          }
-        } catch {
-          // not JSON, ignore
-        }
-      }
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, []);
+  /* ── Symbol change detection is not supported by TradingView embed widget ── */
 
   /* ── Build main widget ──────────────────────────────── */
   const buildWidget = useCallback(() => {
