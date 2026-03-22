@@ -24,15 +24,15 @@ import de from "@/i18n/locales/de.json";
 const dicts: Record<Locale, Record<string, string>> = { fr, en, ar, es, de };
 
 const tabDefs = [
-  { icon: BarChart3, labelKey: "landing_tabAnalytics", img: "analytics" },
-  { icon: BookOpen, labelKey: "landing_tabJournal", img: "dashboard" },
-  { icon: Brain, labelKey: "landing_tabAiCoach", img: "ai-coach" },
-  { icon: Monitor, labelKey: "landing_tabWarRoom", img: "war-room" },
-  { icon: LineChart, labelKey: "landing_tabBacktest", img: "backtest" },
-  { icon: Play, labelKey: "landing_tabReplay", img: "challenges" },
-  { icon: CalendarDays, labelKey: "landing_tabCalendar", img: "calendar" },
-  { icon: MessageSquare, labelKey: "landing_tabChat", img: "chat" },
-  { icon: Swords, labelKey: "landing_tabChallenges", img: "challenges" },
+  { icon: BarChart3, labelKey: "landing_tabAnalytics", img: "analytics", gif: true },
+  { icon: BookOpen, labelKey: "landing_tabJournal", img: "dashboard", gif: true },
+  { icon: Brain, labelKey: "landing_tabAiCoach", img: "ai-coach", gif: true },
+  { icon: Monitor, labelKey: "landing_tabWarRoom", img: "war-room", gif: false },
+  { icon: LineChart, labelKey: "landing_tabBacktest", img: "backtest", gif: false },
+  { icon: Play, labelKey: "landing_tabReplay", img: "challenges", gif: false },
+  { icon: CalendarDays, labelKey: "landing_tabCalendar", img: "calendar", gif: true },
+  { icon: MessageSquare, labelKey: "landing_tabChat", img: "chat", gif: true },
+  { icon: Swords, labelKey: "landing_tabChallenges", img: "challenges", gif: false },
 ];
 
 interface Props {
@@ -77,13 +77,24 @@ export default function LandingFeatureTabs({ locale = "fr" }: Props) {
       <div className="mt-6 sm:mt-8 relative max-w-6xl mx-auto">
         <div className="absolute -inset-2 bg-gradient-to-r from-blue-100/50 via-cyan-100/50 to-emerald-100/50 rounded-3xl blur-xl" />
         <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50">
-          <Image
-            src={`/screenshots/${tabDefs[active].img}.png`}
-            alt={t(tabDefs[active].labelKey)}
-            width={1920}
-            height={1080}
-            className="w-full h-auto"
-          />
+          {tabDefs[active].gif ? (
+            <img
+              key={tabDefs[active].img}
+              src={`/screenshots/${tabDefs[active].img}.gif`}
+              alt={t(tabDefs[active].labelKey)}
+              className="w-full h-auto"
+              loading="lazy"
+            />
+          ) : (
+            <Image
+              key={tabDefs[active].img}
+              src={`/screenshots/${tabDefs[active].img}.png`}
+              alt={t(tabDefs[active].labelKey)}
+              width={1920}
+              height={1080}
+              className="w-full h-auto"
+            />
+          )}
         </div>
       </div>
     </div>
