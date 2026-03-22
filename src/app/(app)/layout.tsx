@@ -1,5 +1,10 @@
 import { AppShell } from "@/components/AppShell";
+import { TradesProvider } from "@/hooks/useTrades";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <AppShell>{children}</AppShell>;
+  return (
+    <TradesProvider>
+      <AppShell>{children}</AppShell>
+    </TradesProvider>
+  );
 }

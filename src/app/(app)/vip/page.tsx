@@ -233,14 +233,13 @@ function VipPage() {
               className="text-2xl sm:text-3xl font-bold mb-2"
               style={{ color: "var(--text-primary, #e5e7eb)" }}
             >
-              MarketPhase VIP &mdash; Analyses Premium
+              Prenez un avantage sur le marché
             </h1>
             <p
               className="text-sm sm:text-base"
               style={{ color: "var(--text-secondary, #9ca3af)" }}
             >
-              Recevez chaque mois des indicateurs exclusifs et des analyses macro
-              compl&egrave;tes
+              Indicateurs exclusifs, analyses macro et scénarios de trading — le tout livré chaque semaine pour des décisions plus rentables
             </p>
           </div>
 
@@ -290,7 +289,7 @@ function VipPage() {
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  S&apos;abonner - 9&euro;/mois
+                  Débloquer l&apos;accès VIP — 9€/mois
                 </>
               )}
             </button>
@@ -786,7 +785,7 @@ function VipPage() {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    S&apos;abonner maintenant
+                    Rejoindre le club VIP maintenant
                   </>
                 )}
               </button>

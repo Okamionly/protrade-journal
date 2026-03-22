@@ -1389,7 +1389,7 @@ export default function ChatPage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.role === "ADMIN") setIsAdmin(true);
-        setIsVip(data?.role === "VIP" || data?.role === "ADMIN");
+        setIsVip(data?.role === "VIP" || data?.role === "PRO" || data?.role === "ADMIN");
         if (data?.banned) setIsBanned(true);
       })
       .catch(() => setIsVip(false));

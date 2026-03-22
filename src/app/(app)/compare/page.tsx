@@ -245,7 +245,7 @@ export default function ComparePage() {
     fetch("/api/user/role")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        setIsVip(data?.role === "VIP" || data?.role === "ADMIN");
+        setIsVip(data?.role === "VIP" || data?.role === "PRO" || data?.role === "ADMIN");
       })
       .catch(() => setIsVip(false));
   }, []);

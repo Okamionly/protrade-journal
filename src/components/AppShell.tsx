@@ -8,6 +8,7 @@ import { LiveTicker } from "./LiveTicker";
 import { QuickTradeButton } from "./QuickTradeButton";
 import { OnboardingWizard } from "./OnboardingWizard";
 import { LocaleProvider } from "@/i18n/context";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { Menu, X } from "lucide-react";
 
 const SidebarContext = createContext({ collapsed: false });
@@ -90,7 +91,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           }`}
         >
           <div className="max-w-[1400px] mx-auto">
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </div>
         </main>
 
