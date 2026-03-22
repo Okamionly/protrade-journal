@@ -58,13 +58,12 @@ const PLANS: PlanDef[] = [
     vip: true,
     features: [
       { text: "Tout le plan Free +", icon: Check },
-      { text: "Indicateurs TradingView exclusifs", icon: Star },
-      { text: "Analyses macro hebdomadaires", icon: Globe },
+      { text: "Indicateurs TradingView exclusifs (Pine Script)", icon: Star },
+      { text: "Analyses macro hebdomadaires (FOMC, DXY)", icon: Globe },
       { text: "Scénarios de trading avec probabilités", icon: BarChart3 },
       { text: "Niveaux GPS supports/résistances", icon: Zap },
-      { text: "Chat & salons VIP privés", icon: MessageCircle },
-      { text: "Challenges & Classement", icon: Trophy },
-      { text: "AI Coach avancé", icon: FlaskConical },
+      { text: "Challenges & Classement communautaire", icon: Trophy },
+      { text: "Chat VIP & salons privés", icon: MessageCircle },
       { text: "Badge VIP doré", icon: Crown },
       { text: "Support prioritaire", icon: Shield },
     ],
@@ -78,11 +77,11 @@ const COMPARISON = [
   { feature: "Analytics de base", free: true, vip: true },
   { feature: "Calendrier P&L", free: true, vip: true },
   { feature: "Heatmap", free: true, vip: true },
-  { feature: "AI Coach", free: "3 msg/jour", vip: "Illimité" },
-  { feature: "Backtest", free: "30 jours", vip: "1 an" },
-  { feature: "Rapports PDF", free: "1/mois", vip: "Illimités" },
-  { feature: "Chat communautaire", free: "Lecture seule", vip: "Écriture + VIP rooms" },
-  { feature: "Challenges", free: false, vip: true },
+  { feature: "AI Coach", free: true, vip: true },
+  { feature: "Backtest", free: true, vip: true },
+  { feature: "Rapports PDF", free: true, vip: true },
+  { feature: "Chat communautaire", free: true, vip: true },
+  { feature: "Challenges & Classement", free: false, vip: true },
   { feature: "Badge VIP doré", free: false, vip: true },
   { feature: "Indicateurs TradingView exclusifs", free: false, vip: true },
   { feature: "Analyses macro hebdomadaires", free: false, vip: true },
@@ -114,7 +113,7 @@ const FAQ = [
   },
   {
     q: "Que contient le plan VIP ?",
-    a: "Le plan VIP débloque toutes les fonctionnalités avancées : AI Coach illimité, challenges, chat écriture + VIP rooms, backtest 1 an, rapports PDF illimités, indicateurs TradingView exclusifs, analyses macro hebdomadaires, scénarios de trading et le support prioritaire.",
+    a: "Le plan VIP débloque les fonctionnalités exclusives : indicateurs TradingView (Pine Script), analyses macro hebdomadaires, scénarios de trading, niveaux GPS, challenges & classement, chat VIP privé, badge doré et support prioritaire.",
   },
 ];
 
@@ -226,7 +225,7 @@ export default function PricingPage() {
       )}
 
       {/* Plan cards */}
-      <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-20 items-end">
+      <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-20 items-stretch">
         {PLANS.map((plan) => {
           const isCurrent = currentPlan === plan.id;
           const price = getPrice(plan.monthlyPrice);
