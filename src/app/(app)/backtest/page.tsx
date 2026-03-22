@@ -8,7 +8,8 @@ import {
   FlaskConical, SlidersHorizontal, TrendingUp, TrendingDown,
   ArrowUpRight, ArrowDownRight, Lightbulb, Zap, Target,
   ShieldCheck, Crosshair, BarChart3, ToggleLeft, ToggleRight,
-  ChevronDown, Minus, Trophy,
+  ChevronDown, Minus, Trophy, Clock, Brain, Flame, Rocket,
+  CalendarClock,
 } from "lucide-react";
 
 // --- Types ---
@@ -338,18 +339,231 @@ function generateInsights(actual: Stats, simulated: Stats, config: SimConfig): s
   return insights.slice(0, 5);
 }
 
-// --- Preset Scenarios ---
-const PRESETS: { label: string; icon: React.ElementType; config: Partial<SimConfig> }[] = [
-  { label: "Discipline parfaite", icon: ShieldCheck, config: { tpRR: 2, slModifier: -20, maxPerDay: 3 } },
-  { label: "Sans revenge trading", icon: Target, config: { maxPerDay: 3 } },
-  { label: "Sniper mode", icon: Crosshair, config: { tpRR: 3, maxPerDay: 2, removeWorst: 3 } },
-  { label: "Meilleure stratégie", icon: Trophy, config: {} }, // Filled dynamically
+// --- Scenario Preset Types ---
+type ScenarioPresetId = "sniper" | "discipline" | "best-strategy" | "no-emotions" | "optimal-hours";
+
+interface ScenarioPreset {
+  id: ScenarioPresetId;
+  label: string;
+  icon: React.ElementType;
+  description: string;
+  /** Custom filter applied BEFORE the normal SimConfig pipeline */
+  filterFn?: (trades: Trade[], allTrades: Trade[]) => Trade[];
+  config: Partial<SimConfig>;
+}
+
+const NEGATIVE_EMOTIONS = ["stressé", "frustré", "tilt", "peur", "colère", "anxieux", "ennui"];
+
+function isNegativeEmotion(emotion: string | null): boolean {
+  if (!emotion) return false;
+  return NEGATIVE_EMOTIONS.some((e) => emotion.toLowerCase().includes(e));
+}
+
+/** Find trades that are "revenge" — taken within 15 min of a losing trade */
+function findRevengeTrades(trades: Trade[]): Set<string> {
+  const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const revengeIds = new Set<string>();
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    if (prev.result < 0) {
+      const diffMs = new Date(curr.date).getTime() - new Date(prev.date).getTime();
+      if (diffMs >= 0 && diffMs <= 15 * 60 * 1000) {
+        revengeIds.add(curr.id);
+      }
+    }
+  }
+  return revengeIds;
+}
+
+/** Find the best 4 hours based on total P&L */
+function findBestHours(trades: Trade[], count: number = 4): number[] {
+  const hourPnl: Record<number, number> = {};
+  trades.forEach((t) => {
+    const h = new Date(t.date).getHours();
+    hourPnl[h] = (hourPnl[h] || 0) + t.result;
+  });
+  return Object.entries(hourPnl)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, count)
+    .map(([h]) => +h);
+}
+
+/** Compute R:R for a trade */
+function getTradeRR(t: Trade): number {
+  const risk = Math.abs(t.entry - t.sl);
+  if (risk === 0 || t.result <= 0) return 0;
+  return t.result / (risk * t.lots || 1);
+}
+
+const SCENARIO_PRESETS: ScenarioPreset[] = [
+  {
+    id: "sniper",
+    label: "Sniper Mode",
+    icon: Crosshair,
+    description: "Retirer tous les trades avec R:R < 2",
+    filterFn: (trades) => trades.filter((t) => t.result <= 0 || getTradeRR(t) >= 2),
+    config: {},
+  },
+  {
+    id: "discipline",
+    label: "Discipline",
+    icon: Flame,
+    description: "Retirer les revenge trades (< 15 min après une perte)",
+    filterFn: (trades) => {
+      const revengeIds = findRevengeTrades(trades);
+      return trades.filter((t) => !revengeIds.has(t.id));
+    },
+    config: {},
+  },
+  {
+    id: "best-strategy",
+    label: "Meilleure stratégie",
+    icon: Trophy,
+    description: "Garder uniquement la stratégie la plus rentable",
+    config: {}, // strategyFilter set dynamically
+  },
+  {
+    id: "no-emotions",
+    label: "Sans émotions",
+    icon: Brain,
+    description: "Retirer les trades Stressé, Frustré, Tilt…",
+    filterFn: (trades) => trades.filter((t) => !isNegativeEmotion(t.emotion)),
+    config: {},
+  },
+  {
+    id: "optimal-hours",
+    label: "Heures optimales",
+    icon: CalendarClock,
+    description: "Garder uniquement tes 4 meilleures heures",
+    filterFn: (trades, allTrades) => {
+      const bestHours = findBestHours(allTrades, 4);
+      return trades.filter((t) => bestHours.includes(new Date(t.date).getHours()));
+    },
+    config: {},
+  },
 ];
+
+// --- Impact Summary Component ---
+function ImpactSummary({
+  actualStats,
+  simStats,
+  removedCount,
+  totalCount,
+}: {
+  actualStats: Stats;
+  simStats: Stats;
+  removedCount: number;
+  totalCount: number;
+}) {
+  const pnlDiff = simStats.totalPnL - actualStats.totalPnL;
+  const pnlPct = actualStats.totalPnL !== 0 ? ((pnlDiff / Math.abs(actualStats.totalPnL)) * 100) : 0;
+  const wrDiff = simStats.winRate - actualStats.winRate;
+
+  const items: { label: string; value: string; isBiggest: boolean }[] = [];
+
+  const pnlStr = `P&L: ${actualStats.totalPnL >= 0 ? "+" : ""}${actualStats.totalPnL.toFixed(0)}€ → ${simStats.totalPnL >= 0 ? "+" : ""}${simStats.totalPnL.toFixed(0)}€ (${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(0)}%)`;
+  const wrStr = `Win Rate: ${actualStats.winRate.toFixed(0)}% → ${simStats.winRate.toFixed(0)}% (${wrDiff >= 0 ? "+" : ""}${wrDiff.toFixed(0)}pp)`;
+  const removedStr = `Trades supprimés: ${removedCount} (sur ${totalCount})`;
+
+  // Determine biggest improvement
+  const improvements = [
+    { key: "pnl", magnitude: Math.abs(pnlPct) },
+    { key: "wr", magnitude: Math.abs(wrDiff) },
+  ];
+  const biggest = improvements.sort((a, b) => b.magnitude - a.magnitude)[0].key;
+
+  items.push({ label: pnlStr, value: "pnl", isBiggest: biggest === "pnl" && pnlDiff > 0 });
+  items.push({ label: wrStr, value: "wr", isBiggest: biggest === "wr" && wrDiff > 0 });
+  items.push({ label: removedStr, value: "removed", isBiggest: false });
+
+  return (
+    <div className="glass p-4 rounded-xl space-y-2">
+      <h3 className="text-xs font-semibold flex items-center gap-2 mb-2" style={{ color: "var(--text-primary)" }}>
+        <Rocket className="w-4 h-4 text-cyan-400" /> Impact du Scénario
+      </h3>
+      {items.map((item) => (
+        <div
+          key={item.value}
+          className="flex items-center gap-2 text-xs mono py-1.5 px-3 rounded-lg"
+          style={{
+            color: item.isBiggest ? "#22c55e" : "var(--text-secondary)",
+            background: item.isBiggest ? "rgba(34,197,94,0.1)" : "transparent",
+            fontWeight: item.isBiggest ? 600 : 400,
+          }}
+        >
+          {item.isBiggest && <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+          {item.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --- Projection Component ---
+function ProjectionPanel({
+  simStats,
+  actualStats,
+  trades,
+}: {
+  simStats: Stats;
+  actualStats: Stats;
+  trades: Trade[];
+}) {
+  // Calculate the time span of trades in months
+  if (trades.length < 2) return null;
+  const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const firstDate = new Date(sorted[0].date);
+  const lastDate = new Date(sorted[sorted.length - 1].date);
+  const months = Math.max(1, (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+
+  const monthlyPnl = simStats.totalPnL / months;
+  const projectedAnnual = monthlyPnl * 12;
+  const target = 10000;
+  const monthsToTarget = monthlyPnl > 0 ? target / monthlyPnl : Infinity;
+
+  // Only show if scenario is better
+  if (simStats.totalPnL <= actualStats.totalPnL) return null;
+
+  return (
+    <div className="glass p-4 rounded-xl space-y-3">
+      <h3 className="text-xs font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+        <Clock className="w-4 h-4 text-amber-400" /> Si j&apos;avais... Projections
+      </h3>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs py-1.5">
+          <span style={{ color: "var(--text-secondary)" }}>P&L mensuel simulé</span>
+          <span className="mono font-semibold text-emerald-400">
+            {monthlyPnl >= 0 ? "+" : ""}{monthlyPnl.toFixed(0)}€/mois
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs py-1.5">
+          <span style={{ color: "var(--text-secondary)" }}>A ce rythme sur 12 mois</span>
+          <span className="mono font-semibold text-emerald-400">
+            {projectedAnnual >= 0 ? "+" : ""}{projectedAnnual.toFixed(0)}€
+          </span>
+        </div>
+        {isFinite(monthsToTarget) && monthsToTarget > 0 && (
+          <div className="flex items-center justify-between text-xs py-1.5">
+            <span style={{ color: "var(--text-secondary)" }}>Objectif {target.toLocaleString("fr-FR")}€ atteint en</span>
+            <span className="mono font-semibold text-amber-400">
+              {monthsToTarget.toFixed(1)} mois
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="text-xs p-2.5 rounded-lg leading-relaxed" style={{ background: "rgba(245,158,11,0.08)", color: "var(--text-muted)" }}>
+        Projection linéaire basée sur le P&L simulé. Les résultats passés ne garantissent pas les performances futures.
+      </div>
+    </div>
+  );
+}
 
 // --- Main Page ---
 export default function BacktestPage() {
   const { trades, loading } = useTrades();
   const [config, setConfig] = useState<SimConfig>(DEFAULT_CONFIG);
+  const [activeScenario, setActiveScenario] = useState<ScenarioPresetId | null>(null);
 
   const strategies = useMemo(() => [...new Set(trades.map((t) => t.strategy).filter(Boolean))].sort(), [trades]);
 
@@ -365,7 +579,15 @@ export default function BacktestPage() {
     () => [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()), [trades]
   );
 
-  const simTrades = useMemo(() => simulateTrades(sortedTrades, config), [sortedTrades, config]);
+  // Apply scenario pre-filter
+  const scenarioFilteredTrades = useMemo(() => {
+    if (!activeScenario) return sortedTrades;
+    const preset = SCENARIO_PRESETS.find((p) => p.id === activeScenario);
+    if (!preset?.filterFn) return sortedTrades;
+    return preset.filterFn(sortedTrades, sortedTrades);
+  }, [sortedTrades, activeScenario]);
+
+  const simTrades = useMemo(() => simulateTrades(scenarioFilteredTrades, config), [scenarioFilteredTrades, config]);
 
   const actualStats = useMemo(() => computeStats(sortedTrades, 1), [sortedTrades]);
   const simStats = useMemo(() => computeStats(simTrades, config.sizeMultiplier), [simTrades, config.sizeMultiplier]);
@@ -375,10 +597,29 @@ export default function BacktestPage() {
 
   const insights = useMemo(() => generateInsights(actualStats, simStats, config), [actualStats, simStats, config]);
 
+  const removedCount = actualStats.totalTrades - simStats.totalTrades;
+
   const set = <K extends keyof SimConfig>(key: K, val: SimConfig[K]) => setConfig((c) => ({ ...c, [key]: val }));
 
-  const applyPreset = (preset: Partial<SimConfig>) => {
-    setConfig({ ...DEFAULT_CONFIG, ...preset });
+  const applyScenario = (preset: ScenarioPreset) => {
+    const isActive = activeScenario === preset.id;
+    if (isActive) {
+      // Toggle off
+      setActiveScenario(null);
+      setConfig(DEFAULT_CONFIG);
+      return;
+    }
+    setActiveScenario(preset.id);
+    const dynamicConfig = { ...preset.config };
+    if (preset.id === "best-strategy") {
+      dynamicConfig.strategyFilter = bestStrategy;
+    }
+    setConfig({ ...DEFAULT_CONFIG, ...dynamicConfig });
+  };
+
+  const resetAll = () => {
+    setActiveScenario(null);
+    setConfig(DEFAULT_CONFIG);
   };
 
   if (loading) {
@@ -407,23 +648,40 @@ export default function BacktestPage() {
         </div>
       </div>
 
-      {/* Quick Scenarios */}
-      <div className="flex flex-wrap gap-2">
-        {PRESETS.map((p) => {
-          const presetConfig = p.label === "Meilleure stratégie" ? { ...p.config, strategyFilter: bestStrategy } : p.config;
-          return (
-            <button key={p.label} onClick={() => applyPreset(presetConfig)}
-              className="glass px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 hover:brightness-125 transition-all"
-              style={{ color: "var(--text-secondary)" }}>
-              <p.icon className="w-3.5 h-3.5 text-cyan-400" /> {p.label}
-            </button>
-          );
-        })}
-        <button onClick={() => setConfig(DEFAULT_CONFIG)}
-          className="px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 hover:brightness-125 transition-all"
-          style={{ color: "var(--text-muted)", border: "1px solid var(--border)" }}>
-          Réinitialiser
-        </button>
+      {/* Scenario Presets */}
+      <div>
+        <h2 className="text-xs font-semibold mb-2 flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+          <Zap className="w-3.5 h-3.5" /> Scénarios rapides
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {SCENARIO_PRESETS.map((p) => {
+            const isActive = activeScenario === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => applyScenario(p)}
+                title={p.description}
+                className="px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all"
+                style={{
+                  color: isActive ? "#fff" : "var(--text-secondary)",
+                  background: isActive ? "rgba(6,182,212,0.25)" : "var(--bg-secondary)",
+                  border: isActive ? "1px solid rgba(6,182,212,0.5)" : "1px solid var(--border)",
+                  fontWeight: isActive ? 600 : 400,
+                }}
+              >
+                <p.icon className="w-3.5 h-3.5" style={{ color: isActive ? "#06b6d4" : "var(--text-muted)" }} />
+                {p.label}
+              </button>
+            );
+          })}
+          <button
+            onClick={resetAll}
+            className="px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 hover:brightness-125 transition-all"
+            style={{ color: "var(--text-muted)", border: "1px solid var(--border)" }}
+          >
+            Réinitialiser
+          </button>
+        </div>
       </div>
 
       {/* Main Layout: Controls (left) + Results (right) */}
@@ -526,6 +784,23 @@ export default function BacktestPage() {
               </span>
             </div>
           </div>
+
+          {/* Impact Summary — shown when a scenario is active or config differs from default */}
+          {(activeScenario || removedCount > 0 || simStats.totalPnL !== actualStats.totalPnL) && (
+            <ImpactSummary
+              actualStats={actualStats}
+              simStats={simStats}
+              removedCount={removedCount}
+              totalCount={actualStats.totalTrades}
+            />
+          )}
+
+          {/* Projections — shown when simulation is better */}
+          <ProjectionPanel
+            simStats={simStats}
+            actualStats={actualStats}
+            trades={sortedTrades}
+          />
 
           {/* Confidence Score */}
           <ConfidenceScore tradeCount={simStats.totalTrades} />

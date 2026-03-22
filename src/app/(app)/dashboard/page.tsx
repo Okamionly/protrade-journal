@@ -9,7 +9,7 @@ import { useToast } from "@/components/Toast";
 import { ForexSessions } from "@/components/ForexSessions";
 import { calculateRR, formatDate, computeStats } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair, DollarSign, AlertTriangle, Share2, Star, Crown, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair, DollarSign, AlertTriangle, Share2, Star, Crown, ExternalLink, Lightbulb, Clock, X, Flag } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
 import { ShareStatsCard } from "@/components/ShareStatsCard";
@@ -167,6 +167,213 @@ function TradeDuJourWidget() {
         Voir dans la communauté
         <ExternalLink className="w-3 h-3" />
       </Link>
+    </div>
+  );
+}
+
+/* ─── Prochain Objectif Widget ─────────────────────────── */
+
+function ProchainObjectifWidget({ monthlyGoal, monthlyPnL, trades }: { monthlyGoal: number; monthlyPnL: number; trades: Trade[] }) {
+  if (monthlyGoal <= 0) return null;
+
+  const remaining = monthlyGoal - monthlyPnL;
+  if (remaining <= 0) return null; // goal already reached
+
+  const progress = Math.min(Math.max((monthlyPnL / monthlyGoal) * 100, 0), 100);
+  const percentRemaining = 100 - progress;
+
+  // Estimate date based on daily average
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const daysSinceStart = Math.max(Math.floor((now.getTime() - monthStart.getTime()) / 86400000), 1);
+  const dailyAvg = monthlyPnL / daysSinceStart;
+  const daysToGoal = dailyAvg > 0 ? Math.ceil(remaining / dailyAvg) : null;
+  const estimatedDate = daysToGoal !== null ? new Date(now.getTime() + daysToGoal * 86400000) : null;
+
+  const isClose = percentRemaining < 20;
+
+  return (
+    <div
+      className="glass rounded-2xl p-4"
+      style={{ maxHeight: 150, border: isClose ? "1px solid rgba(16,185,129,0.3)" : undefined }}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <Flag className="w-4 h-4 text-blue-400" />
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+          Prochain Objectif
+        </span>
+      </div>
+      <p className="text-xs font-medium mb-2" style={{ color: "var(--text-primary)" }}>
+        Plus que <span className="text-blue-400 font-bold">{remaining.toFixed(0)}€</span> pour atteindre votre objectif mensuel
+      </p>
+      <div className="h-2 rounded-full overflow-hidden mb-2" style={{ background: "var(--bg-secondary)" }}>
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${isClose ? "bg-emerald-500" : "bg-blue-500"}`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        {estimatedDate && dailyAvg > 0 ? (
+          <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+            Estimé le {estimatedDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} (~{dailyAvg.toFixed(0)}€/jour)
+          </span>
+        ) : (
+          <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+            Continuez vos efforts !
+          </span>
+        )}
+        {isClose && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
+            Presque !
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Activité Récente Timeline ───────────────────────── */
+
+function ActiviteRecenteWidget({ trades }: { trades: Trade[] }) {
+  // Build a timeline from trade data
+  const events: { type: "trade_add" | "trade_loss"; time: Date; label: string }[] = [];
+
+  const sorted = [...trades].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  for (const tr of sorted.slice(0, 5)) {
+    const isWin = tr.result > 0;
+    events.push({
+      type: isWin ? "trade_add" : "trade_loss",
+      time: new Date(tr.date),
+      label: `${tr.asset} ${tr.direction} ${tr.result >= 0 ? "+" : ""}${tr.result.toFixed(0)}€`,
+    });
+  }
+
+  if (events.length === 0) return null;
+
+  const formatTimeAgo = (date: Date) => {
+    const diff = Date.now() - date.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `il y a ${mins}min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `il y a ${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `il y a ${days}j`;
+  };
+
+  const dotColor = (type: string) => {
+    switch (type) {
+      case "trade_add": return "#10b981";
+      case "trade_loss": return "#ef4444";
+      default: return "#6b7280";
+    }
+  };
+
+  return (
+    <div className="glass rounded-2xl p-4" style={{ maxHeight: 150, overflow: "hidden" }}>
+      <div className="flex items-center gap-2 mb-2">
+        <Clock className="w-4 h-4 text-purple-400" />
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+          Activité Récente
+        </span>
+      </div>
+      <div className="space-y-1.5">
+        {events.map((ev, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <div className="flex flex-col items-center" style={{ width: 12 }}>
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ background: dotColor(ev.type) }}
+              />
+              {i < events.length - 1 && (
+                <div className="w-px flex-1 min-h-[8px]" style={{ background: "var(--border)" }} />
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-[10px] flex-shrink-0" style={{ color: "var(--text-muted)", minWidth: 52 }}>
+                {formatTimeAgo(ev.time)}
+              </span>
+              <span className="text-[11px] font-medium truncate" style={{ color: "var(--text-primary)" }}>
+                {ev.label}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Astuce du Jour Widget ───────────────────────────── */
+
+const TRADING_TIPS: string[] = [
+  "Un bon trader ne cherche pas à avoir raison, il cherche à être rentable.",
+  "Le marché récompense la patience, pas la précipitation.",
+  "Coupez vos pertes rapidement, laissez courir vos gains.",
+  "Ne risquez jamais plus de 2% de votre capital par trade.",
+  "Votre journal de trading est votre meilleur professeur.",
+  "La discipline bat l'intelligence 9 fois sur 10.",
+  "Pas de setup, pas de trade. La patience est une stratégie.",
+  "Le revenge trading est le chemin le plus court vers la ruine.",
+  "Concentrez-vous sur le processus, pas sur les résultats.",
+  "Un trade manqué vaut mieux qu'un mauvais trade pris.",
+  "Le marché sera encore là demain. Protégez votre capital.",
+  "Traitez le trading comme un business, pas comme un casino.",
+  "La gestion du risque n'est pas optionnelle, c'est fondamentale.",
+  "Votre pire ennemi en trading, c'est votre ego.",
+  "Backtestez avant de risquer de l'argent réel.",
+  "Les meilleures opportunités viennent quand tout le monde a peur.",
+  "Ne confondez pas être occupé avec être productif en trading.",
+  "Un plan de trading sans exécution n'est qu'un vœu pieux.",
+  "La constance dans l'exécution crée la constance dans les résultats.",
+  "Acceptez l'incertitude : chaque trade a une issue probabiliste.",
+];
+
+function AstuceDuJourWidget() {
+  const [dismissed, setDismissed] = useState(false);
+
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  const tipIndex = dayOfYear % TRADING_TIPS.length;
+  const tip = TRADING_TIPS[tipIndex];
+
+  useEffect(() => {
+    const key = `astuce_dismissed_${dayOfYear}`;
+    if (localStorage.getItem(key) === "1") setDismissed(true);
+  }, [dayOfYear]);
+
+  const handleDismiss = () => {
+    localStorage.setItem(`astuce_dismissed_${dayOfYear}`, "1");
+    setDismissed(true);
+  };
+
+  if (dismissed) return null;
+
+  return (
+    <div
+      className="glass rounded-2xl p-4 relative"
+      style={{
+        maxHeight: 150,
+        background: "linear-gradient(135deg, rgba(234,179,8,0.06), rgba(234,179,8,0.02))",
+        border: "1px solid rgba(234,179,8,0.15)",
+      }}
+    >
+      <button
+        onClick={handleDismiss}
+        className="absolute top-2 right-2 p-1 rounded-lg hover:bg-white/5 transition"
+        style={{ color: "var(--text-muted)" }}
+      >
+        <X className="w-3 h-3" />
+      </button>
+      <div className="flex items-center gap-2 mb-2">
+        <Lightbulb className="w-4 h-4 text-yellow-400" />
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#eab308" }}>
+          Astuce du Jour
+        </span>
+      </div>
+      <p className="text-xs leading-relaxed pr-4" style={{ color: "var(--text-primary)" }}>
+        &laquo; {tip} &raquo;
+      </p>
     </div>
   );
 }
@@ -959,6 +1166,13 @@ export default function DashboardPage() {
 
       {/* Trade du Jour */}
       <TradeDuJourWidget />
+
+      {/* === New Widgets Row: Prochain Objectif + Activité Récente + Astuce du Jour === */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <ProchainObjectifWidget monthlyGoal={monthlyGoal} monthlyPnL={monthlyPnL} trades={trades} />
+        <ActiviteRecenteWidget trades={trades} />
+        <AstuceDuJourWidget />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="glass rounded-2xl p-6">
