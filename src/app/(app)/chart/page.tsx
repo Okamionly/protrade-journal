@@ -18,7 +18,6 @@ export default function ChartPage() {
     };
     detect();
     window.addEventListener("storage", detect);
-    // Also watch for class changes on html
     const observer = new MutationObserver(detect);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     return () => { window.removeEventListener("storage", detect); observer.disconnect(); };
@@ -31,6 +30,23 @@ export default function ChartPage() {
     el.innerHTML = "";
 
     const isDark = theme === "dark";
+    const h = isFullscreen ? "calc(100vh - 4px)" : "calc(100vh - 144px)";
+
+    // TradingView requires this exact HTML structure:
+    // <div class="tradingview-widget-container">
+    //   <div class="tradingview-widget-container__widget" style="height:X;width:100%"></div>
+    //   <script src="..." type="text/javascript">{ config }</script>
+    // </div>
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "tradingview-widget-container";
+    wrapper.style.height = "100%";
+    wrapper.style.width = "100%";
+
+    const widgetDiv = document.createElement("div");
+    widgetDiv.className = "tradingview-widget-container__widget";
+    widgetDiv.style.height = h;
+    widgetDiv.style.width = "100%";
 
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
@@ -59,14 +75,10 @@ export default function ChartPage() {
       withdateranges: true,
     });
 
-    const widgetDiv = document.createElement("div");
-    widgetDiv.className = "tradingview-widget-container__widget";
-    widgetDiv.style.height = "100%";
-    widgetDiv.style.width = "100%";
-
-    el.appendChild(widgetDiv);
-    el.appendChild(script);
-  }, [theme]);
+    wrapper.appendChild(widgetDiv);
+    wrapper.appendChild(script);
+    el.appendChild(wrapper);
+  }, [theme, isFullscreen]);
 
   useEffect(() => {
     buildWidget();
@@ -92,7 +104,7 @@ export default function ChartPage() {
   return (
     <div
       ref={wrapperRef}
-      className="relative flex flex-col"
+      className="relative"
       style={{
         margin: 0,
         height: isFullscreen ? "100vh" : "calc(100vh - 140px)",
@@ -115,15 +127,8 @@ export default function ChartPage() {
         {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
       </button>
 
-      {/* Chart — takes 100% of space */}
-      <div
-        ref={containerRef}
-        className="w-full"
-        style={{
-          height: isFullscreen ? "calc(100vh - 4px)" : "calc(100vh - 144px)",
-          minHeight: "400px",
-        }}
-      />
+      {/* Chart */}
+      <div ref={containerRef} style={{ height: "100%", width: "100%" }} />
     </div>
   );
 }
