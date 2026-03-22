@@ -94,9 +94,12 @@ export default function ChartPage() {
       ref={wrapperRef}
       className="relative flex flex-col"
       style={{
-        margin: isFullscreen ? 0 : "-1.5rem -1rem -2.5rem -1rem",
-        height: isFullscreen ? "100vh" : "calc(100vh - 48px)",
+        margin: 0,
+        height: isFullscreen ? "100vh" : "calc(100vh - 140px)",
         background: theme === "dark" ? "#0a0a0f" : "#ffffff",
+        borderRadius: isFullscreen ? 0 : "12px",
+        overflow: "hidden",
+        border: isFullscreen ? "none" : `1px solid ${theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)"}`,
       }}
     >
       {/* Fullscreen button */}
