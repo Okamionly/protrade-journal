@@ -17,6 +17,7 @@ export async function GET() {
         name: true,
         role: true,
         balance: true,
+        publicProfile: true,
         createdAt: true,
       },
     });
@@ -189,9 +190,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, balance, email } = body;
+    const { name, balance, email, publicProfile } = body;
 
     const updateData: Record<string, unknown> = {};
+
+    if (typeof publicProfile === "boolean") {
+      updateData.publicProfile = publicProfile;
+    }
 
     if (typeof name === "string" && name.trim().length > 0) {
       updateData.name = name.trim();
@@ -228,6 +233,7 @@ export async function PATCH(request: NextRequest) {
         name: true,
         role: true,
         balance: true,
+        publicProfile: true,
         createdAt: true,
       },
     });

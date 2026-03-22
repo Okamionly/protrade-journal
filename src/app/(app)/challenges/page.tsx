@@ -1,1393 +1,38 @@
 "use client";
 
-import { useTrades } from "@/hooks/useTrades";
-import { calculateRR } from "@/lib/utils";
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import {
   Trophy, Flame, Shield, Target, Zap, Award, Lock, Star,
-  TrendingUp, TrendingDown, Clock, Crosshair, BarChart3,
-  Crown, Gem, Medal, ArrowUpRight, ArrowDownRight, Layers,
-  Sunrise, Sparkles, Swords, Plus, X, Users, Timer,
-  Share2, ChevronDown, ChevronUp, CheckCircle2,
-  Ban, Gift, Check,
+  TrendingUp, Clock, Crosshair, BarChart3,
+  Crown, Gem, Sunrise, Sparkles, Ban,
+  Timer, CheckCircle2, Check, Gift, Loader2,
 } from "lucide-react";
-
-/* ─── helpers ──────────────────────────────────────────── */
-
-function uniqueDays(trades: { date: string }[]) {
-  return [...new Set(trades.map((t) => t.date.slice(0, 10)))].sort();
-}
-
-function currentConsecutiveDays(trades: { date: string }[]) {
-  const days = uniqueDays(trades);
-  if (days.length === 0) return 0;
-  const today = new Date().toISOString().slice(0, 10);
-  const last = days[days.length - 1];
-  const diffToday =
-    (new Date(today).getTime() - new Date(last).getTime()) / 86400000;
-  if (diffToday > 1) return 0;
-  let streak = 1;
-  for (let i = days.length - 1; i > 0; i--) {
-    const diff =
-      (new Date(days[i]).getTime() - new Date(days[i - 1]).getTime()) /
-      86400000;
-    if (diff === 1) streak++;
-    else break;
-  }
-  return streak;
-}
-
-function isThisMonth(d: string) {
-  const now = new Date();
-  const dt = new Date(d);
-  return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
-}
-
-function isThisWeek(d: string) {
-  const now = new Date();
-  const start = new Date(now);
-  start.setDate(now.getDate() - now.getDay());
-  start.setHours(0, 0, 0, 0);
-  return new Date(d) >= start;
-}
-
-function isLastMonth(d: string) {
-  const now = new Date();
-  const dt = new Date(d);
-  const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-  const lastYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-  return dt.getMonth() === lastMonth && dt.getFullYear() === lastYear;
-}
-
-function daysRemaining(endDate: string) {
-  const diff = new Date(endDate).getTime() - Date.now();
-  if (diff <= 0) return { days: 0, hours: 0, minutes: 0, expired: true };
-  const days = Math.floor(diff / 86400000);
-  const hours = Math.floor((diff % 86400000) / 3600000);
-  const minutes = Math.floor((diff % 3600000) / 60000);
-  return { days, hours, minutes, expired: false };
-}
-
-function formatCountdown(endDate: string) {
-  const { days, hours, minutes, expired } = daysRemaining(endDate);
-  if (expired) return "Terminé";
-  if (days > 0) return `${days}j ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
-function getEndOfWeek() {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = 7 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(23, 59, 59, 999);
-  return d.toISOString();
-}
-
-function getEndOfMonth() {
-  const d = new Date();
-  d.setMonth(d.getMonth() + 1, 0);
-  d.setHours(23, 59, 59, 999);
-  return d.toISOString();
-}
-
-function getEndOfTwoWeeks() {
-  const d = new Date();
-  d.setDate(d.getDate() + 14);
-  d.setHours(23, 59, 59, 999);
-  return d.toISOString();
-}
-
-/* ─── localStorage helpers ──────────────────────────────── */
-
-interface ChallengeProgress {
-  id: string;
-  completedAt?: string;
-  bestProgress: number;
-  streakDays: number;
-  lastUpdated: string;
-}
-
-interface CustomChallenge {
-  id: string;
-  name: string;
-  description: string;
-  type: string;
-  target: number;
-  duration: "week" | "month" | "2weeks";
-  createdAt: string;
-  endDate: string;
-  iconName: string;
-  color: string;
-}
-
-interface CompletedChallenge {
-  id: string;
-  name: string;
-  completedAt: string;
-  badge: string;
-  color: string;
-  iconName: string;
-  shared: boolean;
-}
-
-function loadFromStorage<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveToStorage<T>(key: string, data: T) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch {
-    // storage full or unavailable
-  }
-}
 
 /* ─── types ────────────────────────────────────────────── */
 
-interface ActiveChallenge {
+interface ChallengeData {
   id: string;
   title: string;
   description: string;
-  icon: React.ReactNode;
-  iconName: string;
-  current: number;
-  target: number;
+  category: "daily" | "weekly" | "monthly" | "special";
+  icon: string;
   color: string;
   gradient: string;
-  endDate: string;
-  participants: number;
-  reward: string;
-  type: string;
-  milestones: number[];
+  current: number;
+  target: number;
+  progress: number;
+  completed: boolean;
+  completedAt: string | null;
+  joined: boolean;
+  startedAt: string | null;
+  reward: { xp: number; badge: string };
 }
 
-interface Badge {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  unlocked: boolean;
-  color: string;
-}
+type TabId = "daily" | "weekly" | "monthly" | "special";
 
-/* ─── tabs ─────────────────────────────────────────────── */
+/* ─── icon map ─────────────────────────────────────────── */
 
-type TabId = "actifs" | "completes" | "classement" | "creer";
-
-/* ─── page ─────────────────────────────────────────────── */
-
-export default function ChallengesPage() {
-  const { trades, loading } = useTrades();
-  const [activeTab, setActiveTab] = useState<TabId>("actifs");
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [expandedChallenge, setExpandedChallenge] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  // localStorage state
-  const [completedChallenges, setCompletedChallenges] = useState<CompletedChallenge[]>([]);
-  const [customChallenges, setCustomChallenges] = useState<CustomChallenge[]>([]);
-  const [progressMap, setProgressMap] = useState<Record<string, ChallengeProgress>>({});
-  const [isVip, setIsVip] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    fetch("/api/user/role")
-      .then(r => r.json())
-      .then(d => setIsVip(d.role === "VIP" || d.role === "ADMIN"))
-      .catch(() => setIsVip(false));
-  }, []);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    setCompletedChallenges(loadFromStorage<CompletedChallenge[]>("ptj-completed-challenges", []));
-    setCustomChallenges(loadFromStorage<CustomChallenge[]>("ptj-custom-challenges", []));
-    setProgressMap(loadFromStorage<Record<string, ChallengeProgress>>("ptj-challenge-progress", {}));
-  }, []);
-
-  // Persist to localStorage on change
-  useEffect(() => {
-    if (completedChallenges.length > 0) saveToStorage("ptj-completed-challenges", completedChallenges);
-  }, [completedChallenges]);
-  useEffect(() => {
-    saveToStorage("ptj-custom-challenges", customChallenges);
-  }, [customChallenges]);
-  useEffect(() => {
-    saveToStorage("ptj-challenge-progress", progressMap);
-  }, [progressMap]);
-
-  const sorted = useMemo(
-    () => [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
-    [trades]
-  );
-
-  /* ── challenge computations ── */
-  const challenges: ActiveChallenge[] = useMemo(() => {
-    const monthTrades = sorted.filter((t) => isThisMonth(t.date));
-    const weekTrades = sorted.filter((t) => isThisWeek(t.date));
-
-    // Semaine rentable - profitable 5 consecutive days
-    const weekDays = uniqueDays(weekTrades);
-    let profitableDaysInRow = 0;
-    let bestProfitStreak = 0;
-    for (const day of weekDays) {
-      const dayTrades = weekTrades.filter((t) => t.date.slice(0, 10) === day);
-      const dayPnL = dayTrades.reduce((s, t) => s + t.result, 0);
-      if (dayPnL > 0) {
-        profitableDaysInRow++;
-        if (profitableDaysInRow > bestProfitStreak) bestProfitStreak = profitableDaysInRow;
-      } else {
-        profitableDaysInRow = 0;
-      }
-    }
-
-    // R:R Master - avg R:R > 2:1 this week
-    const weekRRs = weekTrades
-      .map((t) => parseFloat(calculateRR(t.entry, t.sl, t.tp)))
-      .filter((rr) => !isNaN(rr));
-    const avgRR = weekRRs.length > 0 ? weekRRs.reduce((s, r) => s + r, 0) / weekRRs.length : 0;
-    const rrProgress = Math.min(avgRR / 2, 1) * 100;
-
-    // Discipline parfaite - follow all items for 10 trades (trades with emotion set & tags)
-    const disciplinedTrades = sorted.filter(
-      (t) => t.emotion && t.emotion !== "" && t.tags && t.tags !== ""
-    ).length;
-
-    // Zero revenge - no revenge trades for a month (trades tagged "revenge")
-    const monthWithRevenge = monthTrades.filter(
-      (t) => t.tags && t.tags.toLowerCase().includes("revenge")
-    );
-    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-    const daysSoFar = new Date().getDate();
-    const zeroRevengeProgress = monthWithRevenge.length === 0 ? daysSoFar : 0;
-
-    // Sniper - win rate > 70% with min 10 trades
-    const wins = weekTrades.filter((t) => t.result > 0).length;
-    const weekWinRate = weekTrades.length >= 10 ? (wins / weekTrades.length) * 100 : (weekTrades.length > 0 ? (wins / weekTrades.length) * 100 : 0);
-    const sniperQualified = weekTrades.length >= 10;
-
-    // Consistance - max 1% drawdown per day for 2 weeks
-    const twoWeekTrades = sorted.filter((t) => {
-      const d = new Date(t.date);
-      const twoWeeksAgo = new Date();
-      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-      return d >= twoWeeksAgo;
-    });
-    const twoWeekDays = uniqueDays(twoWeekTrades);
-    let consistentDays = 0;
-    for (const day of twoWeekDays) {
-      const dayTrades = twoWeekTrades.filter((t) => t.date.slice(0, 10) === day);
-      const dayLoss = dayTrades.filter((t) => t.result < 0).reduce((s, t) => s + t.result, 0);
-      if (Math.abs(dayLoss) <= 50) {
-        consistentDays++;
-      }
-    }
-
-    const consDays = currentConsecutiveDays(sorted);
-
-    // Win streak
-    let winStreak = 0;
-    for (let i = sorted.length - 1; i >= 0; i--) {
-      if (sorted[i].result > 0) winStreak++;
-      else break;
-    }
-
-    // Monthly profit
-    const monthProfit = monthTrades.reduce((s, t) => s + t.result, 0);
-
-    // Sniper high RR
-    const sniperTrades = monthTrades.filter((t) => {
-      const rr = parseFloat(calculateRR(t.entry, t.sl, t.tp));
-      return !isNaN(rr) && rr > 3 && t.result > 0;
-    }).length;
-
-    // Unique assets
-    const weekAssets = new Set(weekTrades.map((t) => t.asset));
-
-    return [
-      {
-        id: "semaine-rentable",
-        title: "Semaine rentable",
-        description: "Être profitable pendant 5 jours consécutifs",
-        icon: <TrendingUp size={20} />,
-        iconName: "TrendingUp",
-        current: bestProfitStreak,
-        target: 5,
-        color: "#10b981",
-        gradient: "from-emerald-500/20 to-emerald-600/5",
-        endDate: getEndOfWeek(),
-        participants: 247,
-        reward: "Badge Semaine Verte",
-        type: "weekly",
-        milestones: [1, 2, 3, 4, 5],
-      },
-      {
-        id: "rr-master",
-        title: "R:R Master",
-        description: "Obtenir un R:R moyen > 2:1 sur la semaine",
-        icon: <Target size={20} />,
-        iconName: "Target",
-        current: Math.round(rrProgress),
-        target: 100,
-        color: "#f59e0b",
-        gradient: "from-amber-500/20 to-amber-600/5",
-        endDate: getEndOfWeek(),
-        participants: 183,
-        reward: "Badge R:R Elite",
-        type: "weekly",
-        milestones: [25, 50, 75, 100],
-      },
-      {
-        id: "discipline-parfaite",
-        title: "Discipline parfaite",
-        description: "Remplir toutes les infos pour 10 trades (emotion + tags)",
-        icon: <CheckCircle2 size={20} />,
-        iconName: "CheckCircle2",
-        current: Math.min(disciplinedTrades, 10),
-        target: 10,
-        color: "#8b5cf6",
-        gradient: "from-violet-500/20 to-violet-600/5",
-        endDate: getEndOfMonth(),
-        participants: 312,
-        reward: "Badge Discipline",
-        type: "monthly",
-        milestones: [2, 5, 8, 10],
-      },
-      {
-        id: "zero-revenge",
-        title: "Zero revenge",
-        description: "Aucun trade de revenge pendant un mois entier",
-        icon: <Ban size={20} />,
-        iconName: "Ban",
-        current: zeroRevengeProgress,
-        target: daysInMonth,
-        color: "#ef4444",
-        gradient: "from-red-500/20 to-red-600/5",
-        endDate: getEndOfMonth(),
-        participants: 156,
-        reward: "Badge Zero Tilt",
-        type: "monthly",
-        milestones: [7, 14, 21, daysInMonth],
-      },
-      {
-        id: "sniper-challenge",
-        title: "Sniper",
-        description: `Win rate > 70% avec min 10 trades (actuel: ${weekTrades.length} trades, ${weekWinRate.toFixed(0)}%)`,
-        icon: <Crosshair size={20} />,
-        iconName: "Crosshair",
-        current: sniperQualified ? Math.round(Math.min(weekWinRate / 70 * 100, 100)) : Math.min(weekTrades.length, 10) * 10,
-        target: 100,
-        color: "#ec4899",
-        gradient: "from-pink-500/20 to-pink-600/5",
-        endDate: getEndOfWeek(),
-        participants: 198,
-        reward: "Badge Sniper Elite",
-        type: "weekly",
-        milestones: [25, 50, 75, 100],
-      },
-      {
-        id: "consistance",
-        title: "Consistance",
-        description: "Max 50€ de perte par jour pendant 2 semaines",
-        icon: <Shield size={20} />,
-        iconName: "Shield",
-        current: Math.min(consistentDays, 14),
-        target: 14,
-        color: "#06b6d4",
-        gradient: "from-cyan-500/20 to-cyan-600/5",
-        endDate: getEndOfTwoWeeks(),
-        participants: 134,
-        reward: "Badge Consistance",
-        type: "biweekly",
-        milestones: [3, 7, 10, 14],
-      },
-      {
-        id: "consistency-king",
-        title: "Consistency King",
-        description: "Trader 5 jours consécutifs",
-        icon: <Crown size={20} />,
-        iconName: "Crown",
-        current: Math.min(consDays, 5),
-        target: 5,
-        color: "#f59e0b",
-        gradient: "from-amber-500/20 to-amber-600/5",
-        endDate: getEndOfWeek(),
-        participants: 289,
-        reward: "Badge Roi de la Consistance",
-        type: "weekly",
-        milestones: [1, 2, 3, 4, 5],
-      },
-      {
-        id: "profit-target",
-        title: "Profit Target",
-        description: "500€ de profit ce mois",
-        icon: <Gem size={20} />,
-        iconName: "Gem",
-        current: Math.min(Math.max(monthProfit, 0), 500),
-        target: 500,
-        color: "#10b981",
-        gradient: "from-emerald-500/20 to-emerald-600/5",
-        endDate: getEndOfMonth(),
-        participants: 421,
-        reward: "Badge Objectif Atteint",
-        type: "monthly",
-        milestones: [100, 250, 400, 500],
-      },
-    ];
-  }, [sorted]);
-
-  // Track completions automatically
-  useEffect(() => {
-    const newCompleted = [...completedChallenges];
-    const newProgress = { ...progressMap };
-    let changed = false;
-
-    challenges.forEach((c) => {
-      const done = c.current >= c.target;
-      const alreadyCompleted = completedChallenges.some((cc) => cc.id === c.id);
-
-      // Update progress
-      if (!newProgress[c.id] || c.current > (newProgress[c.id]?.bestProgress ?? 0)) {
-        newProgress[c.id] = {
-          id: c.id,
-          bestProgress: c.current,
-          streakDays: (newProgress[c.id]?.streakDays ?? 0) + (done ? 1 : 0),
-          lastUpdated: new Date().toISOString(),
-          ...(done ? { completedAt: new Date().toISOString() } : {}),
-        };
-        changed = true;
-      }
-
-      if (done && !alreadyCompleted) {
-        newCompleted.push({
-          id: c.id,
-          name: c.title,
-          completedAt: new Date().toISOString(),
-          badge: c.reward,
-          color: c.color,
-          iconName: c.iconName,
-          shared: false,
-        });
-        changed = true;
-      }
-    });
-
-    if (changed) {
-      setCompletedChallenges(newCompleted);
-      setProgressMap(newProgress);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [challenges]);
-
-  /* ── XP system ── */
-  const { xp, level, title: levelTitle, xpInLevel, xpForLevel } = useMemo(() => {
-    let total = 0;
-    sorted.forEach((t) => {
-      total += 10;
-      if (t.result > 0) total += 25;
-      const rr = parseFloat(calculateRR(t.entry, t.sl, t.tp));
-      if (!isNaN(rr) && rr > 2) total += 50;
-    });
-    const completed = challenges.filter((c) => c.current >= c.target).length;
-    total += completed * 100;
-    total += completedChallenges.length * 50;
-
-    const lvl = Math.floor(total / 500) + 1;
-    const titles: [number, string][] = [
-      [50, "Légende"], [36, "Master"], [21, "Expert"],
-      [11, "Trader"], [6, "Apprenti"], [1, "Débutant"],
-    ];
-    const t = titles.find(([min]) => lvl >= min)?.[1] || "Débutant";
-    const inLevel = total % 500;
-    return { xp: total, level: lvl, title: t, xpInLevel: inLevel, xpForLevel: 500 };
-  }, [sorted, challenges, completedChallenges]);
-
-  /* ── badges ── */
-  const badges: Badge[] = useMemo(() => {
-    const wins = sorted.filter((t) => t.result > 0).length;
-    const totalPnL = sorted.reduce((s, t) => s + t.result, 0);
-    const winRate = sorted.length > 0 ? (wins / sorted.length) * 100 : 0;
-    const grossWins = sorted.filter((t) => t.result > 0).reduce((s, t) => s + t.result, 0);
-    const grossLosses = Math.abs(sorted.filter((t) => t.result < 0).reduce((s, t) => s + t.result, 0));
-    const pf = grossLosses > 0 ? grossWins / grossLosses : grossWins > 0 ? Infinity : 0;
-    const months: Record<string, number> = {};
-    sorted.forEach((t) => {
-      const key = t.date.slice(0, 7);
-      months[key] = (months[key] || 0) + t.result;
-    });
-    const bestMonth = Math.max(0, ...Object.values(months));
-    const diamondScore = pf > 2 && winRate > 55;
-
-    // Challenge-based badges
-    const challengeBadges: Badge[] = completedChallenges.map((cc) => ({
-      id: `challenge-${cc.id}`,
-      title: cc.badge,
-      description: `Challenge "${cc.name}" complete`,
-      icon: getIconForName(cc.iconName, 20),
-      unlocked: true,
-      color: cc.color,
-    }));
-
-    return [
-      { id: "first-trade", title: "Premier Trade", description: "Passer votre premier trade", icon: <Zap size={20} />, unlocked: sorted.length >= 1, color: "#f59e0b" },
-      { id: "10-trades", title: "10 Trades", description: "Completer 10 trades", icon: <BarChart3 size={20} />, unlocked: sorted.length >= 10, color: "#3b82f6" },
-      { id: "50-trades", title: "50 Trades", description: "Completer 50 trades", icon: <BarChart3 size={20} />, unlocked: sorted.length >= 50, color: "#8b5cf6" },
-      { id: "100-trades", title: "Centurion", description: "Completer 100 trades", icon: <Trophy size={20} />, unlocked: sorted.length >= 100, color: "#f97316" },
-      { id: "first-win", title: "Premier Gain", description: "Gagner votre premier trade", icon: <Star size={20} />, unlocked: wins >= 1, color: "#10b981" },
-      { id: "10-wins", title: "10 Victoires", description: "Gagner 10 trades", icon: <Star size={20} />, unlocked: wins >= 10, color: "#06b6d4" },
-      { id: "winrate-60", title: "Win Rate > 60%", description: "Atteindre 60% de win rate", icon: <TrendingUp size={20} />, unlocked: winRate > 60 && sorted.length >= 10, color: "#10b981" },
-      { id: "pf-2", title: "Profit Factor > 2", description: "Profit factor superieur a 2", icon: <Gem size={20} />, unlocked: pf > 2 && sorted.length >= 10, color: "#ec4899" },
-      { id: "diamond", title: "Diamant", description: "PF > 2 et Win Rate > 55%", icon: <Sparkles size={20} />, unlocked: diamondScore && sorted.length >= 20, color: "#a855f7" },
-      { id: "1000-profit", title: "1000€ Profit", description: "Accumuler 1000€ de profit", icon: <Award size={20} />, unlocked: totalPnL >= 1000, color: "#f59e0b" },
-      { id: "best-month", title: "Mois Record", description: "Mois avec 500€+ de profit", icon: <Medal size={20} />, unlocked: bestMonth >= 500, color: "#ef4444" },
-      ...challengeBadges,
-    ];
-  }, [sorted, completedChallenges]);
-
-  /* ── streaks ── */
-  const streaks = useMemo(() => {
-    let curWin = 0, curLoss = 0, bestWin = 0, bestLoss = 0;
-    sorted.forEach((t) => {
-      if (t.result > 0) { curWin++; curLoss = 0; if (curWin > bestWin) bestWin = curWin; }
-      else if (t.result < 0) { curLoss++; curWin = 0; if (curLoss > bestLoss) bestLoss = curLoss; }
-      else { curWin = 0; curLoss = 0; }
-    });
-
-    // Challenge streak - how many challenges completed in a row (consecutive months)
-    const challengeStreak = completedChallenges.length;
-
-    return {
-      currentWin: curWin,
-      currentLoss: curLoss,
-      bestWin,
-      bestLoss,
-      consecutiveDays: currentConsecutiveDays(sorted),
-      challengeStreak,
-    };
-  }, [sorted, completedChallenges]);
-
-  /* ── monthly progress ── */
-  const monthly = useMemo(() => {
-    const mTrades = sorted.filter((t) => isThisMonth(t.date));
-    const lmTrades = sorted.filter((t) => isLastMonth(t.date));
-    const mWins = mTrades.filter((t) => t.result > 0).length;
-    const lmWins = lmTrades.filter((t) => t.result > 0).length;
-    const mWinRate = mTrades.length > 0 ? (mWins / mTrades.length) * 100 : 0;
-    const lmWinRate = lmTrades.length > 0 ? (lmWins / lmTrades.length) * 100 : 0;
-    const mPnL = mTrades.reduce((s, t) => s + t.result, 0);
-    const lmPnL = lmTrades.reduce((s, t) => s + t.result, 0);
-    return {
-      trades: mTrades.length,
-      lastTrades: lmTrades.length,
-      winRate: mWinRate,
-      lastWinRate: lmWinRate,
-      pnl: mPnL,
-      lastPnl: lmPnL,
-    };
-  }, [sorted]);
-
-  /* ── leaderboard (real data not available yet) ── */
-  const leaderboard: { challengeId: string; challengeName: string; entries: { rank: number; name: string; progress: number; isYou: boolean }[] }[] = [];
-
-  /* ── custom challenge creation ── */
-  const [newChallenge, setNewChallenge] = useState({
-    name: "",
-    description: "",
-    type: "trades",
-    target: 10,
-    duration: "week" as "week" | "month" | "2weeks",
-    color: "#3b82f6",
-  });
-
-  const handleCreateChallenge = useCallback(() => {
-    if (!newChallenge.name.trim()) return;
-    const endDate = newChallenge.duration === "week"
-      ? getEndOfWeek()
-      : newChallenge.duration === "2weeks"
-        ? getEndOfTwoWeeks()
-        : getEndOfMonth();
-    const custom: CustomChallenge = {
-      id: `custom-${Date.now()}`,
-      name: newChallenge.name,
-      description: newChallenge.description || `Challenge personnalise: ${newChallenge.name}`,
-      type: newChallenge.type,
-      target: newChallenge.target,
-      duration: newChallenge.duration,
-      createdAt: new Date().toISOString(),
-      endDate,
-      iconName: "Star",
-      color: newChallenge.color,
-    };
-    setCustomChallenges((prev) => [...prev, custom]);
-    setNewChallenge({ name: "", description: "", type: "trades", target: 10, duration: "week", color: "#3b82f6" });
-    setShowCreateModal(false);
-  }, [newChallenge]);
-
-  const handleDeleteCustomChallenge = useCallback((id: string) => {
-    setCustomChallenges((prev) => prev.filter((c) => c.id !== id));
-  }, []);
-
-  /* ── share handler ── */
-  const handleShare = useCallback(async (challenge: CompletedChallenge) => {
-    const text = `J'ai complete le challenge "${challenge.name}" sur ProTrade Journal ! ${challenge.badge}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "ProTrade Journal - Challenge", text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        setCopiedId(challenge.id);
-        setTimeout(() => setCopiedId(null), 2000);
-      }
-      setCompletedChallenges((prev) =>
-        prev.map((c) => (c.id === challenge.id ? { ...c, shared: true } : c))
-      );
-    } catch {
-      // user cancelled share
-    }
-  }, []);
-
-  /* ─── render ──────────────────────────────────────────── */
-
-  // VIP loading state
-  if (isVip === null) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // VIP gate
-  if (!isVip) {
-    return (
-      <div className="relative min-h-[70vh] flex items-center justify-center">
-        {/* Blurred background preview */}
-        <div className="absolute inset-0 overflow-hidden rounded-2xl opacity-30 blur-sm pointer-events-none">
-          <div className="p-6 space-y-4">
-            <div className="flex items-center gap-3"><Trophy className="text-amber-500" size={28} /><span className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Challenges</span></div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[1,2,3,4].map(i => (
-                <div key={i} className="rounded-xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-                  <div className="h-3 rounded mb-2" style={{ background: "var(--border)", width: "70%" }} />
-                  <div className="h-6 rounded" style={{ background: "var(--border)", width: "50%" }} />
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {[1,2,3,4].map(i => (
-                <div key={i} className="rounded-xl p-5" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-                  <div className="h-3 rounded mb-3" style={{ background: "var(--border)", width: `${40 + i * 10}%` }} />
-                  <div className="h-2 rounded-full" style={{ background: "var(--border)" }}><div className="h-full rounded-full" style={{ background: "rgba(6,182,212,0.3)", width: `${20 + i * 15}%` }} /></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        {/* VIP overlay */}
-        <div className="relative z-10 glass rounded-2xl p-8 md:p-12 max-w-lg mx-4 text-center" style={{ border: "1px solid rgba(6,182,212,0.2)", background: "rgba(var(--bg-card-rgb, 15,15,20), 0.85)", backdropFilter: "blur(20px)" }}>
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" }}>
-            <Lock className="w-8 h-8 text-cyan-400" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalité VIP</h2>
-          <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-            Participez à des défis de trading et mesurez-vous aux meilleurs
-          </p>
-          <div className="space-y-3 text-left mb-8">
-            {[
-              "Challenges hebdomadaires et mensuels",
-              "Créez vos propres défis personnalisés",
-              "Classement et badges de réussite",
-            ].map((b, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(6,182,212,0.15)" }}>
-                  <Check className="w-3 h-3 text-cyan-400" />
-                </div>
-                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{b}</span>
-              </div>
-            ))}
-          </div>
-          <a href="/vip" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
-            <Crown className="w-4 h-4" />
-            Devenir VIP
-          </a>
-          <div className="mt-4">
-            <a href="/vip" className="text-xs hover:underline" style={{ color: "var(--text-muted)" }}>Voir les offres</a>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-transparent" style={{ borderColor: "var(--border)", borderTopColor: "transparent" }} />
-      </div>
-    );
-  }
-
-  const pctBar = (current: number, target: number) => Math.min((current / target) * 100, 100);
-
-  const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: "actifs", label: "Challenges Actifs", icon: <Target size={16} /> },
-    { id: "completes", label: "Completes", icon: <Trophy size={16} /> },
-    { id: "classement", label: "Classement", icon: <Crown size={16} /> },
-    { id: "creer", label: "Creer", icon: <Plus size={16} /> },
-  ];
-
-  return (
-    <div className="max-w-7xl mx-auto space-y-8 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3" style={{ color: "var(--text-primary)" }}>
-            <Trophy className="text-amber-500" size={28} />
-            Challenges & Gamification
-          </h1>
-          <p className="mt-1" style={{ color: "var(--text-muted)" }}>
-            Relevez des defis, gagnez de l&apos;XP et debloquez des badges
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl glass" style={{ border: "1px solid var(--border)" }}>
-            <Flame size={16} className="text-orange-500" />
-            <span className="mono text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-              {streaks.challengeStreak} streak
-            </span>
-          </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl glass" style={{ border: "1px solid var(--border)" }}>
-            <Sparkles size={16} className="text-amber-500" />
-            <span className="mono text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-              {badges.filter((b) => b.unlocked).length}/{badges.length} Badges
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* XP Bar */}
-      <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--border)" }}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold mono text-lg">
-              {level}
-            </div>
-            <div>
-              <p className="font-semibold" style={{ color: "var(--text-primary)" }}>{levelTitle}</p>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>Niveau {level}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="mono text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-              {xp.toLocaleString()} XP
-            </p>
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              {xpInLevel}/{xpForLevel} XP vers niveau {level + 1}
-            </p>
-          </div>
-        </div>
-        <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-primary)" }}>
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-700"
-            style={{ width: `${(xpInLevel / xpForLevel) * 100}%` }}
-          />
-        </div>
-        <div className="flex justify-between mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
-          <span>+10/trade  +25/win  +50/R:R&gt;2  +100/challenge</span>
-          <span>{xpForLevel - xpInLevel} XP restants</span>
-        </div>
-      </div>
-
-      {/* Streak Counter */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <Flame size={20} className="text-red-500" />
-          Compteur de Streaks
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {[
-            { label: "Win Streak", value: streaks.currentWin, icon: <TrendingUp size={18} />, color: "#10b981", active: streaks.currentWin >= 3 },
-            { label: "Loss Streak", value: streaks.currentLoss, icon: <TrendingDown size={18} />, color: "#ef4444", active: false },
-            { label: "Meilleur Win", value: streaks.bestWin, icon: <Crown size={18} />, color: "#f59e0b", active: false },
-            { label: "Jours Consecutifs", value: streaks.consecutiveDays, icon: <Clock size={18} />, color: "#8b5cf6", active: streaks.consecutiveDays >= 3 },
-            { label: "Challenges Streak", value: streaks.challengeStreak, icon: <Trophy size={18} />, color: "#ec4899", active: streaks.challengeStreak >= 2 },
-          ].map((s) => (
-            <div key={s.label} className="glass rounded-xl p-4" style={{ border: `1px solid ${s.active ? s.color + "60" : "var(--border)"}` }}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs" style={{ color: "var(--text-muted)" }}>{s.label}</span>
-                {s.active && <Flame size={14} className="text-orange-500 animate-pulse" />}
-              </div>
-              <div className="flex items-center gap-2">
-                <div style={{ color: s.color }}>{s.icon}</div>
-                <span className="mono text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  {s.value}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Tab Navigation */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => {
-              setActiveTab(tab.id);
-              if (tab.id === "creer") setShowCreateModal(true);
-            }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${
-              activeTab === tab.id
-                ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20"
-                : "glass hover:scale-[1.02]"
-            }`}
-            style={{
-              border: `1px solid ${activeTab === tab.id ? "#f59e0b40" : "var(--border)"}`,
-              color: activeTab === tab.id ? "#f59e0b" : "var(--text-secondary)",
-            }}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab: Active Challenges */}
-      {activeTab === "actifs" && (
-        <section className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {challenges.map((c) => {
-              const pct = pctBar(c.current, c.target);
-              const done = c.current >= c.target;
-              const nearDone = pct >= 80 && !done;
-              const isExpanded = expandedChallenge === c.id;
-              const remaining = formatCountdown(c.endDate);
-              const milestonesHit = c.milestones.filter(
-                (m) => (c.current / c.target) * (c.milestones[c.milestones.length - 1] || c.target) >= m
-              ).length;
-
-              return (
-                <div
-                  key={c.id}
-                  className={`glass rounded-xl p-4 bg-gradient-to-br ${c.gradient} transition-all duration-300 hover:scale-[1.02] cursor-pointer ${nearDone ? "ring-1 ring-amber-500/30" : ""}`}
-                  style={{ border: `1px solid ${done ? c.color : "var(--border)"}` }}
-                  onClick={() => setExpandedChallenge(isExpanded ? null : c.id)}
-                >
-                  {/* Header row */}
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: `${c.color}20`, color: c.color }}
-                      >
-                        {c.icon}
-                      </div>
-                      <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                        {c.title}
-                      </span>
-                    </div>
-                    {done ? (
-                      <div className="flex items-center gap-1">
-                        <Trophy size={14} className="text-amber-500" />
-                        <CheckCircle2 size={14} className="text-emerald-500" />
-                      </div>
-                    ) : (
-                      isExpanded ? <ChevronUp size={14} style={{ color: "var(--text-muted)" }} /> : <ChevronDown size={14} style={{ color: "var(--text-muted)" }} />
-                    )}
-                  </div>
-
-                  <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>{c.description}</p>
-
-                  {/* Countdown & Participants */}
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1">
-                      <Timer size={12} style={{ color: "var(--text-muted)" }} />
-                      <span className="mono text-[11px]" style={{ color: daysRemaining(c.endDate).days < 2 ? "#ef4444" : "var(--text-muted)" }}>
-                        {remaining}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users size={12} style={{ color: "var(--text-muted)" }} />
-                      <span className="mono text-[11px]" style={{ color: "var(--text-muted)" }}>
-                        {c.participants}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Progress bar with milestones */}
-                  <div className="relative w-full h-2.5 rounded-full overflow-hidden mb-1" style={{ backgroundColor: "var(--bg-primary)" }}>
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%`, backgroundColor: c.color }}
-                    />
-                    {/* Milestone markers */}
-                    {c.milestones.map((m, i) => {
-                      const mPct = (m / c.milestones[c.milestones.length - 1]) * 100;
-                      return (
-                        <div
-                          key={i}
-                          className="absolute top-0 w-0.5 h-full"
-                          style={{ left: `${mPct}%`, backgroundColor: "var(--bg-primary)", opacity: 0.6 }}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex justify-between mt-1.5">
-                    <span className="mono text-xs font-medium" style={{ color: c.color }}>
-                      {c.current}/{c.target}
-                    </span>
-                    <span className="mono text-xs" style={{ color: "var(--text-muted)" }}>
-                      {Math.round(pct)}%
-                    </span>
-                  </div>
-
-                  {/* Reward badge */}
-                  <div className="flex items-center gap-1.5 mt-3 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
-                    <Gift size={12} style={{ color: c.color }} />
-                    <span className="text-[11px] font-medium" style={{ color: c.color }}>{c.reward}</span>
-                  </div>
-
-                  {/* Expanded details */}
-                  {isExpanded && (
-                    <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid var(--border)" }}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>Jalons atteints:</span>
-                        <span className="mono text-xs font-medium" style={{ color: c.color }}>
-                          {milestonesHit}/{c.milestones.length}
-                        </span>
-                      </div>
-                      <div className="flex gap-1">
-                        {c.milestones.map((m, i) => {
-                          const hit = (c.current / c.target) * (c.milestones[c.milestones.length - 1] || c.target) >= m;
-                          return (
-                            <div
-                              key={i}
-                              className="flex-1 h-1.5 rounded-full"
-                              style={{ backgroundColor: hit ? c.color : "var(--bg-primary)" }}
-                            />
-                          );
-                        })}
-                      </div>
-                      <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                        Type: {c.type === "weekly" ? "Hebdomadaire" : c.type === "monthly" ? "Mensuel" : "Bimensuel"}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* Custom challenges */}
-            {customChallenges.map((cc) => {
-              const remaining = formatCountdown(cc.endDate);
-              const { expired } = daysRemaining(cc.endDate);
-              return (
-                <div
-                  key={cc.id}
-                  className="glass rounded-xl p-4 transition-all duration-300 hover:scale-[1.02] relative"
-                  style={{ border: `1px solid ${cc.color}40` }}
-                >
-                  <button
-                    className="absolute top-2 right-2 p-1 rounded-lg hover:bg-red-500/20 transition-colors"
-                    onClick={() => handleDeleteCustomChallenge(cc.id)}
-                  >
-                    <X size={12} className="text-red-400" />
-                  </button>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${cc.color}20`, color: cc.color }}
-                    >
-                      <Star size={20} />
-                    </div>
-                    <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                      {cc.name}
-                    </span>
-                  </div>
-                  <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>{cc.description}</p>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1">
-                      <Timer size={12} style={{ color: "var(--text-muted)" }} />
-                      <span className="mono text-[11px]" style={{ color: expired ? "#ef4444" : "var(--text-muted)" }}>
-                        {remaining}
-                      </span>
-                    </div>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ backgroundColor: `${cc.color}20`, color: cc.color }}>
-                      Personnalise
-                    </span>
-                  </div>
-                  <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    Objectif: {cc.target} {cc.type}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Tab: Completed Challenges */}
-      {activeTab === "completes" && (
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-            <CheckCircle2 size={20} className="text-emerald-500" />
-            Challenges Completes ({completedChallenges.length})
-          </h2>
-          {completedChallenges.length === 0 ? (
-            <div className="glass rounded-xl p-12 text-center" style={{ border: "1px solid var(--border)" }}>
-              <Trophy size={48} className="mx-auto mb-4" style={{ color: "var(--text-muted)" }} />
-              <p className="text-lg font-medium mb-2" style={{ color: "var(--text-primary)" }}>
-                Aucun challenge complete pour le moment
-              </p>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                Completez vos premiers challenges pour les voir apparaitre ici !
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {completedChallenges.map((cc) => (
-                <div
-                  key={cc.id + cc.completedAt}
-                  className="glass rounded-xl p-5 transition-all duration-300 hover:scale-[1.02]"
-                  style={{ border: `1px solid ${cc.color}40` }}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: `${cc.color}20`, color: cc.color }}
-                      >
-                        {getIconForName(cc.iconName, 20)}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{cc.name}</p>
-                        <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                          {new Date(cc.completedAt).toLocaleDateString("fr-FR")}
-                        </p>
-                      </div>
-                    </div>
-                    <CheckCircle2 size={18} className="text-emerald-500" />
-                  </div>
-                  <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg" style={{ backgroundColor: `${cc.color}10` }}>
-                    <Gift size={14} style={{ color: cc.color }} />
-                    <span className="text-xs font-medium" style={{ color: cc.color }}>{cc.badge}</span>
-                  </div>
-                  <button
-                    onClick={() => handleShare(cc)}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all hover:scale-[1.02]"
-                    style={{
-                      backgroundColor: "var(--bg-primary)",
-                      border: "1px solid var(--border)",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    {copiedId === cc.id ? (
-                      <>
-                        <Check size={14} className="text-emerald-500" />
-                        Copie !
-                      </>
-                    ) : (
-                      <>
-                        <Share2 size={14} />
-                        Partager
-                      </>
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Badges Gallery within completed tab */}
-          <h2 className="text-lg font-semibold mt-8 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-            <Award size={20} className="text-purple-500" />
-            Galerie de Badges
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {badges.map((b) => (
-              <div
-                key={b.id}
-                className={`glass rounded-xl p-4 flex flex-col items-center text-center transition-all duration-300 ${
-                  b.unlocked ? "hover:scale-105" : "opacity-40 grayscale"
-                }`}
-                style={{ border: `1px solid ${b.unlocked ? b.color + "40" : "var(--border)"}` }}
-              >
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center mb-2 relative"
-                  style={{
-                    backgroundColor: b.unlocked ? `${b.color}20` : "var(--bg-primary)",
-                    color: b.unlocked ? b.color : "var(--text-muted)",
-                  }}
-                >
-                  {b.unlocked ? b.icon : <Lock size={20} />}
-                </div>
-                <span className="text-xs font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
-                  {b.title}
-                </span>
-                <span className="text-[10px] mt-1 leading-tight" style={{ color: "var(--text-muted)" }}>
-                  {b.description}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Tab: Leaderboard */}
-      {activeTab === "classement" && (
-        <section className="space-y-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-            <Crown size={20} className="text-amber-500" />
-            Classement par Challenge
-          </h2>
-          <div className="glass rounded-xl p-8 text-center" style={{ border: "1px solid var(--border)" }}>
-            <Crown size={40} className="text-amber-500/40 mx-auto mb-3" />
-            <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-              Classement communautaire disponible prochainement
-            </p>
-          </div>
-        </section>
-      )}
-
-      {/* Tab: Create / Custom Challenges */}
-      {activeTab === "creer" && (
-        <section className="space-y-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-            <Plus size={20} className="text-blue-500" />
-            Creer un Challenge Personnalise
-          </h2>
-
-          <div className="glass rounded-xl p-6" style={{ border: "1px solid var(--border)" }}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  Nom du challenge
-                </label>
-                <input
-                  type="text"
-                  value={newChallenge.name}
-                  onChange={(e) => setNewChallenge((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Ex: 20 trades ce mois"
-                  className="w-full px-3 py-2.5 rounded-lg text-sm glass"
-                  style={{
-                    border: "1px solid var(--border)",
-                    color: "var(--text-primary)",
-                    backgroundColor: "var(--bg-primary)",
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  Description
-                </label>
-                <input
-                  type="text"
-                  value={newChallenge.description}
-                  onChange={(e) => setNewChallenge((p) => ({ ...p, description: e.target.value }))}
-                  placeholder="Decrivez votre challenge..."
-                  className="w-full px-3 py-2.5 rounded-lg text-sm glass"
-                  style={{
-                    border: "1px solid var(--border)",
-                    color: "var(--text-primary)",
-                    backgroundColor: "var(--bg-primary)",
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  Type d&apos;objectif
-                </label>
-                <select
-                  value={newChallenge.type}
-                  onChange={(e) => setNewChallenge((p) => ({ ...p, type: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-lg text-sm glass"
-                  style={{
-                    border: "1px solid var(--border)",
-                    color: "var(--text-primary)",
-                    backgroundColor: "var(--bg-primary)",
-                  }}
-                >
-                  <option value="trades">Nombre de trades</option>
-                  <option value="winrate">Win rate (%)</option>
-                  <option value="profit">Profit (EUR)</option>
-                  <option value="rr">R:R moyen</option>
-                  <option value="streak">Jours consécutifs</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  Objectif
-                </label>
-                <input
-                  type="number"
-                  value={newChallenge.target}
-                  onChange={(e) => setNewChallenge((p) => ({ ...p, target: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2.5 rounded-lg text-sm glass"
-                  style={{
-                    border: "1px solid var(--border)",
-                    color: "var(--text-primary)",
-                    backgroundColor: "var(--bg-primary)",
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  Duree
-                </label>
-                <select
-                  value={newChallenge.duration}
-                  onChange={(e) => setNewChallenge((p) => ({ ...p, duration: e.target.value as "week" | "month" | "2weeks" }))}
-                  className="w-full px-3 py-2.5 rounded-lg text-sm glass"
-                  style={{
-                    border: "1px solid var(--border)",
-                    color: "var(--text-primary)",
-                    backgroundColor: "var(--bg-primary)",
-                  }}
-                >
-                  <option value="week">1 semaine</option>
-                  <option value="2weeks">2 semaines</option>
-                  <option value="month">1 mois</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  Couleur
-                </label>
-                <div className="flex gap-2">
-                  {["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"].map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setNewChallenge((p) => ({ ...p, color }))}
-                      className="w-8 h-8 rounded-lg transition-all"
-                      style={{
-                        backgroundColor: color,
-                        border: newChallenge.color === color ? "2px solid white" : "2px solid transparent",
-                        transform: newChallenge.color === color ? "scale(1.2)" : "scale(1)",
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={handleCreateChallenge}
-              disabled={!newChallenge.name.trim()}
-              className="mt-6 flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium text-white transition-all hover:scale-[1.02] disabled:opacity-40 disabled:hover:scale-100"
-              style={{
-                background: `linear-gradient(135deg, ${newChallenge.color}, ${newChallenge.color}cc)`,
-              }}
-            >
-              <Plus size={16} />
-              Creer le challenge
-            </button>
-          </div>
-
-          {/* List existing custom challenges */}
-          {customChallenges.length > 0 && (
-            <>
-              <h3 className="text-sm font-semibold mt-6" style={{ color: "var(--text-secondary)" }}>
-                Vos challenges personnalises ({customChallenges.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {customChallenges.map((cc) => {
-                  const remaining = formatCountdown(cc.endDate);
-                  const { expired } = daysRemaining(cc.endDate);
-                  return (
-                    <div
-                      key={cc.id}
-                      className="glass rounded-xl p-4 relative"
-                      style={{ border: `1px solid ${cc.color}40` }}
-                    >
-                      <button
-                        className="absolute top-2 right-2 p-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
-                        onClick={() => handleDeleteCustomChallenge(cc.id)}
-                      >
-                        <X size={14} className="text-red-400" />
-                      </button>
-                      <div className="flex items-center gap-2 mb-2">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: `${cc.color}20`, color: cc.color }}
-                        >
-                          <Star size={18} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{cc.name}</p>
-                          <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>{cc.description}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
-                        <span>Objectif: {cc.target} {cc.type}</span>
-                        <span className="flex items-center gap-1">
-                          <Timer size={12} />
-                          <span style={{ color: expired ? "#ef4444" : "inherit" }}>{remaining}</span>
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </section>
-      )}
-
-      {/* Monthly Progress (always shown at bottom) */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-          <BarChart3 size={20} className="text-blue-500" />
-          Progression Mensuelle
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { label: "Trades", current: monthly.trades, target: 30, last: monthly.lastTrades, format: (v: number) => `${v}`, color: "#3b82f6" },
-            { label: "Win Rate", current: monthly.winRate, target: 100, last: monthly.lastWinRate, format: (v: number) => `${v.toFixed(1)}%`, color: "#10b981" },
-            { label: "P&L", current: monthly.pnl, target: 500, last: monthly.lastPnl, format: (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(0)}€`, color: monthly.pnl >= 0 ? "#10b981" : "#ef4444" },
-          ].map((m) => {
-            const diff = m.current - m.last;
-            const pctDiff = m.last > 0 ? ((diff / m.last) * 100) : 0;
-            const up = diff >= 0;
-            return (
-              <div key={m.label} className="glass rounded-xl p-5" style={{ border: "1px solid var(--border)" }}>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{m.label}</span>
-                  <div className="flex items-center gap-1">
-                    {up ? <ArrowUpRight size={14} className="text-emerald-500" /> : <ArrowDownRight size={14} className="text-red-500" />}
-                    <span className="mono text-xs font-medium" style={{ color: up ? "#10b981" : "#ef4444" }}>
-                      {pctDiff !== 0 ? `${up ? "+" : ""}${pctDiff.toFixed(0)}%` : "-"}
-                    </span>
-                  </div>
-                </div>
-                <p className="mono text-xl font-bold mb-3" style={{ color: m.color }}>{m.format(m.current)}</p>
-                <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-primary)" }}>
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(Math.max((m.current / m.target) * 100, 0), 100)}%`, backgroundColor: m.color }}
-                  />
-                </div>
-                <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-                  Objectif: {m.format(m.target)} {m.label === "P&L" ? "ce mois" : ""}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-/* ─── icon resolver for serialized icon names ──────────── */
-
-function getIconForName(name: string, size: number): React.ReactNode {
+function getIcon(name: string, size: number) {
   const icons: Record<string, React.ReactNode> = {
     TrendingUp: <TrendingUp size={size} />,
     Target: <Target size={size} />,
@@ -1402,6 +47,608 @@ function getIconForName(name: string, size: number): React.ReactNode {
     Flame: <Flame size={size} />,
     Zap: <Zap size={size} />,
     Award: <Award size={size} />,
+    BarChart3: <BarChart3 size={size} />,
+    Sunrise: <Sunrise size={size} />,
   };
   return icons[name] || <Star size={size} />;
+}
+
+/* ─── confetti burst ───────────────────────────────────── */
+
+function ConfettiBurst({ active }: { active: boolean }) {
+  if (!active) return null;
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden z-10">
+      {Array.from({ length: 24 }).map((_, i) => {
+        const angle = (i / 24) * 360;
+        const dist = 60 + Math.random() * 40;
+        const colors = ["#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#ec4899", "#8b5cf6", "#06b6d4"];
+        const color = colors[i % colors.length];
+        const size = 4 + Math.random() * 4;
+        return (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: size,
+              height: size,
+              backgroundColor: color,
+              left: "50%",
+              top: "50%",
+              animation: `confetti-burst 0.8s ease-out forwards`,
+              animationDelay: `${Math.random() * 0.15}s`,
+              transform: `translate(-50%, -50%)`,
+              // @ts-expect-error CSS custom properties
+              "--tx": `${Math.cos((angle * Math.PI) / 180) * dist}px`,
+              "--ty": `${Math.sin((angle * Math.PI) / 180) * dist}px`,
+            }}
+          />
+        );
+      })}
+      <style>{`
+        @keyframes confetti-burst {
+          0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+          100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ─── countdown helpers ────────────────────────────────── */
+
+function getDeadline(category: string): string {
+  const d = new Date();
+  if (category === "daily") {
+    d.setHours(23, 59, 59, 999);
+  } else if (category === "weekly") {
+    const day = d.getDay();
+    const diff = day === 0 ? 0 : 7 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(23, 59, 59, 999);
+  } else {
+    d.setMonth(d.getMonth() + 1, 0);
+    d.setHours(23, 59, 59, 999);
+  }
+  return d.toISOString();
+}
+
+function formatCountdown(endDate: string): string {
+  const diff = new Date(endDate).getTime() - Date.now();
+  if (diff <= 0) return "Terminé";
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  if (days > 0) return `${days}j ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+/* ─── tab config ───────────────────────────────────────── */
+
+const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[] = [
+  { id: "daily", label: "Quotidien", icon: <Zap size={16} />, color: "#f59e0b" },
+  { id: "weekly", label: "Hebdomadaire", icon: <Flame size={16} />, color: "#f97316" },
+  { id: "monthly", label: "Mensuel", icon: <BarChart3 size={16} />, color: "#3b82f6" },
+  { id: "special", label: "Spécial", icon: <Sparkles size={16} />, color: "#a855f7" },
+];
+
+/* ─── page ─────────────────────────────────────────────── */
+
+export default function ChallengesPage() {
+  const [challenges, setChallenges] = useState<ChallengeData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isVip, setIsVip] = useState<boolean | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>("daily");
+  const [joining, setJoining] = useState<string | null>(null);
+  const [justCompleted, setJustCompleted] = useState<Set<string>>(new Set());
+  const [celebratingId, setCelebratingId] = useState<string | null>(null);
+  const prevProgressRef = useRef<Map<string, number>>(new Map());
+
+  // Check VIP
+  useEffect(() => {
+    fetch("/api/user/role")
+      .then((r) => r.json())
+      .then((d) => setIsVip(d.role === "VIP" || d.role === "ADMIN"))
+      .catch(() => setIsVip(false));
+  }, []);
+
+  // Fetch challenges
+  const fetchChallenges = useCallback(async () => {
+    try {
+      const res = await fetch("/api/challenges");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setChallenges(data.challenges || []);
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isVip) fetchChallenges();
+  }, [isVip, fetchChallenges]);
+
+  // Auto-refresh every 30s
+  useEffect(() => {
+    if (!isVip) return;
+    const interval = setInterval(fetchChallenges, 30000);
+    return () => clearInterval(interval);
+  }, [isVip, fetchChallenges]);
+
+  // Detect newly completed challenges
+  useEffect(() => {
+    const prev = prevProgressRef.current;
+    const newCompleted = new Set<string>();
+    challenges.forEach((c) => {
+      if (c.completed && c.joined) {
+        const wasPrev = prev.get(c.id);
+        if (wasPrev !== undefined && wasPrev < 100 && c.progress >= 100) {
+          newCompleted.add(c.id);
+        }
+      }
+    });
+    if (newCompleted.size > 0) {
+      setJustCompleted((old) => new Set([...old, ...newCompleted]));
+      // Auto-sync completion to backend
+      newCompleted.forEach(async (id) => {
+        const ch = challenges.find((c) => c.id === id);
+        if (ch) {
+          await fetch("/api/challenges", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ challengeId: id, progress: 100, completed: true }),
+          });
+          setCelebratingId(id);
+          setTimeout(() => setCelebratingId(null), 1500);
+        }
+      });
+    }
+    // Update ref
+    const newMap = new Map<string, number>();
+    challenges.forEach((c) => newMap.set(c.id, c.progress));
+    prevProgressRef.current = newMap;
+  }, [challenges]);
+
+  // Join a challenge
+  const handleJoin = useCallback(async (challengeId: string) => {
+    setJoining(challengeId);
+    try {
+      await fetch("/api/challenges", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challengeId }),
+      });
+      await fetchChallenges();
+    } catch {
+      // silent
+    } finally {
+      setJoining(null);
+    }
+  }, [fetchChallenges]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const joined = challenges.filter((c) => c.joined);
+    const completed = challenges.filter((c) => c.completed && c.joined);
+    const totalXp = completed.reduce((s, c) => s + c.reward.xp, 0);
+    const level = Math.floor(totalXp / 500) + 1;
+    const titles: [number, string][] = [
+      [50, "Légende"], [36, "Master"], [21, "Expert"],
+      [11, "Trader"], [6, "Apprenti"], [1, "Débutant"],
+    ];
+    const title = titles.find(([min]) => level >= min)?.[1] || "Débutant";
+    return {
+      total: challenges.length,
+      joined: joined.length,
+      completed: completed.length,
+      totalXp,
+      level,
+      title,
+      xpInLevel: totalXp % 500,
+      xpForLevel: 500,
+    };
+  }, [challenges]);
+
+  // Filtered challenges
+  const filtered = useMemo(
+    () => challenges.filter((c) => c.category === activeTab),
+    [challenges, activeTab]
+  );
+
+  const completedChallenges = useMemo(
+    () => challenges.filter((c) => c.completed && c.joined),
+    [challenges]
+  );
+
+  /* ─── render ─────────────────────────────────────────── */
+
+  if (isVip === null) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isVip) {
+    return (
+      <div className="relative min-h-[70vh] flex items-center justify-center">
+        <div className="absolute inset-0 overflow-hidden rounded-2xl opacity-30 blur-sm pointer-events-none">
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <Trophy className="text-amber-500" size={28} />
+              <span className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Challenges</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="rounded-xl p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+                  <div className="h-3 rounded mb-2" style={{ background: "var(--border)", width: "70%" }} />
+                  <div className="h-6 rounded" style={{ background: "var(--border)", width: "50%" }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="relative z-10 glass rounded-2xl p-8 md:p-12 max-w-lg mx-4 text-center" style={{ border: "1px solid rgba(6,182,212,0.2)", background: "rgba(var(--bg-card-rgb, 15,15,20), 0.85)", backdropFilter: "blur(20px)" }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" }}>
+            <Lock className="w-8 h-8 text-cyan-400" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalité VIP</h2>
+          <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
+            Participez à des défis de trading et mesurez-vous aux meilleurs
+          </p>
+          <div className="space-y-3 text-left mb-8">
+            {[
+              "Challenges quotidiens, hebdomadaires et mensuels",
+              "Gagnez de l'XP et débloquez des badges",
+              "Suivez votre progression en temps réel",
+            ].map((b, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(6,182,212,0.15)" }}>
+                  <Check className="w-3 h-3 text-cyan-400" />
+                </div>
+                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>{b}</span>
+              </div>
+            ))}
+          </div>
+          <a href="/vip" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
+            <Crown className="w-4 h-4" />
+            Devenir VIP
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--text-muted)" }} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-8 p-4 md:p-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3" style={{ color: "var(--text-primary)" }}>
+            <Trophy className="text-amber-500" size={28} />
+            Challenges
+          </h1>
+          <p className="mt-1" style={{ color: "var(--text-muted)" }}>
+            Relevez des défis, gagnez de l&apos;XP et débloquez des badges
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl glass" style={{ border: "1px solid var(--border)" }}>
+            <Trophy size={16} className="text-emerald-500" />
+            <span className="mono text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              {stats.completed}/{stats.total}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl glass" style={{ border: "1px solid var(--border)" }}>
+            <Sparkles size={16} className="text-amber-500" />
+            <span className="mono text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              {stats.totalXp} XP
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* XP Bar */}
+      <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--border)" }}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold mono text-lg">
+              {stats.level}
+            </div>
+            <div>
+              <p className="font-semibold" style={{ color: "var(--text-primary)" }}>{stats.title}</p>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>Niveau {stats.level}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="mono text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+              {stats.totalXp.toLocaleString()} XP
+            </p>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              {stats.xpInLevel}/{stats.xpForLevel} XP vers niveau {stats.level + 1}
+            </p>
+          </div>
+        </div>
+        <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-primary)" }}>
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-700"
+            style={{ width: `${(stats.xpInLevel / stats.xpForLevel) * 100}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
+          <span>Complétez des challenges pour gagner de l&apos;XP</span>
+          <span>{stats.xpForLevel - stats.xpInLevel} XP restants</span>
+        </div>
+      </div>
+
+      {/* Completed Badges Row */}
+      {completedChallenges.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+            <Award size={16} className="text-purple-500" />
+            Badges gagnés ({completedChallenges.length})
+          </h2>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {completedChallenges.map((c) => (
+              <div
+                key={c.id}
+                className="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl glass"
+                style={{ border: `1px solid ${c.color}40` }}
+              >
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: `${c.color}20`, color: c.color }}
+                >
+                  {getIcon(c.icon, 14)}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: c.color }}>{c.reward.badge}</p>
+                  <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>+{c.reward.xp} XP</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Category Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {TABS.map((tab) => {
+          const count = challenges.filter((c) => c.category === tab.id).length;
+          const completedCount = challenges.filter((c) => c.category === tab.id && c.completed && c.joined).length;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                activeTab === tab.id
+                  ? "shadow-lg scale-[1.02]"
+                  : "glass hover:scale-[1.02]"
+              }`}
+              style={{
+                border: `1px solid ${activeTab === tab.id ? tab.color + "60" : "var(--border)"}`,
+                color: activeTab === tab.id ? tab.color : "var(--text-secondary)",
+                background: activeTab === tab.id ? `${tab.color}15` : undefined,
+              }}
+            >
+              {tab.icon}
+              {tab.label}
+              <span
+                className="text-[11px] px-1.5 py-0.5 rounded-full mono"
+                style={{
+                  backgroundColor: activeTab === tab.id ? `${tab.color}20` : "var(--bg-primary)",
+                  color: activeTab === tab.id ? tab.color : "var(--text-muted)",
+                }}
+              >
+                {completedCount}/{count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Challenge Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {filtered.map((c) => {
+          const pct = c.progress;
+          const done = c.completed && c.joined;
+          const nearDone = pct >= 80 && !done;
+          const isCelebrating = celebratingId === c.id;
+          const deadline = getDeadline(c.category);
+          const countdown = formatCountdown(deadline);
+
+          return (
+            <div
+              key={c.id}
+              className={`relative glass rounded-2xl p-5 bg-gradient-to-br ${c.gradient} transition-all duration-300 hover:scale-[1.01] ${
+                nearDone ? "ring-1 ring-amber-500/30 animate-pulse-slow" : ""
+              } ${done ? "ring-2" : ""}`}
+              style={{
+                border: `1px solid ${done ? c.color + "80" : "var(--border)"}`,
+                ...(done ? { boxShadow: `0 0 20px ${c.color}20` } : {}),
+              }}
+            >
+              <ConfettiBurst active={isCelebrating} />
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${done ? "scale-110" : ""}`}
+                    style={{
+                      backgroundColor: `${c.color}20`,
+                      color: c.color,
+                      ...(done ? { boxShadow: `0 0 12px ${c.color}40` } : {}),
+                    }}
+                  >
+                    {done ? <CheckCircle2 size={22} /> : getIcon(c.icon, 20)}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                      {c.title}
+                    </h3>
+                    <span
+                      className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                      style={{
+                        backgroundColor: `${c.color}15`,
+                        color: c.color,
+                      }}
+                    >
+                      {c.category === "daily" ? "Quotidien" : c.category === "weekly" ? "Hebdomadaire" : c.category === "monthly" ? "Mensuel" : "Spécial"}
+                    </span>
+                  </div>
+                </div>
+                {done && (
+                  <div className="flex items-center gap-1">
+                    <Trophy size={16} className="text-amber-500" />
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              <p className="text-xs mb-4 leading-relaxed" style={{ color: "var(--text-muted)" }}>
+                {c.description}
+              </p>
+
+              {/* Countdown */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5">
+                  <Timer size={13} style={{ color: "var(--text-muted)" }} />
+                  <span
+                    className="mono text-xs"
+                    style={{
+                      color: countdown === "Terminé" || (c.category === "daily" && parseInt(countdown) < 2)
+                        ? "#ef4444"
+                        : "var(--text-muted)",
+                    }}
+                  >
+                    {countdown}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Sparkles size={12} style={{ color: c.color }} />
+                  <span className="mono text-xs font-semibold" style={{ color: c.color }}>
+                    +{c.reward.xp} XP
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="relative w-full h-3 rounded-full overflow-hidden mb-2" style={{ backgroundColor: "var(--bg-primary)" }}>
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: `${c.joined ? pct : 0}%`,
+                    background: done
+                      ? `linear-gradient(90deg, ${c.color}, ${c.color}cc)`
+                      : c.color,
+                  }}
+                />
+                {done && (
+                  <div
+                    className="absolute inset-0 rounded-full animate-shimmer"
+                    style={{
+                      background: `linear-gradient(90deg, transparent, ${c.color}40, transparent)`,
+                      backgroundSize: "200% 100%",
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Progress Text */}
+              <div className="flex justify-between mb-4">
+                <span className="mono text-xs font-medium" style={{ color: c.color }}>
+                  {c.joined ? `${c.current}/${c.target}` : "-/-"}
+                </span>
+                <span className="mono text-xs font-bold" style={{ color: done ? c.color : "var(--text-muted)" }}>
+                  {c.joined ? `${Math.round(pct)}%` : ""}
+                </span>
+              </div>
+
+              {/* Reward Badge */}
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg mb-3"
+                style={{
+                  backgroundColor: `${c.color}08`,
+                  border: `1px solid ${c.color}20`,
+                }}
+              >
+                <Gift size={14} style={{ color: c.color }} />
+                <span className="text-xs font-medium" style={{ color: c.color }}>
+                  {c.reward.badge}
+                </span>
+              </div>
+
+              {/* Action Button */}
+              {done ? (
+                <div
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold"
+                  style={{ backgroundColor: `${c.color}15`, color: c.color }}
+                >
+                  <CheckCircle2 size={16} />
+                  Complété !
+                </div>
+              ) : c.joined ? (
+                <div
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium"
+                  style={{
+                    backgroundColor: "var(--bg-primary)",
+                    border: `1px solid ${c.color}30`,
+                    color: c.color,
+                  }}
+                >
+                  <Clock size={14} />
+                  En cours...
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleJoin(c.id)}
+                  disabled={joining === c.id}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
+                  style={{
+                    background: `linear-gradient(135deg, ${c.color}, ${c.color}cc)`,
+                  }}
+                >
+                  {joining === c.id ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <>
+                      <Zap size={14} />
+                      Rejoindre
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Shimmer animation style */}
+      <style>{`
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .animate-shimmer {
+          animation: shimmer 2s linear infinite;
+        }
+        .animate-pulse-slow {
+          animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+      `}</style>
+    </div>
+  );
 }

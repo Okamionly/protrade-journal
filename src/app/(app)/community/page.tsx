@@ -5,7 +5,7 @@ import { useTranslation } from "@/i18n/context";
 import { useTrades } from "@/hooks/useTrades";
 import { useGamification } from "@/hooks/useGamification";
 import { CommunityShareTradeModal } from "@/components/CommunityShareTradeModal";
-import { calculateRR } from "@/lib/utils";
+import { TradeCard } from "@/components/TradeCard";
 import {
   Users,
   Share2,
@@ -21,14 +21,20 @@ import {
   MoreHorizontal,
   Link2,
   BarChart2,
-  ArrowUpRight,
-  ArrowDownRight,
   X,
   Plus,
   Trash2,
   Clock,
   CheckCircle2,
+  TrendingUp,
+  TrendingDown,
+  Hash,
+  DollarSign,
+  UserPlus,
+  UserCheck,
+  Trophy,
 } from "lucide-react";
+import Link from "next/link";
 
 /* ─── Types ─────────────────────────────────────────────── */
 
@@ -44,6 +50,8 @@ interface SharedTrade {
   lots: number;
   result: number;
   date: string;
+  emotion?: string | null;
+  duration?: number | null;
 }
 
 interface Reaction {
@@ -98,6 +106,223 @@ const POLL_DURATIONS = [
   { label: "3j", ms: 259200000 },
   { label: "7j", ms: 604800000 },
 ];
+
+/* ─── Asset & Trending Constants ────────────────────────── */
+
+const KNOWN_ASSETS = [
+  "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "NZDUSD", "USDCAD",
+  "EURGBP", "EURJPY", "GBPJPY", "XAUUSD", "XAGUSD", "US30", "NAS100",
+  "SPX500", "US100", "DAX40", "BTCUSD", "ETHUSD", "USOIL", "BRENT",
+  "DXY", "VIX", "EURAUD", "EURNZD", "GBPAUD", "GBPNZD", "AUDNZD",
+  "CADJPY", "CHFJPY", "AUDCAD", "NZDCAD",
+];
+
+const HASHTAG_REGEX_SRC = "#([A-Za-z\\u00C0-\\u024F0-9_]{2,30})";
+const ASSET_MENTION_REGEX_SRC = "\\$([A-Z]{2,10})";
+const PLAIN_ASSET_LIST = KNOWN_ASSETS.join("|");
+const PLAIN_ASSET_REGEX_SRC = `\\b(${PLAIN_ASSET_LIST})\\b`;
+
+interface TrendingItem {
+  topic: string;
+  type: "hashtag" | "asset";
+  count: number;
+  previousCount: number;
+}
+
+function extractTrendingFromMessages(
+  messages: FeedMessage[],
+  now: number = Date.now()
+): TrendingItem[] {
+  const last24h = now - 24 * 60 * 60 * 1000;
+  const prev24h = last24h - 24 * 60 * 60 * 1000;
+
+  const currentCounts = new Map<string, { count: number; type: "hashtag" | "asset" }>();
+  const previousCounts = new Map<string, number>();
+
+  for (const msg of messages) {
+    const msgTime = new Date(msg.createdAt).getTime();
+    const isCurrent = msgTime >= last24h;
+    const isPrevious = msgTime >= prev24h && msgTime < last24h;
+    if (msgTime < prev24h) continue;
+
+    const content = msg.content;
+
+    // Extract hashtags
+    const hashtags = new Set<string>();
+    let match: RegExpExecArray | null;
+    const hRe = new RegExp(HASHTAG_REGEX_SRC, "g");
+    while ((match = hRe.exec(content)) !== null) {
+      hashtags.add("#" + match[1].toLowerCase());
+    }
+    for (const tag of Array.from(hashtags)) {
+      if (isCurrent) {
+        const prev = currentCounts.get(tag) || { count: 0, type: "hashtag" as const };
+        prev.count++;
+        currentCounts.set(tag, prev);
+      }
+      if (isPrevious) {
+        previousCounts.set(tag, (previousCounts.get(tag) || 0) + 1);
+      }
+    }
+
+    // Extract $ASSET mentions
+    const assets = new Set<string>();
+    const aRe = new RegExp(ASSET_MENTION_REGEX_SRC, "g");
+    while ((match = aRe.exec(content)) !== null) {
+      const upper = match[1].toUpperCase();
+      if (KNOWN_ASSETS.includes(upper)) assets.add("$" + upper);
+    }
+    // Extract plain asset mentions
+    const pRe = new RegExp(PLAIN_ASSET_REGEX_SRC, "g");
+    while ((match = pRe.exec(content)) !== null) {
+      assets.add("$" + match[1].toUpperCase());
+    }
+    for (const asset of Array.from(assets)) {
+      if (isCurrent) {
+        const prev = currentCounts.get(asset) || { count: 0, type: "asset" as const };
+        prev.count++;
+        currentCounts.set(asset, prev);
+      }
+      if (isPrevious) {
+        previousCounts.set(asset, (previousCounts.get(asset) || 0) + 1);
+      }
+    }
+  }
+
+  const items: TrendingItem[] = [];
+  for (const [topic, data] of Array.from(currentCounts.entries())) {
+    items.push({
+      topic,
+      type: data.type,
+      count: data.count,
+      previousCount: previousCounts.get(topic) || 0,
+    });
+  }
+
+  return items.sort((a, b) => b.count - a.count).slice(0, 5);
+}
+
+/* ─── Render post content with clickable hashtags/assets ── */
+
+function RichPostContent({
+  content,
+  onHashtagClick,
+}: {
+  content: string;
+  onHashtagClick: (tag: string) => void;
+}) {
+  const combinedRegex = new RegExp(
+    `(?:${HASHTAG_REGEX_SRC})|(?:${ASSET_MENTION_REGEX_SRC})|(?:${PLAIN_ASSET_REGEX_SRC})`,
+    "g"
+  );
+
+  const parts: { type: "text" | "hashtag" | "asset"; value: string }[] = [];
+  let lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = combinedRegex.exec(content)) !== null) {
+    if (m.index > lastIndex) {
+      parts.push({ type: "text", value: content.slice(lastIndex, m.index) });
+    }
+    if (m[1]) {
+      parts.push({ type: "hashtag", value: "#" + m[1] });
+    } else if (m[2] && KNOWN_ASSETS.includes(m[2].toUpperCase())) {
+      parts.push({ type: "asset", value: "$" + m[2].toUpperCase() });
+    } else if (m[3]) {
+      parts.push({ type: "asset", value: "$" + m[3] });
+    } else {
+      parts.push({ type: "text", value: m[0] });
+    }
+    lastIndex = m.index + m[0].length;
+  }
+  if (lastIndex < content.length) {
+    parts.push({ type: "text", value: content.slice(lastIndex) });
+  }
+
+  if (parts.length === 0) return <>{content}</>;
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.type === "hashtag") {
+          return (
+            <span
+              key={i}
+              onClick={(e) => {
+                e.stopPropagation();
+                onHashtagClick(part.value);
+              }}
+              className="cursor-pointer hover:underline"
+              style={{ color: "#06b6d4", fontWeight: 600 }}
+            >
+              {part.value}
+            </span>
+          );
+        }
+        if (part.type === "asset") {
+          const assetCode = part.value.replace("$", "");
+          return (
+            <Link
+              key={i}
+              href={`/market-data?asset=${assetCode}`}
+              onClick={(e) => e.stopPropagation()}
+              className="hover:underline"
+              style={{ color: "#10b981", fontWeight: 600 }}
+            >
+              {part.value}
+            </Link>
+          );
+        }
+        return <span key={i}>{part.value}</span>;
+      })}
+    </>
+  );
+}
+
+/* ─── Asset autocomplete suggestions ───────────────────── */
+
+function AssetSuggestions({
+  query,
+  onSelect,
+  visible,
+}: {
+  query: string;
+  onSelect: (asset: string) => void;
+  visible: boolean;
+}) {
+  if (!visible || !query) return null;
+  const filtered = KNOWN_ASSETS.filter((a) =>
+    a.toLowerCase().startsWith(query.toLowerCase())
+  ).slice(0, 8);
+  if (filtered.length === 0) return null;
+
+  return (
+    <div
+      className="absolute left-0 right-0 rounded-xl py-1 shadow-2xl z-50 max-h-48 overflow-y-auto"
+      style={{
+        background: "var(--bg-card, var(--bg-primary))",
+        border: "1px solid var(--border)",
+        bottom: "100%",
+        marginBottom: "4px",
+      }}
+    >
+      {filtered.map((asset) => (
+        <button
+          key={asset}
+          onClick={() => onSelect(asset)}
+          className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors"
+          style={{ color: "var(--text-primary)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        >
+          <DollarSign className="w-3.5 h-3.5" style={{ color: "#10b981" }} />
+          <span className="font-semibold" style={{ color: "#10b981" }}>
+            {asset}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function parsePollFromContent(content: string): { poll: PollData; text: string } | null {
   if (!content.startsWith(POLL_PREFIX)) return null;
@@ -181,35 +406,92 @@ function pseudoRandom(seed: string): number {
   return Math.abs(h);
 }
 
-/* ─── Likes hook (localStorage) ─────────────────────────── */
+/* ─── Likes hook (server-side via /api/chat/likes) ─────── */
 
-function useLikes() {
-  const [likes, setLikes] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("community-likes");
-      if (stored) setLikes(new Set(JSON.parse(stored)));
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const toggleLike = useCallback((messageId: string) => {
-    setLikes((prev) => {
-      const next = new Set(prev);
-      if (next.has(messageId)) next.delete(messageId);
-      else next.add(messageId);
-      try {
-        localStorage.setItem("community-likes", JSON.stringify([...next]));
-      } catch {
-        /* ignore */
+function useLikes(currentUserId: string | null, messages: FeedMessage[]) {
+  // Derive liked state from reactions in messages
+  const likes = useMemo(() => {
+    const set = new Set<string>();
+    if (!currentUserId) return set;
+    for (const msg of messages) {
+      if (msg.reactions?.some((r) => r.emoji === "\u2764\uFE0F" && r.userId === currentUserId)) {
+        set.add(msg.id);
       }
-      return next;
-    });
-  }, []);
+    }
+    return set;
+  }, [currentUserId, messages]);
 
-  return { likes, toggleLike };
+  // Optimistic set for instant UI feedback before server confirms
+  const [optimistic, setOptimistic] = useState<Record<string, boolean>>({});
+
+  const isLiked = useCallback(
+    (messageId: string) => {
+      if (messageId in optimistic) return optimistic[messageId];
+      return likes.has(messageId);
+    },
+    [likes, optimistic],
+  );
+
+  const toggleLike = useCallback(
+    async (messageId: string) => {
+      const wasLiked = likes.has(messageId);
+      const currentOptimistic = optimistic[messageId];
+      const currentState = currentOptimistic !== undefined ? currentOptimistic : wasLiked;
+
+      // Optimistic update
+      setOptimistic((prev) => ({ ...prev, [messageId]: !currentState }));
+
+      try {
+        const res = await fetch("/api/chat/likes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messageId }),
+        });
+        if (!res.ok) {
+          // Rollback on error
+          setOptimistic((prev) => {
+            const next = { ...prev };
+            delete next[messageId];
+            return next;
+          });
+        } else {
+          // Clear optimistic state — next messages refresh will have truth
+          setOptimistic((prev) => {
+            const next = { ...prev };
+            delete next[messageId];
+            return next;
+          });
+        }
+      } catch {
+        // Rollback on network error
+        setOptimistic((prev) => {
+          const next = { ...prev };
+          delete next[messageId];
+          return next;
+        });
+      }
+    },
+    [likes, optimistic],
+  );
+
+  const getLikeCount = useCallback(
+    (msg: FeedMessage) => {
+      const serverCount = msg.reactions?.filter((r) => r.emoji === "\u2764\uFE0F").length || 0;
+      const wasLikedOnServer = msg.reactions?.some(
+        (r) => r.emoji === "\u2764\uFE0F" && r.userId === currentUserId,
+      ) || false;
+      const optState = optimistic[msg.id];
+
+      if (optState === undefined) return serverCount;
+      // Adjust count based on optimistic toggle
+      if (optState && !wasLikedOnServer) return serverCount + 1;
+      if (!optState && wasLikedOnServer) return serverCount - 1;
+      return serverCount;
+    },
+    [currentUserId, optimistic],
+  );
+
+  return { isLiked, toggleLike, getLikeCount };
 }
 
 /* ─── Bookmarks hook (localStorage) ─────────────────────── */
@@ -287,91 +569,301 @@ function usePollVotes() {
   return { vote, getVoteData };
 }
 
-/* ─── Inline Trade Card (embedded in tweet) ─────────────── */
+/* ─── Share counts hook (localStorage) ─────────────────── */
 
-function InlineTradeCard({ trade }: { trade: SharedTrade }) {
-  const isBuy = trade.direction?.toUpperCase() === "BUY" || trade.direction?.toUpperCase() === "LONG";
-  const pnl = trade.result;
-  let rr: string | null = trade.sl && trade.tp ? calculateRR(trade.entry, trade.sl, trade.tp) : null;
-  // Fallback: calculate realized R:R if we have entry, exit, and sl
-  if (!rr && trade.exit && trade.sl && trade.sl !== trade.entry) {
-    const risk = Math.abs(trade.entry - trade.sl);
-    const reward = Math.abs(trade.exit - trade.entry);
-    rr = (reward / risk).toFixed(1);
+function useShareCounts() {
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("community-share-counts");
+      if (stored) setCounts(JSON.parse(stored));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const incrementShare = useCallback((messageId: string) => {
+    setCounts((prev) => {
+      const next = { ...prev, [messageId]: (prev[messageId] || 0) + 1 };
+      try {
+        localStorage.setItem("community-share-counts", JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  const getShareCount = useCallback(
+    (messageId: string) => counts[messageId] || 0,
+    [counts],
+  );
+
+  return { incrementShare, getShareCount };
+}
+
+/* ─── User Badges Helper ───────────────────────────────── */
+
+function getUserBadges(
+  user: FeedMessage["user"],
+  allMessages: FeedMessage[],
+): { emoji: string; label: string }[] {
+  const badges: { emoji: string; label: string }[] = [];
+
+  if (user.role === "VIP" || user.role === "ADMIN") {
+    badges.push({ emoji: "\uD83D\uDC8E", label: "VIP" });
   }
+
+  const userTrades = allMessages.filter((m) => m.userId === user.id && m.trade);
+  const tradeCount = userTrades.length;
+
+  if (tradeCount > 0) {
+    const wins = userTrades.filter((m) => m.trade && m.trade.result > 0);
+    const winRate = (wins.length / tradeCount) * 100;
+
+    if (winRate >= 60 && tradeCount >= 5) {
+      badges.push({ emoji: "\uD83C\uDFC6", label: `${winRate.toFixed(0)}% win rate` });
+    }
+
+    const sorted = [...userTrades].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    let streak = 0;
+    for (const m of sorted) {
+      if (m.trade && m.trade.result > 0) streak++;
+      else break;
+    }
+    if (streak >= 5) {
+      badges.push({ emoji: "\uD83D\uDD25", label: `${streak} wins` });
+    }
+
+    if (tradeCount >= 100) {
+      badges.push({ emoji: "\uD83D\uDCCA", label: `${tradeCount} trades` });
+    }
+  }
+
+  return badges.slice(0, 2);
+}
+
+/* ─── Trade du Jour Component ──────────────────────────── */
+
+function TradeDuJour({ messages }: { messages: FeedMessage[] }) {
+  const bestTrade = useMemo(() => {
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const recentTradeMessages = messages.filter(
+      (m) => m.trade && new Date(m.createdAt) >= oneDayAgo,
+    );
+    if (recentTradeMessages.length === 0) return null;
+    return recentTradeMessages.reduce((best, current) => {
+      if (!best.trade) return current;
+      if (!current.trade) return best;
+      return current.trade.result > best.trade.result ? current : best;
+    });
+  }, [messages]);
+
+  if (!bestTrade || !bestTrade.trade) {
+    return (
+      <div
+        className="mx-4 mt-3 mb-1 rounded-2xl p-4 text-center"
+        style={{
+          background: "linear-gradient(135deg, rgba(234,179,8,0.08), rgba(245,158,11,0.05))",
+          border: "1px solid rgba(234,179,8,0.25)",
+        }}
+      >
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <Trophy className="w-5 h-5" style={{ color: "#eab308" }} />
+          <span className="font-bold text-[15px]" style={{ color: "#eab308" }}>
+            Trade du jour
+          </span>
+        </div>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          Partagez votre meilleur trade pour apparaitre ici !
+        </p>
+      </div>
+    );
+  }
+
+  const trade = bestTrade.trade;
+  const isBuy = trade.direction?.toUpperCase() === "BUY" || trade.direction?.toUpperCase() === "LONG";
+  const gradient = getAvatarGradient(bestTrade.user.name);
+  const handle = getHandle(bestTrade.user.email);
 
   return (
     <div
-      className="mt-3 rounded-xl border overflow-hidden"
-      style={{ borderColor: "var(--border)", background: "var(--bg-secondary)" }}
+      className="mx-4 mt-3 mb-1 rounded-2xl overflow-hidden"
+      style={{
+        background: "linear-gradient(135deg, rgba(234,179,8,0.06), rgba(245,158,11,0.03))",
+        border: "1px solid rgba(234,179,8,0.3)",
+        boxShadow: "0 0 20px rgba(234,179,8,0.08), inset 0 1px 0 rgba(234,179,8,0.1)",
+      }}
     >
-      <div className="p-3.5">
-        {/* Asset + Direction badge */}
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-2.5">
-            <span className="font-bold text-[15px]" style={{ color: "var(--text-primary)" }}>
-              {trade.asset}
-            </span>
-            <span
-              className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide"
-              style={{
-                background: isBuy ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
-                color: isBuy ? "#10b981" : "#ef4444",
-                border: `1px solid ${isBuy ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
-              }}
-            >
-              {isBuy ? "LONG" : "SHORT"}
-            </span>
+      <div className="px-4 pt-3 pb-2 flex items-center gap-2">
+        <Trophy className="w-5 h-5" style={{ color: "#eab308" }} />
+        <span className="font-bold text-[15px]" style={{ color: "#eab308" }}>
+          Trade du jour
+        </span>
+      </div>
+      <div className="px-4 pb-3">
+        <div className="flex items-center gap-2.5 mb-3">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+            style={{ background: gradient }}
+          >
+            {getInitials(bestTrade.user.name)}
           </div>
-          {isBuy ? (
-            <ArrowUpRight className="w-5 h-5" style={{ color: "#10b981" }} />
-          ) : (
-            <ArrowDownRight className="w-5 h-5" style={{ color: "#ef4444" }} />
-          )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                {bestTrade.user.name || "Anonyme"}
+              </span>
+              <span className="text-[13px] truncate" style={{ color: "var(--text-muted)" }}>
+                @{handle}
+              </span>
+            </div>
+          </div>
         </div>
-
-        {/* Details grid */}
-        <div className="grid grid-cols-4 gap-3">
-          <div>
-            <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>
-              Entree
-            </p>
-            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-              {trade.entry}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>
-              Sortie
-            </p>
-            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-              {trade.exit ?? "—"}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>
-              P&L
-            </p>
-            <p
-              className="text-sm font-bold"
-              style={{ color: pnl >= 0 ? "#10b981" : "#ef4444" }}
+        <div
+          className="rounded-xl p-3"
+          style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(234,179,8,0.15)" }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[15px]" style={{ color: "var(--text-primary)" }}>
+                {trade.asset}
+              </span>
+              <span
+                className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide"
+                style={{
+                  background: isBuy ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
+                  color: isBuy ? "#10b981" : "#ef4444",
+                  border: `1px solid ${isBuy ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
+                }}
+              >
+                {isBuy ? "LONG" : "SHORT"}
+              </span>
+            </div>
+            <span
+              className="text-lg font-bold"
+              style={{ color: trade.result >= 0 ? "#10b981" : "#ef4444" }}
             >
-              {pnl >= 0 ? "+" : ""}
-              {pnl.toFixed(2)}
-            </p>
+              {trade.result >= 0 ? "+" : ""}{trade.result.toFixed(2)}
+            </span>
           </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>
-              R:R
+          {trade.strategy && (
+            <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+              Strategie : {trade.strategy}
             </p>
-            <p className="text-sm font-semibold" style={{ color: "#06b6d4" }}>
-              {rr ? parseFloat(rr).toFixed(1) : "—"}
-            </p>
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+/* ─── Weekly Recap Component ───────────────────────────── */
+
+function WeeklyRecap({ messages }: { messages: FeedMessage[] }) {
+  const stats = useMemo(() => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const weekMessages = messages.filter((m) => new Date(m.createdAt) >= sevenDaysAgo);
+    if (weekMessages.length === 0) return null;
+
+    const tradesShared = weekMessages.filter((m) => m.trade).length;
+
+    const userPostCounts = new Map<string, { name: string; count: number }>();
+    for (const m of weekMessages) {
+      const prev = userPostCounts.get(m.userId) || { name: m.user.name || "Anonyme", count: 0 };
+      prev.count++;
+      userPostCounts.set(m.userId, prev);
+    }
+    const mostActive = Array.from(userPostCounts.values()).sort((a, b) => b.count - a.count)[0];
+
+    let bestPnl: { name: string; pnl: number } | null = null;
+    for (const m of weekMessages) {
+      if (m.trade && (!bestPnl || m.trade.result > bestPnl.pnl)) {
+        bestPnl = { name: m.user.name || "Anonyme", pnl: m.trade.result };
+      }
+    }
+
+    let mostLiked: { name: string; likes: number } | null = null;
+    for (const m of weekMessages) {
+      const likes = m.reactions?.filter((r) => r.emoji === "\u2764\uFE0F").length || 0;
+      if (!mostLiked || likes > mostLiked.likes) {
+        mostLiked = { name: m.user.name || "Anonyme", likes };
+      }
+    }
+
+    return {
+      totalPosts: weekMessages.length,
+      tradesShared,
+      mostActive: mostActive || null,
+      bestPnl,
+      mostLiked: mostLiked && mostLiked.likes > 0 ? mostLiked : null,
+    };
+  }, [messages]);
+
+  if (!stats) return null;
+
+  return (
+    <div
+      className="mx-4 mt-2 mb-1 rounded-2xl overflow-hidden"
+      style={{
+        background: "linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.04))",
+        border: "1px solid rgba(99,102,241,0.25)",
+        boxShadow: "0 0 15px rgba(99,102,241,0.06)",
+      }}
+    >
+      <div className="px-4 pt-3 pb-2 flex items-center gap-2">
+        <BarChart3 className="w-5 h-5" style={{ color: "#818cf8" }} />
+        <span className="font-bold text-[15px]" style={{ color: "#818cf8" }}>
+          Recap de la semaine
+        </span>
+      </div>
+      <div className="px-4 pb-3">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+            <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Posts partages</p>
+            <p className="text-lg font-bold" style={{ color: "#818cf8" }}>{stats.totalPosts}</p>
+          </div>
+          <div className="rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+            <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Trades partages</p>
+            <p className="text-lg font-bold" style={{ color: "#06b6d4" }}>{stats.tradesShared}</p>
+          </div>
+          {stats.mostActive && (
+            <div className="rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+              <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Plus actif</p>
+              <p className="text-sm font-bold truncate" style={{ color: "#f59e0b" }}>{stats.mostActive.name}</p>
+              <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>{stats.mostActive.count} posts</p>
+            </div>
+          )}
+          {stats.bestPnl && (
+            <div className="rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+              <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Meilleur P&amp;L</p>
+              <p className="text-sm font-bold truncate" style={{ color: "#10b981" }}>+{stats.bestPnl.pnl.toFixed(2)}</p>
+              <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>par {stats.bestPnl.name}</p>
+            </div>
+          )}
+          {stats.mostLiked && (
+            <div className="col-span-2 rounded-xl p-2.5" style={{ background: "rgba(0,0,0,0.2)" }}>
+              <p className="text-[11px] uppercase tracking-wider mb-0.5" style={{ color: "var(--text-muted)" }}>Post le plus aime</p>
+              <p className="text-sm font-bold" style={{ color: "#f43f5e" }}>
+                {stats.mostLiked.name} — {stats.mostLiked.likes} <Heart className="inline w-3.5 h-3.5" style={{ fill: "#f43f5e", color: "#f43f5e" }} />
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Inline Trade Card (embedded in tweet) — uses shared TradeCard ── */
+
+function InlineTradeCard({ trade }: { trade: SharedTrade }) {
+  return <TradeCard trade={trade} variant="full" showActions={true} />;
 }
 
 /* ─── Poll Display Component ─────────────────────────────── */
@@ -542,6 +1034,10 @@ function TweetPost({
   replyCount,
   pollVoteData,
   onPollVote,
+  onHashtagClick,
+  badges,
+  shareCount,
+  onShare,
 }: {
   msg: FeedMessage;
   isLiked: boolean;
@@ -553,6 +1049,10 @@ function TweetPost({
   replyCount: number;
   pollVoteData: { optionIndex: number; counts: Record<number, number> } | null;
   onPollVote: (messageId: string, optionIndex: number, totalOptions: number) => void;
+  onHashtagClick: (tag: string) => void;
+  badges: { emoji: string; label: string }[];
+  shareCount: number;
+  onShare: (messageId: string) => void;
 }) {
   const [showMore, setShowMore] = useState(false);
   const [likeAnim, setLikeAnim] = useState(false);
@@ -573,6 +1073,7 @@ function TweetPost({
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/community#post-${msg.id}`);
       setCopied(true);
+      onShare(msg.id);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       /* ignore */
@@ -608,6 +1109,15 @@ function TweetPost({
             >
               {msg.user.name || "Anonyme"}
             </span>
+            {badges.map((badge, i) => (
+              <span
+                key={i}
+                className="shrink-0 text-[13px] cursor-default"
+                title={badge.label}
+              >
+                {badge.emoji}
+              </span>
+            ))}
             {msg.user.role === "ADMIN" && (
               <svg viewBox="0 0 22 22" className="w-[18px] h-[18px] shrink-0" style={{ color: "#06b6d4" }}>
                 <path
@@ -708,7 +1218,7 @@ function TweetPost({
                     lineHeight: "1.5",
                   }}
                 >
-                  {msg.content}
+                  <RichPostContent content={msg.content} onHashtagClick={onHashtagClick} />
                 </p>
               </div>
             );
@@ -837,6 +1347,7 @@ function TweetPost({
                 title="Partager"
               >
                 <Link2 className="w-[18px] h-[18px]" />
+                {shareCount > 0 && <span className="text-[13px] ml-0.5">{shareCount}</span>}
                 {copied && (
                   <span
                     className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded text-[11px] font-medium whitespace-nowrap"
@@ -890,6 +1401,27 @@ function PostComposer({
   const circumference = 2 * Math.PI * 10;
   const strokeColor = isOverLimit ? "#ef4444" : remaining <= 20 ? "#ef4444" : remaining <= 40 ? "#f59e0b" : "#06b6d4";
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [assetQuery, setAssetQuery] = useState("");
+  const [showAssetSuggestions, setShowAssetSuggestions] = useState(false);
+
+  const handleInputChange = (value: string) => {
+    setInput(value.slice(0, MAX_POST_LENGTH + 20));
+    const cursorMatch = value.match(/$([A-Za-z]{0,10})$/);
+    if (cursorMatch) {
+      setAssetQuery(cursorMatch[1]);
+      setShowAssetSuggestions(true);
+    } else {
+      setShowAssetSuggestions(false);
+      setAssetQuery("");
+    }
+  };
+
+  const handleAssetSelect = (asset: string) => {
+    const newInput = input.replace(/$[A-Za-z]{0,10}$/, "$" + asset + " ");
+    setInput(newInput);
+    setShowAssetSuggestions(false);
+    setAssetQuery("");
+  };
 
   const canPost = sending
     ? false
@@ -942,10 +1474,15 @@ function PostComposer({
         </div>
 
         {/* Composer area */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 relative">
+          <AssetSuggestions
+            query={assetQuery}
+            onSelect={handleAssetSelect}
+            visible={showAssetSuggestions}
+          />
           <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value.slice(0, MAX_POST_LENGTH + 20))}
+            onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && canPost) {
                 e.preventDefault();
@@ -1260,11 +1797,23 @@ function PostComposer({
 
 /* ─── Right Sidebar ─────────────────────────────────────── */
 
+interface SuggestedUser {
+  id: string;
+  name: string | null;
+  handle: string;
+  role: string;
+  winRate: number;
+  sharedTrades: number;
+}
+
 function RightSidebar({
   myStats,
   trendingAssets,
+  trendingTopics,
   searchQuery,
   setSearchQuery,
+  currentUserId,
+  onTrendClick,
 }: {
   myStats: {
     winRate: number;
@@ -1273,9 +1822,41 @@ function RightSidebar({
     trades: number;
   } | null;
   trendingAssets: { asset: string; count: number; pnl: number }[];
+  trendingTopics: TrendingItem[];
   searchQuery: string;
   setSearchQuery: (v: string) => void;
+  currentUserId: string | null;
+  onTrendClick: (topic: string) => void;
 }) {
+  const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
+  const [followingSet, setFollowingSet] = useState<Set<string>>(new Set());
+  const [loadingSuggested, setLoadingSuggested] = useState(true);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    fetch("/api/users/suggested")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: SuggestedUser[]) => setSuggestedUsers(data))
+      .catch(() => {})
+      .finally(() => setLoadingSuggested(false));
+  }, [currentUserId]);
+
+  const toggleFollow = async (userId: string) => {
+    const res = await fetch("/api/users/follow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setFollowingSet((prev) => {
+      const next = new Set(prev);
+      if (data.following) next.add(userId);
+      else next.delete(userId);
+      return next;
+    });
+  };
+
   return (
     <aside className="space-y-4 sticky top-4">
       {/* Search bar */}
@@ -1288,7 +1869,7 @@ function RightSidebar({
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Rechercher"
+          placeholder="Rechercher #hashtag ou $ASSET"
           className="w-full pl-10 pr-4 py-2.5 rounded-full text-sm focus:outline-none transition-all"
           style={{
             background: "var(--bg-secondary)",
@@ -1309,7 +1890,7 @@ function RightSidebar({
         )}
       </div>
 
-      {/* Tendances Trading */}
+      {/* Tendances pour vous */}
       <div className="glass rounded-2xl overflow-hidden">
         <div className="p-4" style={{ borderBottom: "1px solid var(--border)" }}>
           <h3 className="font-extrabold text-[17px]" style={{ color: "var(--text-primary)" }}>
@@ -1317,19 +1898,55 @@ function RightSidebar({
           </h3>
         </div>
         <div>
-          {trendingAssets.length > 0 ? (
+          {trendingTopics.length > 0 ? (
+            trendingTopics.map((item, i) => {
+              const isUp = item.count > item.previousCount;
+              const isNew = item.previousCount === 0;
+              return (
+                <div
+                  key={item.topic}
+                  className="px-4 py-3 transition-colors cursor-pointer"
+                  onClick={() => onTrendClick(item.topic)}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+                      {i + 1} · {item.type === "hashtag" ? "Tendance" : "Trading"}
+                    </p>
+                    {isNew ? (
+                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded" style={{ background: "rgba(6,182,212,0.15)", color: "#06b6d4" }}>
+                        NOUVEAU
+                      </span>
+                    ) : isUp ? (
+                      <TrendingUp className="w-4 h-4" style={{ color: "#10b981" }} />
+                    ) : (
+                      <TrendingDown className="w-4 h-4" style={{ color: "#ef4444" }} />
+                    )}
+                  </div>
+                  <p className="font-bold text-[15px]" style={{ color: item.type === "hashtag" ? "#06b6d4" : "#10b981" }}>
+                    {item.topic}
+                  </p>
+                  <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+                    {item.count} post{item.count > 1 ? "s" : ""}
+                  </p>
+                </div>
+              );
+            })
+          ) : trendingAssets.length > 0 ? (
             trendingAssets.map((item, i) => (
               <div
                 key={item.asset}
-                className="px-4 py-3 transition-colors cursor-default"
+                className="px-4 py-3 transition-colors cursor-pointer"
+                onClick={() => onTrendClick("$" + item.asset)}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
                   {i + 1} · Trading
                 </p>
-                <p className="font-bold text-[15px]" style={{ color: "var(--text-primary)" }}>
-                  {item.asset}
+                <p className="font-bold text-[15px]" style={{ color: "#10b981" }}>
+                  ${item.asset}
                 </p>
                 <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
                   {item.count} trade{item.count > 1 ? "s" : ""}
@@ -1346,19 +1963,8 @@ function RightSidebar({
           ) : (
             <div className="px-4 py-6 text-center">
               <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
-                Ajoutez des trades pour voir les tendances
+                Aucune tendance pour le moment
               </p>
-            </div>
-          )}
-          {trendingAssets.length > 0 && (
-            <div
-              className="px-4 py-3 transition-colors cursor-pointer"
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            >
-              <span className="text-[15px]" style={{ color: "#06b6d4" }}>
-                Voir plus
-              </span>
             </div>
           )}
         </div>
@@ -1371,10 +1977,68 @@ function RightSidebar({
             Qui suivre
           </h3>
         </div>
-        <div className="p-4 text-center">
-          <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
-            Disponible prochainement
-          </p>
+        <div>
+          {loadingSuggested ? (
+            <div className="p-4 text-center">
+              <Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: "#06b6d4" }} />
+            </div>
+          ) : suggestedUsers.length > 0 ? (
+            suggestedUsers.map((user) => {
+              const isFollowing = followingSet.has(user.id);
+              return (
+                <div
+                  key={user.id}
+                  className="px-4 py-3 flex items-center gap-3 transition-colors"
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                    style={{ background: getAvatarGradient(user.name) }}
+                  >
+                    {getInitials(user.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-[14px] truncate" style={{ color: "var(--text-primary)" }}>
+                        {user.name || user.handle}
+                      </span>
+                      {(user.role === "PRO" || user.role === "VIP" || user.role === "ADMIN") && (
+                        <span
+                          className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"
+                          style={{
+                            background: user.role === "ADMIN" ? "rgba(239,68,68,0.15)" : user.role === "VIP" ? "rgba(168,85,247,0.15)" : "rgba(6,182,212,0.15)",
+                            color: user.role === "ADMIN" ? "#ef4444" : user.role === "VIP" ? "#a855f7" : "#06b6d4",
+                          }}
+                        >
+                          {user.role}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>@{user.handle}</span>
+                      <span className="text-[11px] font-medium" style={{ color: "#06b6d4" }}>{user.winRate}% WR</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleFollow(user.id)}
+                    className="px-3 py-1.5 rounded-full text-[12px] font-bold transition-all shrink-0 flex items-center gap-1"
+                    style={{
+                      background: isFollowing ? "transparent" : "#06b6d4",
+                      color: isFollowing ? "#06b6d4" : "#fff",
+                      border: isFollowing ? "1px solid rgba(6,182,212,0.4)" : "1px solid transparent",
+                    }}
+                  >
+                    {isFollowing ? <><UserCheck className="w-3.5 h-3.5" /> Suivi</> : <><UserPlus className="w-3.5 h-3.5" /> Suivre</>}
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-4 text-center">
+              <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>Aucune suggestion pour le moment</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1471,7 +2135,6 @@ export default function CommunityPage() {
   const { t } = useTranslation();
   const { trades, loading: tradesLoading } = useTrades();
   const { data: gamData } = useGamification();
-  const { likes, toggleLike } = useLikes();
   const { bookmarks, toggleBookmark } = useBookmarks();
   const { vote: pollVote, getVoteData: getPollVoteData } = usePollVotes();
 
@@ -1490,6 +2153,15 @@ export default function CommunityPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [pollDraft, setPollDraft] = useState<PollDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [followingMessages, setFollowingMessages] = useState<FeedMessage[]>([]);
+  const [followingLoading, setFollowingLoading] = useState(false);
+  const [followedUserIds, setFollowedUserIds] = useState<string[]>([]);
+
+  const { isLiked, toggleLike, getLikeCount } = useLikes(currentUserId, messages);
+  const { incrementShare, getShareCount } = useShareCounts();
+
+  type SortMode = "recent" | "populaire";
+  const [sortMode, setSortMode] = useState<SortMode>("recent");
 
   const feedRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1527,6 +2199,16 @@ export default function CommunityPage() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
   }, [trades]);
+
+  /* ─── Trending topics from community messages ─── */
+  const trendingTopics = useMemo(() => {
+    return extractTrendingFromMessages(messages);
+  }, [messages]);
+
+  /* ─── Handle hashtag/trend click → filter feed ─── */
+  const handleTrendClick = useCallback((topic: string) => {
+    setSearchQuery(topic);
+  }, []);
 
   /* ─── Room init & messaging ─── */
   const initRoom = useCallback(async () => {
@@ -1619,6 +2301,32 @@ export default function CommunityPage() {
     };
   }, [communityRoomId, fetchMessages]);
 
+  // Fetch following feed when Suivis tab is active
+  useEffect(() => {
+    if (activeTab !== "following" || !currentUserId || !communityRoomId) return;
+    setFollowingLoading(true);
+    (async () => {
+      try {
+        const [msgsRes, followRes] = await Promise.all([
+          fetch("/api/chat/messages?roomId=" + communityRoomId + "&limit=100"),
+          fetch("/api/users/follow/list"),
+        ]);
+        const allMsgs: FeedMessage[] = msgsRes.ok ? (await msgsRes.json()).messages || [] : [];
+        if (followRes.ok) {
+          const { followingIds: ids }: { followingIds: string[] } = await followRes.json();
+          setFollowedUserIds(ids);
+          setFollowingMessages(allMsgs.filter((m) => ids.includes(m.userId)));
+        } else {
+          setFollowingMessages([]);
+        }
+      } catch {
+        setFollowingMessages([]);
+      } finally {
+        setFollowingLoading(false);
+      }
+    })();
+  }, [activeTab, currentUserId, communityRoomId]);
+
   const sendMessage = async (content: string, tradeId?: string, imageUrl?: string) => {
     if (!communityRoomId || !content.trim()) return;
     setSending(true);
@@ -1671,28 +2379,57 @@ export default function CommunityPage() {
   /* ─── Filter messages by search ─── */
   const filteredMessages = useMemo(() => {
     if (!searchQuery.trim()) return messages;
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.trim();
+    const qLower = q.toLowerCase();
+
+    // Filter by hashtag
+    if (q.startsWith("#")) {
+      return messages.filter((m) => {
+        const hRe = new RegExp(HASHTAG_REGEX_SRC, "gi");
+        let match: RegExpExecArray | null;
+        while ((match = hRe.exec(m.content)) !== null) {
+          if (("#" + match[1]).toLowerCase() === qLower) return true;
+        }
+        return false;
+      });
+    }
+
+    // Filter by asset mention
+    if (q.startsWith("$")) {
+      const assetSearch = q.slice(1).toUpperCase();
+      return messages.filter((m) => {
+        const content = m.content.toUpperCase();
+        return (
+          content.includes("$" + assetSearch) ||
+          content.includes(assetSearch) ||
+          m.trade?.asset.toUpperCase() === assetSearch
+        );
+      });
+    }
+
+    // General search
     return messages.filter(
       (m) =>
-        m.content.toLowerCase().includes(q) ||
-        m.user.name?.toLowerCase().includes(q) ||
-        m.user.email.toLowerCase().includes(q) ||
-        m.trade?.asset.toLowerCase().includes(q)
+        m.content.toLowerCase().includes(qLower) ||
+        m.user.name?.toLowerCase().includes(qLower) ||
+        m.user.email.toLowerCase().includes(qLower) ||
+        m.trade?.asset.toLowerCase().includes(qLower)
     );
   }, [messages, searchQuery]);
 
-  /* ─── Sort: newest first ─── */
+  /* ─── Sort: newest first or by popularity ─── */
   const sortedMessages = useMemo(() => {
+    if (sortMode === "populaire") {
+      return [...filteredMessages].sort((a, b) => {
+        const aReactions = a.reactions?.length || 0;
+        const bReactions = b.reactions?.length || 0;
+        return bReactions - aReactions;
+      });
+    }
     return [...filteredMessages].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [filteredMessages]);
-
-  /* ─── Like counts (pseudo from reactions + localStorage) ─── */
-  const getLikeCount = (msg: FeedMessage) => {
-    const reactionCount = msg.reactions?.length || 0;
-    return reactionCount + (likes.has(msg.id) ? 1 : 0);
-  };
+  }, [filteredMessages, sortMode]);
 
   /* ─── Render ─── */
   return (
@@ -1785,6 +2522,38 @@ export default function CommunityPage() {
           {/* Feed content */}
           {activeTab === "foryou" ? (
             <div ref={feedRef}>
+              {/* Trade du Jour */}
+              <TradeDuJour messages={messages} />
+
+              {/* Weekly Recap */}
+              <WeeklyRecap messages={messages} />
+
+              {/* Sort pills */}
+              <div className="flex items-center gap-1.5 px-4 py-2.5" style={{ borderBottom: "1px solid var(--border)" }}>
+                <button
+                  onClick={() => setSortMode("recent")}
+                  className="px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all"
+                  style={{
+                    background: sortMode === "recent" ? "rgba(6,182,212,0.15)" : "transparent",
+                    color: sortMode === "recent" ? "#06b6d4" : "var(--text-muted)",
+                    border: sortMode === "recent" ? "1px solid rgba(6,182,212,0.3)" : "1px solid var(--border)",
+                  }}
+                >
+                  Recent
+                </button>
+                <button
+                  onClick={() => setSortMode("populaire")}
+                  className="px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all"
+                  style={{
+                    background: sortMode === "populaire" ? "rgba(6,182,212,0.15)" : "transparent",
+                    color: sortMode === "populaire" ? "#06b6d4" : "var(--text-muted)",
+                    border: sortMode === "populaire" ? "1px solid rgba(6,182,212,0.3)" : "1px solid var(--border)",
+                  }}
+                >
+                  Populaire
+                </button>
+              </div>
+
               {/* Post Composer */}
               {communityRoomId && (
                 <PostComposer
@@ -1886,17 +2655,78 @@ export default function CommunityPage() {
                     <TweetPost
                       key={msg.id}
                       msg={msg}
-                      isLiked={likes.has(msg.id)}
+                      isLiked={isLiked(msg.id)}
                       isBookmarked={bookmarks.has(msg.id)}
                       onLike={toggleLike}
                       onBookmark={toggleBookmark}
                       onReply={handleReply}
                       likeCount={getLikeCount(msg)}
-                      replyCount={msg.reactions?.length || 0}
+                      replyCount={msg.reactions?.filter((r) => r.emoji !== "\u2764\uFE0F").length || 0}
                       pollVoteData={getPollVoteData(msg.id)}
                       onPollVote={pollVote}
+                      onHashtagClick={handleTrendClick}
+                      badges={getUserBadges(msg.user, messages)}
+                      shareCount={getShareCount(msg.id)}
+                      onShare={incrementShare}
                     />
                   ))}
+                  <div className="h-20" />
+                </>
+              )}
+            </div>
+          ) : activeTab === "following" ? (
+            /* Suivis — filtered feed from followed users */
+            <div>
+              {followingLoading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <Loader2 className="w-7 h-7 animate-spin mb-3" style={{ color: "#06b6d4" }} />
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                    Chargement des posts...
+                  </p>
+                </div>
+              ) : followingMessages.length === 0 ? (
+                <div className="py-20 text-center px-8">
+                  <div
+                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                    style={{ background: "rgba(6,182,212,0.1)" }}
+                  >
+                    <Users className="w-8 h-8" style={{ color: "#06b6d4" }} />
+                  </div>
+                  <h2
+                    className="text-xl font-extrabold mb-2"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Suivis
+                  </h2>
+                  <p className="text-[15px] mb-1" style={{ color: "var(--text-secondary)" }}>
+                    {followedUserIds.length === 0
+                      ? "Suivez d'autres traders pour voir leurs posts ici."
+                      : "Les traders que vous suivez n'ont pas encore poste."}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {followingMessages
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((msg) => (
+                      <TweetPost
+                        key={msg.id}
+                        msg={msg}
+                        isLiked={isLiked(msg.id)}
+                        isBookmarked={bookmarks.has(msg.id)}
+                        onLike={toggleLike}
+                        onBookmark={toggleBookmark}
+                        onReply={handleReply}
+                        likeCount={getLikeCount(msg)}
+                        replyCount={msg.reactions?.filter((r) => r.emoji !== "\u2764\uFE0F").length || 0}
+                        pollVoteData={getPollVoteData(msg.id)}
+                        onPollVote={pollVote}
+                        onHashtagClick={handleTrendClick}
+                        badges={getUserBadges(msg.user, messages)}
+                        shareCount={getShareCount(msg.id)}
+                        onShare={incrementShare}
+                      />
+                    ))}
                   <div className="h-20" />
                 </>
               )}
@@ -1914,16 +2744,15 @@ export default function CommunityPage() {
                 {activeTab === "bestof" && <Heart className="w-8 h-8" style={{ color: "#a855f7" }} />}
                 {activeTab === "mentorat" && <Users className="w-8 h-8" style={{ color: "#10b981" }} />}
                 {activeTab === "comparer" && <BarChart3 className="w-8 h-8" style={{ color: "#ec4899" }} />}
-                {activeTab === "following" && <Users className="w-8 h-8" style={{ color: "#06b6d4" }} />}
               </div>
               <h2
                 className="text-xl font-extrabold mb-2"
                 style={{ color: "var(--text-primary)" }}
               >
-                {activeTab === "following" ? "Suivis" : activeTab === "classement" ? "Classement des Traders" : activeTab === "defis" ? "Défis Trading" : activeTab === "discussions" ? "Discussions" : activeTab === "bestof" ? "Best Of" : activeTab === "mentorat" ? "Mentorat" : "Comparer"}
+                {activeTab === "classement" ? "Classement des Traders" : activeTab === "defis" ? "Défis Trading" : activeTab === "discussions" ? "Discussions" : activeTab === "bestof" ? "Best Of" : activeTab === "mentorat" ? "Mentorat" : "Comparer"}
               </h2>
               <p className="text-[15px] mb-1" style={{ color: "var(--text-secondary)" }}>
-                {activeTab === "following" ? "Suivez d'autres traders pour voir leurs posts ici." : activeTab === "classement" ? "Classement communautaire des meilleurs traders par performance." : activeTab === "defis" ? "Participez à des défis hebdomadaires et mensuels entre traders." : activeTab === "discussions" ? "Espaces de discussion thématiques sur les marchés." : activeTab === "bestof" ? "Les meilleurs trades et analyses de la communauté." : activeTab === "mentorat" ? "Trouvez un mentor ou partagez votre expérience." : "Comparez vos performances avec d'autres traders."}
+                {activeTab === "classement" ? "Classement communautaire des meilleurs traders par performance." : activeTab === "defis" ? "Participez à des défis hebdomadaires et mensuels entre traders." : activeTab === "discussions" ? "Espaces de discussion thématiques sur les marchés." : activeTab === "bestof" ? "Les meilleurs trades et analyses de la communauté." : activeTab === "mentorat" ? "Trouvez un mentor ou partagez votre expérience." : "Comparez vos performances avec d'autres traders."}
               </p>
               <p className="text-sm font-medium mt-4" style={{ color: "#06b6d4" }}>
                 Disponible prochainement
@@ -1942,8 +2771,11 @@ export default function CommunityPage() {
           <RightSidebar
             myStats={myStats}
             trendingAssets={trendingAssets}
+            trendingTopics={trendingTopics}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            onTrendClick={handleTrendClick}
+            currentUserId={currentUserId}
           />
         </div>
       </div>

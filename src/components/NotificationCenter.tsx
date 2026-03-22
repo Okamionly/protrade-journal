@@ -17,19 +17,18 @@ import {
   Zap,
   Settings,
   Trash2,
+  Heart,
+  Share2,
+  Award,
+  AtSign,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Trade } from "@/hooks/useTrades";
-import {
-  useNotificationSystem,
-  type NotificationType,
-  type AppNotification,
-} from "@/hooks/useNotifications";
 
 /* ── Legacy types (trade-derived) ─────────────────────────────────── */
 
 type LegacyNType = "ACHIEVEMENT" | "STREAK" | "WARNING" | "GOAL" | "TIP" | "RISK";
-type Tab = "all" | "trading" | "system";
+type Tab = "all" | "trading" | "social";
 
 interface LegacyNotification {
   id: string;
@@ -37,7 +36,19 @@ interface LegacyNotification {
   title: string;
   message: string;
   createdAt: number;
-  tab: "trading" | "system";
+  tab: "trading" | "social";
+}
+
+/* ── DB notification type ─────────────────────────────────────────── */
+
+interface DbNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  href: string | null;
+  read: boolean;
+  createdAt: string;
 }
 
 const LEGACY_STORAGE_KEY = "mp_notif_read";
@@ -52,15 +63,14 @@ const LEGACY_ICON_MAP: Record<LegacyNType, { icon: typeof Trophy; cls: string }>
   RISK: { icon: ShieldAlert, cls: "text-rose-500" },
 };
 
-const NEW_ICON_MAP: Record<NotificationType, { icon: typeof Trophy; cls: string }> = {
-  TRADE_ALERT: { icon: TrendingUp, cls: "text-emerald-400" },
-  BIAS_REMINDER: { icon: Clock, cls: "text-cyan-400" },
-  ACHIEVEMENT: { icon: Trophy, cls: "text-yellow-400" },
-  CHAT_MENTION: { icon: MessageSquare, cls: "text-blue-400" },
-  SYSTEM: { icon: Zap, cls: "text-purple-400" },
-  PRICE_ALERT: { icon: TrendingUp, cls: "text-rose-400" },
-  CALENDAR: { icon: Clock, cls: "text-amber-400" },
-  REVIEW_REMINDER: { icon: Lightbulb, cls: "text-cyan-400" },
+const DB_ICON_MAP: Record<string, { icon: typeof Trophy; cls: string }> = {
+  like: { icon: Heart, cls: "text-rose-400" },
+  reply: { icon: MessageSquare, cls: "text-blue-400" },
+  mention: { icon: AtSign, cls: "text-purple-400" },
+  trade_shared: { icon: Share2, cls: "text-emerald-400" },
+  challenge_complete: { icon: Trophy, cls: "text-yellow-400" },
+  badge_earned: { icon: Award, cls: "text-amber-400" },
+  system: { icon: Zap, cls: "text-cyan-400" },
 };
 
 const TIPS = [
@@ -87,7 +97,6 @@ function timeAgo(ts: number): string {
 
 function getDateGroup(ts: number): string {
   const now = new Date();
-  const date = new Date(ts);
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const yesterdayStart = todayStart - 86400000;
 
@@ -196,7 +205,7 @@ function useLegacyNotifications(trades: Trade[]) {
         title: "Limite de trades",
         message: `Tu as depasse ta limite avec ${todayTrades.length} trades aujourd'hui.`,
         createdAt: now - 300000,
-        tab: "system",
+        tab: "trading",
       });
     }
 
@@ -208,7 +217,7 @@ function useLegacyNotifications(trades: Trade[]) {
       title: "Conseil du jour",
       message: TIPS[dayIdx],
       createdAt: now - 10800000,
-      tab: "system",
+      tab: "trading",
     });
 
     return notifs
@@ -248,6 +257,68 @@ function useLegacyNotifications(trades: Trade[]) {
   return { notifications, unreadCount, readIds, markAllRead, markRead, dismiss };
 }
 
+/* ── DB notifications hook ────────────────────────────────────────── */
+
+function useDbNotifications() {
+  const [dbNotifs, setDbNotifs] = useState<DbNotification[]>([]);
+  const [dbUnread, setDbUnread] = useState(0);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      if (!res.ok) return;
+      const data = await res.json();
+      setDbNotifs(data.notifications ?? []);
+      setDbUnread(data.unreadCount ?? 0);
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Poll every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const markRead = useCallback(async (id: string) => {
+    // Optimistic update
+    setDbNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    setDbUnread((prev) => Math.max(0, prev - 1));
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  const markAllRead = useCallback(async () => {
+    // Optimistic update
+    setDbNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
+    setDbUnread(0);
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAllRead: true }),
+      });
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  return { dbNotifs, dbUnread, markRead, markAllRead, refetch: fetchNotifications };
+}
+
 /* ── Exported hook (backward-compatible) ──────────────────────────── */
 
 export function useNotifications(trades: Trade[]) {
@@ -265,8 +336,8 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
   // Legacy trade-derived notifications
   const legacy = useLegacyNotifications(trades);
 
-  // New persistent notification system
-  const system = useNotificationSystem();
+  // DB-backed notifications (social, badges, etc.)
+  const db = useDbNotifications();
 
   // Click outside to close
   useEffect(() => {
@@ -288,7 +359,7 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
     isRead: boolean;
     isLegacy: boolean;
     actionUrl?: string;
-    tab: "trading" | "system";
+    tab: "trading" | "social";
   };
 
   const allNotifications = useMemo<DisplayNotif[]>(() => {
@@ -306,34 +377,34 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
         timestamp: n.createdAt,
         isRead: legacy.readIds.has(n.id),
         isLegacy: true,
-        tab: n.tab,
+        tab: "trading",
       });
     }
 
-    // New system notifications
-    for (const n of system.notifications) {
-      const mapping = NEW_ICON_MAP[n.type] || NEW_ICON_MAP.SYSTEM;
-      const isTrading = ["TRADE_ALERT", "BIAS_REMINDER", "PRICE_ALERT"].includes(n.type);
+    // DB notifications
+    for (const n of db.dbNotifs) {
+      const mapping = DB_ICON_MAP[n.type] || DB_ICON_MAP.system || { icon: Zap, cls: "text-cyan-400" };
+      const isSocial = ["like", "reply", "mention", "trade_shared", "badge_earned", "challenge_complete"].includes(n.type);
       items.push({
         id: n.id,
         icon: mapping.icon,
         iconCls: mapping.cls,
         title: n.title,
-        message: n.message,
-        timestamp: n.timestamp,
+        message: n.body,
+        timestamp: new Date(n.createdAt).getTime(),
         isRead: n.read,
         isLegacy: false,
-        actionUrl: n.actionUrl,
-        tab: isTrading ? "trading" : "system",
+        actionUrl: n.href ?? undefined,
+        tab: isSocial ? "social" : "trading",
       });
     }
 
-    // Sort by timestamp desc, keep last 20
+    // Sort by timestamp desc
     items.sort((a, b) => b.timestamp - a.timestamp);
-    return items.slice(0, 20);
-  }, [legacy.notifications, legacy.readIds, system.notifications]);
+    return items.slice(0, 50);
+  }, [legacy.notifications, legacy.readIds, db.dbNotifs]);
 
-  const totalUnread = legacy.unreadCount + system.unreadCount;
+  const totalUnread = legacy.unreadCount + db.dbUnread;
 
   const filtered = tab === "all" ? allNotifications : allNotifications.filter((n) => n.tab === tab);
 
@@ -359,14 +430,14 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
 
   const handleMarkAllRead = () => {
     legacy.markAllRead();
-    system.markAllAsRead();
+    db.markAllRead();
   };
 
   const handleClick = (n: DisplayNotif) => {
     if (n.isLegacy) {
       legacy.markRead(n.id);
     } else {
-      system.markAsRead(n.id);
+      db.markRead(n.id);
       if (n.actionUrl) {
         router.push(n.actionUrl);
         setOpen(false);
@@ -377,15 +448,17 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
   const handleDismiss = (n: DisplayNotif) => {
     if (n.isLegacy) {
       legacy.dismiss(n.id);
-    } else {
-      system.dismissNotification(n.id);
+    }
+    // DB notifications: just mark as read (no delete from client)
+    if (!n.isLegacy && !n.isRead) {
+      db.markRead(n.id);
     }
   };
 
   const TAB_LABELS: { key: Tab; label: string }[] = [
     { key: "all", label: "Toutes" },
     { key: "trading", label: "Trading" },
-    { key: "system", label: "Systeme" },
+    { key: "social", label: "Social" },
   ];
 
   return (
@@ -439,17 +512,7 @@ export function NotificationCenter({ trades }: { trades: Trade[] }) {
                 className="flex items-center gap-1 text-xs font-medium text-cyan-500 hover:text-cyan-400 transition px-2 py-1 rounded-lg hover:bg-cyan-500/10"
               >
                 <Check className="w-3.5 h-3.5" />
-                Tout lu
-              </button>
-            )}
-            {allNotifications.length > 0 && (
-              <button
-                onClick={system.clearAll}
-                className="flex items-center gap-1 text-xs font-medium hover:text-rose-400 transition px-2 py-1 rounded-lg hover:bg-rose-500/10"
-                style={{ color: "var(--text-muted)" }}
-                title="Tout effacer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
+                Tout marquer comme lu
               </button>
             )}
             <button

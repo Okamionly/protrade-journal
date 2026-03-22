@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-const ALLOWED_EMOJIS = ["👍", "❤️", "🔥", "💰", "📈", "📉", "🎯", "💪", "😂", "🤔"];
+const ALLOWED_EMOJIS = ["👍", "❤️", "🔥", "💰", "📈", "📉", "🎯", "💪", "😂", "🤔", "👀", "⚡", "💎", "🚀", "✅", "❌", "🏆", "😱", "🤝", "👏"];
 
 export async function POST(req: Request) {
   try {

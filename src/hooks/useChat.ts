@@ -19,9 +19,13 @@ export interface SharedTrade {
   strategy: string;
   entry: number;
   exit: number | null;
+  sl?: number;
+  tp?: number;
   lots: number;
   result: number;
   date: string;
+  emotion?: string | null;
+  duration?: number | null;
 }
 
 export interface ReactionGroup {

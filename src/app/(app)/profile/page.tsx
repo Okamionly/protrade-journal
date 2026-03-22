@@ -74,6 +74,7 @@ interface UserProfile {
   name: string | null;
   role: string;
   balance: number;
+  publicProfile: boolean;
   createdAt: string;
   stats: TradingStats;
 }
@@ -251,6 +252,8 @@ export default function ProfilePage() {
   // Preferences
   const [theme, setTheme] = useState("dark");
   const [notifications, setNotifications] = useState(true);
+  const [publicProfile, setPublicProfile] = useState(false);
+  const [savingPublicProfile, setSavingPublicProfile] = useState(false);
 
   // Load user profile
   useEffect(() => {
@@ -263,6 +266,7 @@ export default function ProfilePage() {
           setName(data.name || "");
           setEmail(data.email || "");
           setBalance(String(data.balance));
+          setPublicProfile(data.publicProfile || false);
         }
       } catch {
         toast(t("profileLoadError"), "error");
@@ -496,6 +500,34 @@ export default function ProfilePage() {
     setNotifications(next);
     localStorage.setItem("notifications", String(next));
     toast(next ? t("notificationsEnabled") : t("notificationsDisabled"), "info");
+  };
+
+  // Toggle public profile (leaderboard opt-in)
+  const handlePublicProfileToggle = async () => {
+    const next = !publicProfile;
+    setSavingPublicProfile(true);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicProfile: next }),
+      });
+      if (res.ok) {
+        setPublicProfile(next);
+        toast(
+          next
+            ? "Vous apparaîtrez dans le classement"
+            : "Vous avez été retiré du classement",
+          "success"
+        );
+      } else {
+        toast("Erreur lors de la mise à jour", "error");
+      }
+    } catch {
+      toast("Erreur lors de la mise à jour", "error");
+    } finally {
+      setSavingPublicProfile(false);
+    }
   };
 
   // Get user initials
@@ -1141,6 +1173,31 @@ export default function ProfilePage() {
           <div>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t("notifications")}</p>
             <NotificationSettings />
+          </div>
+
+          {/* Public profile / Leaderboard opt-in */}
+          <div className="flex items-center justify-between py-1">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Apparaître dans le classement
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                Vos statistiques anonymisées seront visibles dans le classement communautaire
+              </p>
+            </div>
+            <button
+              onClick={handlePublicProfileToggle}
+              disabled={savingPublicProfile}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500/50 flex-shrink-0 ml-4 ${
+                publicProfile ? "bg-cyan-500" : "bg-gray-600"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  publicProfile ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
           </div>
         </div>
       </GlassCard>

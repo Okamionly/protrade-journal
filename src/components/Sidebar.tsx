@@ -44,6 +44,15 @@ import {
   User,
   Users,
   CreditCard,
+  AlertCircle,
+  GraduationCap,
+  Medal,
+  Heart,
+  ArrowUpDown,
+  Gem,
+  Search,
+  LayoutGrid,
+  GitBranch,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@/i18n/context";
@@ -84,6 +93,9 @@ const sections: SectionDef[] = [
       { href: "/import", labelKey: "sidebarImportCsv", icon: Upload },
       { href: "/checklist", labelKey: "sidebarChecklist", icon: CheckSquare },
       { href: "/daily-bias", labelKey: "sidebarDailyBias", icon: Target },
+      { href: "/playbook", labelKey: "sidebarPlaybook", icon: BookOpen },
+      { href: "/risk", labelKey: "sidebarRiskManager", icon: Shield },
+      { href: "/mistakes", labelKey: "sidebarErrors", icon: AlertCircle },
     ],
   },
   // ANALYTICS (collapsible)
@@ -97,6 +109,16 @@ const sections: SectionDef[] = [
       { href: "/heatmap", labelKey: "sidebarHeatmap", icon: Grid3x3 },
       { href: "/recaps", labelKey: "sidebarRecaps", icon: FileBarChart },
       { href: "/analytics/distribution", labelKey: "sidebarDistribution", icon: Clock },
+    ],
+  },
+  // PERFORMANCE (collapsible)
+  {
+    id: "performance",
+    labelKey: "sidebarSecPerformance",
+    items: [
+      { href: "/performance/grading", labelKey: "sidebarGrading", icon: GraduationCap },
+      { href: "/badges", labelKey: "sidebarBadges", icon: Medal },
+      { href: "/analytics/sessions", labelKey: "sidebarSessions", icon: Clock },
     ],
   },
   // MARCHÉ (collapsible, collapsed by default)
@@ -113,6 +135,12 @@ const sections: SectionDef[] = [
       { href: "/watchlist", labelKey: "sidebarWatchlist", icon: Eye },
       { href: "/volatility", labelKey: "sidebarVolatility", icon: Gauge },
       { href: "/earnings", labelKey: "sidebarEarnings", icon: CalendarDays },
+      { href: "/sentiment", labelKey: "sidebarSentiment", icon: Heart },
+      { href: "/force-devises", labelKey: "sidebarCurrencyStrength", icon: ArrowUpDown },
+      { href: "/lbma-metaux", labelKey: "sidebarLbmaMetals", icon: Gem },
+      { href: "/scanner", labelKey: "sidebarScanner", icon: Search },
+      { href: "/sector-heatmap", labelKey: "sidebarSectorHeatmap", icon: LayoutGrid },
+      { href: "/flow", labelKey: "sidebarOptionsFlow", icon: GitBranch },
     ],
   },
   // AVANCÉ (collapsible, collapsed by default)
@@ -163,6 +191,8 @@ const sections: SectionDef[] = [
       { href: "/vip/analyses", labelKey: "sidebarMacroAnalyses", icon: Globe, isVip: true },
       { href: "/community", labelKey: "sidebarCommunity", icon: Users, isVip: true },
       { href: "/chat", labelKey: "sidebarChat", icon: MessageCircle, isVip: true },
+      { href: "/challenges", labelKey: "sidebarChallenges", icon: Swords, isVip: true },
+      { href: "/leaderboard", labelKey: "sidebarLeaderboard", icon: Trophy, isVip: true },
     ],
   },
 ];
@@ -324,7 +354,7 @@ export function Sidebar() {
         {/* Section items with smooth collapse */}
         <div
           className={`overflow-hidden transition-all duration-200 ease-in-out ${
-            isOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+            isOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
           }`}
         >
           <div className="space-y-0.5">

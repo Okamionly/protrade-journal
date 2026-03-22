@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useTrades } from "@/hooks/useTrades";
-import { X, Search, Share2, Send, TrendingUp, TrendingDown } from "lucide-react";
+import { X, Search, Share2, Send } from "lucide-react";
+import { TradeCard } from "@/components/TradeCard";
+
+const SHARE_TEMPLATES = [
+  { label: "Setup du jour", text: "Setup du jour" },
+  { label: "Trade de la semaine", text: "Trade de la semaine" },
+  { label: "Analyse technique", text: "Analyse technique" },
+];
 
 interface CommunityShareTradeModalProps {
   onShare: (tradeId: string, content: string, comment: string) => void;
@@ -36,7 +43,7 @@ export function CommunityShareTradeModal({ onShare, onClose }: CommunityShareTra
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Share2 className="w-5 h-5 text-cyan-400" />
-            Partager dans la communaute
+            Partager dans la communauté
           </h3>
           <button onClick={onClose} className="text-[--text-secondary] hover:text-white transition">
             <X className="w-5 h-5" />
@@ -50,7 +57,7 @@ export function CommunityShareTradeModal({ onShare, onClose }: CommunityShareTra
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[--text-secondary]" />
               <input
                 type="text"
-                placeholder="Rechercher par actif ou strategie..."
+                placeholder="Rechercher par actif ou stratégie..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:outline-none focus:border-cyan-500/50 transition"
@@ -62,7 +69,7 @@ export function CommunityShareTradeModal({ onShare, onClose }: CommunityShareTra
               {loading ? (
                 <p className="text-[--text-secondary] text-center py-8">Chargement...</p>
               ) : filtered.length === 0 ? (
-                <p className="text-[--text-muted] text-center py-8">Aucun trade trouve.</p>
+                <p className="text-[--text-muted] text-center py-8">Aucun trade trouvé.</p>
               ) : (
                 filtered.slice(0, 20).map((trade) => {
                   const isWin = trade.result > 0;
@@ -70,7 +77,13 @@ export function CommunityShareTradeModal({ onShare, onClose }: CommunityShareTra
                     <button
                       key={trade.id}
                       onClick={() => setSelectedTradeId(trade.id)}
-                      className="w-full text-left p-3 rounded-xl border border-[--border] hover:bg-[var(--bg-hover)] transition flex items-center justify-between"
+                      className="w-full text-left p-3 rounded-xl border transition flex items-center justify-between"
+                      style={{
+                        borderColor: isWin ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)",
+                        background: isWin
+                          ? "rgba(16,185,129,0.03)"
+                          : "rgba(239,68,68,0.03)",
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <span
@@ -103,56 +116,53 @@ export function CommunityShareTradeModal({ onShare, onClose }: CommunityShareTra
           </>
         ) : (
           <>
-            {/* Preview selected trade */}
+            {/* Preview with TradeCard */}
             {selectedTrade && (
-              <div className="rounded-xl p-4 bg-[--bg-secondary]/50 border border-[--border] mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">{selectedTrade.asset}</span>
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        selectedTrade.direction === "LONG"
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : "bg-rose-500/20 text-rose-400"
-                      }`}
-                    >
-                      {selectedTrade.direction}
-                    </span>
-                  </div>
-                  {selectedTrade.result >= 0 ? (
-                    <TrendingUp className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4 text-rose-400" />
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs mb-2">
-                  <div>
-                    <p className="text-[--text-muted]">Entree</p>
-                    <p className="mono font-medium">{selectedTrade.entry}</p>
-                  </div>
-                  <div>
-                    <p className="text-[--text-muted]">Sortie</p>
-                    <p className="mono font-medium">{selectedTrade.exit || "-"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[--text-muted]">Lots</p>
-                    <p className="mono font-medium">{selectedTrade.lots}</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-[--border]">
-                  <span className="text-xs text-[--text-muted]">{selectedTrade.strategy}</span>
-                  <span className={`mono font-bold text-sm ${selectedTrade.result >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {selectedTrade.result >= 0 ? "+" : ""}{selectedTrade.result}€
-                  </span>
-                </div>
-              </div>
+              <>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
+                  Aperçu dans le fil
+                </p>
+                <TradeCard
+                  trade={{
+                    id: selectedTrade.id,
+                    asset: selectedTrade.asset,
+                    direction: selectedTrade.direction,
+                    strategy: selectedTrade.strategy,
+                    entry: selectedTrade.entry,
+                    exit: selectedTrade.exit,
+                    sl: selectedTrade.sl,
+                    tp: selectedTrade.tp,
+                    lots: selectedTrade.lots,
+                    result: selectedTrade.result,
+                    date: selectedTrade.date,
+                    emotion: selectedTrade.emotion,
+                  }}
+                  variant="full"
+                  showActions={false}
+                />
+              </>
             )}
+
+            {/* Quick templates */}
+            <div className="flex gap-2 mt-4 mb-2 flex-wrap">
+              {SHARE_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.label}
+                  onClick={() => setComment((prev) => prev ? `${prev} ${tpl.text}` : tpl.text)}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-medium border transition hover:opacity-80"
+                  style={{
+                    borderColor: "rgba(6,182,212,0.3)",
+                    color: "#06b6d4",
+                    background: "rgba(6,182,212,0.08)",
+                  }}
+                >
+                  {tpl.label}
+                </button>
+              ))}
+            </div>
 
             {/* Comment input */}
             <div className="mb-4">
-              <label className="text-xs text-[--text-secondary] mb-1.5 block">
-                Ajouter un commentaire (optionnel)
-              </label>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
@@ -174,10 +184,10 @@ export function CommunityShareTradeModal({ onShare, onClose }: CommunityShareTra
               </button>
               <button
                 onClick={handleShare}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition flex items-center justify-center gap-2 group"
               >
-                <Send className="w-4 h-4" />
-                Publier
+                <Send className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                Partager dans la communauté
               </button>
             </div>
           </>

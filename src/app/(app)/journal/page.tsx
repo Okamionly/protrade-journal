@@ -7,8 +7,9 @@ import { useToast } from "@/components/Toast";
 import { calculateRR, formatDate } from "@/lib/utils";
 import { useState, useMemo, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Camera, Trash2, Pencil, ArrowUpDown, Download, X, Copy, Brain, Share2 } from "lucide-react";
+import { Plus, Camera, Trash2, Pencil, ArrowUpDown, Download, X, Copy, Brain, Share2, Send } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import { TradeCard } from "@/components/TradeCard";
 
 import { AdvancedFilters } from "@/components/AdvancedFilters";
 import { useAdvancedFilters } from "@/hooks/useAdvancedFilters";
@@ -594,6 +595,12 @@ function JournalPageContent() {
   );
 }
 
+const SHARE_TEMPLATES = [
+  { label: "Setup du jour", text: "Setup du jour" },
+  { label: "Trade de la semaine", text: "Trade de la semaine" },
+  { label: "Analyse technique", text: "Analyse technique" },
+];
+
 function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: string; trades: Trade[]; onClose: () => void }) {
   const [comment, setComment] = useState("");
   const [sending, setSending] = useState(false);
@@ -608,7 +615,6 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
   const handleShare = async () => {
     setSending(true);
     try {
-      // Get community room
       const roomsRes = await fetch("/api/chat/rooms");
       if (!roomsRes.ok) throw new Error("Failed to fetch rooms");
       const rooms = await roomsRes.json();
@@ -647,58 +653,73 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
     }
   };
 
+  // Build a SharedTrade-compatible object for the TradeCard preview
+  const sharedTrade = {
+    id: trade.id,
+    asset: trade.asset,
+    direction: trade.direction,
+    strategy: trade.strategy,
+    entry: trade.entry,
+    exit: trade.exit,
+    sl: trade.sl,
+    tp: trade.tp,
+    lots: trade.lots,
+    result: trade.result,
+    date: trade.date,
+    emotion: trade.emotion,
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="glass rounded-2xl p-6 max-w-md w-full border border-[--border] shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Share2 className="w-5 h-5 text-cyan-400" />
-            Partager ce trade
+            Partager dans la communauté
           </h3>
           <button onClick={onClose} className="text-[--text-muted] hover:text-[--text-primary] transition">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Trade preview */}
-        <div className="rounded-xl p-4 bg-[--bg-secondary]/50 border border-[--border] mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm">{trade.asset}</span>
-              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
-              }`}>
-                {trade.direction}
-              </span>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            <div>
-              <p className="text-[--text-muted]">Entrée</p>
-              <p className="mono font-medium">{trade.entry}</p>
-            </div>
-            <div>
-              <p className="text-[--text-muted]">Sortie</p>
-              <p className="mono font-medium">{trade.exit || "-"}</p>
-            </div>
-            <div>
-              <p className="text-[--text-muted]">Résultat</p>
-              <p className={`mono font-bold ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
-                {isWin ? "+" : ""}{trade.result}€
-              </p>
-            </div>
-          </div>
+        {/* Live preview label */}
+        <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
+          Aperçu dans le fil
+        </p>
+
+        {/* Trade card preview using shared component */}
+        <TradeCard trade={sharedTrade} variant="full" showActions={false} />
+
+        {/* Quick templates */}
+        <div className="flex gap-2 mt-4 mb-2 flex-wrap">
+          {SHARE_TEMPLATES.map((tpl) => (
+            <button
+              key={tpl.label}
+              onClick={() => setComment((prev) => prev ? `${prev} ${tpl.text}` : tpl.text)}
+              className="px-2.5 py-1 rounded-full text-[11px] font-medium border transition hover:opacity-80"
+              style={{
+                borderColor: "rgba(6,182,212,0.3)",
+                color: "#06b6d4",
+                background: "rgba(6,182,212,0.08)",
+              }}
+            >
+              {tpl.label}
+            </button>
+          ))}
         </div>
 
         {/* Comment */}
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Ajouter un commentaire (optionnel)..."
+          placeholder="Ajouter un commentaire, votre analyse, votre raisonnement..."
           rows={3}
           maxLength={500}
-          className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-xl px-4 py-2.5 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:outline-none focus:border-cyan-500/50 transition resize-none mb-4"
+          className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-xl px-4 py-2.5 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:outline-none focus:border-cyan-500/50 transition resize-none mb-1"
         />
+        <p className="text-[10px] text-right mb-4" style={{ color: "var(--text-muted)" }}>
+          {comment.length}/500
+        </p>
 
         <div className="flex gap-3">
           <button
@@ -710,9 +731,18 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
           <button
             onClick={handleShare}
             disabled={sending || sent}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2 group"
           >
-            {sent ? "Partagé !" : sending ? "Envoi..." : "Publier"}
+            {sent ? (
+              "Partagé !"
+            ) : sending ? (
+              "Envoi..."
+            ) : (
+              <>
+                <Send className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                Partager dans la communauté
+              </>
+            )}
           </button>
         </div>
       </div>

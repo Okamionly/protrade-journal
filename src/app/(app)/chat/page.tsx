@@ -64,17 +64,15 @@ const ICON_MAP: Record<string, React.ElementType> = {
   MessageCircle, Signal, BookOpen, GraduationCap, Trophy, TrendingUp, Zap, Star,
 };
 
-const QUICK_EMOJIS = ["👍", "❤️", "🔥", "💰", "📈", "📉", "🎯", "💪", "😂", "🤔"];
-const EXTENDED_EMOJIS = [
+const REACTION_EMOJIS = [
   "👍", "❤️", "🔥", "💰", "📈", "📉", "🎯", "💪", "😂", "🤔",
-  "🚀", "💎", "⚡", "🏆", "👏", "😱", "🤝", "💯", "🎉", "😎",
-  "🐻", "🐂", "⭐", "💸", "📊", "🔔", "✅", "❌", "⚠️", "💡",
+  "👀", "⚡", "💎", "🚀", "✅", "❌", "🏆", "😱", "🤝", "👏",
 ];
 
 const ROOM_CATEGORIES: Record<string, string[]> = {
   "TRADING": ["Général", "Signaux", "Analyses"],
-  "FORMATION": ["Débutants", "Stratégies"],
-  "SOCIAL": ["Résultats"],
+  "MARCHÉS": ["Forex", "Indices", "Crypto"],
+  "COMMUNAUTÉ": ["Débutants", "VIP Lounge"],
 };
 
 // ─── Types ────────────────────────────────────────────────
@@ -464,28 +462,7 @@ function UserProfileCard({ profile, position }: { profile: UserProfile; position
   );
 }
 
-// ─── Typing Indicator ────────────────────────────────────
-function TypingIndicator({ users }: { users: string[] }) {
-  if (users.length === 0) return null;
-
-  const text =
-    users.length === 1
-      ? `${users[0]} est en train d'écrire`
-      : users.length === 2
-        ? `${users[0]} et ${users[1]} écrivent`
-        : `${users[0]} et ${users.length - 1} autres écrivent`;
-
-  return (
-    <div className="flex items-center gap-2 px-4 py-1.5 text-[11px] text-[--text-muted]">
-      <div className="flex gap-0.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-      </div>
-      <span className="italic">{text}...</span>
-    </div>
-  );
-}
+// (Typing indicator is now rendered inline in the main component)
 
 // ─── Poll Creation Modal ─────────────────────────────────
 function PollCreationModal({
@@ -1007,19 +984,20 @@ function MessageBubble({
         )}
       </div>
 
-      {/* Quick emoji picker - enhanced with more emojis and animation */}
+      {/* Compact emoji picker — 20 emojis in a 5x4 grid */}
       {showEmojiPicker && (
-        <div className="absolute right-3 top-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-2 z-20 flex gap-1 flex-wrap max-w-[280px] animate-in fade-in zoom-in-95 duration-150">
-          {EXTENDED_EMOJIS.map((emoji, i) => (
-            <button
-              key={emoji}
-              onClick={() => { onReaction(msg.id, emoji); setShowEmojiPicker(false); }}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--bg-hover)] text-base transition hover:scale-125 active:scale-90"
-              style={{ animationDelay: `${i * 15}ms` }}
-            >
-              {emoji}
-            </button>
-          ))}
+        <div className="absolute right-3 top-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-2 z-20 animate-in fade-in zoom-in-95 duration-150">
+          <div className="grid grid-cols-5 gap-0.5">
+            {REACTION_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => { onReaction(msg.id, emoji); setShowEmojiPicker(false); }}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--bg-hover)] text-base transition hover:scale-125 active:scale-90"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -1039,7 +1017,95 @@ function DateSeparator({ date }: { date: string }) {
   );
 }
 
-// ─── Search Modal ─────────────────────────────────────────
+// ─── Inline Search Bar ───────────────────────────────────
+function InlineSearchBar({
+  messages,
+  onClose,
+  onJump,
+  highlightedIds,
+  setHighlightedIds,
+}: {
+  messages: ChatMessage[];
+  onClose: () => void;
+  onJump: (id: string) => void;
+  highlightedIds: Set<string>;
+  setHighlightedIds: (ids: Set<string>) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [currentIdx, setCurrentIdx] = useState(0);
+
+  const results = useMemo(() => {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return messages.filter(
+      (m) =>
+        m.content?.toLowerCase().includes(q) ||
+        m.user.name?.toLowerCase().includes(q)
+    );
+  }, [query, messages]);
+
+  // Sync highlighted IDs with parent
+  useEffect(() => {
+    setHighlightedIds(new Set(results.map((r) => r.id)));
+  }, [results, setHighlightedIds]);
+
+  // Jump to current result
+  useEffect(() => {
+    if (results.length > 0 && results[currentIdx]) {
+      onJump(results[currentIdx].id);
+    }
+  }, [currentIdx, results, onJump]);
+
+  const goNext = () => {
+    if (results.length > 0) setCurrentIdx((i) => (i + 1) % results.length);
+  };
+  const goPrev = () => {
+    if (results.length > 0) setCurrentIdx((i) => (i - 1 + results.length) % results.length);
+  };
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); goNext(); }
+    if (e.key === "Escape") onClose();
+  };
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-950/60 backdrop-blur-sm">
+      <Search className="w-4 h-4 text-[--text-muted] flex-shrink-0" />
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setCurrentIdx(0); }}
+        onKeyDown={handleKey}
+        placeholder="Rechercher dans les messages..."
+        className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400"
+        style={{ color: "var(--text-primary)" }}
+        autoFocus
+      />
+      {query.trim() && (
+        <span className="text-[11px] text-[--text-muted] mono whitespace-nowrap">
+          {results.length > 0
+            ? `${currentIdx + 1}/${results.length} résultat${results.length !== 1 ? "s" : ""}`
+            : "0 résultat"}
+        </span>
+      )}
+      {results.length > 1 && (
+        <div className="flex items-center gap-0.5">
+          <button onClick={goPrev} className="p-1 rounded hover:bg-[var(--bg-hover)] text-[--text-muted]">
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={goNext} className="p-1 rounded hover:bg-[var(--bg-hover)] text-[--text-muted]">
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      <button onClick={onClose} className="p-1 rounded-lg hover:bg-[var(--bg-hover)] text-[--text-muted]">
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// ─── Search Modal (kept for Ctrl+K overlay) ──────────────
 function SearchOverlay({ messages, onClose, onJump }: { messages: ChatMessage[]; onClose: () => void; onJump: (id: string) => void }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -1353,6 +1419,8 @@ export default function ChatPage() {
   const [uploading, setUploading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [showInlineSearch, setShowInlineSearch] = useState(false);
+  const [searchHighlightIds, setSearchHighlightIds] = useState<Set<string>>(new Set());
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [showNewMsgIndicator, setShowNewMsgIndicator] = useState(false);
@@ -1363,13 +1431,14 @@ export default function ChatPage() {
   // New state for enhanced features
   const [activeThread, setActiveThread] = useState<ChatMessage | null>(null);
   const [showPollModal, setShowPollModal] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [userProfile, setUserProfile] = useState<{ profile: UserProfile; position: { x: number; y: number } } | null>(null);
   const [showFormattingBar, setShowFormattingBar] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
   const [roomUnreads, setRoomUnreads] = useState<Record<string, number>>({});
+  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -1377,7 +1446,7 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const shouldAutoScroll = useRef(true);
   const prevMessageCount = useRef(0);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
 
   useEffect(() => {
     if (rooms.length > 0 && !activeRoomId) setActiveRoomId(rooms[0].id);
@@ -1410,16 +1479,23 @@ export default function ChatPage() {
     prevMessageCount.current = messages.length;
   }, [messages.length]);
 
-  // Real typing indicator - only show when there are actual typing events
-  // (no simulated typing)
+  // Real typing indicator: client-side only, shows when user is actively typing
+  useEffect(() => {
+    if (!isTyping) return;
+    const timer = setTimeout(() => setIsTyping(false), 2000);
+    return () => clearTimeout(timer);
+  }, [isTyping, input]);
 
   // Room unread badges - based on real new messages only
   // (no simulated unread counts)
 
-  // Clear unread when switching rooms
+  // Clear unread and close inline search when switching rooms
   useEffect(() => {
     if (activeRoomId) {
       setRoomUnreads((prev) => ({ ...prev, [activeRoomId]: 0 }));
+      setShowInlineSearch(false);
+      setSearchHighlightIds(new Set());
+      setExpandedThreads(new Set());
     }
   }, [activeRoomId]);
 
@@ -1537,6 +1613,7 @@ export default function ChatPage() {
     const result = await sendMessage(content, undefined, imageUrl);
     if (result.success) {
       setInput("");
+      setIsTyping(false);
       setImageFile(null);
       setImagePreview(null);
       setReplyTo(null);
@@ -1709,6 +1786,29 @@ export default function ChatPage() {
     return map;
   }, [messages]);
 
+  // Map of parentId -> reply messages for inline thread display
+  const threadRepliesMap = useMemo(() => {
+    const map = new Map<string, ChatMessage[]>();
+    messages.forEach((m) => {
+      const threadMatch = m.content?.match(/^\[THREAD:(.+?)\]/);
+      if (threadMatch) {
+        const parentId = threadMatch[1];
+        if (!map.has(parentId)) map.set(parentId, []);
+        map.get(parentId)!.push(m);
+      }
+    });
+    return map;
+  }, [messages]);
+
+  const toggleThreadExpand = useCallback((parentId: string) => {
+    setExpandedThreads((prev) => {
+      const next = new Set(prev);
+      if (next.has(parentId)) next.delete(parentId);
+      else next.add(parentId);
+      return next;
+    });
+  }, []);
+
   // Get thread replies for active thread
   const threadReplies = useMemo(() => {
     if (!activeThread) return [];
@@ -1735,6 +1835,9 @@ export default function ChatPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInput(val);
+    // Trigger typing indicator
+    if (val.trim()) setIsTyping(true);
+    else setIsTyping(false);
     // Detect @mention
     const cursorPos = e.target.selectionStart || val.length;
     const textBeforeCursor = val.slice(0, cursorPos);
@@ -1778,6 +1881,8 @@ export default function ChatPage() {
       }
       if (e.key === "Escape") {
         setShowSearch(false);
+        setShowInlineSearch(false);
+        setSearchHighlightIds(new Set());
         setLightboxUrl(null);
         setUserProfile(null);
         if (activeThread) setActiveThread(null);
@@ -2045,6 +2150,13 @@ export default function ChatPage() {
 
               {/* Room actions */}
               <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setShowInlineSearch(!showInlineSearch)}
+                  className={`p-1.5 rounded-md transition ${showInlineSearch ? "bg-cyan-500/10 text-cyan-400" : "text-[--text-muted] hover:text-[--text-secondary] hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)]"}`}
+                  title="Rechercher dans ce salon"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
                 {pinnedCount > 0 && (
                   <button
                     onClick={() => setShowRightPanel(true)}
@@ -2062,6 +2174,17 @@ export default function ChatPage() {
                 </button>
               </div>
             </div>
+          )}
+
+          {/* Inline search bar */}
+          {showInlineSearch && (
+            <InlineSearchBar
+              messages={messages}
+              onClose={() => { setShowInlineSearch(false); setSearchHighlightIds(new Set()); }}
+              onJump={handleJumpToMessage}
+              highlightedIds={searchHighlightIds}
+              setHighlightedIds={setSearchHighlightIds}
+            />
           )}
 
           {/* Drag overlay */}
@@ -2174,27 +2297,90 @@ export default function ChatPage() {
                         group.messages[mi - 1].userId === msg.userId &&
                         new Date(msg.createdAt).getTime() - new Date(group.messages[mi - 1].createdAt).getTime() < 300000;
 
-                      // Skip thread replies in main view (they show as thread count on parent)
+                      // Skip thread replies in main view (they render inline under parent)
                       if (msg.content?.startsWith("[THREAD:")) return null;
 
+                      const inlineReplies = threadRepliesMap.get(msg.id) || [];
+                      const isThreadExpanded = expandedThreads.has(msg.id);
+
                       return (
-                        <div key={msg.id} id={`msg-${msg.id}`} className="transition-all duration-500">
-                          <MessageBubble
-                            msg={msg}
-                            isOwn={false}
-                            isAdmin={isAdmin}
-                            onDelete={handleDelete}
-                            onPin={handlePin}
-                            onBan={handleBan}
-                            onImageClick={setLightboxUrl}
-                            onReaction={handleReaction}
-                            onReply={handleReply}
-                            onOpenThread={handleOpenThread}
-                            currentUserId={undefined}
-                            isConsecutive={isConsecutive}
-                            threadInfo={threadInfoMap.get(msg.id)}
-                            onShowProfile={handleShowProfile}
-                          />
+                        <div key={msg.id}>
+                          <div id={`msg-${msg.id}`} className={`transition-all duration-500 ${searchHighlightIds.has(msg.id) ? "bg-amber-500/10 border-l-2 border-amber-400" : ""}`}>
+                            <MessageBubble
+                              msg={msg}
+                              isOwn={false}
+                              isAdmin={isAdmin}
+                              onDelete={handleDelete}
+                              onPin={handlePin}
+                              onBan={handleBan}
+                              onImageClick={setLightboxUrl}
+                              onReaction={handleReaction}
+                              onReply={handleReply}
+                              onOpenThread={handleOpenThread}
+                              currentUserId={undefined}
+                              isConsecutive={isConsecutive}
+                              threadInfo={threadInfoMap.get(msg.id)}
+                              onShowProfile={handleShowProfile}
+                            />
+                          </div>
+
+                          {/* Inline thread replies */}
+                          {inlineReplies.length > 0 && (
+                            <div className="ml-12 border-l-2 border-cyan-500/20">
+                              <button
+                                onClick={() => toggleThreadExpand(msg.id)}
+                                className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-cyan-500 hover:text-cyan-400 hover:bg-cyan-500/5 transition w-full text-left"
+                              >
+                                {isThreadExpanded ? (
+                                  <ChevronDown className="w-3 h-3" />
+                                ) : (
+                                  <ChevronRight className="w-3 h-3" />
+                                )}
+                                <Reply className="w-3 h-3" />
+                                <span className="font-medium">
+                                  {inlineReplies.length} réponse{inlineReplies.length !== 1 ? "s" : ""}
+                                </span>
+                                {!isThreadExpanded && inlineReplies.length > 0 && (
+                                  <span className="text-[10px] text-[--text-muted]">
+                                    — Dernière de {inlineReplies[inlineReplies.length - 1].user.name || inlineReplies[inlineReplies.length - 1].user.email.split("@")[0]}, {formatTime(inlineReplies[inlineReplies.length - 1].createdAt)}
+                                  </span>
+                                )}
+                              </button>
+                              {isThreadExpanded && (
+                                <div className="pb-1">
+                                  {inlineReplies.map((reply, ri) => {
+                                    // Strip [THREAD:xxx] prefix from display content
+                                    const cleanContent = reply.content?.replace(/^\[THREAD:.+?\]\s*/, "") || "";
+                                    const cleanReply = { ...reply, content: cleanContent };
+                                    const replyConsecutive = ri > 0 && inlineReplies[ri - 1].userId === reply.userId &&
+                                      new Date(reply.createdAt).getTime() - new Date(inlineReplies[ri - 1].createdAt).getTime() < 300000;
+
+                                    return (
+                                      <div key={reply.id} className="pl-1">
+                                        <MessageBubble
+                                          msg={cleanReply}
+                                          isOwn={false}
+                                          isAdmin={isAdmin}
+                                          onDelete={handleDelete}
+                                          onPin={handlePin}
+                                          onBan={handleBan}
+                                          onImageClick={setLightboxUrl}
+                                          onReaction={handleReaction}
+                                          onReply={handleReply}
+                                          onOpenThread={() => {}}
+                                          currentUserId={undefined}
+                                          isConsecutive={replyConsecutive}
+                                          threadInfo={undefined}
+                                          showThreadButton={false}
+                                          onShowProfile={handleShowProfile}
+                                        />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -2204,8 +2390,17 @@ export default function ChatPage() {
               </div>
             )}
 
-            {/* Typing indicator */}
-            <TypingIndicator users={typingUsers} />
+            {/* Typing indicator — client-side only */}
+            {isTyping && (
+              <div className="flex items-center gap-2 px-4 py-1.5 text-[11px] text-[--text-muted]">
+                <div className="flex gap-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className="italic">est en train d&apos;écrire...</span>
+              </div>
+            )}
 
             {/* New messages indicator with unread count */}
             {showNewMsgIndicator && (

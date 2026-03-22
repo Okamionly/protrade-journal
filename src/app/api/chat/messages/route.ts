@@ -34,6 +34,8 @@ const messageInclude = {
       lots: true,
       result: true,
       date: true,
+      emotion: true,
+      duration: true,
     },
   },
   reactions: {

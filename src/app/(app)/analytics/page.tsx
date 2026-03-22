@@ -1,18 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTrades } from "@/hooks/useTrades";
 import { computeStats, computeStreaks, computeAssetPerformance, computeEmotionPerformance, computeMonthlyComparison } from "@/lib/utils";
 import { WeekdayChart, EquityChart, MonthlyComparisonChart, EmotionChart, AdvancedEquityChart } from "@/components/ChartComponents";
 import { AnalyticsSkeleton } from "@/components/Skeleton";
 import { useUser } from "@/hooks/useTrades";
-import { TrendingUp, TrendingDown, Zap, Flame, ArrowUpRight, ArrowDownRight, Clock, Activity, ChevronUp, ChevronDown, BarChart3, GitCompare, Tag, Crosshair } from "lucide-react";
+import { useVipAccess } from "@/hooks/useVipAccess";
+import { TrendingUp, TrendingDown, Zap, Flame, ArrowUpRight, ArrowDownRight, Clock, Activity, ChevronUp, ChevronDown, BarChart3, GitCompare, Tag, Crosshair, Crown, Timer, Target, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 
 export default function AnalyticsPage() {
   const { t } = useTranslation();
   const { trades, loading } = useTrades();
   const { user } = useUser();
+  const { isVip } = useVipAccess();
   const [showNet, setShowNet] = useState(false);
   const stats = computeStats(trades);
   const streaks = computeStreaks(trades);
@@ -998,6 +1000,488 @@ export default function AnalyticsPage() {
           );
         })()}
       </div>
+
+      {/* ═══════════════════════ VIP PREMIUM ANALYTICS ═══════════════════════ */}
+      {isVip && <VipAnalyticsSections trades={trades} getPnl={getPnl} />}
     </div>
+  );
+}
+
+/* ─────────────────────────── VIP-Only Sections Component ─────────────────────────── */
+
+function VipAnalyticsSections({ trades, getPnl }: { trades: ReturnType<typeof useTrades>["trades"]; getPnl: (tr: ReturnType<typeof useTrades>["trades"][0]) => number }) {
+
+  /* ─── 1. Emotion-Performance Correlation ─── */
+  const emotionHeatmap = useMemo(() => {
+    const emotions = [...new Set(trades.map(t => t.emotion).filter(Boolean))] as string[];
+    const map: Record<string, { total: number; wins: number; totalPnl: number }> = {};
+    trades.forEach(tr => {
+      const em = tr.emotion;
+      if (!em) return;
+      if (!map[em]) map[em] = { total: 0, wins: 0, totalPnl: 0 };
+      map[em].total++;
+      map[em].totalPnl += getPnl(tr);
+      if (tr.result > 0) map[em].wins++;
+    });
+    const entries = emotions.map(em => {
+      const d = map[em] || { total: 0, wins: 0, totalPnl: 0 };
+      const winRate = d.total > 0 ? (d.wins / d.total) * 100 : 0;
+      return { emotion: em, trades: d.total, wins: d.wins, winRate, totalPnl: d.totalPnl, avgPnl: d.total > 0 ? d.totalPnl / d.total : 0 };
+    }).sort((a, b) => b.winRate - a.winRate);
+    const best = entries.length > 0 ? entries[0] : null;
+    const worst = entries.length > 0 ? entries[entries.length - 1] : null;
+    return { entries, best, worst };
+  }, [trades, getPnl]);
+
+  /* ─── 2. Hourly Performance Analysis ─── */
+  const hourlyPerf = useMemo(() => {
+    const hours: Record<number, { totalPnl: number; count: number; wins: number }> = {};
+    for (let h = 0; h < 24; h++) hours[h] = { totalPnl: 0, count: 0, wins: 0 };
+    trades.forEach(tr => {
+      const h = new Date(tr.date).getHours();
+      hours[h].totalPnl += getPnl(tr);
+      hours[h].count++;
+      if (tr.result > 0) hours[h].wins++;
+    });
+    const entries = Object.entries(hours).map(([h, d]) => ({ hour: Number(h), ...d }));
+    const active = entries.filter(e => e.count > 0);
+    const sortedByPnl = [...active].sort((a, b) => b.totalPnl - a.totalPnl);
+    const best3 = sortedByPnl.slice(0, 3);
+    const worst3 = sortedByPnl.slice(-3).reverse();
+    const maxAbsPnl = Math.max(...entries.map(e => Math.abs(e.totalPnl)), 1);
+    return { entries, best3, worst3, maxAbsPnl };
+  }, [trades, getPnl]);
+
+  /* ─── 3. Expected Value per Strategy ─── */
+  const strategyEV = useMemo(() => {
+    const map: Record<string, { count: number; wins: number; winTotal: number; lossTotal: number }> = {};
+    trades.forEach(tr => {
+      const s = tr.strategy;
+      if (!map[s]) map[s] = { count: 0, wins: 0, winTotal: 0, lossTotal: 0 };
+      map[s].count++;
+      const pnl = getPnl(tr);
+      if (tr.result > 0) {
+        map[s].wins++;
+        map[s].winTotal += pnl;
+      } else {
+        map[s].lossTotal += Math.abs(pnl);
+      }
+    });
+    return Object.entries(map).map(([name, d]) => {
+      const winRate = d.count > 0 ? d.wins / d.count : 0;
+      const avgWin = d.wins > 0 ? d.winTotal / d.wins : 0;
+      const losses = d.count - d.wins;
+      const avgLoss = losses > 0 ? d.lossTotal / losses : 0;
+      const ev = (winRate * avgWin) - ((1 - winRate) * avgLoss);
+      return { name, trades: d.count, winRate, avgWin, avgLoss, ev };
+    }).sort((a, b) => b.ev - a.ev);
+  }, [trades, getPnl]);
+
+  /* ─── 4. Drawdown Recovery Analysis ─── */
+  const drawdownAnalysis = useMemo(() => {
+    const sorted = [...trades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    if (sorted.length === 0) return { periods: [], equityCurve: [], maxDDPct: 0, avgRecoveryTrades: 0 };
+
+    // Build equity curve
+    let cumulative = 0;
+    const equityCurve = sorted.map((tr, i) => {
+      cumulative += tr.result;
+      return { index: i, date: tr.date, equity: cumulative };
+    });
+
+    // Find all drawdown periods (peak to recovery)
+    let peak = 0;
+    let peakIdx = 0;
+    let inDrawdown = false;
+    let ddStart = 0;
+    let ddTrough = 0;
+    let ddTroughIdx = 0;
+    const periods: { startIdx: number; troughIdx: number; endIdx: number; depth: number; recoveryTrades: number; startDate: string; endDate: string }[] = [];
+
+    equityCurve.forEach((pt, i) => {
+      if (pt.equity >= peak) {
+        if (inDrawdown && ddTrough < peak) {
+          // recovered
+          periods.push({
+            startIdx: ddStart,
+            troughIdx: ddTroughIdx,
+            endIdx: i,
+            depth: peak - ddTrough,
+            recoveryTrades: i - ddTroughIdx,
+            startDate: sorted[ddStart].date,
+            endDate: sorted[i].date,
+          });
+        }
+        peak = pt.equity;
+        peakIdx = i;
+        inDrawdown = false;
+      } else {
+        if (!inDrawdown) {
+          inDrawdown = true;
+          ddStart = peakIdx;
+          ddTrough = pt.equity;
+          ddTroughIdx = i;
+        }
+        if (pt.equity < ddTrough) {
+          ddTrough = pt.equity;
+          ddTroughIdx = i;
+        }
+      }
+    });
+
+    // If still in drawdown at end
+    if (inDrawdown) {
+      periods.push({
+        startIdx: ddStart,
+        troughIdx: ddTroughIdx,
+        endIdx: -1,
+        depth: peak - ddTrough,
+        recoveryTrades: -1,
+        startDate: sorted[ddStart].date,
+        endDate: "N/R",
+      });
+    }
+
+    const recovered = periods.filter(p => p.recoveryTrades > 0);
+    const avgRecoveryTrades = recovered.length > 0 ? recovered.reduce((s, p) => s + p.recoveryTrades, 0) / recovered.length : 0;
+    const maxDDPct = periods.length > 0 ? Math.max(...periods.map(p => p.depth)) : 0;
+
+    // Top 5 drawdowns
+    const topPeriods = [...periods].sort((a, b) => b.depth - a.depth).slice(0, 5);
+
+    return { periods: topPeriods, equityCurve, maxDDPct, avgRecoveryTrades };
+  }, [trades]);
+
+  const formatHour = (h: number) => `${String(h).padStart(2, "0")}:00`;
+
+  return (
+    <>
+      {/* VIP Section Header */}
+      <div className="flex items-center gap-3 pt-4">
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30">
+          <Crown className="w-4 h-4 text-amber-400" />
+          <span className="text-sm font-semibold text-amber-400">Analyses Premium VIP</span>
+        </div>
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+      </div>
+
+      {/* ═══ 1. Emotion-Performance Correlation Heatmap ═══ */}
+      <div className="glass rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="w-5 h-5 text-purple-400" />
+          <h3 className="text-lg font-semibold">Correlation Emotion-Performance</h3>
+        </div>
+        {emotionHeatmap.entries.length > 0 ? (
+          <div className="space-y-6">
+            {/* Heatmap Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {emotionHeatmap.entries.map(e => {
+                const intensity = e.winRate / 100;
+                const bgColor = e.winRate >= 55
+                  ? `rgba(16, 185, 129, ${0.15 + intensity * 0.45})`
+                  : e.winRate >= 45
+                  ? `rgba(245, 158, 11, ${0.15 + intensity * 0.35})`
+                  : `rgba(239, 68, 68, ${0.15 + (1 - intensity) * 0.45})`;
+                const textColor = e.winRate >= 55 ? "#6ee7b7" : e.winRate >= 45 ? "#fcd34d" : "#fca5a5";
+                return (
+                  <div
+                    key={e.emotion}
+                    className="rounded-xl p-4 text-center transition-transform hover:scale-105"
+                    style={{ background: bgColor }}
+                  >
+                    <p className="text-sm font-semibold mb-1" style={{ color: "var(--text-primary)" }}>{e.emotion}</p>
+                    <p className="text-2xl font-bold mono" style={{ color: textColor }}>{e.winRate.toFixed(0)}%</p>
+                    <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{e.trades} trades</p>
+                    <p className={`text-xs mono font-medium mt-0.5 ${e.avgPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {e.avgPnl >= 0 ? "+" : ""}{e.avgPnl.toFixed(2)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Best / Worst / Recommendation */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {emotionHeatmap.best && (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
+                  <p className="text-xs text-emerald-400 font-medium mb-1">Meilleure emotion</p>
+                  <p className="text-lg font-bold text-emerald-400">{emotionHeatmap.best.emotion}</p>
+                  <p className="text-sm mono text-emerald-300">{emotionHeatmap.best.winRate.toFixed(1)}% win rate</p>
+                </div>
+              )}
+              {emotionHeatmap.worst && (
+                <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4">
+                  <p className="text-xs text-rose-400 font-medium mb-1">Pire emotion</p>
+                  <p className="text-lg font-bold text-rose-400">{emotionHeatmap.worst.emotion}</p>
+                  <p className="text-sm mono text-rose-300">{emotionHeatmap.worst.winRate.toFixed(1)}% win rate</p>
+                </div>
+              )}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                <p className="text-xs text-blue-400 font-medium mb-1">Recommandation</p>
+                <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                  {emotionHeatmap.best && emotionHeatmap.worst && emotionHeatmap.best.winRate - emotionHeatmap.worst.winRate > 10
+                    ? `Tradez de preference quand vous vous sentez "${emotionHeatmap.best.emotion}". Evitez de trader en etat "${emotionHeatmap.worst.emotion}" (${(emotionHeatmap.best.winRate - emotionHeatmap.worst.winRate).toFixed(0)}% d'ecart).`
+                    : "Votre performance est stable quelle que soit votre emotion. Continuez a surveiller cette metrique."}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-[--text-muted] text-sm text-center py-12">Ajoutez des emotions a vos trades pour voir cette analyse.</p>
+        )}
+      </div>
+
+      {/* ═══ 2. Hourly Performance Analysis ═══ */}
+      <div className="glass rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Timer className="w-5 h-5 text-cyan-400" />
+          <h3 className="text-lg font-semibold">Performance par Heure</h3>
+        </div>
+        {hourlyPerf.entries.some(e => e.count > 0) ? (
+          <div className="space-y-6">
+            {/* Bar Chart */}
+            <div className="flex items-end gap-[3px] h-48">
+              {hourlyPerf.entries.map(e => {
+                const hPct = e.count > 0 ? Math.max((Math.abs(e.totalPnl) / hourlyPerf.maxAbsPnl) * 100, 4) : 0;
+                const isPositive = e.totalPnl >= 0;
+                return (
+                  <div key={e.hour} className="flex-1 flex flex-col items-center justify-end group relative">
+                    {e.count > 0 && (
+                      <div className="absolute -top-8 text-[9px] text-[--text-muted] opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+                        {e.totalPnl >= 0 ? "+" : ""}{e.totalPnl.toFixed(0)} ({e.count}t)
+                      </div>
+                    )}
+                    <div
+                      className={`w-full rounded-t transition-all ${isPositive ? "bg-emerald-500" : "bg-rose-500"} hover:opacity-80`}
+                      style={{ height: `${hPct}%`, opacity: e.count > 0 ? 0.8 : 0.15 }}
+                      title={`${formatHour(e.hour)}: ${e.totalPnl >= 0 ? "+" : ""}${e.totalPnl.toFixed(2)} (${e.count} trades)`}
+                    />
+                    <span className="text-[9px] text-[--text-muted] mt-1">{e.hour}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Best and Worst Hours */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
+                <p className="text-xs text-emerald-400 font-medium mb-2">Vos meilleures heures de trading</p>
+                <div className="space-y-2">
+                  {hourlyPerf.best3.map((h, i) => (
+                    <div key={h.hour} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-emerald-400 w-4">{i + 1}.</span>
+                        <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{formatHour(h.hour)}</span>
+                        <span className="text-xs text-[--text-muted]">({h.count} trades)</span>
+                      </div>
+                      <span className="text-sm mono font-bold text-emerald-400">+{h.totalPnl.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4">
+                <p className="text-xs text-rose-400 font-medium mb-2">Evitez ces heures</p>
+                <div className="space-y-2">
+                  {hourlyPerf.worst3.map((h, i) => (
+                    <div key={h.hour} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-rose-400 w-4">{i + 1}.</span>
+                        <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{formatHour(h.hour)}</span>
+                        <span className="text-xs text-[--text-muted]">({h.count} trades)</span>
+                      </div>
+                      <span className="text-sm mono font-bold text-rose-400">{h.totalPnl.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de donnees horaires.</p>
+        )}
+      </div>
+
+      {/* ═══ 3. Expected Value per Strategy ═══ */}
+      <div className="glass rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Target className="w-5 h-5 text-amber-400" />
+          <h3 className="text-lg font-semibold">Esperance de Gain par Strategie</h3>
+        </div>
+        {strategyEV.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[--text-secondary] border-b border-[--border]">
+                  <th className="pb-3 font-medium">Strategie</th>
+                  <th className="pb-3 font-medium">Trades</th>
+                  <th className="pb-3 font-medium">Win Rate</th>
+                  <th className="pb-3 font-medium">Gain Moy.</th>
+                  <th className="pb-3 font-medium">Perte Moy.</th>
+                  <th className="pb-3 font-medium">Esperance (EV)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {strategyEV.map(s => (
+                  <tr key={s.name} className="border-b border-[--border-subtle]">
+                    <td className="py-3 font-medium" style={{ color: "var(--text-primary)" }}>{s.name}</td>
+                    <td className="py-3 mono">{s.trades}</td>
+                    <td className="py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-2 bg-[--bg-secondary] rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500" style={{ width: `${s.winRate * 100}%` }} />
+                        </div>
+                        <span className="mono text-emerald-400 text-xs">{(s.winRate * 100).toFixed(1)}%</span>
+                      </div>
+                    </td>
+                    <td className="py-3 mono text-emerald-400">+{s.avgWin.toFixed(2)}</td>
+                    <td className="py-3 mono text-rose-400">-{s.avgLoss.toFixed(2)}</td>
+                    <td className="py-3">
+                      <span className={`mono font-bold px-2 py-0.5 rounded ${s.ev >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
+                        {s.ev >= 0 ? "+" : ""}{s.ev.toFixed(2)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="text-xs text-[--text-muted] mt-3">
+              EV = (Win Rate x Gain Moyen) - ((1 - Win Rate) x Perte Moyenne). Une EV positive signifie une strategie rentable sur le long terme.
+            </p>
+          </div>
+        ) : (
+          <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de donnees.</p>
+        )}
+      </div>
+
+      {/* ═══ 4. Drawdown Recovery Analysis ═══ */}
+      <div className="glass rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="w-5 h-5 text-rose-400" />
+          <h3 className="text-lg font-semibold">Analyse de Drawdown et Recovery</h3>
+        </div>
+        {drawdownAnalysis.equityCurve.length > 0 ? (
+          <div className="space-y-6">
+            {/* KPI row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 text-center">
+                <p className="text-xs text-rose-400 font-medium mb-1">Drawdown Max</p>
+                <p className="text-2xl font-bold mono text-rose-400">-{drawdownAnalysis.maxDDPct.toFixed(2)}</p>
+              </div>
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center">
+                <p className="text-xs text-amber-400 font-medium mb-1">Recovery Moyen</p>
+                <p className="text-2xl font-bold mono text-amber-400">
+                  {drawdownAnalysis.avgRecoveryTrades > 0 ? `${drawdownAnalysis.avgRecoveryTrades.toFixed(0)} trades` : "N/A"}
+                </p>
+              </div>
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-center">
+                <p className="text-xs text-blue-400 font-medium mb-1">Periodes de Drawdown</p>
+                <p className="text-2xl font-bold mono text-blue-400">{drawdownAnalysis.periods.length}</p>
+              </div>
+            </div>
+
+            {/* SVG Equity Curve with Drawdowns */}
+            {(() => {
+              const curve = drawdownAnalysis.equityCurve;
+              const minEq = Math.min(...curve.map(c => c.equity));
+              const maxEq = Math.max(...curve.map(c => c.equity));
+              const range = maxEq - minEq || 1;
+              const w = 800;
+              const h = 200;
+              const pad = 10;
+
+              const toX = (i: number) => pad + ((i / Math.max(curve.length - 1, 1)) * (w - 2 * pad));
+              const toY = (eq: number) => h - pad - ((eq - minEq) / range) * (h - 2 * pad);
+
+              const linePath = curve.map((pt, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(pt.equity).toFixed(1)}`).join(" ");
+
+              // Build drawdown highlight rects
+              const ddRects = drawdownAnalysis.periods.map((p, idx) => {
+                const x1 = toX(p.startIdx);
+                const x2 = toX(p.endIdx >= 0 ? p.endIdx : curve.length - 1);
+                return (
+                  <rect
+                    key={idx}
+                    x={x1}
+                    y={pad}
+                    width={Math.max(x2 - x1, 2)}
+                    height={h - 2 * pad}
+                    fill="rgba(239, 68, 68, 0.12)"
+                    stroke="rgba(239, 68, 68, 0.3)"
+                    strokeWidth="0.5"
+                  />
+                );
+              });
+
+              return (
+                <div className="w-full overflow-x-auto">
+                  <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ minWidth: "400px", maxHeight: "220px" }}>
+                    {/* Grid */}
+                    {[0.25, 0.5, 0.75].map(pct => (
+                      <line key={pct} x1={pad} y1={toY(minEq + range * pct)} x2={w - pad} y2={toY(minEq + range * pct)} stroke="var(--border-subtle, #333)" strokeWidth="0.5" strokeDasharray="4,4" />
+                    ))}
+                    {/* Drawdown highlights */}
+                    {ddRects}
+                    {/* Equity line */}
+                    <path d={linePath} fill="none" stroke="#10b981" strokeWidth="2" strokeLinejoin="round" />
+                    {/* Zero line */}
+                    <line x1={pad} y1={toY(0)} x2={w - pad} y2={toY(0)} stroke="var(--text-muted, #666)" strokeWidth="0.5" strokeDasharray="2,2" />
+                    {/* Y-axis labels */}
+                    <text x={pad} y={toY(maxEq) - 4} fontSize="9" fill="var(--text-muted, #888)">{maxEq.toFixed(0)}</text>
+                    <text x={pad} y={toY(minEq) + 12} fontSize="9" fill="var(--text-muted, #888)">{minEq.toFixed(0)}</text>
+                  </svg>
+                  <div className="flex items-center justify-center gap-4 text-xs text-[--text-muted] mt-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-6 h-0.5 bg-emerald-500 rounded" />
+                      <span>Equity</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.3)" }} />
+                      <span>Drawdown</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Drawdown Periods Table */}
+            {drawdownAnalysis.periods.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-[--text-secondary] border-b border-[--border]">
+                      <th className="pb-3 font-medium">#</th>
+                      <th className="pb-3 font-medium">Debut</th>
+                      <th className="pb-3 font-medium">Fin</th>
+                      <th className="pb-3 font-medium">Profondeur</th>
+                      <th className="pb-3 font-medium">Recovery (trades)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {drawdownAnalysis.periods.map((p, i) => (
+                      <tr key={i} className="border-b border-[--border-subtle]">
+                        <td className="py-3 mono font-medium">{i + 1}</td>
+                        <td className="py-3 text-xs">{new Date(p.startDate).toLocaleDateString("fr-FR")}</td>
+                        <td className="py-3 text-xs">{p.endDate === "N/R" ? <span className="text-rose-400">Non recupere</span> : new Date(p.endDate).toLocaleDateString("fr-FR")}</td>
+                        <td className="py-3 mono font-bold text-rose-400">-{p.depth.toFixed(2)}</td>
+                        <td className="py-3 mono font-bold">
+                          {p.recoveryTrades >= 0 ? (
+                            <span className="text-amber-400">{p.recoveryTrades} trades</span>
+                          ) : (
+                            <span className="text-rose-400">En cours</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-[--text-muted] text-sm text-center py-12">Pas assez de donnees.</p>
+        )}
+      </div>
+    </>
   );
 }
