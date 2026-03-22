@@ -256,7 +256,7 @@ export default function DashboardPage() {
       />
 
       {/* Fix #5: Quick Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 stagger-in">
         <div className="glass rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <BarChart3 className="w-4 h-4 text-blue-400" />

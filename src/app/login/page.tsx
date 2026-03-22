@@ -50,7 +50,7 @@ export default function LoginPage() {
           style={{ background: "linear-gradient(135deg, #8b5cf6, #0ea5e9)" }} />
       </div>
 
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md animate-fade-in-up">
         {/* Logo + Brand */}
         <div className="flex flex-col items-center mb-8">
           <div className="relative mb-5">
@@ -75,7 +75,7 @@ export default function LoginPage() {
         {/* Card */}
         <div className="glass rounded-2xl p-8" style={{ border: "1px solid var(--border, rgba(255,255,255,0.1))" }}>
           {error && (
-            <div className="mb-5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm flex items-center gap-2">
+            <div className="mb-5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm flex items-center gap-2 animate-shake">
               <div className="w-2 h-2 rounded-full bg-rose-400 flex-shrink-0" />
               {error}
             </div>
