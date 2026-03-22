@@ -291,6 +291,7 @@ export default function LandingContent() {
   return (
     <div className="bg-white text-gray-900">
       <h1 className="sr-only">Journal de Trading Gratuit — MarketPhase</h1>
+      <h1 className="sr-only">Journal de Trading Gratuit — MarketPhase</h1>
       {/* ==================== NAVBAR ==================== */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
         <div className="max-w-[100vw] mx-auto px-4 sm:px-6 lg:px-8">
