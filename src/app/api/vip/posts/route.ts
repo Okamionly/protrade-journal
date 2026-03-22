@@ -18,7 +18,7 @@ export async function GET() {
       return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
     }
 
-    const isVipOrAdmin = currentUser.role === "VIP" || currentUser.role === "PRO" || currentUser.role === "ADMIN";
+    const isVipOrAdmin = currentUser.role === "VIP" || currentUser.role === "ADMIN";
 
     if (isVipOrAdmin) {
       // VIP/ADMIN: return full published posts

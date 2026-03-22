@@ -26,7 +26,7 @@ export function useVipAccess(): VipAccess {
         if (cancelled) return;
         const role = data.role ?? null;
         setState({
-          isVip: role === "VIP" || role === "PRO" || role === "ADMIN",
+          isVip: role === "VIP" || role === "ADMIN",
           isAdmin: role === "ADMIN",
           role,
         });

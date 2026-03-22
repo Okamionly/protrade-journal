@@ -17,13 +17,11 @@ import {
   Sparkles,
   Calendar,
   FlaskConical,
-  Award,
-  Mail,
   Trophy,
 } from "lucide-react";
 
 // ─── Types ───
-type Plan = "free" | "pro" | "vip";
+type Plan = "free" | "vip";
 type BillingCycle = "monthly" | "annual";
 
 interface PlanDef {
@@ -32,7 +30,6 @@ interface PlanDef {
   monthlyPrice: number;
   features: { text: string; icon: React.ElementType }[];
   cta: string;
-  popular?: boolean;
   vip?: boolean;
 }
 
@@ -55,33 +52,20 @@ const PLANS: PlanDef[] = [
     cta: "Actuel",
   },
   {
-    id: "pro",
-    name: "Pro",
-    monthlyPrice: 4.9,
-    popular: true,
-    features: [
-      { text: "Tout le Free +", icon: Check },
-      { text: "AI Coach illimité", icon: Zap },
-      { text: "Challenges", icon: Trophy },
-      { text: "Chat (écriture)", icon: MessageCircle },
-      { text: "Rapports PDF illimités", icon: FileText },
-      { text: "Backtest (1 an)", icon: FlaskConical },
-      { text: "Badge Pro", icon: Award },
-      { text: "Support email", icon: Mail },
-    ],
-    cta: "Passer à Pro",
-  },
-  {
     id: "vip",
     name: "VIP",
     monthlyPrice: 9,
     vip: true,
     features: [
-      { text: "Tout le Pro +", icon: Check },
+      { text: "Tout le Free +", icon: Check },
+      { text: "AI Coach illimité", icon: Zap },
+      { text: "Challenges", icon: Trophy },
+      { text: "Chat (écriture + VIP rooms)", icon: MessageCircle },
+      { text: "Rapports PDF illimités", icon: FileText },
+      { text: "Backtest (1 an)", icon: FlaskConical },
       { text: "Indicateurs TradingView exclusifs", icon: Star },
       { text: "Analyses macro hebdomadaires", icon: Globe },
       { text: "Scénarios de trading", icon: BarChart3 },
-      { text: "Chat VIP rooms", icon: MessageCircle },
       { text: "Badge VIP doré", icon: Crown },
       { text: "Support prioritaire", icon: Shield },
     ],
@@ -91,22 +75,20 @@ const PLANS: PlanDef[] = [
 
 // ─── Feature comparison table ───
 const COMPARISON = [
-  { feature: "Journal illimité", free: true, pro: true, vip: true },
-  { feature: "Analytics de base", free: true, pro: true, vip: true },
-  { feature: "Calendrier P&L", free: true, pro: true, vip: true },
-  { feature: "Heatmap", free: true, pro: true, vip: true },
-  { feature: "AI Coach", free: "3 msg/jour", pro: "Illimité", vip: "Illimité" },
-  { feature: "Backtest", free: "30 jours", pro: "1 an", vip: "1 an" },
-  { feature: "Rapports PDF", free: "1/mois", pro: "Illimités", vip: "Illimités" },
-  { feature: "Chat communautaire", free: "Lecture seule", pro: "Écriture", vip: "Écriture" },
-  { feature: "Challenges", free: false, pro: true, vip: true },
-  { feature: "Badge", free: false, pro: "Pro", vip: "VIP doré" },
-  { feature: "Support email", free: false, pro: true, vip: true },
-  { feature: "Indicateurs TradingView exclusifs", free: false, pro: false, vip: true },
-  { feature: "Analyses macro hebdomadaires", free: false, pro: false, vip: true },
-  { feature: "Scénarios de trading", free: false, pro: false, vip: true },
-  { feature: "Chat VIP rooms", free: false, pro: false, vip: true },
-  { feature: "Support prioritaire", free: false, pro: false, vip: true },
+  { feature: "Journal illimité", free: true, vip: true },
+  { feature: "Analytics de base", free: true, vip: true },
+  { feature: "Calendrier P&L", free: true, vip: true },
+  { feature: "Heatmap", free: true, vip: true },
+  { feature: "AI Coach", free: "3 msg/jour", vip: "Illimité" },
+  { feature: "Backtest", free: "30 jours", vip: "1 an" },
+  { feature: "Rapports PDF", free: "1/mois", vip: "Illimités" },
+  { feature: "Chat communautaire", free: "Lecture seule", vip: "Écriture + VIP rooms" },
+  { feature: "Challenges", free: false, vip: true },
+  { feature: "Badge VIP doré", free: false, vip: true },
+  { feature: "Indicateurs TradingView exclusifs", free: false, vip: true },
+  { feature: "Analyses macro hebdomadaires", free: false, vip: true },
+  { feature: "Scénarios de trading", free: false, vip: true },
+  { feature: "Support prioritaire", free: false, vip: true },
 ];
 
 // ─── FAQ ───
@@ -132,8 +114,8 @@ const FAQ = [
     a: "Oui, toutes vos données sont conservées quel que soit votre plan. Vous ne perdez jamais de données.",
   },
   {
-    q: "Quelle est la différence entre Pro et VIP ?",
-    a: "Le plan Pro débloque toutes les fonctionnalités avancées (AI Coach illimité, challenges, chat écriture, backtest 1 an). Le VIP ajoute le contenu exclusif : indicateurs TradingView, analyses macro hebdomadaires, scénarios de trading et les rooms VIP.",
+    q: "Que contient le plan VIP ?",
+    a: "Le plan VIP débloque toutes les fonctionnalités avancées : AI Coach illimité, challenges, chat écriture + VIP rooms, backtest 1 an, rapports PDF illimités, indicateurs TradingView exclusifs, analyses macro hebdomadaires, scénarios de trading et le support prioritaire.",
   },
 ];
 
@@ -250,45 +232,32 @@ export default function PricingPage() {
       )}
 
       {/* Plan cards */}
-      <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-20 items-end">
+      <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-20 items-end">
         {PLANS.map((plan) => {
           const isCurrent = currentPlan === plan.id;
           const price = getPrice(plan.monthlyPrice);
           const isVip = plan.vip;
-          const isPro = plan.popular;
 
           return (
             <div
               key={plan.id}
               className={`relative rounded-2xl p-[1px] transition-all duration-300 ${
-                isPro
-                  ? "bg-gradient-to-b from-blue-400/60 via-blue-500/30 to-blue-600/10 shadow-lg shadow-blue-500/20 md:-mt-4"
-                  : isVip
+                isVip
                   ? "bg-gradient-to-b from-amber-400/60 via-amber-500/30 to-amber-600/10 shadow-lg shadow-amber-500/20"
                   : "bg-gray-200 dark:bg-gray-800"
               }`}
             >
-              {isPro && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                  <span className="px-4 py-1 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 text-white text-xs font-bold shadow-lg shadow-blue-500/30">
-                    Recommandé
-                  </span>
-                </div>
-              )}
-
               {isVip && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                   <span className="px-4 py-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-600 text-black text-xs font-bold shadow-lg shadow-amber-500/30">
-                    VIP
+                    Recommandé
                   </span>
                 </div>
               )}
 
               <div
                 className={`h-full rounded-2xl p-6 backdrop-blur-xl ${
-                  isPro
-                    ? "bg-gray-900/95 dark:bg-gray-900/95"
-                    : isVip
+                  isVip
                     ? "bg-gray-900/95 dark:bg-gray-900/95"
                     : "bg-white/80 dark:bg-gray-900/80"
                 }`}
@@ -296,9 +265,7 @@ export default function PricingPage() {
                 {/* Plan name */}
                 <h3
                   className={`text-xl font-bold mb-1 ${
-                    isPro
-                      ? "text-blue-400"
-                      : isVip
+                    isVip
                       ? "text-amber-400"
                       : "text-gray-900 dark:text-white"
                   }`}
@@ -310,9 +277,7 @@ export default function PricingPage() {
                 <div className="flex items-baseline gap-1 mb-6">
                   <span
                     className={`text-4xl font-extrabold ${
-                      isPro
-                        ? "text-blue-400"
-                        : isVip
+                      isVip
                         ? "text-amber-400"
                         : "text-gray-900 dark:text-white"
                     }`}
@@ -337,9 +302,7 @@ export default function PricingPage() {
                       <li key={i} className="flex items-center gap-3 text-sm">
                         <FIcon
                           className={`w-4 h-4 flex-shrink-0 ${
-                            isPro
-                              ? "text-blue-400"
-                              : isVip
+                            isVip
                               ? "text-amber-400"
                               : "text-emerald-400"
                           }`}
@@ -359,8 +322,6 @@ export default function PricingPage() {
                   className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${
                     isCurrent
                       ? "bg-gray-200 dark:bg-gray-800 text-gray-500 cursor-default"
-                      : isPro
-                      ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white hover:shadow-lg hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-[0.98]"
                       : isVip
                       ? "bg-gradient-to-r from-amber-400 to-amber-600 text-black hover:shadow-lg hover:shadow-amber-500/30 hover:scale-[1.02] active:scale-[0.98]"
                       : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:scale-[1.02] active:scale-[0.98]"
@@ -393,9 +354,6 @@ export default function PricingPage() {
                 <th className="text-center py-4 px-4 text-sm font-bold text-gray-900 dark:text-white">
                   Free
                 </th>
-                <th className="text-center py-4 px-4 text-sm font-bold text-blue-400">
-                  Pro — {getPrice(4.9)}€/mois
-                </th>
                 <th className="text-center py-4 px-4 text-sm font-bold text-amber-400">
                   VIP — {getPrice(9)}€/mois
                 </th>
@@ -410,7 +368,7 @@ export default function PricingPage() {
                   <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
                     {row.feature}
                   </td>
-                  {(["free", "pro", "vip"] as const).map((p) => (
+                  {(["free", "vip"] as const).map((p) => (
                     <td key={p} className="text-center py-3 px-4">
                       {typeof row[p] === "string" ? (
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">

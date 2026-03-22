@@ -9,7 +9,7 @@ export default function LeaderboardPage() {
   useEffect(() => {
     fetch("/api/user/role")
       .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(d => setIsVip(d.role === "VIP" || d.role === "PRO" || d.role === "ADMIN"))
+      .then(d => setIsVip(d.role === "VIP" || d.role === "ADMIN"))
       .catch(() => setIsVip(false));
   }, []);
 
