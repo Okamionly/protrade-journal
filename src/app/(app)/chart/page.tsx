@@ -655,7 +655,7 @@ function ScreenshotButton({
     <button
       onClick={capture}
       disabled={capturing}
-      className="absolute top-2 right-14 z-20 rounded-lg p-1.5 transition-all hover:scale-110"
+      className="rounded-lg p-1.5 transition-all hover:scale-110"
       style={{
         ...glassStyle,
         color: done
@@ -808,43 +808,32 @@ export default function ChartPage() {
           : `1px solid var(--border)`,
       }}
     >
-      {/* ── Top-right toolbar ───────────────────────────── */}
-      {/* Multi-chart toggle */}
-      <button
-        onClick={() => setDualChart((v) => !v)}
-        title={dualChart ? "Vue simple" : "Double graphique"}
-        className="absolute top-2 right-26 z-20 rounded-lg p-1.5 transition-all hover:scale-110"
-        style={{
-          ...glassStyle,
-          color: dualChart
-            ? "#6366f1"
-            : theme === "dark"
-              ? "#a0a0a0"
-              : "#666",
-        }}
-      >
-        <Columns2 className="w-4 h-4" />
-      </button>
-
-      {/* Screenshot */}
-      <ScreenshotButton wrapperRef={wrapperRef} theme={theme} />
-
-      {/* Fullscreen */}
-      <button
-        onClick={toggleFullscreen}
-        title={isFullscreen ? "Quitter" : "Plein ecran"}
-        className="absolute top-2 right-2 z-20 rounded-lg p-1.5 transition-all hover:scale-110"
-        style={{
-          ...glassStyle,
-          color: theme === "dark" ? "#a0a0a0" : "#666",
-        }}
-      >
-        {isFullscreen ? (
-          <Minimize className="w-4 h-4" />
-        ) : (
-          <Maximize className="w-4 h-4" />
-        )}
-      </button>
+      {/* ── Top-right toolbar (grouped) ─────────────────── */}
+      <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
+        <button
+          onClick={() => setDualChart((v) => !v)}
+          title={dualChart ? "Vue simple" : "Double graphique"}
+          className="rounded-lg p-1.5 transition-all hover:scale-110"
+          style={{
+            ...glassStyle,
+            color: dualChart ? "#6366f1" : theme === "dark" ? "#a0a0a0" : "#666",
+          }}
+        >
+          <Columns2 className="w-4 h-4" />
+        </button>
+        <ScreenshotButton wrapperRef={wrapperRef} theme={theme} />
+        <button
+          onClick={toggleFullscreen}
+          title={isFullscreen ? "Quitter" : "Plein écran"}
+          className="rounded-lg p-1.5 transition-all hover:scale-110"
+          style={{
+            ...glassStyle,
+            color: theme === "dark" ? "#a0a0a0" : "#666",
+          }}
+        >
+          {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+        </button>
+      </div>
 
       {/* ── Chart area ──────────────────────────────────── */}
       <div
