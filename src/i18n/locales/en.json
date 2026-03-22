@@ -1733,5 +1733,14 @@
   "landing_faqQ2": "Is my trading data safe?",
   "landing_faqA2": "Absolutely. Your data is encrypted and stored securely. We never sell your data to third parties.",
   "landing_faqQ3": "Can I cancel VIP anytime?",
-  "landing_faqA3": "Yes, in one click from your profile. No commitment, no penalty. You keep free access after cancellation."
+  "landing_faqA3": "Yes, in one click from your profile. No commitment, no penalty. You keep free access after cancellation.",
+  "calCapture": "Capture",
+  "calCapturing": "Capturing...",
+  "calHoverTrades": "trades",
+  "calHoverWinRate": "Win Rate",
+  "calHoverBest": "Best",
+  "calHoverWorst": "Worst",
+  "calWeekShort": "W",
+  "calYearHeatmapTitle": "Yearly Heatmap",
+  "calNoTrades": "No trades"
 }

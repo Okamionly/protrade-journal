@@ -1,15 +1,21 @@
 "use client";
 
 import { useTrades } from "@/hooks/useTrades";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock, Target, ArrowRight, ArrowUpRight, ArrowDownRight, Zap, Award } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock, Target, ArrowRight, ArrowUpRight, ArrowDownRight, Zap, Award, Camera } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+
+interface HoverInfo {
+  day: number;
+  rect: DOMRect;
+}
 
 export default function PnLCalendarPage() {
   const { trades, loading } = useTrades();
   const { t } = useTranslation();
   const router = useRouter();
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   const MONTH_NAMES = [t("monthJan"), t("monthFeb"), t("monthMar"), t("monthApr"), t("monthMay"), t("monthJun"), t("monthJul"), t("monthAug"), t("monthSep"), t("monthOct"), t("monthNov"), t("monthDec")];
   const DAY_NAMES = [t("dayMon"), t("dayTue"), t("dayWed"), t("dayThu"), t("dayFri"), t("daySat"), t("daySun")];
@@ -17,6 +23,8 @@ export default function PnLCalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<{ day: number; trades: typeof trades } | null>(null);
   const [view, setView] = useState<"month" | "year">("month");
+  const [hoveredDay, setHoveredDay] = useState<HoverInfo | null>(null);
+  const [capturing, setCapturing] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -146,7 +154,7 @@ export default function PnLCalendarPage() {
     };
   }, [monthTrades, prevMonthTrades, daysInMonth, year, month, tradesByDay]);
 
-  // Year view data
+  // Year view data — enhanced with daily breakdown for heatmap
   const yearData = useMemo(() => {
     if (view !== "year") return [];
     return Array.from({ length: 12 }, (_, m) => {
@@ -156,9 +164,29 @@ export default function PnLCalendarPage() {
       });
       const pnl = mt.reduce((s, t) => s + t.result, 0);
       const wins = mt.filter(t => t.result > 0).length;
-      return { month: m, pnl, count: mt.length, winRate: mt.length > 0 ? (wins / mt.length) * 100 : 0 };
+
+      // Build daily PnL map for heatmap
+      const dailyPnl: Record<number, number> = {};
+      mt.forEach((t) => {
+        const day = new Date(t.date).getDate();
+        dailyPnl[day] = (dailyPnl[day] || 0) + t.result;
+      });
+
+      return { month: m, pnl, count: mt.length, winRate: mt.length > 0 ? (wins / mt.length) * 100 : 0, dailyPnl };
     });
   }, [trades, year, view]);
+
+  // Compute max daily PnL across the year for consistent heatmap coloring
+  const yearMaxDailyPnl = useMemo(() => {
+    if (view !== "year" || yearData.length === 0) return 1;
+    let maxAbs = 1;
+    yearData.forEach((md) => {
+      Object.values(md.dailyPnl).forEach((v) => {
+        if (Math.abs(v) > maxAbs) maxAbs = Math.abs(v);
+      });
+    });
+    return maxAbs;
+  }, [yearData, view]);
 
   const changeMonth = (delta: number) => setCurrentDate(new Date(year, month + delta, 1));
   const changeYear = (delta: number) => setCurrentDate(new Date(year + delta, month, 1));
@@ -174,12 +202,96 @@ export default function PnLCalendarPage() {
   // Comparison vs previous month
   const pnlDelta = stats.totalPnl - stats.prevPnl;
 
+  // Build calendar rows with week summaries
+  const calendarRows = useMemo(() => {
+    const rows: { days: (number | null)[]; weekPnl: number; weekTrades: number }[] = [];
+    let currentRow: (number | null)[] = [];
+
+    // Fill offset
+    for (let i = 0; i < startOffset; i++) {
+      currentRow.push(null);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      currentRow.push(day);
+      if (currentRow.length === 7) {
+        // Calculate week stats
+        let wPnl = 0;
+        let wTrades = 0;
+        currentRow.forEach((d) => {
+          if (d !== null) {
+            const dt = tradesByDay[d] || [];
+            wPnl += dt.reduce((s, t) => s + t.result, 0);
+            wTrades += dt.length;
+          }
+        });
+        rows.push({ days: currentRow, weekPnl: wPnl, weekTrades: wTrades });
+        currentRow = [];
+      }
+    }
+
+    // Fill remainder
+    if (currentRow.length > 0) {
+      let wPnl = 0;
+      let wTrades = 0;
+      currentRow.forEach((d) => {
+        if (d !== null) {
+          const dt = tradesByDay[d] || [];
+          wPnl += dt.reduce((s, t) => s + t.result, 0);
+          wTrades += dt.length;
+        }
+      });
+      while (currentRow.length < 7) currentRow.push(null);
+      rows.push({ days: currentRow, weekPnl: wPnl, weekTrades: wTrades });
+    }
+
+    return rows;
+  }, [startOffset, daysInMonth, tradesByDay]);
+
+  // Hover popover data
+  const hoverData = useMemo(() => {
+    if (!hoveredDay) return null;
+    const dayTrades = tradesByDay[hoveredDay.day] || [];
+    if (dayTrades.length === 0) return null;
+
+    const totalPnl = dayTrades.reduce((s, t) => s + t.result, 0);
+    const wins = dayTrades.filter(t => t.result > 0).length;
+    const winRate = (wins / dayTrades.length) * 100;
+    const sorted = [...dayTrades].sort((a, b) => b.result - a.result);
+    const best = sorted[0];
+    const worst = sorted[sorted.length - 1];
+
+    return { count: dayTrades.length, totalPnl, winRate, best, worst };
+  }, [hoveredDay, tradesByDay]);
+
+  // Capture calendar as PNG
+  const handleCapture = useCallback(async () => {
+    if (!calendarRef.current || capturing) return;
+    setCapturing(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(calendarRef.current, {
+        backgroundColor: "#0f1117",
+        scale: 2,
+        useCORS: true,
+      });
+      const link = document.createElement("a");
+      link.download = `pnl-calendar-${MONTH_NAMES[month]}-${year}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch {
+      // silently fail
+    } finally {
+      setCapturing(false);
+    }
+  }, [capturing, month, year, MONTH_NAMES]);
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">{t("loading")}</div></div>;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={calendarRef}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -187,6 +299,14 @@ export default function PnLCalendarPage() {
           <p className="text-sm text-[--text-secondary]">{t("visualizePerf")}</p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={handleCapture}
+            disabled={capturing}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium glass text-[--text-secondary] hover:text-[--text-primary] transition-all disabled:opacity-50"
+          >
+            <Camera className="w-4 h-4" />
+            {capturing ? t("calCapturing") : t("calCapture")}
+          </button>
           <button
             onClick={() => setView("month")}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "month" ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "glass text-[--text-secondary] hover:text-[--text-primary]"}`}
@@ -276,7 +396,6 @@ export default function PnLCalendarPage() {
               </div>
               <div className="relative h-32">
                 <svg viewBox={`0 0 ${stats.cumulativePnl.length * 40} 120`} className="w-full h-full" preserveAspectRatio="none">
-                  {/* Zero line */}
                   {(() => {
                     const vals = stats.cumulativePnl.map(p => p.cumulative);
                     const maxVal = Math.max(...vals.map(Math.abs), 1);
@@ -343,8 +462,8 @@ export default function PnLCalendarPage() {
             </div>
           )}
 
-          {/* Calendar Grid */}
-          <div className="glass rounded-2xl p-6">
+          {/* Calendar Grid with Week Summary */}
+          <div className="glass rounded-2xl p-6 relative">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
                 <Calendar className="w-5 h-5 text-cyan-400" />
@@ -359,62 +478,146 @@ export default function PnLCalendarPage() {
               </div>
             </div>
 
-            {/* Day headers */}
-            <div className="grid grid-cols-7 gap-2 text-center mb-3">
+            {/* Day headers + week summary header */}
+            <div className="grid gap-2 text-center mb-3" style={{ gridTemplateColumns: "repeat(7, 1fr) 80px" }}>
               {DAY_NAMES.map((d) => (
                 <div key={d} className="text-xs font-semibold text-[--text-muted] py-2">{d}</div>
               ))}
+              <div className="text-xs font-semibold text-[--text-muted] py-2">{t("calWeekShort")}</div>
             </div>
 
-            {/* Calendar days */}
-            <div className="grid grid-cols-7 gap-2">
-              {Array.from({ length: startOffset }).map((_, i) => (
-                <div key={`empty-${i}`} className="aspect-square" />
-              ))}
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1;
-                const dayTrades = tradesByDay[day] || [];
-                const hasTrade = dayTrades.length > 0;
-                const dayPnl = dayTrades.reduce((s, t) => s + t.result, 0);
-                const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
-                const wins = dayTrades.filter(t => t.result > 0).length;
-                const losses = dayTrades.length - wins;
+            {/* Calendar rows with week summary */}
+            {calendarRows.map((row, rowIdx) => (
+              <div key={rowIdx} className="grid gap-2 mb-2" style={{ gridTemplateColumns: "repeat(7, 1fr) 80px" }}>
+                {row.days.map((day, colIdx) => {
+                  if (day === null) {
+                    return <div key={`empty-${rowIdx}-${colIdx}`} className="aspect-square" />;
+                  }
+                  const dayTrades = tradesByDay[day] || [];
+                  const hasTrade = dayTrades.length > 0;
+                  const dayPnl = dayTrades.reduce((s, t) => s + t.result, 0);
+                  const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
+                  const wins = dayTrades.filter(t => t.result > 0).length;
+                  const losses = dayTrades.length - wins;
 
-                return (
-                  <div
-                    key={day}
-                    onClick={() => setSelectedDay({ day, trades: dayTrades })}
-                    className={`calendar-day aspect-square rounded-xl border p-1.5 sm:p-2 flex flex-col justify-between cursor-pointer transition-all hover:scale-105 ${
-                      isToday ? "ring-2 ring-cyan-400/50" : ""
-                    } ${hasTrade ? "border-transparent" : "border-[--border-subtle] bg-[--bg-secondary]/20"}`}
-                    style={hasTrade ? { background: getPnlIntensity(dayPnl), borderColor: dayPnl >= 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)" } : undefined}
-                  >
-                    <div className="flex items-start justify-between">
-                      <span className={`text-xs sm:text-sm font-medium ${isToday ? "text-cyan-400" : hasTrade ? (dayPnl >= 0 ? "text-emerald-300" : "text-rose-300") : "text-[--text-muted]"}`}>
-                        {day}
-                      </span>
-                      {hasTrade && (
-                        <span className="text-[8px] mono" style={{ color: "var(--text-muted)" }}>
-                          {dayTrades.length}t
+                  return (
+                    <div
+                      key={day}
+                      onClick={() => setSelectedDay({ day, trades: dayTrades })}
+                      onMouseEnter={(e) => {
+                        if (hasTrade) {
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          setHoveredDay({ day, rect });
+                        }
+                      }}
+                      onMouseLeave={() => setHoveredDay(null)}
+                      className={`calendar-day aspect-square rounded-xl border p-1.5 sm:p-2 flex flex-col justify-between cursor-pointer transition-all hover:scale-105 ${
+                        isToday ? "ring-2 ring-cyan-400/50" : ""
+                      } ${hasTrade ? "border-transparent" : "border-[--border-subtle] bg-[--bg-secondary]/20"}`}
+                      style={hasTrade ? { background: getPnlIntensity(dayPnl), borderColor: dayPnl >= 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)" } : undefined}
+                    >
+                      <div className="flex items-start justify-between">
+                        <span className={`text-xs sm:text-sm font-medium ${isToday ? "text-cyan-400" : hasTrade ? (dayPnl >= 0 ? "text-emerald-300" : "text-rose-300") : "text-[--text-muted]"}`}>
+                          {day}
                         </span>
+                        {hasTrade && (
+                          <span className="text-[8px] mono" style={{ color: "var(--text-muted)" }}>
+                            {dayTrades.length}t
+                          </span>
+                        )}
+                      </div>
+                      {hasTrade && (
+                        <div className="text-right">
+                          <p className={`text-[10px] sm:text-xs font-bold mono ${dayPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                            {dayPnl >= 0 ? "+" : ""}{dayPnl.toFixed(0)}€
+                          </p>
+                          <p className="text-[8px] sm:text-[10px] mono" style={{ color: "var(--text-muted)" }}>
+                            <span className="text-emerald-400">{wins}W</span>
+                            <span className="mx-0.5">/</span>
+                            <span className="text-rose-400">{losses}L</span>
+                          </p>
+                        </div>
                       )}
                     </div>
-                    {hasTrade && (
-                      <div className="text-right">
-                        <p className={`text-[10px] sm:text-xs font-bold mono ${dayPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                          {dayPnl >= 0 ? "+" : ""}{dayPnl.toFixed(0)}€
-                        </p>
-                        <p className="text-[8px] sm:text-[10px] mono" style={{ color: "var(--text-muted)" }}>
-                          <span className="text-emerald-400">{wins}W</span>
-                          <span className="mx-0.5">/</span>
-                          <span className="text-rose-400">{losses}L</span>
-                        </p>
-                      </div>
-                    )}
+                  );
+                })}
+                {/* Week Summary Cell */}
+                <div
+                  className={`rounded-xl border p-1.5 flex flex-col items-center justify-center text-center ${
+                    row.weekTrades > 0
+                      ? row.weekPnl >= 0
+                        ? "border-emerald-500/20 bg-emerald-500/[0.07]"
+                        : "border-rose-500/20 bg-rose-500/[0.07]"
+                      : "border-[--border-subtle] bg-[--bg-secondary]/10"
+                  }`}
+                >
+                  {row.weekTrades > 0 ? (
+                    <>
+                      <p className={`text-xs font-bold mono ${row.weekPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {row.weekPnl >= 0 ? "+" : ""}{row.weekPnl.toFixed(0)}€
+                      </p>
+                      <p className="text-[8px] text-[--text-muted]">{row.weekTrades}t</p>
+                    </>
+                  ) : (
+                    <p className="text-[9px] text-[--text-muted]">—</p>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Hover Popover */}
+            {hoveredDay && hoverData && (() => {
+              const { rect } = hoveredDay;
+              const popoverWidth = 240;
+              const popoverHeight = 160;
+              const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
+              const showAbove = rect.bottom + popoverHeight + 10 > viewportHeight;
+              const top = showAbove ? rect.top - popoverHeight - 8 : rect.bottom + 8;
+              const left = Math.max(8, Math.min(rect.left + rect.width / 2 - popoverWidth / 2, (typeof window !== "undefined" ? window.innerWidth : 1200) - popoverWidth - 8));
+
+              return (
+                <div
+                  className="fixed z-[60] rounded-xl border border-[--border-subtle] p-3 shadow-xl"
+                  style={{
+                    top,
+                    left,
+                    width: popoverWidth,
+                    background: "var(--bg-card-solid, #1a1b23)",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-[--text-primary]">
+                      {hoveredDay.day} {MONTH_NAMES[month]}
+                    </span>
+                    <span className="text-[10px] text-[--text-muted]">{hoverData.count} {t("calHoverTrades")}</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className={`text-lg font-bold mono mb-2 ${hoverData.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                    {hoverData.totalPnl >= 0 ? "+" : ""}{hoverData.totalPnl.toFixed(2)}€
+                  </div>
+                  <div className="space-y-1 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="text-[--text-muted]">{t("calHoverWinRate")}</span>
+                      <span className={`font-medium mono ${hoverData.winRate >= 50 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {hoverData.winRate.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-emerald-400/70">{t("calHoverBest")}</span>
+                      <span className="text-emerald-400 mono font-medium">
+                        {hoverData.best.asset} +{hoverData.best.result.toFixed(2)}€
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-rose-400/70">{t("calHoverWorst")}</span>
+                      <span className="text-rose-400 mono font-medium">
+                        {hoverData.worst.asset} {hoverData.worst.result.toFixed(2)}€
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Legend */}
             <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-[--border-subtle]">
@@ -431,7 +634,7 @@ export default function PnLCalendarPage() {
                 <span className="text-xs text-[--text-muted]">{t("todayBtn")}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-[--text-muted]">
-                Intensité = amplitude du P&L
+                {`Intensité = amplitude du P&L`}
               </div>
             </div>
           </div>
@@ -535,47 +738,107 @@ export default function PnLCalendarPage() {
           )}
         </>
       ) : (
-        /* Year View */
+        /* Year View — Enhanced with Daily Heatmap */
         <div className="glass rounded-2xl p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-semibold text-[--text-primary]">{t("yearView")} {year}</h3>
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-cyan-400" />
+              <h3 className="text-lg font-semibold text-[--text-primary]">{t("calYearHeatmapTitle")} {year}</h3>
+            </div>
             <div className="flex items-center gap-2">
               <button onClick={() => changeYear(-1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronLeft className="w-5 h-5 text-[--text-secondary]" /></button>
               <button onClick={() => changeYear(1)} className="p-2 hover:bg-[--bg-secondary] rounded-lg"><ChevronRight className="w-5 h-5 text-[--text-secondary]" /></button>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {yearData.map(({ month: m, pnl, count, winRate }) => {
-              const maxYearPnl = Math.max(...yearData.map((d) => Math.abs(d.pnl)), 1);
-              const intensity = count > 0 ? 0.1 + (Math.abs(pnl) / maxYearPnl) * 0.5 : 0;
+
+          {/* 4x3 Mini Month Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+            {yearData.map(({ month: m, pnl, count, winRate, dailyPnl }) => {
+              const dim = new Date(year, m + 1, 0).getDate();
+              const fd = new Date(year, m, 1).getDay();
+              const so = fd === 0 ? 6 : fd - 1;
+
               return (
                 <div
                   key={m}
+                  className="rounded-xl border border-[--border-subtle] p-3 cursor-pointer hover:border-cyan-500/30 transition-all"
                   onClick={() => { setCurrentDate(new Date(year, m, 1)); setView("month"); }}
-                  className="rounded-xl border p-4 cursor-pointer transition-all hover:scale-105"
-                  style={{
-                    background: count > 0 ? (pnl >= 0 ? `rgba(16,185,129,${intensity})` : `rgba(239,68,68,${intensity})`) : "var(--bg-secondary)",
-                    borderColor: count > 0 ? (pnl >= 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)") : "var(--border-subtle)",
-                  }}
                 >
-                  <p className="text-sm font-medium text-[--text-primary]">{MONTH_NAMES[m]}</p>
-                  <p className={`text-lg font-bold mono mt-1 ${count > 0 ? (pnl >= 0 ? "text-emerald-400" : "text-rose-400") : "text-[--text-muted]"}`}>
-                    {count > 0 ? `${pnl >= 0 ? "+" : ""}${pnl.toFixed(0)}€` : "—"}
-                  </p>
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="text-xs text-[--text-muted]">{count} trade{count !== 1 ? "s" : ""}</p>
+                  {/* Month header */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-[--text-primary]">{MONTH_NAMES[m]}</span>
+                    <span className={`text-xs font-bold mono ${count > 0 ? (pnl >= 0 ? "text-emerald-400" : "text-rose-400") : "text-[--text-muted]"}`}>
+                      {count > 0 ? `${pnl >= 0 ? "+" : ""}${pnl.toFixed(0)}€` : "—"}
+                    </span>
+                  </div>
+
+                  {/* Day name headers */}
+                  <div className="grid grid-cols-7 gap-[2px] mb-1">
+                    {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
+                      <div key={`${m}-hdr-${i}`} className="text-center text-[7px] text-[--text-muted] leading-none">{d}</div>
+                    ))}
+                  </div>
+
+                  {/* Day squares heatmap */}
+                  <div className="grid grid-cols-7 gap-[2px]">
+                    {Array.from({ length: so }).map((_, i) => (
+                      <div key={`${m}-pad-${i}`} className="aspect-square rounded-[2px]" />
+                    ))}
+                    {Array.from({ length: dim }).map((_, i) => {
+                      const day = i + 1;
+                      const dp = dailyPnl[day];
+                      let bg = "var(--bg-secondary)";
+                      if (dp !== undefined) {
+                        const ratio = Math.min(Math.abs(dp) / yearMaxDailyPnl, 1);
+                        const opacity = 0.2 + ratio * 0.6;
+                        bg = dp >= 0
+                          ? `rgba(16, 185, 129, ${opacity})`
+                          : `rgba(239, 68, 68, ${opacity})`;
+                      }
+                      return (
+                        <div
+                          key={`${m}-d-${day}`}
+                          className="aspect-square rounded-[2px]"
+                          style={{ background: bg }}
+                          title={dp !== undefined ? `${day} ${MONTH_NAMES[m]}: ${dp >= 0 ? "+" : ""}${dp.toFixed(0)}€` : undefined}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* Mini footer stats */}
+                  <div className="flex items-center justify-between mt-2 pt-1 border-t border-[--border-subtle]">
+                    <span className="text-[9px] text-[--text-muted]">{count} trade{count !== 1 ? "s" : ""}</span>
                     {count > 0 && (
-                      <p className={`text-[10px] font-bold ${winRate >= 50 ? "text-emerald-400" : "text-rose-400"}`}>
-                        {winRate.toFixed(0)}%
-                      </p>
+                      <span className={`text-[9px] font-bold ${winRate >= 50 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {winRate.toFixed(0)}% WR
+                      </span>
                     )}
                   </div>
                 </div>
               );
             })}
           </div>
+
+          {/* Heatmap Legend */}
+          <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-[--border-subtle]">
+            <span className="text-[10px] text-[--text-muted]">Perte</span>
+            <div className="flex gap-[2px]">
+              {[0.2, 0.4, 0.6, 0.8].map((o) => (
+                <div key={`loss-${o}`} className="w-3 h-3 rounded-[2px]" style={{ background: `rgba(239, 68, 68, ${o})` }} />
+              ))}
+            </div>
+            <div className="w-3 h-3 rounded-[2px]" style={{ background: "var(--bg-secondary)" }} />
+            <div className="flex gap-[2px]">
+              {[0.2, 0.4, 0.6, 0.8].map((o) => (
+                <div key={`win-${o}`} className="w-3 h-3 rounded-[2px]" style={{ background: `rgba(16, 185, 129, ${o})` }} />
+              ))}
+            </div>
+            <span className="text-[10px] text-[--text-muted]">Gain</span>
+          </div>
+
           {/* Year Total */}
-          <div className="mt-6 pt-4 border-t border-[--border-subtle] flex justify-between items-center">
+          <div className="mt-4 pt-4 border-t border-[--border-subtle] flex justify-between items-center">
             <span className="text-sm text-[--text-secondary]">{t("totalYear")} {year}</span>
             <span className={`text-xl font-bold mono ${yearData.reduce((s, d) => s + d.pnl, 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
               {yearData.reduce((s, d) => s + d.pnl, 0) >= 0 ? "+" : ""}{yearData.reduce((s, d) => s + d.pnl, 0).toFixed(2)}€

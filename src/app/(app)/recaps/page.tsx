@@ -19,6 +19,13 @@ import {
   Save,
   ChevronDown,
   ChevronUp,
+  CheckCircle2,
+  XCircle,
+  Lightbulb,
+  AlertTriangle,
+  ArrowUp,
+  ArrowDown,
+  MessageSquareQuote,
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
@@ -316,6 +323,161 @@ export default function RecapsPage() {
     return bins;
   }, [periodTrades]);
 
+  // Lesson template chips
+  const lessonTemplates = [
+    "J'ai respect\u00E9 mon plan de trading",
+    "J'ai coup\u00E9 mes pertes rapidement",
+    "J'ai laiss\u00E9 courir mes gains",
+    "J'ai fait du revenge trading",
+    "J'ai sur-trad\u00E9 aujourd'hui",
+  ];
+
+  // Daily trades count for goals
+  const dailyTradesCount = useMemo(() => {
+    const byDay: Record<string, number> = {};
+    periodTrades.forEach((t) => {
+      const d = new Date(t.date);
+      const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      byDay[dayKey] = (byDay[dayKey] || 0) + 1;
+    });
+    const counts = Object.values(byDay);
+    return counts.length > 0 ? counts.reduce((a, b) => a + b, 0) / counts.length : 0;
+  }, [periodTrades]);
+
+  // Max daily loss for goals compliance
+  const maxDailyLoss = useMemo(() => {
+    const byDay: Record<string, number> = {};
+    periodTrades.forEach((t) => {
+      const d = new Date(t.date);
+      const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      byDay[dayKey] = (byDay[dayKey] || 0) + getNetPnl(t);
+    });
+    const losses = Object.values(byDay).filter(v => v < 0);
+    return losses.length > 0 ? Math.min(...losses) : 0;
+  }, [periodTrades]);
+
+  // Max daily loss goal from localStorage
+  const [maxDailyLossGoal, setMaxDailyLossGoal] = useState<number | null>(null);
+  const [tradesPerDayGoal, setTradesPerDayGoal] = useState<number | null>(null);
+
+  useEffect(() => {
+    try {
+      const monthKey = `goals_extended_${range.start.getFullYear()}_${range.start.getMonth()}`;
+      const stored = localStorage.getItem(monthKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setMaxDailyLossGoal(parsed.maxDailyLoss ?? null);
+        setTradesPerDayGoal(parsed.tradesPerDay ?? null);
+      } else {
+        setMaxDailyLossGoal(null);
+        setTradesPerDayGoal(null);
+      }
+    } catch { /* */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pKey]);
+
+  // Auto-generated summary
+  const autoSummary = useMemo(() => {
+    if (periodTrades.length === 0) return null;
+
+    const periodLabel = period === "week" ? "cette semaine" : "ce mois-ci";
+    const lines: string[] = [];
+
+    // Main summary line
+    lines.push(
+      `${period === "week" ? "Cette semaine" : "Ce mois-ci"}, vous avez r\u00E9alis\u00E9 ${stats.total} trade${stats.total > 1 ? "s" : ""} avec un taux de r\u00E9ussite de ${stats.winRate.toFixed(1)}%.`
+    );
+
+    // Best day
+    if (dailyPnl.length > 0) {
+      const bestDay = [...dailyPnl].sort((a, b) => b.pnl - a.pnl)[0];
+      if (bestDay.pnl > 0) {
+        const dayDate = new Date(bestDay.date);
+        const dayName = dayDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+        lines.push(`Votre meilleur jour a \u00E9t\u00E9 ${dayName} avec +${bestDay.pnl.toFixed(2)}\u20AC.`);
+      }
+    }
+
+    // P&L result
+    if (stats.pnl >= 0) {
+      lines.push(`R\u00E9sultat net positif ${periodLabel} : +${stats.pnl.toFixed(2)}\u20AC.`);
+    } else {
+      lines.push(`R\u00E9sultat net n\u00E9gatif ${periodLabel} : ${stats.pnl.toFixed(2)}\u20AC.`);
+    }
+
+    // Improvement point
+    if (stats.winRate < 50 && stats.total > 0) {
+      lines.push("Point d'am\u00E9lioration : votre taux de r\u00E9ussite est sous 50%, travaillez vos entr\u00E9es.");
+    } else if (stats.profitFactor < 1 && stats.total > 0) {
+      lines.push("Point d'am\u00E9lioration : votre profit factor est inf\u00E9rieur \u00E0 1, r\u00E9visez votre gestion du risque.");
+    } else if (stats.avgRR !== null && stats.avgRR < 1) {
+      lines.push("Point d'am\u00E9lioration : votre R:R moyen est inf\u00E9rieur \u00E0 1, visez de meilleurs setups.");
+    } else if (stats.total > 0) {
+      lines.push("Bonne performance globale, continuez \u00E0 respecter votre plan !");
+    }
+
+    return lines;
+  }, [periodTrades, stats, dailyPnl, period]);
+
+  // Comparison deltas with percentage change
+  const comparisonRows = useMemo(() => {
+    const pctChange = (curr: number, prev: number) => {
+      if (prev === 0) return curr > 0 ? 100 : curr < 0 ? -100 : 0;
+      return ((curr - prev) / Math.abs(prev)) * 100;
+    };
+
+    return [
+      {
+        label: "P&L",
+        prev: `${stats.prevPnl >= 0 ? "+" : ""}${stats.prevPnl.toFixed(2)}\u20AC`,
+        curr: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}\u20AC`,
+        delta: stats.pnl - stats.prevPnl,
+        deltaStr: `${stats.pnl - stats.prevPnl >= 0 ? "+" : ""}${(stats.pnl - stats.prevPnl).toFixed(2)}\u20AC`,
+        pctChange: pctChange(stats.pnl, stats.prevPnl),
+      },
+      {
+        label: "Trades",
+        prev: String(stats.prevTotal),
+        curr: String(stats.total),
+        delta: stats.total - stats.prevTotal,
+        deltaStr: `${stats.total - stats.prevTotal >= 0 ? "+" : ""}${stats.total - stats.prevTotal}`,
+        pctChange: pctChange(stats.total, stats.prevTotal),
+      },
+      {
+        label: "Win Rate",
+        prev: `${stats.prevWinRate.toFixed(1)}%`,
+        curr: `${stats.winRate.toFixed(1)}%`,
+        delta: stats.winRate - stats.prevWinRate,
+        deltaStr: `${stats.winRate - stats.prevWinRate >= 0 ? "+" : ""}${(stats.winRate - stats.prevWinRate).toFixed(1)}pp`,
+        pctChange: pctChange(stats.winRate, stats.prevWinRate),
+      },
+      {
+        label: "Profit Factor",
+        prev: stats.prevPF === Infinity ? "\u221E" : stats.prevPF.toFixed(2),
+        curr: stats.profitFactor === Infinity ? "\u221E" : stats.profitFactor.toFixed(2),
+        delta: stats.profitFactor !== Infinity && stats.prevPF !== Infinity ? stats.profitFactor - stats.prevPF : 0,
+        deltaStr: stats.profitFactor !== Infinity && stats.prevPF !== Infinity
+          ? `${stats.profitFactor - stats.prevPF >= 0 ? "+" : ""}${(stats.profitFactor - stats.prevPF).toFixed(2)}`
+          : "-",
+        pctChange: stats.profitFactor !== Infinity && stats.prevPF !== Infinity
+          ? pctChange(stats.profitFactor, stats.prevPF)
+          : null,
+      },
+      {
+        label: "R:R Moyen",
+        prev: stats.prevAvgRR !== null ? stats.prevAvgRR.toFixed(2) : "-",
+        curr: stats.avgRR !== null ? stats.avgRR.toFixed(2) : "-",
+        delta: stats.avgRR !== null && stats.prevAvgRR !== null ? stats.avgRR - stats.prevAvgRR : 0,
+        deltaStr: stats.avgRR !== null && stats.prevAvgRR !== null
+          ? `${stats.avgRR - stats.prevAvgRR >= 0 ? "+" : ""}${(stats.avgRR - stats.prevAvgRR).toFixed(2)}`
+          : "-",
+        pctChange: stats.avgRR !== null && stats.prevAvgRR !== null
+          ? pctChange(stats.avgRR, stats.prevAvgRR)
+          : null,
+      },
+    ];
+  }, [stats]);
+
   const pnlDelta = stats.pnl - stats.prevPnl;
   const wrDelta = stats.winRate - stats.prevWinRate;
   const pfDelta = stats.profitFactor !== Infinity && stats.prevPF !== Infinity
@@ -520,7 +682,28 @@ export default function RecapsPage() {
         ))}
       </div>
 
-      {/* Comparison Table */}
+      {/* Auto-Generated Summary */}
+      {autoSummary && autoSummary.length > 0 && (
+        <div className="metric-card rounded-2xl p-5">
+          <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+            <MessageSquareQuote className="w-5 h-5 text-cyan-400" /> R&eacute;sum&eacute; automatique
+          </h3>
+          <div
+            className="rounded-xl p-4 text-sm leading-relaxed space-y-2"
+            style={{
+              background: "var(--bg-hover)",
+              borderLeft: "4px solid var(--accent, #06b6d4)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            {autoSummary.map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Comparison Table - Enhanced with arrows and % change */}
       <div className="metric-card rounded-2xl p-5">
         <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
           <TrendingUp className="w-5 h-5 text-cyan-400" /> {t("recapComparisonTitle")}
@@ -532,21 +715,38 @@ export default function RecapsPage() {
                 <th className="text-left p-2 text-xs font-medium" style={{ color: "var(--text-muted)" }}>Metric</th>
                 <th className="text-center p-2 text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("recapPrevPeriod")}</th>
                 <th className="text-center p-2 text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("recapCurrentPeriod")}</th>
-                <th className="text-right p-2 text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("recapDelta")}</th>
+                <th className="text-center p-2 text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("recapDelta")}</th>
+                <th className="text-right p-2 text-xs font-medium" style={{ color: "var(--text-muted)" }}>% Chg</th>
               </tr>
             </thead>
             <tbody>
-              {[
-                { label: "P&L", prev: `${stats.prevPnl >= 0 ? "+" : ""}${stats.prevPnl.toFixed(2)}€`, curr: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}€`, delta: pnlDelta, deltaStr: `${pnlDelta >= 0 ? "+" : ""}${pnlDelta.toFixed(2)}€` },
-                { label: "Trades", prev: String(stats.prevTotal), curr: String(stats.total), delta: stats.total - stats.prevTotal, deltaStr: `${stats.total - stats.prevTotal >= 0 ? "+" : ""}${stats.total - stats.prevTotal}` },
-                { label: "Win Rate", prev: `${stats.prevWinRate.toFixed(1)}%`, curr: `${stats.winRate.toFixed(1)}%`, delta: wrDelta, deltaStr: `${wrDelta >= 0 ? "+" : ""}${wrDelta.toFixed(1)}pp` },
-                { label: "Profit Factor", prev: stats.prevPF === Infinity ? "\u221E" : stats.prevPF.toFixed(2), curr: stats.profitFactor === Infinity ? "\u221E" : stats.profitFactor.toFixed(2), delta: pfDelta ?? 0, deltaStr: pfDelta !== null ? `${pfDelta >= 0 ? "+" : ""}${pfDelta.toFixed(2)}` : "-" },
-              ].map((row) => (
+              {comparisonRows.map((row) => (
                 <tr key={row.label} className="border-t" style={{ borderColor: "var(--border)" }}>
                   <td className="p-2 font-medium" style={{ color: "var(--text-primary)" }}>{row.label}</td>
                   <td className="p-2 text-center mono" style={{ color: "var(--text-secondary)" }}>{row.prev}</td>
                   <td className="p-2 text-center mono font-bold" style={{ color: "var(--text-primary)" }}>{row.curr}</td>
-                  <td className="p-2 text-right mono font-bold" style={{ color: row.delta >= 0 ? "#10b981" : "#ef4444" }}>{row.deltaStr}</td>
+                  <td className="p-2 text-center mono font-bold">
+                    <span className="inline-flex items-center gap-1" style={{ color: row.delta >= 0 ? "#10b981" : "#ef4444" }}>
+                      {row.delta > 0 ? <ArrowUp className="w-3 h-3" /> : row.delta < 0 ? <ArrowDown className="w-3 h-3" /> : null}
+                      {row.deltaStr}
+                    </span>
+                  </td>
+                  <td className="p-2 text-right mono text-xs font-medium">
+                    {row.pctChange !== null ? (
+                      <span
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md"
+                        style={{
+                          color: row.pctChange >= 0 ? "#10b981" : "#ef4444",
+                          background: row.pctChange >= 0 ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+                        }}
+                      >
+                        {row.pctChange >= 0 ? "\u2191" : "\u2193"}
+                        {Math.abs(row.pctChange).toFixed(1)}%
+                      </span>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>-</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -951,12 +1151,133 @@ export default function RecapsPage() {
         </div>
       )}
 
+      {/* Comparaison vs Objectifs */}
+      <div className="metric-card rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+            <Target className="w-5 h-5 text-amber-400" /> Comparaison vs Objectifs
+          </h3>
+          <button
+            onClick={() => {
+              const monthKey = `goals_extended_${range.start.getFullYear()}_${range.start.getMonth()}`;
+              const mdl = prompt("Perte max journali\u00E8re autoris\u00E9e (\u20AC) :", maxDailyLossGoal !== null ? String(Math.abs(maxDailyLossGoal)) : "");
+              const tpd = prompt("Objectif trades/jour :", tradesPerDayGoal !== null ? String(tradesPerDayGoal) : "");
+              const newExt = {
+                maxDailyLoss: mdl ? -Math.abs(parseFloat(mdl)) : null,
+                tradesPerDay: tpd ? parseFloat(tpd) : null,
+              };
+              setMaxDailyLossGoal(newExt.maxDailyLoss);
+              setTradesPerDayGoal(newExt.tradesPerDay);
+              try { localStorage.setItem(monthKey, JSON.stringify(newExt)); } catch { /* */ }
+            }}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium hover:bg-white/5 transition"
+            style={{ color: "var(--text-muted)", border: "1px solid var(--border)" }}
+          >
+            D&eacute;finir limites
+          </button>
+        </div>
+
+        {(goals.pnl !== null || goals.winRate !== null || goals.trades !== null || maxDailyLossGoal !== null || tradesPerDayGoal !== null) ? (
+          <div className="space-y-3">
+            {/* P&L Goal Progress */}
+            {goals.pnl !== null && (
+              <GoalComplianceRow
+                label="P&L mensuel"
+                current={stats.pnl}
+                target={goals.pnl}
+                format={(v) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}\u20AC`}
+                isHigherBetter={true}
+              />
+            )}
+
+            {/* Win Rate Target */}
+            {goals.winRate !== null && (
+              <GoalComplianceRow
+                label="Taux de r\u00E9ussite"
+                current={stats.winRate}
+                target={goals.winRate}
+                format={(v) => `${v.toFixed(1)}%`}
+                isHigherBetter={true}
+              />
+            )}
+
+            {/* Max Daily Loss Compliance */}
+            {maxDailyLossGoal !== null && (
+              <GoalComplianceRow
+                label="Perte max journali\u00E8re"
+                current={maxDailyLoss}
+                target={maxDailyLossGoal}
+                format={(v) => `${v.toFixed(2)}\u20AC`}
+                isHigherBetter={true}
+                invertCheck
+              />
+            )}
+
+            {/* Trades per day */}
+            {tradesPerDayGoal !== null && (
+              <GoalComplianceRow
+                label="Trades / jour (moy.)"
+                current={dailyTradesCount}
+                target={tradesPerDayGoal}
+                format={(v) => v.toFixed(1)}
+                isHigherBetter={false}
+                isCloserBetter
+              />
+            )}
+
+            {/* Monthly trades goal */}
+            {goals.trades !== null && (
+              <GoalComplianceRow
+                label="Trades mensuels"
+                current={stats.total}
+                target={goals.trades}
+                format={(v) => String(Math.round(v))}
+                isHigherBetter={true}
+              />
+            )}
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            D&eacute;finissez vos objectifs mensuels dans la section &quot;Objectifs&quot; pour voir votre progression ici.
+          </p>
+        )}
+      </div>
+
       {/* Lessons & Plan */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="metric-card rounded-2xl p-5">
           <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
             <BookOpen className="w-5 h-5 text-amber-400" /> {t("recapLessonsTitle")}
           </h3>
+          {/* Lesson template chips */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {lessonTemplates.map((tmpl) => (
+              <button
+                key={tmpl}
+                onClick={() => {
+                  const sep = lessons.trim() ? "\n" : "";
+                  saveLessons(lessons + sep + tmpl);
+                }}
+                className="px-3 py-1.5 rounded-full text-xs font-medium transition hover:opacity-80"
+                style={{
+                  background: tmpl.includes("revenge") || tmpl.includes("sur-trad")
+                    ? "rgba(239,68,68,0.1)"
+                    : "rgba(16,185,129,0.1)",
+                  color: tmpl.includes("revenge") || tmpl.includes("sur-trad")
+                    ? "#ef4444"
+                    : "#10b981",
+                  border: `1px solid ${tmpl.includes("revenge") || tmpl.includes("sur-trad") ? "rgba(239,68,68,0.2)" : "rgba(16,185,129,0.2)"}`,
+                }}
+              >
+                {tmpl.includes("revenge") || tmpl.includes("sur-trad") ? (
+                  <AlertTriangle className="w-3 h-3 inline mr-1 -mt-0.5" />
+                ) : (
+                  <Lightbulb className="w-3 h-3 inline mr-1 -mt-0.5" />
+                )}
+                {tmpl}
+              </button>
+            ))}
+          </div>
           <textarea
             value={lessons}
             onChange={(e) => saveLessons(e.target.value)}
@@ -1047,6 +1368,69 @@ function GoalProgressBar({
       </div>
       <div className="text-right mt-1">
         <span className="text-xs mono" style={{ color: "var(--text-muted)" }}>{pct.toFixed(0)}%</span>
+      </div>
+    </div>
+  );
+}
+
+// Goal compliance row for the "Comparaison vs Objectifs" card
+function GoalComplianceRow({
+  label,
+  current,
+  target,
+  format,
+  isHigherBetter,
+  invertCheck = false,
+  isCloserBetter = false,
+}: {
+  label: string;
+  current: number;
+  target: number;
+  format: (v: number) => string;
+  isHigherBetter: boolean;
+  invertCheck?: boolean;
+  isCloserBetter?: boolean;
+}) {
+  // Determine if goal is met
+  let met: boolean;
+  if (isCloserBetter) {
+    // For trades/day: being within 20% of target is OK
+    met = Math.abs(current - target) <= target * 0.2;
+  } else if (invertCheck) {
+    // For max daily loss: current (negative) should be >= target (negative), i.e. less severe
+    met = current >= target;
+  } else {
+    met = isHigherBetter ? current >= target : current <= target;
+  }
+
+  const pct = target !== 0 ? Math.min(Math.max((Math.abs(current) / Math.abs(target)) * 100, 0), 100) : 0;
+  const barPct = isHigherBetter ? (target !== 0 ? Math.min((current / target) * 100, 100) : 0) : pct;
+
+  return (
+    <div className="flex items-center gap-4 p-3 rounded-xl" style={{ background: "var(--bg-hover)" }}>
+      <div className="flex-shrink-0">
+        {met ? (
+          <CheckCircle2 className="w-6 h-6" style={{ color: "#10b981" }} />
+        ) : (
+          <XCircle className="w-6 h-6" style={{ color: "#ef4444" }} />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{label}</span>
+          <span className="text-xs font-medium mono" style={{ color: met ? "#10b981" : "#ef4444" }}>
+            {format(current)} / {format(target)}
+          </span>
+        </div>
+        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "var(--bg-card-solid)" }}>
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.max(Math.min(barPct, 100), 0)}%`,
+              background: met ? "#10b981" : barPct >= 75 ? "#f59e0b" : "#ef4444",
+            }}
+          />
+        </div>
       </div>
     </div>
   );

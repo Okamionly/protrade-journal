@@ -1313,5 +1313,14 @@
   "sidebarVip": "VIP",
   "sidebarIndicators": "Indikatoren",
   "sidebarMacroAnalyses": "Makro-Analysen",
-  "sidebarCollapse": "Einklappen"
+  "sidebarCollapse": "Einklappen",
+  "calCapture": "Erfassen",
+  "calCapturing": "Erfassung...",
+  "calHoverTrades": "Trades",
+  "calHoverWinRate": "Gewinnrate",
+  "calHoverBest": "Bester",
+  "calHoverWorst": "Schlechtester",
+  "calWeekShort": "W",
+  "calYearHeatmapTitle": "Jahres-Heatmap",
+  "calNoTrades": "Keine Trades"
 }

@@ -1313,5 +1313,14 @@
   "sidebarVip": "VIP",
   "sidebarIndicators": "المؤشرات",
   "sidebarMacroAnalyses": "تحليلات ماكرو",
-  "sidebarCollapse": "طي"
+  "sidebarCollapse": "طي",
+  "calCapture": "التقاط",
+  "calCapturing": "جاري الالتقاط...",
+  "calHoverTrades": "صفقات",
+  "calHoverWinRate": "نسبة الفوز",
+  "calHoverBest": "أفضل",
+  "calHoverWorst": "أسوأ",
+  "calWeekShort": "أ",
+  "calYearHeatmapTitle": "خريطة حرارية سنوية",
+  "calNoTrades": "لا توجد صفقات"
 }

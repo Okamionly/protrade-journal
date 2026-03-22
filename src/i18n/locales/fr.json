@@ -1733,5 +1733,14 @@
   "landing_faqQ2": "Mes données de trading sont-elles en sécurité ?",
   "landing_faqA2": "Absolument. Vos données sont chiffrées et stockées de manière sécurisée. Nous ne vendons jamais vos données à des tiers.",
   "landing_faqQ3": "Puis-je annuler le VIP à tout moment ?",
-  "landing_faqA3": "Oui, en un clic depuis votre profil. Aucun engagement, aucune pénalité. Vous gardez l'accès gratuit après annulation."
+  "landing_faqA3": "Oui, en un clic depuis votre profil. Aucun engagement, aucune pénalité. Vous gardez l'accès gratuit après annulation.",
+  "calCapture": "Capturer",
+  "calCapturing": "Capture en cours...",
+  "calHoverTrades": "trades",
+  "calHoverWinRate": "Win Rate",
+  "calHoverBest": "Meilleur",
+  "calHoverWorst": "Pire",
+  "calWeekShort": "S",
+  "calYearHeatmapTitle": "Heatmap Annuelle",
+  "calNoTrades": "Aucun trade"
 }

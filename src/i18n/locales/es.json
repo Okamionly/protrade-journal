@@ -1313,5 +1313,14 @@
   "sidebarVip": "VIP",
   "sidebarIndicators": "Indicadores",
   "sidebarMacroAnalyses": "Análisis Macro",
-  "sidebarCollapse": "Contraer"
+  "sidebarCollapse": "Contraer",
+  "calCapture": "Capturar",
+  "calCapturing": "Capturando...",
+  "calHoverTrades": "operaciones",
+  "calHoverWinRate": "Tasa de Éxito",
+  "calHoverBest": "Mejor",
+  "calHoverWorst": "Peor",
+  "calWeekShort": "S",
+  "calYearHeatmapTitle": "Mapa de Calor Anual",
+  "calNoTrades": "Sin operaciones"
 }

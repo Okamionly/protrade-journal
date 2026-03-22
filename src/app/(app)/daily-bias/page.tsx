@@ -5,7 +5,7 @@ import {
   Save, ChevronLeft, ChevronRight, Crosshair, TrendingUp, TrendingDown,
   Minus, Plus, Trash2, CheckSquare, Square, Clock, Globe, MessageSquare,
   BarChart3, Upload, X, Share2, Calendar, Copy, Eye, Target, Award,
-  ChevronDown, ChevronUp, ZoomIn,
+  ChevronDown, ChevronUp, ZoomIn, Activity, AlertTriangle, Zap, FileText,
 } from "lucide-react";
 import { useTradingRules } from "@/hooks/useTradingRules";
 import { useTranslation } from "@/i18n/context";
@@ -566,6 +566,499 @@ function BiasHistory({
   );
 }
 
+// ---- Bias History Calendar (30 days) ----
+function BiasHistoryCalendar({
+  historyMap,
+}: {
+  historyMap: Record<string, HistoryEntry>;
+}) {
+  // Build last 30 days
+  const today = new Date();
+  const days: { dateStr: string; dayNum: number; dayName: string }[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    days.push({
+      dateStr: formatDateKey(d),
+      dayNum: d.getDate(),
+      dayName: d.toLocaleDateString("fr-FR", { weekday: "narrow" }),
+    });
+  }
+
+  const todayStr = formatDateKey(today);
+
+  // Compute win rate WITH vs AGAINST bias
+  let withBiasWins = 0;
+  let withBiasTotal = 0;
+  let againstBiasWins = 0;
+  let againstBiasTotal = 0;
+
+  days.forEach(({ dateStr }) => {
+    const entry = historyMap[dateStr];
+    if (!entry || !entry.bias || !entry.grade) return;
+    const grade = entry.grade || "";
+    const isGoodGrade = grade === "A+" || grade === "A" || grade === "B";
+    // "With bias" = bias was set and grade is good = trading aligned with bias
+    // "Against bias" = bias was set but grade is bad
+    if (isGoodGrade) {
+      withBiasWins++;
+      withBiasTotal++;
+    } else {
+      againstBiasTotal++;
+      // Count C as partial, D/F as loss
+      if (grade === "C") {
+        againstBiasWins++;
+      }
+      withBiasTotal++;
+    }
+  });
+
+  const withBiasRate = withBiasTotal > 0 ? Math.round((withBiasWins / withBiasTotal) * 100) : null;
+  const againstRate = againstBiasTotal > 0 ? Math.round((againstBiasWins / againstBiasTotal) * 100) : null;
+
+  return (
+    <div className="glass rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Calendar className="w-4 h-4 text-cyan-400" />
+        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+          30 derniers jours
+        </h3>
+      </div>
+
+      {/* Mini calendar grid */}
+      <div className="grid grid-cols-10 gap-1">
+        {days.map(({ dateStr, dayNum }) => {
+          const entry = historyMap[dateStr];
+          const biasOpt = entry ? getBiasOption(entry.bias) : null;
+          const isToday = dateStr === todayStr;
+
+          return (
+            <div
+              key={dateStr}
+              className="flex flex-col items-center justify-center rounded-md py-1 transition-all"
+              style={{
+                background: isToday ? "rgba(14,165,233,0.15)" : "transparent",
+                border: isToday ? "1px solid rgba(14,165,233,0.4)" : "1px solid transparent",
+                minHeight: 36,
+              }}
+              title={`${dateStr}${biasOpt ? ` — ${biasOpt.label}` : ""}`}
+            >
+              <span className="text-[9px] font-medium" style={{ color: isToday ? "#0ea5e9" : "var(--text-muted)" }}>
+                {dayNum}
+              </span>
+              {biasOpt ? (
+                biasOpt.value === "bullish" ? (
+                  <TrendingUp className="w-3 h-3 mt-0.5" style={{ color: "#10b981" }} />
+                ) : biasOpt.value === "bearish" ? (
+                  <TrendingDown className="w-3 h-3 mt-0.5" style={{ color: "#f43f5e" }} />
+                ) : (
+                  <Minus className="w-3 h-3 mt-0.5" style={{ color: "#64748b" }} />
+                )
+              ) : (
+                <div className="w-3 h-0.5 rounded-full mt-1" style={{ background: "var(--bg-secondary)" }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Win rate stats */}
+      {withBiasRate !== null && (
+        <div className="flex gap-3 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+          <div className="flex-1 rounded-lg p-2" style={{ background: "rgba(16,185,129,0.08)" }}>
+            <div className="text-[10px] mb-0.5" style={{ color: "var(--text-muted)" }}>
+              Avec le biais
+            </div>
+            <div className="text-sm font-bold" style={{ color: "#10b981" }}>
+              {withBiasRate}%
+            </div>
+          </div>
+          {againstRate !== null && (
+            <div className="flex-1 rounded-lg p-2" style={{ background: "rgba(244,63,94,0.08)" }}>
+              <div className="text-[10px] mb-0.5" style={{ color: "var(--text-muted)" }}>
+                Contre le biais
+              </div>
+              <div className="text-sm font-bold" style={{ color: "#f43f5e" }}>
+                {againstRate}%
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Bias Accuracy Tracker (circular gauge) ----
+function BiasAccuracyTracker({
+  history,
+}: {
+  history: HistoryEntry[];
+}) {
+  // Filter entries that have both a bias and a grade (for accuracy calculation)
+  const gradedEntries = history.filter(e => e.bias && e.grade);
+  const correctCount = gradedEntries.filter(e => {
+    const g = e.grade || "";
+    return g === "A+" || g === "A" || g === "B";
+  }).length;
+  const accuracyPct = gradedEntries.length > 0 ? Math.round((correctCount / gradedEntries.length) * 100) : null;
+
+  // Compute trend: compare first half vs second half
+  let trendLabel = "";
+  let trendColor = "var(--text-muted)";
+  if (gradedEntries.length >= 6) {
+    const half = Math.floor(gradedEntries.length / 2);
+    const firstHalf = gradedEntries.slice(half); // older entries
+    const secondHalf = gradedEntries.slice(0, half); // newer entries
+
+    const firstCorrect = firstHalf.filter(e => {
+      const g = e.grade || "";
+      return g === "A+" || g === "A" || g === "B";
+    }).length;
+    const secondCorrect = secondHalf.filter(e => {
+      const g = e.grade || "";
+      return g === "A+" || g === "A" || g === "B";
+    }).length;
+
+    const firstRate = firstHalf.length > 0 ? firstCorrect / firstHalf.length : 0;
+    const secondRate = secondHalf.length > 0 ? secondCorrect / secondHalf.length : 0;
+    const diff = secondRate - firstRate;
+
+    if (diff > 0.05) {
+      trendLabel = "En progression";
+      trendColor = "#10b981";
+    } else if (diff < -0.05) {
+      trendLabel = "En recul";
+      trendColor = "#f43f5e";
+    } else {
+      trendLabel = "Stable";
+      trendColor = "#f59e0b";
+    }
+  }
+
+  if (accuracyPct === null || gradedEntries.length < 3) {
+    return (
+      <div className="glass rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Activity className="w-4 h-4 text-purple-400" />
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+            Precision du biais
+          </h3>
+        </div>
+        <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
+          Minimum 3 jours avec biais et note requis
+        </p>
+      </div>
+    );
+  }
+
+  // SVG circular gauge
+  const radius = 50;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (accuracyPct / 100) * circumference;
+  const gaugeColor = accuracyPct >= 70 ? "#10b981" : accuracyPct >= 50 ? "#f59e0b" : "#ef4444";
+
+  return (
+    <div className="glass rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Activity className="w-4 h-4 text-purple-400" />
+        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+          Precision du biais
+        </h3>
+      </div>
+
+      <div className="flex flex-col items-center">
+        {/* Circular gauge */}
+        <div className="relative" style={{ width: 130, height: 130 }}>
+          <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+            {/* Background circle */}
+            <circle
+              cx="60" cy="60" r={radius}
+              fill="none"
+              stroke="var(--bg-secondary)"
+              strokeWidth="8"
+            />
+            {/* Progress arc */}
+            <circle
+              cx="60" cy="60" r={radius}
+              fill="none"
+              stroke={gaugeColor}
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              style={{ transition: "stroke-dashoffset 1s ease-out" }}
+            />
+          </svg>
+          {/* Center text */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-bold mono" style={{ color: gaugeColor }}>
+              {accuracyPct}%
+            </span>
+            <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>
+              sur {gradedEntries.length} jours
+            </span>
+          </div>
+        </div>
+
+        {/* Caption */}
+        <p className="text-xs text-center mt-2" style={{ color: "var(--text-secondary)" }}>
+          Votre biais a ete correct {accuracyPct}% du temps
+        </p>
+
+        {/* Trend */}
+        {trendLabel && (
+          <div
+            className="flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full text-[10px] font-bold"
+            style={{ background: `${trendColor}15`, color: trendColor }}
+          >
+            {trendLabel === "En progression" ? (
+              <TrendingUp className="w-3 h-3" />
+            ) : trendLabel === "En recul" ? (
+              <TrendingDown className="w-3 h-3" />
+            ) : (
+              <Minus className="w-3 h-3" />
+            )}
+            {trendLabel}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---- Market Context Integration ----
+interface EcoEvent {
+  title: string;
+  country: string;
+  currency: string;
+  impact: "high" | "medium" | "low";
+  time: string;
+}
+
+function MarketContext() {
+  const [vix, setVix] = useState<{ current: number; changePct: number } | null>(null);
+  const [dxy, setDxy] = useState<{ price: number; change: number } | null>(null);
+  const [ecoEvents, setEcoEvents] = useState<EcoEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const [vixRes, priceRes, calRes] = await Promise.all([
+          fetch("/api/market-data/vix").then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch("/api/live-prices").then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch("/api/calendar").then(r => r.ok ? r.json() : null).catch(() => null),
+        ]);
+
+        if (vixRes?.vix) setVix({ current: vixRes.vix.current, changePct: vixRes.vix.changePct });
+        if (priceRes?.indices) {
+          const dxyItem = priceRes.indices.find((p: PriceItem) => p.symbol === "DXY");
+          if (dxyItem) setDxy({ price: dxyItem.price, change: dxyItem.change });
+        }
+        if (calRes?.events) {
+          const todayStr = formatDateKey(new Date());
+          const todayEvents = calRes.events
+            .filter((e: EcoEvent & { date: string }) => e.date === todayStr && (e.impact === "high" || e.impact === "medium"))
+            .slice(0, 5);
+          setEcoEvents(todayEvents);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="glass rounded-2xl p-4 animate-pulse">
+        <div className="h-4 w-32 rounded mb-3" style={{ background: "var(--bg-secondary)" }} />
+        <div className="flex gap-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-7 w-20 rounded-full" style={{ background: "var(--bg-secondary)" }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const hasData = vix || dxy || ecoEvents.length > 0;
+  if (!hasData) return null;
+
+  // VIX interpretation
+  let vixLevel = "";
+  let vixColor = "var(--text-muted)";
+  if (vix) {
+    if (vix.current < 15) { vixLevel = "Calme"; vixColor = "#10b981"; }
+    else if (vix.current < 20) { vixLevel = "Normal"; vixColor = "#f59e0b"; }
+    else if (vix.current < 30) { vixLevel = "Eleve"; vixColor = "#f97316"; }
+    else { vixLevel = "Extreme"; vixColor = "#ef4444"; }
+  }
+
+  return (
+    <div className="glass rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Zap className="w-4 h-4 text-amber-400" />
+        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+          Contexte marche
+        </h3>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {/* VIX pill */}
+        {vix && (
+          <div
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+            style={{ background: `${vixColor}15`, color: vixColor, border: `1px solid ${vixColor}30` }}
+          >
+            <AlertTriangle className="w-3 h-3" />
+            VIX {vix.current.toFixed(1)} — {vixLevel}
+            <span className="text-[10px] opacity-70">
+              ({vix.changePct >= 0 ? "+" : ""}{vix.changePct.toFixed(1)}%)
+            </span>
+          </div>
+        )}
+
+        {/* DXY pill */}
+        {dxy && (
+          <div
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+            style={{
+              background: dxy.change >= 0 ? "rgba(16,185,129,0.1)" : "rgba(244,63,94,0.1)",
+              color: dxy.change >= 0 ? "#10b981" : "#f43f5e",
+              border: `1px solid ${dxy.change >= 0 ? "rgba(16,185,129,0.3)" : "rgba(244,63,94,0.3)"}`,
+            }}
+          >
+            <Globe className="w-3 h-3" />
+            DXY {dxy.price.toFixed(2)}
+            {dxy.change >= 0 ? (
+              <TrendingUp className="w-3 h-3" />
+            ) : (
+              <TrendingDown className="w-3 h-3" />
+            )}
+            <span className="text-[10px] opacity-70">
+              {dxy.change >= 0 ? "+" : ""}{dxy.change.toFixed(2)}%
+            </span>
+          </div>
+        )}
+
+        {/* Eco events pills */}
+        {ecoEvents.map((evt, i) => (
+          <div
+            key={i}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+            style={{
+              background: evt.impact === "high" ? "rgba(239,68,68,0.1)" : "rgba(245,158,11,0.1)",
+              color: evt.impact === "high" ? "#ef4444" : "#f59e0b",
+              border: `1px solid ${evt.impact === "high" ? "rgba(239,68,68,0.3)" : "rgba(245,158,11,0.3)"}`,
+            }}
+            title={`${evt.time} — ${evt.title} (${evt.currency})`}
+          >
+            <FileText className="w-3 h-3" />
+            <span className="max-w-[120px] truncate">{evt.title}</span>
+            <span className="text-[10px] opacity-60">{evt.currency} {evt.time}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---- Quick Bias Templates ----
+interface BiasTemplate {
+  label: string;
+  bias: string;
+  notes: string;
+}
+
+const BIAS_TEMPLATES: BiasTemplate[] = [
+  {
+    label: "Haussier \u2014 Tendance + supports",
+    bias: "bullish",
+    notes: "Tendance haussiere confirmee. Rechercher des achats sur les supports cles et les replis. Momentum positif.",
+  },
+  {
+    label: "Baissier \u2014 Resistances + momentum",
+    bias: "bearish",
+    notes: "Pression vendeuse dominante. Vendre sur les resistances et les pullbacks. Eviter les achats contre-tendance.",
+  },
+  {
+    label: "Neutre \u2014 Range / pas de setup clair",
+    bias: "neutral",
+    notes: "Marche en range, pas de direction claire. Attendre un breakout ou trader les bornes du range avec prudence.",
+  },
+  {
+    label: "Haussier prudent \u2014 Attente de confirmation",
+    bias: "bullish",
+    notes: "Biais legerement haussier mais en attente de confirmation. Ne pas forcer les entrees, attendre les signaux clairs sur les niveaux cles.",
+  },
+];
+
+function QuickBiasTemplates({
+  onApply,
+}: {
+  onApply: (template: BiasTemplate) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="glass rounded-2xl p-4">
+      <button
+        className="flex items-center justify-between w-full"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2">
+          <Zap className="w-4 h-4 text-cyan-400" />
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+            Templates rapides
+          </h3>
+        </div>
+        {expanded ? (
+          <ChevronUp className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+        ) : (
+          <ChevronDown className="w-4 h-4" style={{ color: "var(--text-muted)" }} />
+        )}
+      </button>
+
+      {expanded && (
+        <div className="grid grid-cols-1 gap-2 mt-3">
+          {BIAS_TEMPLATES.map((tmpl, i) => {
+            const biasOpt = getBiasOption(tmpl.bias);
+            const Icon = biasOpt?.icon || Minus;
+            return (
+              <button
+                key={i}
+                onClick={() => onApply(tmpl)}
+                className="flex items-center gap-3 p-3 rounded-xl text-left transition-all hover:scale-[1.01]"
+                style={{
+                  background: `${biasOpt?.dotColor || "#64748b"}08`,
+                  border: `1px solid ${biasOpt?.dotColor || "#64748b"}25`,
+                }}
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${biasOpt?.dotColor || "#64748b"}20` }}
+                >
+                  <Icon className="w-4 h-4" style={{ color: biasOpt?.dotColor || "#64748b" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-semibold block" style={{ color: "var(--text-primary)" }}>
+                    {tmpl.label}
+                  </span>
+                  <span className="text-[10px] block truncate" style={{ color: "var(--text-muted)" }}>
+                    {tmpl.notes.slice(0, 60)}...
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---- Lightbox ----
 function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   return (
@@ -852,15 +1345,29 @@ export default function DailyBiasPage() {
         <SessionWindows />
       </div>
 
+      {/* Market Context Integration */}
+      <MarketContext />
+
       {/* Main 3-column layout: Calendar sidebar | Form | Review sidebar */}
       <div className="grid grid-cols-1 xl:grid-cols-[280px_1fr_1fr] lg:grid-cols-[280px_1fr] gap-6">
 
-        {/* Left sidebar: Calendar + History */}
+        {/* Left sidebar: Calendar + History + Trackers */}
         <div className="space-y-4">
           <MiniCalendar
             selectedDate={date}
             onSelectDate={setDate}
             historyMap={historyMap}
+          />
+          <BiasHistoryCalendar historyMap={historyMap} />
+          <BiasAccuracyTracker history={history} />
+          <QuickBiasTemplates
+            onApply={(tmpl) => {
+              setPlan(prev => ({
+                ...prev,
+                bias: tmpl.bias,
+                notes: tmpl.notes,
+              }));
+            }}
           />
           <BiasHistory
             history={history}
