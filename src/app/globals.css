@@ -738,12 +738,6 @@ html:not(.dark):not(.oled) .metric-card {
 }
 .chat-input::placeholder { color: var(--text-muted); }
 
-/* ========== TOAST ANIMATIONS ========== */
-@keyframes slideOut {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(100%); opacity: 0; }
-}
-
 /* ========== SKELETON ========== */
 @keyframes skeleton-pulse {
   0%, 100% { opacity: 0.4; }

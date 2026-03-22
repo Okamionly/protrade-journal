@@ -180,6 +180,8 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`dark ${inter.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
+        <link rel="dns-prefetch" href="https://marketphase.vercel.app" />
+        <link rel="preconnect" href="https://marketphase.vercel.app" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0ea5e9" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

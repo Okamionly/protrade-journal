@@ -496,7 +496,7 @@ export default function LandingContent() {
                 <div className="relative animate-hero-float">
                   <div className="absolute -inset-1 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 rounded-2xl opacity-20 blur-sm" />
                   <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-300/50 bg-white">
-                    <img src="/screenshots/dashboard.gif" alt="Tableau de bord du journal de trading gratuit MarketPhase" className="w-full h-auto" loading="eager" />
+                    <img src="/screenshots/dashboard.gif" alt="Tableau de bord du journal de trading gratuit MarketPhase" className="w-full h-auto" loading="eager" fetchPriority="high" />
                   </div>
                   <div className="hidden sm:block absolute -bottom-4 -left-4 sm:-bottom-6 sm:-left-8 p-3 sm:p-4 rounded-xl bg-white/95 backdrop-blur-sm border border-gray-200 shadow-xl">
                     <div className="flex items-center gap-3">
