@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
 import { fetchCotData, type CotParsed } from "@/lib/market/cot";
 import { COT_CONTRACTS, COT_CATEGORIES } from "@/lib/market/constants";
-import { RefreshCw, Search, TrendingUp, TrendingDown, ArrowLeft, AlertTriangle } from "lucide-react";
+import { RefreshCw, Search, TrendingUp, TrendingDown, ArrowLeft, AlertTriangle, Zap, BarChart3, Target } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 import { useTheme } from "next-themes";
 
@@ -25,9 +25,32 @@ interface CotOverviewRow {
   sentimentTrend: "up" | "down" | "flat";
   change: number;
   percentileRank: number; // 0-100, how current net compares to 52w history
+  commNet: number;
+  commPercentile: number; // commercial net percentile 0-100
+  history: CotParsed[];   // full 52w history for charts
 }
 
 type SignalLevel = "extreme" | "elevated" | "normal";
+
+// --- Signal types for the dashboard ---
+type CotSignalType = "accumulation" | "extreme_position" | "reversal" | "divergence";
+
+interface CotSignal {
+  key: string;
+  name: string;
+  type: CotSignalType;
+  direction: "bullish" | "bearish";
+  conviction: number; // 1-5
+  description: string;
+  color: string; // tailwind color class
+}
+
+// --- FX pair mapping ---
+const FX_PAIR_MAP: Record<string, string> = {
+  EUR: "EUR/USD", GBP: "GBP/USD", JPY: "USD/JPY", AUD: "AUD/USD",
+  CAD: "USD/CAD", CHF: "USD/CHF", NZD: "NZD/USD", MXN: "USD/MXN",
+  GOLD: "XAU/USD", SILVER: "XAG/USD", OIL: "WTI", BRENT: "Brent",
+};
 
 function getSignalLevel(percentile: number): SignalLevel {
   if (percentile >= 95 || percentile <= 5) return "extreme";
@@ -59,6 +82,251 @@ function getSignalStyle(level: SignalLevel): { badge: string; dot: string; label
         rowBg: "",
       };
   }
+}
+
+// --- Generate trading signals from COT data ---
+function generateSignals(rows: CotOverviewRow[]): CotSignal[] {
+  const signals: CotSignal[] = [];
+  for (const r of rows) {
+    const pair = FX_PAIR_MAP[r.key] || r.key;
+    // Commercial accumulation signal
+    if (r.commPercentile >= 70) {
+      const conviction = r.commPercentile >= 90 ? 5 : r.commPercentile >= 80 ? 4 : 3;
+      signals.push({
+        key: r.key, name: pair, type: "accumulation", direction: "bullish", conviction,
+        description: `Commerciaux accumulent des longs ${r.key}`,
+        color: "emerald",
+      });
+    } else if (r.commPercentile <= 30) {
+      const conviction = r.commPercentile <= 10 ? 5 : r.commPercentile <= 20 ? 4 : 3;
+      signals.push({
+        key: r.key, name: pair, type: "accumulation", direction: "bearish", conviction,
+        description: `Commerciaux accumulent des shorts ${r.key}`,
+        color: "rose",
+      });
+    }
+    // Speculator extreme position → reversal signal
+    if (r.percentileRank >= 90) {
+      const conviction = r.percentileRank >= 97 ? 5 : r.percentileRank >= 93 ? 4 : 3;
+      signals.push({
+        key: r.key, name: pair, type: "extreme_position", direction: "bearish", conviction,
+        description: `Spéculateurs en position extrême LONG ${r.key}`,
+        color: "amber",
+      });
+    } else if (r.percentileRank <= 10) {
+      const conviction = r.percentileRank <= 3 ? 5 : r.percentileRank <= 7 ? 4 : 3;
+      signals.push({
+        key: r.key, name: pair, type: "extreme_position", direction: "bullish", conviction,
+        description: `Spéculateurs en position extrême SHORT ${r.key}`,
+        color: "amber",
+      });
+    }
+  }
+  return signals.sort((a, b) => b.conviction - a.conviction);
+}
+
+// --- Generate trading implications ---
+function generateImplications(rows: CotOverviewRow[]): { pair: string; key: string; text: string; bias: "bullish" | "bearish" | "neutral"; strength: string }[] {
+  const implications: { pair: string; key: string; text: string; bias: "bullish" | "bearish" | "neutral"; strength: string }[] = [];
+  for (const r of rows) {
+    const pair = FX_PAIR_MAP[r.key] || r.key;
+    // Commercial bias
+    if (r.commPercentile >= 70) {
+      const strength = r.commPercentile >= 85 ? "fort" : "moyen terme";
+      implications.push({
+        pair, key: r.key,
+        text: `${pair} : Commerciaux haussiers → Biais haussier ${strength}`,
+        bias: "bullish", strength,
+      });
+    } else if (r.commPercentile <= 30) {
+      const strength = r.commPercentile <= 15 ? "fort" : "moyen terme";
+      implications.push({
+        pair, key: r.key,
+        text: `${pair} : Commerciaux baissiers → Biais baissier ${strength}`,
+        bias: "bearish", strength,
+      });
+    }
+    // Speculator extreme → correction risk
+    if (r.percentileRank >= 90) {
+      implications.push({
+        pair, key: r.key,
+        text: `${pair} : Spéculateurs en extrême long → Risque de correction`,
+        bias: "bearish", strength: "alerte",
+      });
+    } else if (r.percentileRank <= 10) {
+      implications.push({
+        pair, key: r.key,
+        text: `${pair} : Spéculateurs en extrême short → Potentiel de rebond`,
+        bias: "bullish", strength: "alerte",
+      });
+    }
+  }
+  return implications;
+}
+
+// --- Conviction bars component ---
+function ConvictionBars({ level, max = 5 }: { level: number; max?: number }) {
+  return (
+    <div className="flex gap-0.5 items-end">
+      {Array.from({ length: max }).map((_, i) => (
+        <div
+          key={i}
+          className={`w-1.5 rounded-sm transition-all ${
+            i < level
+              ? level >= 4 ? "bg-emerald-400" : level >= 3 ? "bg-amber-400" : "bg-[--text-muted]"
+              : "bg-[--bg-secondary]/60"
+          }`}
+          style={{ height: `${8 + i * 3}px` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// --- SVG Historical Positioning Chart ---
+function HistoricalPositioningSVG({ data }: { data: CotParsed[] }) {
+  if (data.length < 2) return null;
+
+  const W = 800;
+  const H = 320;
+  const PAD = { top: 30, right: 20, bottom: 40, left: 70 };
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
+
+  // Collect all net values
+  const commNets = data.map((d) => d.commNet);
+  const specNets = data.map((d) => d.nonCommNet);
+  const retailNets = data.map((d) => d.retailNet);
+  const allVals = [...commNets, ...specNets, ...retailNets];
+  const minY = Math.min(...allVals);
+  const maxY = Math.max(...allVals);
+  const rangeY = maxY - minY || 1;
+
+  // Compute mean and stddev for speculator net to highlight extremes
+  const specMean = specNets.reduce((a, b) => a + b, 0) / specNets.length;
+  const specStd = Math.sqrt(specNets.reduce((a, b) => a + (b - specMean) ** 2, 0) / specNets.length) || 1;
+  const extremeHigh = specMean + 2 * specStd;
+  const extremeLow = specMean - 2 * specStd;
+
+  const toX = (i: number) => PAD.left + (i / (data.length - 1)) * plotW;
+  const toY = (v: number) => PAD.top + plotH - ((v - minY) / rangeY) * plotH;
+
+  const makePath = (vals: number[]) =>
+    vals.map((v, i) => `${i === 0 ? "M" : "L"}${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(" ");
+
+  // Y-axis ticks
+  const yTicks: number[] = [];
+  const step = rangeY / 5;
+  for (let i = 0; i <= 5; i++) yTicks.push(minY + step * i);
+
+  // X-axis labels (show ~6 dates)
+  const xLabels: { i: number; label: string }[] = [];
+  const xStep = Math.max(1, Math.floor(data.length / 6));
+  for (let i = 0; i < data.length; i += xStep) {
+    xLabels.push({ i, label: data[i].date.slice(5) });
+  }
+
+  // Extreme zones
+  const ehY = toY(Math.min(extremeHigh, maxY));
+  const elY = toY(Math.max(extremeLow, minY));
+  const ehClipped = Math.max(PAD.top, ehY);
+  const elClipped = Math.min(PAD.top + plotH, elY);
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" style={{ maxHeight: 360 }}>
+      {/* Extreme zones */}
+      {extremeHigh < maxY && (
+        <rect x={PAD.left} y={PAD.top} width={plotW} height={ehClipped - PAD.top}
+          fill="rgba(239,68,68,0.06)" />
+      )}
+      {extremeLow > minY && (
+        <rect x={PAD.left} y={elClipped} width={plotW} height={PAD.top + plotH - elClipped}
+          fill="rgba(239,68,68,0.06)" />
+      )}
+      {/* Extreme threshold lines */}
+      {extremeHigh < maxY && (
+        <line x1={PAD.left} x2={PAD.left + plotW} y1={ehClipped} y2={ehClipped}
+          stroke="rgba(239,68,68,0.3)" strokeDasharray="6,4" strokeWidth={1} />
+      )}
+      {extremeLow > minY && (
+        <line x1={PAD.left} x2={PAD.left + plotW} y1={elClipped} y2={elClipped}
+          stroke="rgba(239,68,68,0.3)" strokeDasharray="6,4" strokeWidth={1} />
+      )}
+
+      {/* Zero line */}
+      {minY < 0 && maxY > 0 && (
+        <line x1={PAD.left} x2={PAD.left + plotW} y1={toY(0)} y2={toY(0)}
+          stroke="var(--text-muted)" strokeWidth={0.5} strokeDasharray="4,4" opacity={0.4} />
+      )}
+
+      {/* Grid lines */}
+      {yTicks.map((v, i) => (
+        <g key={i}>
+          <line x1={PAD.left} x2={PAD.left + plotW} y1={toY(v)} y2={toY(v)}
+            stroke="var(--border)" strokeWidth={0.5} opacity={0.3} />
+          <text x={PAD.left - 8} y={toY(v) + 4} textAnchor="end"
+            fill="var(--text-muted)" fontSize={10} fontFamily="monospace">
+            {(v / 1000).toFixed(0)}K
+          </text>
+        </g>
+      ))}
+
+      {/* X-axis labels */}
+      {xLabels.map(({ i, label }) => (
+        <text key={i} x={toX(i)} y={H - 8} textAnchor="middle"
+          fill="var(--text-muted)" fontSize={10} fontFamily="monospace">
+          {label}
+        </text>
+      ))}
+
+      {/* Lines */}
+      <path d={makePath(commNets)} fill="none" stroke="#10b981" strokeWidth={2} opacity={0.9} />
+      <path d={makePath(specNets)} fill="none" stroke="#ef4444" strokeWidth={2} opacity={0.9} />
+      <path d={makePath(retailNets)} fill="none" stroke="#3b82f6" strokeWidth={1.5} opacity={0.7} />
+
+      {/* Legend */}
+      <g transform={`translate(${PAD.left + 10}, ${PAD.top + 10})`}>
+        <rect x={0} y={-8} width={220} height={52} rx={6} fill="var(--bg-primary)" opacity={0.85} />
+        <circle cx={10} cy={4} r={4} fill="#10b981" /><text x={20} y={8} fill="var(--text-secondary)" fontSize={11}>Commerciaux (Net)</text>
+        <circle cx={10} cy={20} r={4} fill="#ef4444" /><text x={20} y={24} fill="var(--text-secondary)" fontSize={11}>Spéculateurs (Net)</text>
+        <circle cx={10} cy={36} r={4} fill="#3b82f6" /><text x={20} y={40} fill="var(--text-secondary)" fontSize={11}>Petits Traders (Net)</text>
+      </g>
+
+      {/* Axis labels */}
+      <text x={PAD.left - 8} y={PAD.top - 10} fill="var(--text-muted)" fontSize={10}>Contrats</text>
+    </svg>
+  );
+}
+
+// --- COT Index Gauge (0-100) ---
+function CotIndexGauge({ value, label }: { value: number; label: string }) {
+  const clampedVal = Math.max(0, Math.min(100, value));
+  const color =
+    clampedVal >= 70 ? "bg-emerald-500" :
+    clampedVal >= 40 ? "bg-amber-400" :
+    "bg-rose-500";
+  const textColor =
+    clampedVal >= 70 ? "text-emerald-400" :
+    clampedVal >= 40 ? "text-amber-400" :
+    "text-rose-400";
+
+  return (
+    <div className="flex items-center gap-3 w-full">
+      <span className="text-xs font-bold w-14 shrink-0 text-[--text-primary]">{label}</span>
+      <div className="flex-1 relative">
+        <div className="h-3 rounded-full bg-[--bg-secondary]/60 overflow-hidden">
+          <div
+            className={`h-full rounded-full ${color} transition-all duration-700`}
+            style={{ width: `${clampedVal}%` }}
+          />
+        </div>
+        {/* Marker ticks at 30 and 70 */}
+        <div className="absolute top-0 left-[30%] w-px h-3 bg-[--text-muted]/30" />
+        <div className="absolute top-0 left-[70%] w-px h-3 bg-[--text-muted]/30" />
+      </div>
+      <span className={`text-xs font-mono font-bold w-10 text-right ${textColor}`}>{clampedVal}</span>
+    </div>
+  );
 }
 
 export default function CotPage() {
@@ -114,6 +382,12 @@ export default function CotPage() {
         const belowCount = allNets.filter((n) => n < netPosition).length;
         const percentileRank = allNets.length > 1 ? (belowCount / (allNets.length - 1)) * 100 : 50;
 
+        // Compute commercial net percentile
+        const commNetVal = last.commNet;
+        const allCommNets = data.map((d) => d.commNet).sort((a, b) => a - b);
+        const commBelowCount = allCommNets.filter((n) => n < commNetVal).length;
+        const commPercentile = allCommNets.length > 1 ? (commBelowCount / (allCommNets.length - 1)) * 100 : 50;
+
         rows.push({
           key,
           name: contract.name,
@@ -127,6 +401,9 @@ export default function CotPage() {
           sentimentTrend,
           change: prevNet !== 0 ? ((netPosition - prevNet) / Math.abs(prevNet)) * 100 : 0,
           percentileRank: Math.round(percentileRank),
+          commNet: commNetVal,
+          commPercentile: Math.round(commPercentile),
+          history: data,
         });
       }
       setOverviewData(rows);
@@ -160,6 +437,10 @@ export default function CotPage() {
     const matchSearch = !search || r.key.toLowerCase().includes(search.toLowerCase()) || r.name.toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchSearch;
   });
+
+  // Computed signals and implications
+  const cotSignals = useMemo(() => generateSignals(overviewData), [overviewData]);
+  const tradingImplications = useMemo(() => generateImplications(overviewData), [overviewData]);
 
   // Detail charts
   useEffect(() => {
@@ -272,6 +553,42 @@ export default function CotPage() {
               </div>
             )}
 
+            {/* Historical Positioning Chart (SVG) */}
+            {detailData.length > 2 && (
+              <div className="glass rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-5 h-5 text-cyan-400" />
+                  <h3 className="text-lg font-semibold">Positionnement historique (52 sem.)</h3>
+                </div>
+                <p className="text-xs text-[--text-muted] mb-3">
+                  Positions nettes par catégorie. Les zones rouges indiquent un positionnement au-delà de 2 écarts-types.
+                </p>
+                <HistoricalPositioningSVG data={detailData} />
+              </div>
+            )}
+
+            {/* COT Index for this asset */}
+            {last && (() => {
+              const rowMatch = overviewData.find((r) => r.key === asset);
+              if (!rowMatch) return null;
+              return (
+                <div className="glass rounded-2xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target className="w-5 h-5 text-purple-400" />
+                    <h3 className="text-lg font-semibold">Indice COT (0-100)</h3>
+                  </div>
+                  <p className="text-xs text-[--text-muted] mb-4">
+                    0 = positionnement le plus baissier sur 52 sem. | 100 = le plus haussier.
+                    {" "}30-70 = zone neutre.
+                  </p>
+                  <div className="space-y-3">
+                    <CotIndexGauge value={rowMatch.percentileRank} label="Spéc." />
+                    <CotIndexGauge value={rowMatch.commPercentile} label="Comm." />
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="glass rounded-2xl p-6">
                 <h3 className="text-lg font-semibold mb-4">{t("cotNetPositioning52w")}</h3>
@@ -349,93 +666,129 @@ export default function CotPage() {
         </div>
       </div>
 
-      {/* COT Signals Section */}
-      {!loading && overviewData.length > 0 && (() => {
-        const signalRows = overviewData.filter((r) => getSignalLevel(r.percentileRank) !== "normal");
-        if (signalRows.length === 0) return null;
-        return (
-          <div className="glass rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-5 h-5 text-amber-400" />
-              <h2 className="text-lg font-semibold">Signaux COT</h2>
-              <span className="text-xs text-[--text-muted] ml-2">{signalRows.length} positionnement(s) extrême(s)</span>
-            </div>
-            <p className="text-xs text-[--text-muted] mb-4">
-              Le <strong>%</strong> indique où se situe le positionnement actuel par rapport aux 52 dernières semaines.
-              Ex : <span className="text-rose-400">97%</span> = plus haut que 97% de l&apos;historique → signal de retournement potentiel.
-              <span className="text-rose-400 ml-2">● Extrême (&lt;5% ou &gt;95%)</span>
-              <span className="text-amber-400 ml-2">● Élevé (&lt;25% ou &gt;75%)</span>
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {signalRows
-                .sort((a, b) => {
-                  const aExt = getSignalLevel(a.percentileRank) === "extreme" ? 0 : 1;
-                  const bExt = getSignalLevel(b.percentileRank) === "extreme" ? 0 : 1;
-                  if (aExt !== bExt) return aExt - bExt;
-                  return Math.abs(b.percentileRank - 50) - Math.abs(a.percentileRank - 50);
-                })
-                .map((r) => {
-                  const level = getSignalLevel(r.percentileRank);
-                  const style = getSignalStyle(level);
-                  const isBullish = r.percentileRank > 50;
-                  const intensity = Math.abs(r.percentileRank - 50) * 2; // 0-100
-                  return (
-                    <button
-                      key={r.key}
-                      onClick={() => openDetail(r.key)}
-                      className={`flex flex-col gap-2 p-3 rounded-xl text-left transition hover:scale-[1.02] cursor-pointer ${style.badge}`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <span>{level === "extreme" ? "\uD83D\uDD34" : "\uD83D\uDFE1"}</span>
-                          <span className="font-bold text-sm">{r.key}</span>
-                          <span className="text-[10px] opacity-80">{r.name}</span>
-                        </div>
-                        <span className={`text-xs font-mono font-bold ${isBullish ? "text-emerald-400" : "text-rose-400"}`}>
-                          {isBullish ? "▲" : "▼"} {r.percentileRank}%
-                        </span>
-                      </div>
-                      {/* Gauge bar */}
-                      <div className="w-full h-3 rounded-full bg-[--bg-secondary]/60 overflow-hidden relative">
-                        <div className="absolute inset-0 flex">
-                          <div className="w-1/2 flex justify-end">
-                            {!isBullish && (
-                              <div
-                                className="h-full rounded-l-full bg-gradient-to-l from-rose-500/80 to-rose-600/40 transition-all duration-700"
-                                style={{ width: `${intensity}%` }}
-                              />
-                            )}
-                          </div>
-                          <div className="w-px bg-[--text-muted]/30 z-10" />
-                          <div className="w-1/2">
-                            {isBullish && (
-                              <div
-                                className="h-full rounded-r-full bg-gradient-to-r from-emerald-500/80 to-emerald-600/40 transition-all duration-700"
-                                style={{ width: `${intensity}%` }}
-                              />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-[9px] opacity-60">
-                        <span>Baissier</span>
-                        <span>{style.label}</span>
-                        <span>Haussier</span>
-                      </div>
-                      {/* Net position change */}
-                      <div className="flex items-center gap-2 text-[10px] opacity-70">
-                        <span>Net: {r.netPosition > 0 ? "+" : ""}{(r.netPosition / 1000).toFixed(1)}K</span>
-                        <span className={r.change > 0 ? "text-emerald-400" : r.change < 0 ? "text-rose-400" : ""}>
-                          {r.change > 0 ? "+" : ""}{r.change.toFixed(1)}% vs sem. préc.
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-            </div>
+      {/* === 1. COT Signals Dashboard === */}
+      {!loading && cotSignals.length > 0 && (
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-5 h-5 text-cyan-400" />
+            <h2 className="text-lg font-semibold">Signaux COT</h2>
+            <span className="text-xs text-[--text-muted] ml-2">{cotSignals.length} signal(aux) actif(s)</span>
           </div>
-        );
-      })()}
+          <p className="text-xs text-[--text-muted] mb-4">
+            Signaux basés sur les variations de positions nettes et les lectures extrêmes (percentiles 52 sem.)
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {cotSignals.slice(0, 8).map((sig, idx) => {
+              const bgClass =
+                sig.direction === "bullish"
+                  ? "border-emerald-500/40 bg-emerald-500/[0.08]"
+                  : sig.type === "extreme_position"
+                    ? "border-amber-500/40 bg-amber-500/[0.08]"
+                    : "border-rose-500/40 bg-rose-500/[0.08]";
+              const iconColor =
+                sig.direction === "bullish" ? "text-emerald-400"
+                  : sig.type === "extreme_position" ? "text-amber-400"
+                    : "text-rose-400";
+              return (
+                <button
+                  key={`${sig.key}-${sig.type}-${idx}`}
+                  onClick={() => openDetail(sig.key)}
+                  className={`flex flex-col gap-2 p-3.5 rounded-xl border text-left transition hover:scale-[1.02] cursor-pointer ${bgClass}`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      {sig.direction === "bullish"
+                        ? <TrendingUp className={`w-4 h-4 ${iconColor}`} />
+                        : <TrendingDown className={`w-4 h-4 ${iconColor}`} />}
+                      <span className="font-bold text-sm">{sig.name}</span>
+                    </div>
+                    <ConvictionBars level={sig.conviction} />
+                  </div>
+                  <p className="text-[11px] text-[--text-secondary] leading-snug">{sig.description}</p>
+                  <div className="flex items-center gap-2 mt-auto">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                      sig.type === "accumulation"
+                        ? "bg-cyan-500/15 text-cyan-400"
+                        : sig.type === "extreme_position"
+                          ? "bg-amber-500/15 text-amber-400"
+                          : "bg-purple-500/15 text-purple-400"
+                    }`}>
+                      {sig.type === "accumulation" ? "Accumulation" : sig.type === "extreme_position" ? "Extrême" : "Retournement"}
+                    </span>
+                    <span className={`text-[10px] font-medium ${iconColor}`}>
+                      {sig.direction === "bullish" ? "Haussier" : "Baissier"}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* === 3. Impact Trading Section === */}
+      {!loading && tradingImplications.length > 0 && (
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-5 h-5 text-purple-400" />
+            <h2 className="text-lg font-semibold">Impact Trading</h2>
+          </div>
+          <p className="text-xs text-[--text-muted] mb-4">
+            Implications de trading basées sur le positionnement COT. Commerciaux net long &gt; 70e percentile = biais haussier.
+          </p>
+          <div className="space-y-2">
+            {tradingImplications.map((imp, idx) => (
+              <button
+                key={`${imp.key}-${idx}`}
+                onClick={() => openDetail(imp.key)}
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-[--border] hover:bg-[var(--bg-hover)] transition text-left cursor-pointer"
+              >
+                <div className={`w-2 h-8 rounded-full shrink-0 ${
+                  imp.bias === "bullish" ? "bg-emerald-500" : imp.bias === "bearish" ? "bg-rose-500" : "bg-[--text-muted]"
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[--text-primary] truncate">{imp.text}</p>
+                </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                  imp.strength === "fort" ? "bg-emerald-500/15 text-emerald-400"
+                    : imp.strength === "alerte" ? "bg-amber-500/15 text-amber-400"
+                      : "bg-cyan-500/15 text-cyan-400"
+                }`}>
+                  {imp.strength}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* === 4. COT Index (0-100) === */}
+      {!loading && overviewData.length > 0 && (
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3 className="w-5 h-5 text-amber-400" />
+            <h2 className="text-lg font-semibold">Indice COT (0-100)</h2>
+          </div>
+          <p className="text-xs text-[--text-muted] mb-4">
+            Positionnement normalisé sur 52 semaines. 0 = plus baissier | 100 = plus haussier. Zone neutre : 30-70.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2.5">
+            {filteredRows
+              .sort((a, b) => {
+                // Extremes first
+                const aExt = a.percentileRank >= 80 || a.percentileRank <= 20 ? 0 : 1;
+                const bExt = b.percentileRank >= 80 || b.percentileRank <= 20 ? 0 : 1;
+                if (aExt !== bExt) return aExt - bExt;
+                return Math.abs(b.percentileRank - 50) - Math.abs(a.percentileRank - 50);
+              })
+              .map((r) => (
+                <div key={r.key} className="cursor-pointer hover:opacity-80 transition" onClick={() => openDetail(r.key)}>
+                  <CotIndexGauge value={r.percentileRank} label={r.key} />
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {error && <div className="glass rounded-xl p-4 text-rose-400 text-sm">{error}</div>}
 

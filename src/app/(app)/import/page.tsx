@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "@/i18n/context";
 import {
   Upload,
@@ -16,6 +16,12 @@ import {
   X,
   FileSpreadsheet,
   RefreshCw,
+  History,
+  TrendingUp,
+  Calendar,
+  BarChart3,
+  Trophy,
+  Trash2,
 } from "lucide-react";
 import Papa from "papaparse";
 
@@ -39,6 +45,23 @@ interface ImportResult {
   success: number;
   errors: number;
   errorDetails: string[];
+}
+
+interface ImportQuickStats {
+  totalTrades: number;
+  dateRange: string;
+  winRate: number;
+  totalPnl: number;
+  topAsset: string;
+}
+
+interface ImportHistoryEntry {
+  id: string;
+  date: string;
+  tradesCount: number;
+  platform: string;
+  fileName: string;
+  quickStats: ImportQuickStats | null;
 }
 
 /* ─── Platform Definitions ─── */
@@ -194,7 +217,19 @@ export default function ImportPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [importHistory, setImportHistory] = useState<ImportHistoryEntry[]>([]);
+  const [quickStats, setQuickStats] = useState<ImportQuickStats | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Load import history from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("import-history");
+    if (saved) {
+      try {
+        setImportHistory(JSON.parse(saved));
+      } catch { /* ignore */ }
+    }
+  }, []);
 
   /* Mapped fields summary */
   const mappedFields = useMemo(() => {
@@ -317,11 +352,59 @@ export default function ImportPage() {
         body: JSON.stringify({ trades }),
       });
       const data = await res.json();
+      const successCount = data.count || 0;
       setResult({
-        success: data.count || 0,
-        errors: trades.length - (data.count || 0) + errorDetails.length,
+        success: successCount,
+        errors: trades.length - successCount + errorDetails.length,
         errorDetails,
       });
+
+      // Compute quick stats from imported trades
+      if (successCount > 0) {
+        const validTrades = trades.filter(Boolean) as Record<string, unknown>[];
+        const dates = validTrades
+          .map((tr) => String(tr.date || ""))
+          .filter(Boolean)
+          .sort();
+        const pnlValues = validTrades.map((tr) => parseNum(tr.result));
+        const wins = pnlValues.filter((v) => v > 0).length;
+        const totalPnl = pnlValues.reduce((a, b) => a + b, 0);
+
+        // Find top asset by frequency
+        const assetCounts: Record<string, number> = {};
+        validTrades.forEach((tr) => {
+          const asset = String(tr.asset || "N/A");
+          assetCounts[asset] = (assetCounts[asset] || 0) + 1;
+        });
+        const topAsset = Object.entries(assetCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
+
+        const dateRange = dates.length > 0
+          ? `${dates[0].substring(0, 10)} → ${dates[dates.length - 1].substring(0, 10)}`
+          : "N/A";
+
+        const stats: ImportQuickStats = {
+          totalTrades: successCount,
+          dateRange,
+          winRate: validTrades.length > 0 ? Math.round((wins / validTrades.length) * 100) : 0,
+          totalPnl: Math.round(totalPnl * 100) / 100,
+          topAsset,
+        };
+        setQuickStats(stats);
+
+        // Save to import history
+        const entry: ImportHistoryEntry = {
+          id: Date.now().toString(36),
+          date: new Date().toISOString(),
+          tradesCount: successCount,
+          platform: detection?.platform.name || t("custom"),
+          fileName,
+          quickStats: stats,
+        };
+        const updatedHistory = [entry, ...importHistory].slice(0, 50);
+        setImportHistory(updatedHistory);
+        localStorage.setItem("import-history", JSON.stringify(updatedHistory));
+      }
+
       setStep(5);
     } catch {
       setResult({ success: 0, errors: trades.length, errorDetails: [t("serverError")] });
@@ -337,9 +420,16 @@ export default function ImportPage() {
     setMapping({});
     setDetection(null);
     setResult(null);
+    setQuickStats(null);
     setFileName("");
     setDragOver(false);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const deleteHistoryEntry = (id: string) => {
+    const updated = importHistory.filter((e) => e.id !== id);
+    setImportHistory(updated);
+    localStorage.setItem("import-history", JSON.stringify(updated));
   };
 
   /* ─── Step indicator ─── */
@@ -907,92 +997,200 @@ export default function ImportPage() {
 
       {/* ─── Step 5: Result ─── */}
       {step === 5 && result && (
-        <div className="metric-card rounded-2xl p-12 text-center">
-          {result.success > 0 ? (
-            <>
-              <div
-                className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center"
-                style={{ background: "rgba(16, 185, 129, 0.1)" }}
-              >
-                <CheckCircle2 className="w-10 h-10" style={{ color: "#10b981" }} />
-              </div>
-              <h3 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-                {t("importDone")}
-              </h3>
-              <div className="flex items-center justify-center gap-6 mt-4">
-                <div className="text-center">
-                  <p className="text-3xl font-bold" style={{ color: "#10b981" }}>
-                    {result.success}
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                    {t("tradesImported")}
-                  </p>
+        <div className="space-y-4">
+          <div className="metric-card rounded-2xl p-12 text-center">
+            {result.success > 0 ? (
+              <>
+                <div
+                  className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center"
+                  style={{ background: "rgba(16, 185, 129, 0.1)" }}
+                >
+                  <CheckCircle2 className="w-10 h-10" style={{ color: "#10b981" }} />
                 </div>
-                {result.errors > 0 && (
+                <h3 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+                  {t("importDone")}
+                </h3>
+                <div className="flex items-center justify-center gap-6 mt-4">
                   <div className="text-center">
-                    <p className="text-3xl font-bold" style={{ color: "#ef4444" }}>
-                      {result.errors}
+                    <p className="text-3xl font-bold" style={{ color: "#10b981" }}>
+                      {result.success}
                     </p>
                     <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                      {t("erreurs")}
+                      {t("tradesImported")}
                     </p>
                   </div>
-                )}
-              </div>
-              {detection && (
-                <p className="text-sm mt-4" style={{ color: "var(--text-secondary)" }}>
-                  {t("source")} : {detection.platform.name}
-                </p>
-              )}
-              {result.errorDetails.length > 0 && (
-                <div
-                  className="mt-4 p-3 rounded-xl text-left max-h-32 overflow-y-auto text-xs"
-                  style={{ background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.15)" }}
-                >
-                  {result.errorDetails.slice(0, 10).map((e, i) => (
-                    <p key={i} style={{ color: "#ef4444" }}>{e}</p>
-                  ))}
-                  {result.errorDetails.length > 10 && (
-                    <p style={{ color: "var(--text-muted)" }}>
-                      {t("andMoreErrors", { count: result.errorDetails.length - 10 })}
-                    </p>
+                  {result.errors > 0 && (
+                    <div className="text-center">
+                      <p className="text-3xl font-bold" style={{ color: "#ef4444" }}>
+                        {result.errors}
+                      </p>
+                      <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                        {t("erreurs")}
+                      </p>
+                    </div>
                   )}
                 </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div
-                className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center"
-                style={{ background: "rgba(239, 68, 68, 0.1)" }}
-              >
-                <AlertCircle className="w-10 h-10" style={{ color: "#ef4444" }} />
-              </div>
-              <h3 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-                {t("importError")}
-              </h3>
-              <p className="text-sm mt-2" style={{ color: "var(--text-secondary)" }}>
-                {t("importErrorDesc")}
-              </p>
-              {result.errorDetails.length > 0 && (
+                {detection && (
+                  <p className="text-sm mt-4" style={{ color: "var(--text-secondary)" }}>
+                    {t("source")} : {detection.platform.name}
+                  </p>
+                )}
+                {result.errorDetails.length > 0 && (
+                  <div
+                    className="mt-4 p-3 rounded-xl text-left max-h-32 overflow-y-auto text-xs"
+                    style={{ background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.15)" }}
+                  >
+                    {result.errorDetails.slice(0, 10).map((e, i) => (
+                      <p key={i} style={{ color: "#ef4444" }}>{e}</p>
+                    ))}
+                    {result.errorDetails.length > 10 && (
+                      <p style={{ color: "var(--text-muted)" }}>
+                        {t("andMoreErrors", { count: result.errorDetails.length - 10 })}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
                 <div
-                  className="mt-4 p-3 rounded-xl text-left max-h-32 overflow-y-auto text-xs"
-                  style={{ background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.15)" }}
+                  className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center"
+                  style={{ background: "rgba(239, 68, 68, 0.1)" }}
                 >
-                  {result.errorDetails.slice(0, 10).map((e, i) => (
-                    <p key={i} style={{ color: "#ef4444" }}>{e}</p>
-                  ))}
+                  <AlertCircle className="w-10 h-10" style={{ color: "#ef4444" }} />
                 </div>
-              )}
-            </>
+                <h3 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+                  {t("importError")}
+                </h3>
+                <p className="text-sm mt-2" style={{ color: "var(--text-secondary)" }}>
+                  {t("importErrorDesc")}
+                </p>
+                {result.errorDetails.length > 0 && (
+                  <div
+                    className="mt-4 p-3 rounded-xl text-left max-h-32 overflow-y-auto text-xs"
+                    style={{ background: "rgba(239, 68, 68, 0.05)", border: "1px solid rgba(239, 68, 68, 0.15)" }}
+                  >
+                    {result.errorDetails.slice(0, 10).map((e, i) => (
+                      <p key={i} style={{ color: "#ef4444" }}>{e}</p>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+            <button
+              onClick={resetAll}
+              className="btn-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold mt-8 inline-flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              {t("newImport")}
+            </button>
+          </div>
+
+          {/* Quick Stats After Import */}
+          {quickStats && result.success > 0 && (
+            <div className="metric-card rounded-2xl p-6">
+              <h3 className="font-semibold flex items-center gap-2 mb-5" style={{ color: "var(--text-primary)" }}>
+                <BarChart3 className="w-5 h-5" style={{ color: "#0ea5e9" }} />
+                {t("importQuickStats")}
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="text-center p-3 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
+                  <TrendingUp className="w-5 h-5 mx-auto mb-1.5" style={{ color: "#0ea5e9" }} />
+                  <p className="text-xl font-bold mono" style={{ color: "var(--text-primary)" }}>{quickStats.totalTrades}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{t("importStatTrades")}</p>
+                </div>
+                <div className="text-center p-3 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
+                  <Calendar className="w-5 h-5 mx-auto mb-1.5" style={{ color: "#8b5cf6" }} />
+                  <p className="text-xs font-bold mono" style={{ color: "var(--text-primary)" }}>{quickStats.dateRange}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{t("importStatPeriod")}</p>
+                </div>
+                <div className="text-center p-3 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
+                  <CheckCircle2 className="w-5 h-5 mx-auto mb-1.5" style={{ color: quickStats.winRate >= 50 ? "#10b981" : "#ef4444" }} />
+                  <p className="text-xl font-bold mono" style={{ color: quickStats.winRate >= 50 ? "#10b981" : "#ef4444" }}>
+                    {quickStats.winRate}%
+                  </p>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{t("importStatWinRate")}</p>
+                </div>
+                <div className="text-center p-3 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
+                  <BarChart3 className="w-5 h-5 mx-auto mb-1.5" style={{ color: quickStats.totalPnl >= 0 ? "#10b981" : "#ef4444" }} />
+                  <p className="text-xl font-bold mono" style={{ color: quickStats.totalPnl >= 0 ? "#10b981" : "#ef4444" }}>
+                    {quickStats.totalPnl >= 0 ? "+" : ""}{quickStats.totalPnl.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{t("importStatPnl")}</p>
+                </div>
+                <div className="text-center p-3 rounded-xl" style={{ background: "var(--bg-secondary)" }}>
+                  <Trophy className="w-5 h-5 mx-auto mb-1.5" style={{ color: "#f59e0b" }} />
+                  <p className="text-sm font-bold mono" style={{ color: "var(--text-primary)" }}>{quickStats.topAsset}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{t("importStatTopAsset")}</p>
+                </div>
+              </div>
+            </div>
           )}
-          <button
-            onClick={resetAll}
-            className="btn-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold mt-8 inline-flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            {t("newImport")}
-          </button>
+        </div>
+      )}
+
+      {/* ─── Import History ─── */}
+      {importHistory.length > 0 && (
+        <div className="metric-card rounded-2xl p-6">
+          <h3 className="font-semibold flex items-center gap-2 mb-5" style={{ color: "var(--text-primary)" }}>
+            <History className="w-5 h-5" style={{ color: "#8b5cf6" }} />
+            {t("importHistoryTitle")}
+          </h3>
+          <div className="space-y-2">
+            {importHistory.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex items-center gap-4 p-3 rounded-xl transition-all"
+                style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)" }}
+              >
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(14, 165, 233, 0.1)" }}
+                >
+                  <FileSpreadsheet className="w-5 h-5" style={{ color: "#0ea5e9" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold truncate" style={{ color: "var(--text-primary)" }}>
+                      {entry.fileName}
+                    </p>
+                    <span
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0"
+                      style={{ background: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6", border: "1px solid rgba(139, 92, 246, 0.2)" }}
+                    >
+                      {entry.platform}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      {new Date(entry.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span className="text-xs font-medium" style={{ color: "#10b981" }}>
+                      {entry.tradesCount} trades
+                    </span>
+                    {entry.quickStats && (
+                      <>
+                        <span className="text-xs" style={{ color: entry.quickStats.winRate >= 50 ? "#10b981" : "#ef4444" }}>
+                          WR {entry.quickStats.winRate}%
+                        </span>
+                        <span className="text-xs font-mono" style={{ color: entry.quickStats.totalPnl >= 0 ? "#10b981" : "#ef4444" }}>
+                          {entry.quickStats.totalPnl >= 0 ? "+" : ""}{entry.quickStats.totalPnl.toLocaleString()}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => deleteHistoryEntry(entry.id)}
+                  className="p-1.5 rounded-lg transition-colors hover:bg-red-500/10 shrink-0"
+                  style={{ color: "var(--text-muted)" }}
+                  title={t("deleteImportHistory")}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

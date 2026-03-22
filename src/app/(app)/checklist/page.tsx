@@ -1,13 +1,32 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "@/i18n/context";
-import { CheckSquare, Plus, Trash2, GripVertical, Shield, AlertTriangle, Save, RotateCcw, TrendingUp, Brain, Loader2 } from "lucide-react";
+import {
+  CheckSquare,
+  Plus,
+  Trash2,
+  GripVertical,
+  Shield,
+  AlertTriangle,
+  Save,
+  RotateCcw,
+  TrendingUp,
+  Brain,
+  Loader2,
+  BookOpen,
+  Flame,
+  Clock,
+  PlayCircle,
+  ClipboardCheck,
+  X,
+} from "lucide-react";
 
 interface Rule {
   id: string;
   text: string;
   category: "risk" | "setup" | "mental" | "exit";
+  phase: "pre" | "during" | "post";
 }
 
 interface ChecklistEntry {
@@ -24,19 +43,62 @@ const CATEGORIES = {
   exit: { labelKey: "exitAndManagement", icon: AlertTriangle, color: "text-rose-400" },
 };
 
-const DEFAULT_RULES: Rule[] = [
-  { id: "r1", text: "Mon risque est <= 2% du capital", category: "risk" },
-  { id: "r2", text: "Mon SL est placé à un niveau technique logique", category: "risk" },
-  { id: "r3", text: "Mon R:R est >= 1:2", category: "risk" },
-  { id: "r4", text: "J'ai identifié la tendance sur le timeframe supérieur", category: "setup" },
-  { id: "r5", text: "Mon setup correspond à une stratégie du Playbook", category: "setup" },
-  { id: "r6", text: "J'ai vérifié le calendrier économique", category: "setup" },
-  { id: "r7", text: "Je ne suis pas en revenge trading", category: "mental" },
-  { id: "r8", text: "J'ai respecté mon plan de trading", category: "mental" },
-  { id: "r9", text: "Je suis dans un état émotionnel stable", category: "mental" },
-  { id: "r10", text: "J'ai un TP clair ou un plan de sortie", category: "exit" },
-  { id: "r11", text: "Je ne déplacerai pas mon SL dans le mauvais sens", category: "exit" },
+const PHASES = {
+  pre: { labelKey: "phasePre", icon: ClipboardCheck, color: "#0ea5e9" },
+  during: { labelKey: "phaseDuring", icon: PlayCircle, color: "#f59e0b" },
+  post: { labelKey: "phasePost", icon: Clock, color: "#8b5cf6" },
+};
+
+interface TemplateRule {
+  text: string;
+  category: Rule["category"];
+  phase: Rule["phase"];
+}
+
+const TEMPLATE_RULES: TemplateRule[] = [
+  // Pre-trade
+  { text: "Vérifier le calendrier éco", category: "setup", phase: "pre" },
+  { text: "Confirmer le biais daily", category: "setup", phase: "pre" },
+  { text: "Identifier support/résistance", category: "setup", phase: "pre" },
+  { text: "Calculer la taille de position", category: "risk", phase: "pre" },
+  { text: "Vérifier le R:R minimum", category: "risk", phase: "pre" },
+  // During
+  { text: "Ne pas déplacer le SL", category: "exit", phase: "during" },
+  { text: "Respecter le plan initial", category: "mental", phase: "during" },
+  { text: "Prendre des partiels au TP1", category: "exit", phase: "during" },
+  { text: "Ne pas ajouter au perdant", category: "risk", phase: "during" },
+  { text: "Surveiller les news", category: "setup", phase: "during" },
+  // Post-trade
+  { text: "Noter les émotions", category: "mental", phase: "post" },
+  { text: "Capturer le screenshot", category: "setup", phase: "post" },
+  { text: "Évaluer le respect du plan", category: "mental", phase: "post" },
+  { text: "Identifier les erreurs", category: "mental", phase: "post" },
+  { text: "Mettre à jour le journal", category: "setup", phase: "post" },
 ];
+
+const DEFAULT_RULES: Rule[] = [
+  { id: "r1", text: "Mon risque est <= 2% du capital", category: "risk", phase: "pre" },
+  { id: "r2", text: "Mon SL est placé à un niveau technique logique", category: "risk", phase: "pre" },
+  { id: "r3", text: "Mon R:R est >= 1:2", category: "risk", phase: "pre" },
+  { id: "r4", text: "J'ai identifié la tendance sur le timeframe supérieur", category: "setup", phase: "pre" },
+  { id: "r5", text: "Mon setup correspond à une stratégie du Playbook", category: "setup", phase: "pre" },
+  { id: "r6", text: "J'ai vérifié le calendrier économique", category: "setup", phase: "pre" },
+  { id: "r7", text: "Je ne suis pas en revenge trading", category: "mental", phase: "during" },
+  { id: "r8", text: "J'ai respecté mon plan de trading", category: "mental", phase: "during" },
+  { id: "r9", text: "Je suis dans un état émotionnel stable", category: "mental", phase: "pre" },
+  { id: "r10", text: "J'ai un TP clair ou un plan de sortie", category: "exit", phase: "pre" },
+  { id: "r11", text: "Je ne déplacerai pas mon SL dans le mauvais sens", category: "exit", phase: "during" },
+];
+
+function inferPhase(rule: { category: string; text: string; phase?: string }): Rule["phase"] {
+  if (rule.phase && (rule.phase === "pre" || rule.phase === "during" || rule.phase === "post")) {
+    return rule.phase;
+  }
+  const t = rule.text.toLowerCase();
+  if (t.includes("journal") || t.includes("screenshot") || t.includes("émotion") || t.includes("erreur") || t.includes("évaluer")) return "post";
+  if (t.includes("déplacer") || t.includes("revenge") || t.includes("respecter") || t.includes("partiel") || t.includes("ajouter")) return "during";
+  return "pre";
+}
 
 export default function ChecklistPage() {
   const { t } = useTranslation();
@@ -46,11 +108,14 @@ export default function ChecklistPage() {
   const [history, setHistory] = useState<ChecklistEntry[]>([]);
   const [newRule, setNewRule] = useState("");
   const [newCategory, setNewCategory] = useState<Rule["category"]>("setup");
+  const [newPhase, setNewPhase] = useState<Rule["phase"]>("pre");
   const [showAddRule, setShowAddRule] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [activePhase, setActivePhase] = useState<Rule["phase"] | "all">("all");
 
   // Fetch rules from API
   const fetchRules = useCallback(async () => {
@@ -62,15 +127,18 @@ export default function ChecklistPage() {
       }
       const data = await res.json();
       if (data.length === 0) {
-        // Seed default rules for new users
         await seedDefaultRules();
       } else {
         setRules(
-          data.map((r: { id: string; text: string; category?: string }) => ({
-            id: r.id,
-            text: r.text,
-            category: r.category || "setup",
-          }))
+          data.map((r: { id: string; text: string; category?: string; phase?: string }) => {
+            const withCategory = { ...r, category: r.category || "setup" };
+            return {
+              id: r.id,
+              text: r.text,
+              category: withCategory.category,
+              phase: inferPhase(withCategory),
+            };
+          })
         );
       }
     } catch (err) {
@@ -81,7 +149,6 @@ export default function ChecklistPage() {
     }
   }, []);
 
-  // Seed default rules for first-time users
   const seedDefaultRules = async () => {
     try {
       const created: Rule[] = [];
@@ -93,7 +160,12 @@ export default function ChecklistPage() {
         });
         if (res.ok) {
           const data = await res.json();
-          created.push({ id: data.id, text: data.text, category: data.category || "setup" });
+          created.push({
+            id: data.id,
+            text: data.text,
+            category: data.category || "setup",
+            phase: inferPhase({ ...rule, category: data.category || rule.category, text: data.text }),
+          });
         }
       }
       setRules(created);
@@ -103,11 +175,8 @@ export default function ChecklistPage() {
     }
   };
 
-  // Load rules from API + history/checks from localStorage
   useEffect(() => {
     fetchRules();
-
-    // Load history and today's checks from localStorage
     const savedHistory = localStorage.getItem("checklist-history");
     if (savedHistory) {
       const parsed = JSON.parse(savedHistory);
@@ -128,6 +197,35 @@ export default function ChecklistPage() {
   const checkedCount = rules.filter((r) => checks[r.id]).length;
   const score = rules.length > 0 ? Math.round((checkedCount / rules.length) * 100) : 0;
   const canTrade = score >= 80;
+
+  // Compliance score per phase
+  const phaseScores = useMemo(() => {
+    const result: Record<string, { checked: number; total: number; pct: number }> = {};
+    for (const phase of ["pre", "during", "post"] as const) {
+      const phaseRules = rules.filter((r) => r.phase === phase);
+      const checked = phaseRules.filter((r) => checks[r.id]).length;
+      result[phase] = {
+        checked,
+        total: phaseRules.length,
+        pct: phaseRules.length > 0 ? Math.round((checked / phaseRules.length) * 100) : 0,
+      };
+    }
+    return result;
+  }, [rules, checks]);
+
+  // Streak counter: consecutive 100% days
+  const streak = useMemo(() => {
+    let count = 0;
+    const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
+    for (const entry of sorted) {
+      if (entry.score === 100) {
+        count++;
+      } else {
+        break;
+      }
+    }
+    return count;
+  }, [history]);
 
   const getScoreColor = (s: number) => {
     if (s >= 80) return "text-emerald-400";
@@ -169,11 +267,34 @@ export default function ChecklistPage() {
         throw new Error(t("createRuleError"));
       }
       const data = await res.json();
-      setRules((prev) => [...prev, { id: data.id, text: data.text, category: data.category || newCategory }]);
+      setRules((prev) => [...prev, { id: data.id, text: data.text, category: data.category || newCategory, phase: newPhase }]);
       setNewRule("");
       setShowAddRule(false);
     } catch (err) {
       console.error("Failed to add rule:", err);
+      setError(t("cannotAddRule"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addTemplateRule = async (template: TemplateRule) => {
+    if (saving) return;
+    // Check if rule text already exists
+    if (rules.some((r) => r.text === template.text)) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/trading-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: template.text, category: template.category }),
+      });
+      if (!res.ok) throw new Error(t("createRuleError"));
+      const data = await res.json();
+      setRules((prev) => [...prev, { id: data.id, text: data.text, category: data.category || template.category, phase: template.phase }]);
+    } catch (err) {
+      console.error("Failed to add template rule:", err);
       setError(t("cannotAddRule"));
     } finally {
       setSaving(false);
@@ -194,18 +315,27 @@ export default function ChecklistPage() {
     }
   };
 
-  // Group rules by category
+  // Group rules by phase then category
+  const filteredRules = activePhase === "all" ? rules : rules.filter((r) => r.phase === activePhase);
+
   const grouped = Object.entries(CATEGORIES).map(([key, cat]) => ({
     key: key as Rule["category"],
     label: t(cat.labelKey),
     icon: cat.icon,
     color: cat.color,
-    rules: rules.filter((r) => r.category === key),
+    rules: filteredRules.filter((r) => r.category === key),
   }));
 
   // History stats
   const avgScore = history.length > 0 ? Math.round(history.reduce((s, h) => s + h.score, 0) / history.length) : 0;
   const perfectDays = history.filter((h) => h.score === 100).length;
+
+  // Template rules grouped by phase
+  const templatesByPhase = {
+    pre: TEMPLATE_RULES.filter((r) => r.phase === "pre"),
+    during: TEMPLATE_RULES.filter((r) => r.phase === "during"),
+    post: TEMPLATE_RULES.filter((r) => r.phase === "post"),
+  };
 
   if (loading) {
     return (
@@ -243,38 +373,126 @@ export default function ChecklistPage() {
         </div>
       )}
 
-      {/* Score Card */}
-      <div className={`glass rounded-2xl p-6 border-2 transition-all ${canTrade ? "border-emerald-500/30" : score >= 60 ? "border-amber-500/30" : "border-rose-500/30"}`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-[--text-muted]">{t("disciplineScore")}</p>
-            <p className={`text-5xl font-bold mono mt-2 ${getScoreColor(score)}`}>{score}%</p>
-            <p className={`text-sm font-medium mt-2 ${getScoreColor(score)}`}>{getScoreLabel(score)}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-[--text-muted]">{checkedCount}/{rules.length} {t("rules")}</p>
-            {/* Circular progress */}
-            <div className="relative w-24 h-24 mt-2">
-              <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-subtle)" strokeWidth="8" />
-                <circle
-                  cx="50" cy="50" r="42" fill="none"
-                  stroke={score >= 80 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444"}
-                  strokeWidth="8" strokeLinecap="round"
-                  strokeDasharray={`${score * 2.64} 264`}
-                  className="transition-all duration-500"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                {canTrade ? (
-                  <CheckSquare className="w-8 h-8 text-emerald-400" />
-                ) : (
-                  <AlertTriangle className="w-8 h-8 text-rose-400" />
-                )}
+      {/* Score Card + Streak + Compliance */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Main Score */}
+        <div className={`glass rounded-2xl p-6 border-2 transition-all lg:col-span-2 ${canTrade ? "border-emerald-500/30" : score >= 60 ? "border-amber-500/30" : "border-rose-500/30"}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-[--text-muted]">{t("disciplineScore")}</p>
+              <p className={`text-5xl font-bold mono mt-2 ${getScoreColor(score)}`}>{score}%</p>
+              <p className={`text-sm font-medium mt-2 ${getScoreColor(score)}`}>{getScoreLabel(score)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-[--text-muted]">{checkedCount}/{rules.length} {t("rules")}</p>
+              <div className="relative w-24 h-24 mt-2">
+                <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border-subtle)" strokeWidth="8" />
+                  <circle
+                    cx="50" cy="50" r="42" fill="none"
+                    stroke={score >= 80 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444"}
+                    strokeWidth="8" strokeLinecap="round"
+                    strokeDasharray={`${score * 2.64} 264`}
+                    className="transition-all duration-500"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {canTrade ? (
+                    <CheckSquare className="w-8 h-8 text-emerald-400" />
+                  ) : (
+                    <AlertTriangle className="w-8 h-8 text-rose-400" />
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Streak + Phase Compliance */}
+        <div className="space-y-4">
+          {/* Streak Counter */}
+          <div className="glass rounded-2xl p-5 border border-[--border-subtle]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-orange-500/10">
+                <Flame className="w-5 h-5 text-orange-400" />
+              </div>
+              <div>
+                <p className="text-xs text-[--text-muted]">{t("streakPerfectDays")}</p>
+                <p className="text-2xl font-bold mono text-orange-400">{streak}</p>
+              </div>
+            </div>
+            {streak > 0 && (
+              <p className="text-xs text-orange-300/70 mt-2">
+                {streak} {t("streakDaysMessage")}
+              </p>
+            )}
+            {streak === 0 && (
+              <p className="text-xs text-[--text-muted] mt-2">{t("streakStartToday")}</p>
+            )}
+          </div>
+
+          {/* Phase Compliance Mini */}
+          <div className="glass rounded-2xl p-5 border border-[--border-subtle]">
+            <p className="text-xs text-[--text-muted] mb-3">{t("complianceByPhase")}</p>
+            <div className="space-y-2">
+              {(["pre", "during", "post"] as const).map((phase) => {
+                const ps = phaseScores[phase];
+                const phaseInfo = PHASES[phase];
+                return (
+                  <div key={phase} className="flex items-center gap-2">
+                    <span className="text-[10px] font-medium w-16 truncate" style={{ color: phaseInfo.color }}>{t(phaseInfo.labelKey)}</span>
+                    <div className="flex-1 h-2 rounded-full bg-[--bg-secondary]">
+                      <div
+                        className="h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${ps.pct}%`, background: phaseInfo.color }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-mono text-[--text-muted] w-10 text-right">{ps.pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Phase Tabs */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setActivePhase("all")}
+          className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+            activePhase === "all"
+              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+              : "glass text-[--text-secondary] hover:text-[--text-primary]"
+          }`}
+        >
+          {t("phaseAll")}
+        </button>
+        {(["pre", "during", "post"] as const).map((phase) => {
+          const phaseInfo = PHASES[phase];
+          const PhaseIcon = phaseInfo.icon;
+          const ps = phaseScores[phase];
+          return (
+            <button
+              key={phase}
+              onClick={() => setActivePhase(phase)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                activePhase === phase
+                  ? "border"
+                  : "glass text-[--text-secondary] hover:text-[--text-primary]"
+              }`}
+              style={activePhase === phase ? {
+                background: `${phaseInfo.color}15`,
+                borderColor: `${phaseInfo.color}50`,
+                color: phaseInfo.color,
+              } : undefined}
+            >
+              <PhaseIcon className="w-3.5 h-3.5" />
+              {t(phaseInfo.labelKey)}
+              <span className="text-[10px] opacity-70">({ps.checked}/{ps.total})</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Checklist by category */}
@@ -307,6 +525,16 @@ export default function ChecklistPage() {
                   <span className={`text-sm flex-1 ${checks[rule.id] ? "text-emerald-300 line-through opacity-70" : "text-[--text-primary]"}`}>
                     {rule.text}
                   </span>
+                  {/* Phase badge */}
+                  <span
+                    className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shrink-0"
+                    style={{
+                      background: `${PHASES[rule.phase].color}15`,
+                      color: PHASES[rule.phase].color,
+                    }}
+                  >
+                    {rule.phase}
+                  </span>
                   {editMode && (
                     <button onClick={(e) => { e.stopPropagation(); removeRule(rule.id); }} className="text-rose-400 hover:text-rose-300">
                       <Trash2 className="w-4 h-4" />
@@ -333,8 +561,8 @@ export default function ChecklistPage() {
         />
       </div>
 
-      {/* Add Rule / Edit Mode */}
-      <div className="flex gap-3">
+      {/* Add Rule / Edit Mode / Templates */}
+      <div className="flex gap-3 flex-wrap">
         <button
           onClick={() => setEditMode(!editMode)}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${editMode ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" : "glass text-[--text-secondary] hover:text-[--text-primary]"}`}
@@ -347,19 +575,39 @@ export default function ChecklistPage() {
         >
           <Plus className="w-4 h-4" /> {t("addRule")}
         </button>
+        <button
+          onClick={() => setShowTemplates(!showTemplates)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            showTemplates
+              ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
+              : "glass text-[--text-secondary] hover:text-[--text-primary]"
+          }`}
+        >
+          <BookOpen className="w-4 h-4" /> {t("templatesButton")}
+        </button>
       </div>
 
+      {/* Add Rule Form */}
       {showAddRule && (
         <div className="glass rounded-2xl p-5">
           <h3 className="font-semibold text-[--text-primary] mb-3">{t("newRule")}</h3>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as Rule["category"])}
-              className="input-field w-48"
+              className="input-field w-44"
             >
               {Object.entries(CATEGORIES).map(([key, { labelKey }]) => (
                 <option key={key} value={key}>{t(labelKey)}</option>
+              ))}
+            </select>
+            <select
+              value={newPhase}
+              onChange={(e) => setNewPhase(e.target.value as Rule["phase"])}
+              className="input-field w-36"
+            >
+              {(["pre", "during", "post"] as const).map((p) => (
+                <option key={p} value={p}>{t(PHASES[p].labelKey)}</option>
               ))}
             </select>
             <input
@@ -368,7 +616,7 @@ export default function ChecklistPage() {
               onChange={(e) => setNewRule(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addRule()}
               placeholder={t("ruleTextPlaceholder")}
-              className="input-field flex-1"
+              className="input-field flex-1 min-w-[200px]"
             />
             <button
               onClick={addRule}
@@ -377,6 +625,63 @@ export default function ChecklistPage() {
             >
               {saving ? "..." : t("add")}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Templates Library */}
+      {showTemplates && (
+        <div className="glass rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-semibold text-[--text-primary] flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-violet-400" />
+              {t("templatesLibrary")}
+            </h3>
+            <button onClick={() => setShowTemplates(false)} className="text-[--text-muted] hover:text-[--text-primary]">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-xs text-[--text-muted] mb-4">{t("templatesDesc")}</p>
+          <div className="space-y-5">
+            {(["pre", "during", "post"] as const).map((phase) => {
+              const phaseInfo = PHASES[phase];
+              const PhaseIcon = phaseInfo.icon;
+              const templates = templatesByPhase[phase];
+              return (
+                <div key={phase}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <PhaseIcon className="w-4 h-4" style={{ color: phaseInfo.color }} />
+                    <span className="text-sm font-semibold" style={{ color: phaseInfo.color }}>{t(phaseInfo.labelKey)}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {templates.map((tmpl) => {
+                      const alreadyAdded = rules.some((r) => r.text === tmpl.text);
+                      return (
+                        <button
+                          key={tmpl.text}
+                          onClick={() => !alreadyAdded && addTemplateRule(tmpl)}
+                          disabled={alreadyAdded || saving}
+                          className={`text-left p-3 rounded-xl text-xs transition-all ${
+                            alreadyAdded
+                              ? "opacity-40 cursor-not-allowed bg-[--bg-secondary]/30 border border-[--border-subtle]"
+                              : "bg-[--bg-secondary]/30 border border-[--border-subtle] hover:border-violet-500/40 hover:bg-violet-500/5 cursor-pointer"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            {alreadyAdded ? (
+                              <CheckSquare className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                            ) : (
+                              <Plus className="w-3.5 h-3.5 text-violet-400 shrink-0 mt-0.5" />
+                            )}
+                            <span className="text-[--text-primary]">{tmpl.text}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

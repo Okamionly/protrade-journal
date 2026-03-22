@@ -1829,5 +1829,26 @@
   "wlHeatCold": "Inactif (30+ jours)",
   "wlHeatNeutral": "Normal",
   "wlAlertTriggered": "Alerte d\u00e9clench\u00e9e : {symbol} a atteint {price}",
-  "wlActiveAlerts": "{count} alerte(s) active(s)"
+  "wlActiveAlerts": "{count} alerte(s) active(s)",
+
+  "phasePre": "Pré-Trade",
+  "phaseDuring": "En cours",
+  "phasePost": "Post-Trade",
+  "phaseAll": "Toutes",
+  "templatesButton": "Modèles",
+  "templatesLibrary": "Bibliothèque de modèles",
+  "templatesDesc": "Cliquez sur un modèle pour l'ajouter à votre checklist. Les règles déjà ajoutées sont grisées.",
+  "streakPerfectDays": "Série parfaite",
+  "streakDaysMessage": "jours de discipline parfaite",
+  "streakStartToday": "Commencez aujourd'hui pour lancer votre série !",
+  "complianceByPhase": "Conformité par phase",
+
+  "importHistoryTitle": "Historique des imports",
+  "importQuickStats": "Résumé de l'import",
+  "importStatTrades": "Trades importés",
+  "importStatPeriod": "Période couverte",
+  "importStatWinRate": "Win Rate",
+  "importStatPnl": "P&L Total",
+  "importStatTopAsset": "Actif principal",
+  "deleteImportHistory": "Supprimer de l'historique"
 }

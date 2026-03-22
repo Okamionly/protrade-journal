@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { RefreshCw, Activity, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { RefreshCw, Activity, ArrowUpRight, ArrowDownRight, Zap, Target, BarChart3 } from "lucide-react";
+import { useTrades } from "@/hooks/useTrades";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,6 +26,34 @@ interface ApiResponse {
   timestamp: number;
 }
 
+interface StrengthSnapshot {
+  strengths: Record<Currency, number>;
+  timestamp: number;
+}
+
+interface RankChange {
+  currency: Currency;
+  oldRank: number;
+  newRank: number;
+  change: number; // positive = gained ranks (improved)
+}
+
+interface BestPairSuggestion {
+  pair: string;
+  longCcy: Currency;
+  shortCcy: Currency;
+  longRank: number;
+  shortRank: number;
+  divergence: number;
+}
+
+interface CurrencyWinRate {
+  currency: Currency;
+  wins: number;
+  total: number;
+  winRate: number;
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -42,18 +71,12 @@ const CURRENCY_INFO: Record<Currency, { flag: string; name: string }> = {
 };
 
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+const HISTORY_STORAGE_KEY = "currency-strength-history";
+const MAX_HISTORY_POINTS = 288; // 24h at 5-min intervals
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function getBarColor(value: number): string {
-  if (value >= 70) return "bg-green-600";
-  if (value >= 55) return "bg-green-500";
-  if (value >= 45) return "bg-gray-400";
-  if (value >= 30) return "bg-orange-500";
-  return "bg-red-500";
-}
-
 function getBarGradient(value: number): string {
   if (value >= 70) return "from-green-600 to-green-500";
   if (value >= 55) return "from-green-500 to-emerald-400";
@@ -94,12 +117,312 @@ function formatRate(rate: number): string {
   return rate.toFixed(4);
 }
 
+function getRanking(strengths: Record<Currency, number>): Currency[] {
+  return CURRENCIES.slice().sort(
+    (a, b) => (strengths[b] ?? 50) - (strengths[a] ?? 50)
+  );
+}
+
+/** Extract currency codes from a trade asset like "EUR/USD" or "EURUSD" */
+function extractCurrencies(asset: string): Currency[] {
+  const upper = asset.toUpperCase().replace(/[^A-Z]/g, "");
+  const result: Currency[] = [];
+  for (const c of CURRENCIES) {
+    if (upper.includes(c)) result.push(c);
+  }
+  return result;
+}
+
 // ---------------------------------------------------------------------------
-// Section A: Strength Rankings
+// History persistence (localStorage)
 // ---------------------------------------------------------------------------
-function StrengthRankings({ strengths }: { strengths: Record<Currency, number> }) {
+function loadHistory(): StrengthSnapshot[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as StrengthSnapshot[];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(history: StrengthSnapshot[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+  } catch {
+    // quota exceeded — drop oldest
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SVG Sparkline Component
+// ---------------------------------------------------------------------------
+function Sparkline({ values, width = 30, height = 16 }: { values: number[]; width?: number; height?: number }) {
+  if (values.length < 2) return null;
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const points = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * width;
+    const y = height - ((v - min) / range) * height;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+
+  const trending = values[values.length - 1] >= values[0];
+  const color = trending ? "#22c55e" : "#ef4444";
+
+  return (
+    <svg width={width} height={height} className="inline-block align-middle">
+      <polyline
+        points={points.join(" ")}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Feature 1: Strength Change Alerts
+// ---------------------------------------------------------------------------
+function StrengthChangeAlerts({ changes }: { changes: RankChange[] }) {
+  const significant = changes.filter((c) => Math.abs(c.change) >= 2);
+  if (significant.length === 0) return null;
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+        <Zap className="w-5 h-5 text-yellow-400" />
+        Alertes de Momentum
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {significant
+          .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
+          .map((c) => {
+            const gaining = c.change > 0;
+            const info = CURRENCY_INFO[c.currency];
+            return (
+              <div
+                key={c.currency}
+                className={`rounded-xl border p-4 flex items-center gap-3 transition-all ${
+                  gaining
+                    ? "border-green-500/30 bg-green-500/5"
+                    : "border-red-500/30 bg-red-500/5"
+                }`}
+              >
+                <div
+                  className={`flex items-center justify-center w-10 h-10 rounded-lg text-lg ${
+                    gaining ? "bg-green-500/20" : "bg-red-500/20"
+                  }`}
+                >
+                  {info.flag}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-[var(--text-primary)]">
+                      {c.currency}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                        gaining
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-red-500/20 text-red-400"
+                      }`}
+                    >
+                      {gaining ? "+" : ""}{c.change} places
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                    {gaining
+                      ? `${info.name} a gagne ${Math.abs(c.change)} places — momentum haussier`
+                      : `${info.name} a perdu ${Math.abs(c.change)} places — momentum baissier`}
+                  </p>
+                </div>
+                {gaining ? (
+                  <ArrowUpRight className="w-5 h-5 text-green-400 shrink-0" />
+                ) : (
+                  <ArrowDownRight className="w-5 h-5 text-red-400 shrink-0" />
+                )}
+              </div>
+            );
+          })}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Feature 2: Best Pairs Suggestions
+// ---------------------------------------------------------------------------
+function BestPairsSuggestions({ suggestions }: { suggestions: BestPairSuggestion[] }) {
+  if (suggestions.length === 0) return null;
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+        <Target className="w-5 h-5 text-cyan-400" />
+        Meilleures Paires a Trader
+      </h2>
+      <div className="space-y-3">
+        {suggestions.map((s, i) => {
+          const longInfo = CURRENCY_INFO[s.longCcy];
+          const shortInfo = CURRENCY_INFO[s.shortCcy];
+          return (
+            <div
+              key={s.pair}
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* Rank badge */}
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 text-sm font-bold">
+                    #{i + 1}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-bold text-[var(--text-primary)]">
+                        LONG {s.pair}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-green-500/20 text-green-400">
+                        force
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                      {longInfo.flag} {s.longCcy} #{s.longRank} force —{" "}
+                      {shortInfo.flag} {s.shortCcy} #{s.shortRank} faiblesse
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0 ml-3">
+                  <div className="text-xl font-bold text-cyan-400">
+                    {s.divergence}
+                  </div>
+                  <div className="text-[10px] text-[var(--text-secondary)]">divergence</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Feature 4: Performance per Currency
+// ---------------------------------------------------------------------------
+function CurrencyPerformance({ winRates }: { winRates: CurrencyWinRate[] }) {
+  if (winRates.length === 0) return null;
+
+  const sorted = [...winRates].sort((a, b) => b.winRate - a.winRate);
+  const best = sorted[0];
+  const worst = sorted[sorted.length - 1];
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+        <BarChart3 className="w-5 h-5 text-purple-400" />
+        Votre Performance par Devise
+      </h2>
+      <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-5 space-y-3">
+        {sorted.map((wr) => {
+          const info = CURRENCY_INFO[wr.currency];
+          const isBest = wr.currency === best.currency && winRates.length > 1;
+          const isWorst = wr.currency === worst.currency && winRates.length > 1 && worst.currency !== best.currency;
+          const barColor =
+            wr.winRate >= 60
+              ? "from-green-600 to-green-500"
+              : wr.winRate >= 50
+              ? "from-yellow-500 to-yellow-400"
+              : "from-red-600 to-red-500";
+          const textColor =
+            wr.winRate >= 60
+              ? "text-green-400"
+              : wr.winRate >= 50
+              ? "text-yellow-400"
+              : "text-red-400";
+
+          return (
+            <div key={wr.currency} className="flex items-center gap-3">
+              {/* Flag + currency */}
+              <div className="flex items-center gap-2 w-24 shrink-0">
+                <span className="text-lg">{info.flag}</span>
+                <span className="text-sm font-bold text-[var(--text-primary)]">
+                  {wr.currency}
+                </span>
+              </div>
+
+              {/* Win-rate bar */}
+              <div className="flex-1 h-6 rounded-md bg-[var(--bg-secondary)]/60 overflow-hidden relative">
+                <div
+                  className={`h-full rounded-md bg-gradient-to-r ${barColor} transition-all duration-700 ease-out`}
+                  style={{ width: `${wr.winRate}%` }}
+                />
+              </div>
+
+              {/* Stats */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-sm font-bold w-12 text-right ${textColor}`}>
+                  {wr.winRate.toFixed(0)}%
+                </span>
+                <span className="text-[10px] text-[var(--text-secondary)] w-20 text-right">
+                  ({wr.wins}/{wr.total} trades)
+                </span>
+                {isBest && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+                    meilleur
+                  </span>
+                )}
+                {isWorst && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+                    a travailler
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {winRates.length === 0 && (
+          <p className="text-sm text-[var(--text-secondary)]">
+            Aucun trade enregistre pour calculer les statistiques
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section A: Strength Rankings (with sparklines)
+// ---------------------------------------------------------------------------
+function StrengthRankings({
+  strengths,
+  history,
+}: {
+  strengths: Record<Currency, number>;
+  history: StrengthSnapshot[];
+}) {
   const sorted = CURRENCIES.slice()
     .sort((a, b) => (strengths[b] ?? 50) - (strengths[a] ?? 50));
+
+  // Build sparkline data per currency from history
+  const sparklines = useMemo(() => {
+    const result: Record<Currency, number[]> = {} as Record<Currency, number[]>;
+    for (const c of CURRENCIES) {
+      result[c] = history.map((snap) => snap.strengths[c] ?? 50);
+      // Add current value at end
+      result[c].push(strengths[c] ?? 50);
+    }
+    return result;
+  }, [history, strengths]);
 
   return (
     <div>
@@ -121,7 +444,13 @@ function StrengthRankings({ strengths }: { strengths: Record<Currency, number> }
               <div className="flex items-center gap-2 w-28 shrink-0">
                 <span className="text-lg">{info.flag}</span>
                 <div>
-                  <span className="text-sm font-bold text-[var(--text-primary)]">{currency}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-bold text-[var(--text-primary)]">{currency}</span>
+                    {/* Sparkline */}
+                    {sparklines[currency].length >= 2 && (
+                      <Sparkline values={sparklines[currency]} />
+                    )}
+                  </div>
                   <div className="text-[10px] text-[var(--text-secondary)] leading-tight">{info.name}</div>
                 </div>
               </div>
@@ -467,7 +796,16 @@ export default function CurrencyStrengthPage() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<string>("");
+  const [history, setHistory] = useState<StrengthSnapshot[]>([]);
+  const [prevRanking, setPrevRanking] = useState<Currency[] | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const { trades } = useTrades();
+
+  // Load history from localStorage on mount
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -475,14 +813,34 @@ export default function CurrencyStrengthPage() {
       const res = await fetch("/api/currency-strength");
       if (res.ok) {
         const json: ApiResponse = await res.json();
+
+        // Save previous ranking before updating
+        if (data?.strengths) {
+          setPrevRanking(getRanking(data.strengths));
+        }
+
         setData(json);
         setLastUpdate(new Date().toLocaleTimeString("fr-FR"));
+
+        // Append to history
+        const snapshot: StrengthSnapshot = {
+          strengths: json.strengths,
+          timestamp: Date.now(),
+        };
+        setHistory((prev) => {
+          const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+          const filtered = prev.filter((s) => s.timestamp > cutoff);
+          const updated = [...filtered, snapshot].slice(-MAX_HISTORY_POINTS);
+          saveHistory(updated);
+          return updated;
+        });
       }
     } catch {
       // keep previous data
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Initial load + auto-refresh every 5 min
@@ -498,6 +856,89 @@ export default function CurrencyStrengthPage() {
   const matrix = data?.matrix ?? [];
   const pairs = data?.pairs ?? [];
   const rates = data?.rates ?? {};
+
+  // ---- Feature 1: Compute rank changes ----
+  const rankChanges = useMemo<RankChange[]>(() => {
+    if (!prevRanking || !data?.strengths) return [];
+    const currentRanking = getRanking(data.strengths);
+    const changes: RankChange[] = [];
+    for (const currency of CURRENCIES) {
+      const oldRank = prevRanking.indexOf(currency) + 1;
+      const newRank = currentRanking.indexOf(currency) + 1;
+      if (oldRank > 0 && newRank > 0 && oldRank !== newRank) {
+        changes.push({
+          currency,
+          oldRank,
+          newRank,
+          change: oldRank - newRank, // positive = moved up
+        });
+      }
+    }
+    return changes;
+  }, [prevRanking, data?.strengths]);
+
+  // ---- Feature 2: Best pairs from strength divergence ----
+  const bestPairs = useMemo<BestPairSuggestion[]>(() => {
+    if (!data?.strengths) return [];
+    const ranking = getRanking(data.strengths);
+    const result: BestPairSuggestion[] = [];
+    const top3 = ranking.slice(0, 3);
+    const bottom3 = ranking.slice(-3).reverse();
+
+    const seen = new Set<string>();
+    for (const strong of top3) {
+      for (const weak of bottom3) {
+        const pairKey = `${strong}/${weak}`;
+        if (seen.has(pairKey)) continue;
+        seen.add(pairKey);
+        const strongRank = ranking.indexOf(strong) + 1;
+        const weakRank = ranking.indexOf(weak) + 1;
+        result.push({
+          pair: pairKey,
+          longCcy: strong,
+          shortCcy: weak,
+          longRank: strongRank,
+          shortRank: weakRank,
+          divergence: weakRank - strongRank,
+        });
+      }
+    }
+
+    return result
+      .sort((a, b) => b.divergence - a.divergence)
+      .slice(0, 3);
+  }, [data?.strengths]);
+
+  // ---- Feature 4: Win rate per currency from trades ----
+  const currencyWinRates = useMemo<CurrencyWinRate[]>(() => {
+    const stats: Record<Currency, { wins: number; total: number }> = {} as Record<
+      Currency,
+      { wins: number; total: number }
+    >;
+
+    for (const trade of trades) {
+      const ccys = extractCurrencies(trade.asset);
+      const isWin = trade.result > 0;
+      for (const c of ccys) {
+        if (!stats[c]) stats[c] = { wins: 0, total: 0 };
+        stats[c].total++;
+        if (isWin) stats[c].wins++;
+      }
+    }
+
+    const result: CurrencyWinRate[] = [];
+    for (const c of CURRENCIES) {
+      if (stats[c] && stats[c].total > 0) {
+        result.push({
+          currency: c,
+          wins: stats[c].wins,
+          total: stats[c].total,
+          winRate: (stats[c].wins / stats[c].total) * 100,
+        });
+      }
+    }
+    return result;
+  }, [trades]);
 
   return (
     <div className="space-y-6 pb-8">
@@ -522,7 +963,7 @@ export default function CurrencyStrengthPage() {
           <button
             onClick={load}
             className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] transition border border-[var(--border-subtle)]"
-            title="Rafraîchir"
+            title="Rafraichir"
           >
             <RefreshCw
               className={`w-5 h-5 text-[var(--text-secondary)] ${loading ? "animate-spin" : ""}`}
@@ -545,8 +986,14 @@ export default function CurrencyStrengthPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Section A: Strength Rankings */}
-          <StrengthRankings strengths={strengths} />
+          {/* Feature 1: Strength Change Alerts */}
+          <StrengthChangeAlerts changes={rankChanges} />
+
+          {/* Section A: Strength Rankings (with sparklines) */}
+          <StrengthRankings strengths={strengths} history={history} />
+
+          {/* Feature 2: Best Pairs Suggestions */}
+          <BestPairsSuggestions suggestions={bestPairs} />
 
           {/* Section B: Strength Matrix */}
           {matrix.length > 0 && (
@@ -561,6 +1008,11 @@ export default function CurrencyStrengthPage() {
             {/* Section D: Cross-Rates Table */}
             <CrossRatesTable rates={rates} strengths={strengths} />
           </div>
+
+          {/* Feature 4: Performance per Currency */}
+          {currencyWinRates.length > 0 && (
+            <CurrencyPerformance winRates={currencyWinRates} />
+          )}
         </div>
       )}
     </div>

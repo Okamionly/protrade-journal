@@ -1829,5 +1829,26 @@
   "wlHeatCold": "Inactive (30+ days)",
   "wlHeatNeutral": "Normal",
   "wlAlertTriggered": "Alert triggered: {symbol} reached {price}",
-  "wlActiveAlerts": "{count} active alert(s)"
+  "wlActiveAlerts": "{count} active alert(s)",
+
+  "phasePre": "Pre-Trade",
+  "phaseDuring": "During Trade",
+  "phasePost": "Post-Trade",
+  "phaseAll": "All",
+  "templatesButton": "Templates",
+  "templatesLibrary": "Rule Templates Library",
+  "templatesDesc": "Click a template to add it to your checklist. Already added rules are greyed out.",
+  "streakPerfectDays": "Perfect Streak",
+  "streakDaysMessage": "days of perfect discipline",
+  "streakStartToday": "Start today to begin your streak!",
+  "complianceByPhase": "Compliance by Phase",
+
+  "importHistoryTitle": "Import History",
+  "importQuickStats": "Import Summary",
+  "importStatTrades": "Trades Imported",
+  "importStatPeriod": "Period Covered",
+  "importStatWinRate": "Win Rate",
+  "importStatPnl": "Total P&L",
+  "importStatTopAsset": "Top Asset",
+  "deleteImportHistory": "Delete from history"
 }
