@@ -343,7 +343,7 @@ const PRESETS: { label: string; icon: React.ElementType; config: Partial<SimConf
   { label: "Discipline parfaite", icon: ShieldCheck, config: { tpRR: 2, slModifier: -20, maxPerDay: 3 } },
   { label: "Sans revenge trading", icon: Target, config: { maxPerDay: 3 } },
   { label: "Sniper mode", icon: Crosshair, config: { tpRR: 3, maxPerDay: 2, removeWorst: 3 } },
-  { label: "Best strategy only", icon: Trophy, config: {} }, // Filled dynamically
+  { label: "Meilleure stratégie", icon: Trophy, config: {} }, // Filled dynamically
 ];
 
 // --- Main Page ---
@@ -402,7 +402,7 @@ export default function BacktestPage() {
           <FlaskConical className="w-5 h-5 text-cyan-400" />
         </div>
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>What If &mdash; Backtesting Simulator</h1>
+          <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Simulateur What-If</h1>
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>Simule des scénarios alternatifs sur tes trades réels</p>
         </div>
       </div>
@@ -410,7 +410,7 @@ export default function BacktestPage() {
       {/* Quick Scenarios */}
       <div className="flex flex-wrap gap-2">
         {PRESETS.map((p) => {
-          const presetConfig = p.label === "Best strategy only" ? { ...p.config, strategyFilter: bestStrategy } : p.config;
+          const presetConfig = p.label === "Meilleure stratégie" ? { ...p.config, strategyFilter: bestStrategy } : p.config;
           return (
             <button key={p.label} onClick={() => applyPreset(presetConfig)}
               className="glass px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 hover:brightness-125 transition-all"
@@ -422,7 +422,7 @@ export default function BacktestPage() {
         <button onClick={() => setConfig(DEFAULT_CONFIG)}
           className="px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 hover:brightness-125 transition-all"
           style={{ color: "var(--text-muted)", border: "1px solid var(--border)" }}>
-          Reset
+          Réinitialiser
         </button>
       </div>
 
@@ -436,7 +436,7 @@ export default function BacktestPage() {
             </h2>
 
             <Slider label="Take Profit à X R:R" icon={Target} value={config.tpRR} min={0} max={5} step={0.5}
-              format={(v) => v === 0 ? "Off" : `${v}R`} onChange={(v) => set("tpRR", v)} />
+              format={(v) => v === 0 ? "Désactivé" : `${v}R`} onChange={(v) => set("tpRR", v)} />
 
             <Slider label="Modificateur Stop Loss" icon={ShieldCheck} value={config.slModifier} min={-50} max={50} step={5}
               format={(v) => `${v > 0 ? "+" : ""}${v}%`} onChange={(v) => set("slModifier", v)} />
@@ -479,7 +479,7 @@ export default function BacktestPage() {
           {/* Insights */}
           <div className="glass p-5 rounded-xl">
             <h2 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-              <Lightbulb className="w-4 h-4 text-amber-400" /> Insights
+              <Lightbulb className="w-4 h-4 text-amber-400" /> Analyses
             </h2>
             <div className="space-y-2">
               {insights.map((text, i) => (
@@ -506,16 +506,16 @@ export default function BacktestPage() {
               <span className="text-xs flex-1" style={{ color: "var(--text-muted)" }}>Métrique</span>
               <span className="text-xs w-24 text-right" style={{ color: "var(--text-muted)" }}>Actuel</span>
               <span className="text-xs w-24 text-right font-semibold text-cyan-400">Simulé</span>
-              <span className="text-xs w-20 text-right" style={{ color: "var(--text-muted)" }}>Delta</span>
+              <span className="text-xs w-20 text-right" style={{ color: "var(--text-muted)" }}>Écart</span>
             </div>
-            <StatRow label="Total P&L" actual={actualStats.totalPnL} simulated={simStats.totalPnL} format={fmt} />
-            <StatRow label="Win Rate" actual={actualStats.winRate} simulated={simStats.winRate} format={fmtPct} />
-            <StatRow label="Profit Factor" actual={actualStats.profitFactor} simulated={simStats.profitFactor} format={fmtRatio} />
-            <StatRow label="Max Drawdown" actual={actualStats.maxDrawdown} simulated={simStats.maxDrawdown} format={fmt} inverse />
+            <StatRow label="P&L Total" actual={actualStats.totalPnL} simulated={simStats.totalPnL} format={fmt} />
+            <StatRow label="Taux de réussite" actual={actualStats.winRate} simulated={simStats.winRate} format={fmtPct} />
+            <StatRow label="Facteur de profit" actual={actualStats.profitFactor} simulated={simStats.profitFactor} format={fmtRatio} />
+            <StatRow label="Drawdown max" actual={actualStats.maxDrawdown} simulated={simStats.maxDrawdown} format={fmt} inverse />
             <StatRow label="Gain moyen" actual={actualStats.avgWin} simulated={simStats.avgWin} format={fmt} />
             <StatRow label="Perte moyenne" actual={actualStats.avgLoss} simulated={simStats.avgLoss} format={fmt} inverse />
             <StatRow label="Nombre de trades" actual={actualStats.totalTrades} simulated={simStats.totalTrades} format={fmtNum} />
-            <StatRow label="Sharpe Ratio" actual={actualStats.sharpe} simulated={simStats.sharpe} format={fmtRatio} />
+            <StatRow label="Ratio de Sharpe" actual={actualStats.sharpe} simulated={simStats.sharpe} format={fmtRatio} />
 
             {/* Summary banner */}
             <div className="mt-4 p-3 rounded-lg flex items-center justify-between"

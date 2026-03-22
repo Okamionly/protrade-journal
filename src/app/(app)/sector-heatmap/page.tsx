@@ -27,26 +27,26 @@ interface GlobalMarketEntry {
 }
 
 const SECTORS: Record<string, SectorStock[]> = {
-  "Technology": [
-    { symbol: "AAPL", name: "Apple", sector: "Technology", marketCap: 350 },
-    { symbol: "MSFT", name: "Microsoft", sector: "Technology", marketCap: 320 },
-    { symbol: "NVDA", name: "NVIDIA", sector: "Technology", marketCap: 300 },
-    { symbol: "GOOGL", name: "Alphabet", sector: "Technology", marketCap: 220 },
-    { symbol: "META", name: "Meta", sector: "Technology", marketCap: 160 },
-    { symbol: "AMD", name: "AMD", sector: "Technology", marketCap: 8 },
-    { symbol: "INTC", name: "Intel", sector: "Technology", marketCap: 6 },
-    { symbol: "CRM", name: "Salesforce", sector: "Technology", marketCap: 10 },
-    { symbol: "ORCL", name: "Oracle", sector: "Technology", marketCap: 9 },
-    { symbol: "ADBE", name: "Adobe", sector: "Technology", marketCap: 8 },
+  "Technologie": [
+    { symbol: "AAPL", name: "Apple", sector: "Technologie", marketCap: 350 },
+    { symbol: "MSFT", name: "Microsoft", sector: "Technologie", marketCap: 320 },
+    { symbol: "NVDA", name: "NVIDIA", sector: "Technologie", marketCap: 300 },
+    { symbol: "GOOGL", name: "Alphabet", sector: "Technologie", marketCap: 220 },
+    { symbol: "META", name: "Meta", sector: "Technologie", marketCap: 160 },
+    { symbol: "AMD", name: "AMD", sector: "Technologie", marketCap: 8 },
+    { symbol: "INTC", name: "Intel", sector: "Technologie", marketCap: 6 },
+    { symbol: "CRM", name: "Salesforce", sector: "Technologie", marketCap: 10 },
+    { symbol: "ORCL", name: "Oracle", sector: "Technologie", marketCap: 9 },
+    { symbol: "ADBE", name: "Adobe", sector: "Technologie", marketCap: 8 },
   ],
-  "Consumer": [
-    { symbol: "AMZN", name: "Amazon", sector: "Consumer", marketCap: 210 },
-    { symbol: "TSLA", name: "Tesla", sector: "Consumer", marketCap: 100 },
-    { symbol: "NFLX", name: "Netflix", sector: "Consumer", marketCap: 12 },
-    { symbol: "NKE", name: "Nike", sector: "Consumer", marketCap: 8 },
-    { symbol: "SBUX", name: "Starbucks", sector: "Consumer", marketCap: 7 },
-    { symbol: "MCD", name: "McDonald's", sector: "Consumer", marketCap: 9 },
-    { symbol: "DIS", name: "Disney", sector: "Consumer", marketCap: 8 },
+  "Consommation": [
+    { symbol: "AMZN", name: "Amazon", sector: "Consommation", marketCap: 210 },
+    { symbol: "TSLA", name: "Tesla", sector: "Consommation", marketCap: 100 },
+    { symbol: "NFLX", name: "Netflix", sector: "Consommation", marketCap: 12 },
+    { symbol: "NKE", name: "Nike", sector: "Consommation", marketCap: 8 },
+    { symbol: "SBUX", name: "Starbucks", sector: "Consommation", marketCap: 7 },
+    { symbol: "MCD", name: "McDonald's", sector: "Consommation", marketCap: 9 },
+    { symbol: "DIS", name: "Disney", sector: "Consommation", marketCap: 8 },
   ],
   "Finance": [
     { symbol: "JPM", name: "JPMorgan", sector: "Finance", marketCap: 70 },
@@ -57,36 +57,36 @@ const SECTORS: Record<string, SectorStock[]> = {
     { symbol: "MS", name: "Morgan Stanley", sector: "Finance", marketCap: 10 },
     { symbol: "BLK", name: "BlackRock", sector: "Finance", marketCap: 9 },
   ],
-  "Healthcare": [
-    { symbol: "JNJ", name: "J&J", sector: "Healthcare", marketCap: 50 },
-    { symbol: "UNH", name: "UnitedHealth", sector: "Healthcare", marketCap: 20 },
-    { symbol: "PFE", name: "Pfizer", sector: "Healthcare", marketCap: 10 },
-    { symbol: "ABBV", name: "AbbVie", sector: "Healthcare", marketCap: 14 },
-    { symbol: "LLY", name: "Eli Lilly", sector: "Healthcare", marketCap: 16 },
-    { symbol: "MRK", name: "Merck", sector: "Healthcare", marketCap: 12 },
-    { symbol: "TMO", name: "Thermo Fisher", sector: "Healthcare", marketCap: 8 },
+  "Santé": [
+    { symbol: "JNJ", name: "J&J", sector: "Santé", marketCap: 50 },
+    { symbol: "UNH", name: "UnitedHealth", sector: "Santé", marketCap: 20 },
+    { symbol: "PFE", name: "Pfizer", sector: "Santé", marketCap: 10 },
+    { symbol: "ABBV", name: "AbbVie", sector: "Santé", marketCap: 14 },
+    { symbol: "LLY", name: "Eli Lilly", sector: "Santé", marketCap: 16 },
+    { symbol: "MRK", name: "Merck", sector: "Santé", marketCap: 12 },
+    { symbol: "TMO", name: "Thermo Fisher", sector: "Santé", marketCap: 8 },
   ],
-  "Energy": [
-    { symbol: "XOM", name: "ExxonMobil", sector: "Energy", marketCap: 22 },
-    { symbol: "CVX", name: "Chevron", sector: "Energy", marketCap: 16 },
-    { symbol: "COP", name: "ConocoPhillips", sector: "Energy", marketCap: 10 },
-    { symbol: "SLB", name: "Schlumberger", sector: "Energy", marketCap: 8 },
-    { symbol: "EOG", name: "EOG Resources", sector: "Energy", marketCap: 7 },
+  "Énergie": [
+    { symbol: "XOM", name: "ExxonMobil", sector: "Énergie", marketCap: 22 },
+    { symbol: "CVX", name: "Chevron", sector: "Énergie", marketCap: 16 },
+    { symbol: "COP", name: "ConocoPhillips", sector: "Énergie", marketCap: 10 },
+    { symbol: "SLB", name: "Schlumberger", sector: "Énergie", marketCap: 8 },
+    { symbol: "EOG", name: "EOG Resources", sector: "Énergie", marketCap: 7 },
   ],
-  "Industrials": [
-    { symbol: "CAT", name: "Caterpillar", sector: "Industrials", marketCap: 14 },
-    { symbol: "BA", name: "Boeing", sector: "Industrials", marketCap: 12 },
-    { symbol: "HON", name: "Honeywell", sector: "Industrials", marketCap: 10 },
-    { symbol: "UPS", name: "UPS", sector: "Industrials", marketCap: 8 },
-    { symbol: "GE", name: "GE Aerospace", sector: "Industrials", marketCap: 11 },
+  "Industrie": [
+    { symbol: "CAT", name: "Caterpillar", sector: "Industrie", marketCap: 14 },
+    { symbol: "BA", name: "Boeing", sector: "Industrie", marketCap: 12 },
+    { symbol: "HON", name: "Honeywell", sector: "Industrie", marketCap: 10 },
+    { symbol: "UPS", name: "UPS", sector: "Industrie", marketCap: 8 },
+    { symbol: "GE", name: "GE Aerospace", sector: "Industrie", marketCap: 11 },
   ],
-  "Cybersecurity & Cloud": [
-    { symbol: "CRWD", name: "CrowdStrike", sector: "Cybersecurity & Cloud", marketCap: 12 },
-    { symbol: "ZS", name: "Zscaler", sector: "Cybersecurity & Cloud", marketCap: 8 },
-    { symbol: "NET", name: "Cloudflare", sector: "Cybersecurity & Cloud", marketCap: 9 },
-    { symbol: "DDOG", name: "Datadog", sector: "Cybersecurity & Cloud", marketCap: 8 },
-    { symbol: "SNOW", name: "Snowflake", sector: "Cybersecurity & Cloud", marketCap: 7 },
-    { symbol: "MDB", name: "MongoDB", sector: "Cybersecurity & Cloud", marketCap: 6 },
+  "Cybersécurité & Cloud": [
+    { symbol: "CRWD", name: "CrowdStrike", sector: "Cybersécurité & Cloud", marketCap: 12 },
+    { symbol: "ZS", name: "Zscaler", sector: "Cybersécurité & Cloud", marketCap: 8 },
+    { symbol: "NET", name: "Cloudflare", sector: "Cybersécurité & Cloud", marketCap: 9 },
+    { symbol: "DDOG", name: "Datadog", sector: "Cybersécurité & Cloud", marketCap: 8 },
+    { symbol: "SNOW", name: "Snowflake", sector: "Cybersécurité & Cloud", marketCap: 7 },
+    { symbol: "MDB", name: "MongoDB", sector: "Cybersécurité & Cloud", marketCap: 6 },
   ],
   "Indices": [
     { symbol: "SPY", name: "S&P 500", sector: "Indices", marketCap: 30 },
@@ -264,7 +264,7 @@ export default function SectorHeatmapPage() {
   const totalSectors = sectorPerf.length;
   const breadthRatio = totalSectors > 0 ? positiveSectors / totalSectors : 0;
   // Key sectors are Technology, Finance, Consumer - divergence if most are up but these key ones are down
-  const keySectorNames = ["Technology", "Finance", "Consumer"];
+  const keySectorNames = ["Technologie", "Finance", "Consommation"];
   const keySectorsDown = sectorPerf.filter((s) => keySectorNames.includes(s.name) && s.avg < 0);
   const hasBreadthDivergence = breadthRatio >= 0.6 && keySectorsDown.length >= 2;
 
@@ -432,7 +432,7 @@ export default function SectorHeatmapPage() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-cyan-400" />
-              <h3 className="font-semibold text-[--text-primary] text-sm">Market Breadth</h3>
+              <h3 className="font-semibold text-[--text-primary] text-sm">Ampleur du marché</h3>
             </div>
             <span className={`text-sm font-medium ${breadthRatio >= 0.5 ? "text-emerald-400" : "text-rose-400"}`}>
               {positiveSectors}/{totalSectors} secteurs en hausse
@@ -565,7 +565,7 @@ export default function SectorHeatmapPage() {
                 <th className="text-left text-xs font-semibold text-[--text-muted] p-4">Symbole</th>
                 <th className="text-left text-xs font-semibold text-[--text-muted] p-4">Secteur</th>
                 <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Prix</th>
-                <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Change %</th>
+                <th className="text-right text-xs font-semibold text-[--text-muted] p-4">Variation %</th>
                 <th className="text-center text-xs font-semibold text-[--text-muted] p-4">Momentum</th>
                 <th className="text-center text-xs font-semibold text-[--text-muted] p-4">Volume</th>
                 <th className="text-left text-xs font-semibold text-[--text-muted] p-4">Performance</th>

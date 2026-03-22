@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import { Sun, Moon, LogOut, Monitor, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { NotificationCenter } from "./NotificationCenter";
+import { LoginStreak } from "./LoginStreak";
 import { NewsTicker } from "./NewsTicker";
 import { useTrades } from "@/hooks/useTrades";
 import { useTranslation } from "@/i18n/context";
@@ -87,6 +88,9 @@ export function Header() {
         >
           {zenMode ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
         </button>
+
+        {/* Login Streak */}
+        <LoginStreak />
 
         {/* Notifications */}
         <NotificationCenter trades={trades} />

@@ -681,7 +681,7 @@ export default function ScannerPage() {
         {loading && rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <RefreshCw size={24} className="animate-spin text-cyan-400" />
-            <span className="text-sm" style={{ color: "var(--text-muted)" }}>Chargement des donnees...</span>
+            <span className="text-sm" style={{ color: "var(--text-muted)" }}>Chargement des données...</span>
           </div>
         ) : filteredRows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -842,13 +842,13 @@ export default function ScannerPage() {
                 <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>Recommandation</span>
                 <span className="text-sm font-medium" style={{ color: signalColor(selectedRow.signal) }}>
                   {selectedRow.signal === "buy" && selectedRow.strength >= 65
-                    ? "Opportunite forte a l'achat"
+                    ? "Opportunité forte à l'achat"
                     : selectedRow.signal === "sell" && selectedRow.strength >= 65
-                    ? "Pression vendeuse elevee"
+                    ? "Pression vendeuse élevée"
                     : selectedRow.signal === "buy"
-                    ? "Biais haussier moderee"
+                    ? "Biais haussier modéré"
                     : selectedRow.signal === "sell"
-                    ? "Biais baissier moderee"
+                    ? "Biais baissier modéré"
                     : "Pas de direction claire"}
                 </span>
               </div>

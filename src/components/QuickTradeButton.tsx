@@ -54,6 +54,13 @@ export function QuickTradeButton() {
     return () => document.removeEventListener("keydown", handler);
   }, [open]);
 
+  // Listen for open-trade-form custom event (dispatched by Ctrl+N)
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("open-trade-form", handler);
+    return () => window.removeEventListener("open-trade-form", handler);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);

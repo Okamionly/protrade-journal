@@ -12,7 +12,7 @@ export default function FlowPage() {
           style={{ color: "var(--text-primary)" }}
         >
           <Activity className="w-7 h-7 text-violet-400" />
-          Options Flow
+          Flux d&apos;Options
         </h1>
       </div>
 

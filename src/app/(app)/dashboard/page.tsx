@@ -16,6 +16,7 @@ import { ShareStatsCard } from "@/components/ShareStatsCard";
 import { MorningBriefing } from "@/components/MorningBriefing";
 import { TradingWrapped } from "@/components/TradingWrapped";
 import { DailyGoalTracker } from "@/components/DailyGoalTracker";
+import { EmptyDayMotivation } from "@/components/EmptyDayMotivation";
 
 
 /* ─── Trade du Jour Types ──────────────────────────────── */
@@ -190,6 +191,25 @@ export default function DashboardPage() {
     if (saved) setMonthlyGoal(parseFloat(saved));
   }, []);
 
+  // Ctrl+N dispatches open-trade-form, and listen for it to open the form
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "n") {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("open-trade-form"));
+      }
+    };
+    const handleOpenTradeForm = () => {
+      setShowForm(true);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("open-trade-form", handleOpenTradeForm);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("open-trade-form", handleOpenTradeForm);
+    };
+  }, []);
+
   const handleAddTrade = async (trade: Record<string, unknown>) => {
     const ok = await addTrade(trade);
     if (ok) toast(t("tradeCreated"), "success");
@@ -332,6 +352,9 @@ export default function DashboardPage() {
     <>
       {/* === Morning Briefing === */}
       <MorningBriefing trades={trades} userName={user?.name ?? null} />
+
+      {/* === Empty Day Motivation (after 16h, no trades) === */}
+      <EmptyDayMotivation todayTradesCount={todayTrades.length} />
 
       {/* === Trading Wrapped Modal === */}
       <TradingWrapped open={showWrapped} onClose={() => setShowWrapped(false)} trades={trades} />
