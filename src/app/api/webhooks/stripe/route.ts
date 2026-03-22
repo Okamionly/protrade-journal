@@ -66,7 +66,27 @@ export async function POST(req: NextRequest) {
     // Handle customer.subscription.deleted (cancellation) — downgrade to USER
     if (event.type === "customer.subscription.deleted") {
       const sub = event.data.object;
-      const customerEmail = sub.customer_email || sub.metadata?.email;
+      // The subscription object does not have customer_email — retrieve customer from Stripe API
+      let customerEmail: string | undefined = sub.metadata?.email;
+
+      if (!customerEmail && sub.customer) {
+        try {
+          const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
+          const customerRes = await fetch(
+            `https://api.stripe.com/v1/customers/${sub.customer}`,
+            {
+              headers: { Authorization: `Bearer ${stripeSecretKey}` },
+            }
+          );
+          if (customerRes.ok) {
+            const customer = await customerRes.json();
+            customerEmail = customer.email;
+          }
+        } catch (err) {
+          console.error("[Stripe] Failed to fetch customer:", err);
+        }
+      }
+
       if (customerEmail) {
         await prisma.user.updateMany({
           where: { email: customerEmail },

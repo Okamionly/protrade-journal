@@ -13,6 +13,9 @@ import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, 
 import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
 import { ShareStatsCard } from "@/components/ShareStatsCard";
+import { MorningBriefing } from "@/components/MorningBriefing";
+import { TradingWrapped } from "@/components/TradingWrapped";
+import { DailyGoalTracker } from "@/components/DailyGoalTracker";
 
 
 /* ─── Trade du Jour Types ──────────────────────────────── */
@@ -179,6 +182,7 @@ export default function DashboardPage() {
   const [goalInput, setGoalInput] = useState("");
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
+  const [showWrapped, setShowWrapped] = useState(false);
   const [balanceInput, setBalanceInput] = useState("");
 
   useEffect(() => {
@@ -326,8 +330,26 @@ export default function DashboardPage() {
 
   return (
     <>
+      {/* === Morning Briefing === */}
+      <MorningBriefing trades={trades} userName={user?.name ?? null} />
+
+      {/* === Trading Wrapped Modal === */}
+      <TradingWrapped open={showWrapped} onClose={() => setShowWrapped(false)} trades={trades} />
+
+      {/* === Floating Daily Goal Tracker === */}
+      <DailyGoalTracker trades={trades} monthlyGoal={monthlyGoal} />
+
       {/* === Share button + PROMINENT DAILY P&L CARD === */}
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end gap-2 mb-2">
+        <button
+          onClick={() => setShowWrapped(true)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105"
+          style={{ background: "rgba(139,92,246,0.15)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" }}
+          title="Mon Récap du mois"
+        >
+          <BarChart3 className="w-3.5 h-3.5" />
+          Mon Récap
+        </button>
         <button
           onClick={() => setShowShareCard(true)}
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105"

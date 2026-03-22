@@ -16,7 +16,6 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
   const { t } = useTranslation();
   const stats = computeStats(trades);
   const totalBalance = balance + stats.netProfit;
-  const profitPercent = balance > 0 ? ((stats.netProfit / balance) * 100).toFixed(1) : "0";
 
   // Filter trades for the current month
   const now = new Date();
@@ -25,6 +24,8 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
   const monthlyStats = computeStats(monthlyTrades);
+  // Use monthly net profit for the "this month" percentage, not all-time
+  const profitPercent = balance > 0 ? ((monthlyStats.netProfit / balance) * 100).toFixed(1) : "0";
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -53,8 +54,8 @@ export function DashboardCards({ trades, balance, onEditBalance }: Props) {
           </div>
         </div>
         <div className="flex items-center text-sm">
-          <span className={`${stats.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"} font-medium`}>
-            {stats.netProfit >= 0 ? "+" : ""}{profitPercent}%
+          <span className={`${monthlyStats.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"} font-medium`}>
+            {monthlyStats.netProfit >= 0 ? "+" : ""}{profitPercent}%
           </span>
           <span className="text-[--text-muted] ml-2">{t("thisMonth")}</span>
         </div>

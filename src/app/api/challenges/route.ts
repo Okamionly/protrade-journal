@@ -270,15 +270,28 @@ const CHALLENGES: ChallengeDef[] = [
       if (days.length === 0) return { current: 0, target: 10 };
       const today = new Date().toISOString().slice(0, 10);
       const last = days[days.length - 1];
-      const diffToday =
-        (new Date(today).getTime() - new Date(last).getTime()) / 86400000;
-      if (diffToday > 1) return { current: 0, target: 10 };
+      // Calculate weekday gap between last trade day and today
+      const lastDate = new Date(last);
+      const todayDate = new Date(today);
+      const calendarDiff = (todayDate.getTime() - lastDate.getTime()) / 86400000;
+      const todayDay = todayDate.getDay();
+      // Allow gap if it's only due to weekends (e.g., last traded Friday, today is Monday = 3 calendar days but 1 weekday gap)
+      const isWeekdayConsecutive = calendarDiff === 1 ||
+        (calendarDiff === 2 && lastDate.getDay() === 5 && todayDay === 0) || // Fri->Sun
+        (calendarDiff === 2 && lastDate.getDay() === 6 && todayDay === 1) || // Sat->Mon (unlikely)
+        (calendarDiff === 3 && lastDate.getDay() === 5 && todayDay === 1);   // Fri->Mon
+      if (calendarDiff > 0 && !isWeekdayConsecutive) return { current: 0, target: 10 };
       let streak = 1;
       for (let i = days.length - 1; i > 0; i--) {
-        const diff =
-          (new Date(days[i]).getTime() - new Date(days[i - 1]).getTime()) /
-          86400000;
-        if (diff === 1) streak++;
+        const currDate = new Date(days[i]);
+        const prevDate = new Date(days[i - 1]);
+        const diff = (currDate.getTime() - prevDate.getTime()) / 86400000;
+        const prevDay = prevDate.getDay();
+        // Treat Fri->Mon (3 days) as consecutive, also handle Fri->Sat/Sun->Mon gaps
+        const consecutive = diff === 1 ||
+          (diff === 2 && prevDay === 5) || // Friday to Sunday
+          (diff === 3 && prevDay === 5);   // Friday to Monday
+        if (consecutive) streak++;
         else break;
       }
       return { current: Math.min(streak, 10), target: 10 };

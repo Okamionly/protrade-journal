@@ -100,9 +100,14 @@ export interface SessionDistribution {
 
 function getForexSession(date: Date): string {
   const h = date.getUTCHours();
-  if (h >= 0 && h < 8) return "Asie";
-  if (h >= 7 && h < 16) return "Londres";
+  // Overlap zones are assigned to the dominant/opening session
+  // New York: 13-22 (checked first since it overlaps with London 13-16)
   if (h >= 13 && h < 22) return "New York";
+  // London: 7-16 (after NY check, so effectively 7-13)
+  if (h >= 7 && h < 16) return "Londres";
+  // Asia: 0-7
+  if (h >= 0 && h < 7) return "Asie";
+  // Hours 22-23: late session
   return "Hors session";
 }
 
