@@ -533,6 +533,19 @@ export default function DashboardPage() {
   const dailyGoal = monthlyGoal > 0 ? monthlyGoal / 22 : 0;
   const dailyGoalProgress = dailyGoal > 0 ? Math.min(Math.max((todayPnL / dailyGoal) * 100, 0), 100) : 0;
 
+  // Suggested monthly goal based on average positive monthly P&L
+  const suggestedGoal = (() => {
+    const monthlyBuckets: Record<string, number> = {};
+    trades.forEach((tr) => {
+      const key = new Date(tr.date).toISOString().slice(0, 7);
+      monthlyBuckets[key] = (monthlyBuckets[key] || 0) + tr.result;
+    });
+    const positiveMonths = Object.values(monthlyBuckets).filter(v => v > 0);
+    if (positiveMonths.length < 1) return 0;
+    const avg = positiveMonths.reduce((a, b) => a + b, 0) / positiveMonths.length;
+    return Math.round(avg * 0.9); // 90% of avg positive month = realistic target
+  })();
+
   // Risk exposure today (sum of absolute risk on today's trades)
   const balance = user?.balance ?? 25000;
   const todayRiskExposure = todayTrades.reduce((s, t) => {
@@ -804,12 +817,22 @@ export default function DashboardPage() {
             <Target className="w-5 h-5 text-blue-400" />
             <h3 className="text-lg font-semibold">{t("monthlyGoal")}</h3>
           </div>
-          <button
-            onClick={() => { setGoalInput(String(monthlyGoal || "")); setShowGoalModal(true); }}
-            className="text-sm text-blue-400 hover:text-blue-300 transition"
-          >
-            {monthlyGoal > 0 ? t("editGoal") : t("setGoal")}
-          </button>
+          {monthlyGoal > 0 ? (
+            <button
+              onClick={() => { setGoalInput(String(monthlyGoal || "")); setShowGoalModal(true); }}
+              className="text-sm text-blue-400 hover:text-blue-300 transition"
+            >
+              {t("editGoal")}
+            </button>
+          ) : (
+            <button
+              onClick={() => { setGoalInput(suggestedGoal > 0 ? String(suggestedGoal) : ""); setShowGoalModal(true); }}
+              className="text-sm font-semibold px-4 py-1.5 rounded-lg text-white transition hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, var(--accent-primary), #6366f1)" }}
+            >
+              {t("setGoal")}
+            </button>
+          )}
         </div>
         {monthlyGoal > 0 ? (() => {
           const remaining = monthlyGoal - monthlyPnL;
@@ -855,7 +878,15 @@ export default function DashboardPage() {
             </>
           );
         })() : (
-          <p className="text-[--text-muted] text-sm">{t("noGoalSet")}</p>
+          <div>
+            <p className="text-[--text-muted] text-sm">{t("noGoalSet")}</p>
+            {suggestedGoal > 0 && (
+              <p className="text-xs mt-2 flex items-center gap-1.5" style={{ color: "var(--accent-primary)" }}>
+                <Lightbulb className="w-3.5 h-3.5" />
+                {t("goalSuggestion").replace("{amount}", String(suggestedGoal))}
+              </p>
+            )}
+          </div>
         )}
       </div>
 

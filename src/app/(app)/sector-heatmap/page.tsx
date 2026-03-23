@@ -208,9 +208,12 @@ export default function SectorHeatmapPage() {
       }
     } catch {
       setError("Impossible de charger les données. Réessayez.");
-      if (Object.keys(quotes).length === 0) {
-        setUsingFallback(true);
-      }
+      setQuotes((current) => {
+        if (Object.keys(current).length === 0) {
+          setUsingFallback(true);
+        }
+        return current;
+      });
     }
     setLoading(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

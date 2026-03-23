@@ -2180,5 +2180,8 @@
   "vol_todayLabel": "today",
   "scannerVolHigh": "High",
   "scannerVolMedium": "Medium",
-  "scannerVolLow": "Low"
+  "scannerVolLow": "Low",
+  "emptyStateMessage": "Start adding trades to see your data here",
+  "emptyStateCta": "Add my first trade",
+  "goalSuggestion": "Suggestion: based on your performance, a goal of {amount}€ is realistic"
 }

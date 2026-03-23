@@ -7,7 +7,7 @@ import { useToast } from "@/components/Toast";
 import { calculateRR, formatDate } from "@/lib/utils";
 import React, { useState, useMemo, useCallback, Suspense, useRef, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Camera, Trash2, Pencil, ArrowUpDown, Download, X, Copy, Brain, Share2, Send, Tag, FileText } from "lucide-react";
+import { Plus, Camera, Trash2, Pencil, ArrowUpDown, Download, X, Copy, Brain, Share2, Send, Tag, FileText, LayoutGrid, List, Image } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 import { TradeCard } from "@/components/TradeCard";
 
@@ -196,6 +196,9 @@ function JournalPageContent() {
 
   // Tag picker state
   const [tagPickerTradeId, setTagPickerTradeId] = useState<string | null>(null);
+
+  // View mode: "cards" (default) or "table"
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   // Notes expand state
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
@@ -537,7 +540,48 @@ function JournalPageContent() {
         <Suspense fallback={null}>
           <AdvancedFilters trades={trades} />
         </Suspense>
-        <div className="flex items-center gap-3 mb-4">
+        {/* Sort bar + view toggle */}
+        <div className="flex items-center gap-3 mb-5">
+          {/* View toggle */}
+          <div className="flex items-center rounded-lg border border-[--border] overflow-hidden">
+            <button
+              onClick={() => setViewMode("cards")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition ${
+                viewMode === "cards"
+                  ? "bg-cyan-500/20 text-cyan-400"
+                  : "text-[--text-muted] hover:text-[--text-primary] hover:bg-[--bg-secondary]/50"
+              }`}
+              title="Vue liste"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Liste</span>
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition ${
+                viewMode === "table"
+                  ? "bg-cyan-500/20 text-cyan-400"
+                  : "text-[--text-muted] hover:text-[--text-primary] hover:bg-[--bg-secondary]/50"
+              }`}
+              title="Vue tableau"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Tableau</span>
+            </button>
+          </div>
+
+          {/* Select all checkbox */}
+          <label className="flex items-center gap-2 text-xs text-[--text-muted] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={allFilteredSelected}
+              onChange={toggleSelectAll}
+              disabled={sorted.length === 0}
+              className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
+            />
+            {t("selectAll")}
+          </label>
+
           <div className="flex items-center gap-2 ml-auto">
             <ArrowUpDown className="w-3.5 h-3.5 text-[--text-muted]" />
             <select value={`${sortBy}-${sortDir}`} onChange={(e) => { const [s, d] = e.target.value.split("-"); setSortBy(s as "date" | "result" | "rr"); setSortDir(d as "asc" | "desc"); }} className="bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-2 py-1 text-xs">
@@ -552,169 +596,358 @@ function JournalPageContent() {
           <span className="text-sm text-[--text-muted]">{filtered.length} trade{filtered.length !== 1 ? "s" : ""}</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-[--text-secondary] text-sm border-b border-[--border]">
-                <th className="pb-3 pr-2 w-10">
-                  <input
-                    type="checkbox"
-                    checked={allFilteredSelected}
-                    onChange={toggleSelectAll}
-                    disabled={sorted.length === 0}
-                    className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
-                    title={t("selectAll")}
-                  />
-                </th>
-                <th className="pb-3 font-medium">{t("dateCol")}</th>
-                <th className="pb-3 font-medium">{t("assetCol")}</th>
-                <th className="pb-3 font-medium">{t("directionCol")}</th>
-                <th className="pb-3 font-medium">{t("strategyCol")}</th>
-                <th className="pb-3 font-medium">{t("setupCol")}</th>
-                <th className="pb-3 font-medium">{t("screenshotsCol")}</th>
-                <th className="pb-3 font-medium">{t("entryExitCol")}</th>
-                <th className="pb-3 font-medium">{t("lotsCol")}</th>
-                <th className="pb-3 font-medium">{t("rrCol")}</th>
-                <th className="pb-3 font-medium">{t("resultCol")}</th>
-                <th className="pb-3 font-medium">{t("emotionCol")}</th>
-                <th className="pb-3 font-medium">Tags</th>
-                <th className="pb-3 font-medium">{t("actionsCol")}</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
-              {sorted.length === 0 ? (
-                <tr>
-                  <td colSpan={14} className="py-8 text-center text-[--text-muted]">{t("noTradesFound")}</td>
-                </tr>
-              ) : (
-                sorted.map((trade) => {
-                  const isWin = trade.result > 0;
-                  const rr = calculateRR(trade.entry, trade.sl, trade.tp);
-                  const isSelected = selectedIds.has(trade.id);
-                  const tradeTags = (trade.tags || "").split(",").map((s) => s.trim()).filter(Boolean);
-                  const hasNotes = !!trade.setup;
-                  const isNoteExpanded = expandedNoteId === trade.id;
-                  const isNoteHovered = hoveredNoteId === trade.id;
-                  return (
-                    <React.Fragment key={trade.id}>
-                      <tr className={`trade-row border-b border-[--border-subtle] ${isSelected ? "bg-blue-500/10" : ""}`}>
-                        <td className="py-4 pr-2">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelect(trade.id)}
-                            className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
-                          />
-                        </td>
-                        <td className="py-4 mono text-[--text-secondary]">{formatDate(trade.date)}</td>
-                        <td className="py-4 font-medium">{trade.asset}</td>
-                        <td className="py-4">
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
-                            {trade.direction}
-                          </span>
-                        </td>
-                        <td className="py-4">
-                          <span className="px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-xs">{trade.strategy}</span>
-                        </td>
-                        {/* Setup / Notes cell with preview */}
-                        <td className="py-4 text-[--text-secondary] max-w-xs">
-                          {hasNotes ? (
-                            <div className="relative inline-flex items-center gap-1.5">
-                              <button
-                                onClick={() => setExpandedNoteId(isNoteExpanded ? null : trade.id)}
-                                onMouseEnter={() => setHoveredNoteId(trade.id)}
-                                onMouseLeave={() => setHoveredNoteId(null)}
-                                className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 transition cursor-pointer"
-                                title={t("journalViewNotes")}
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                                <span className="truncate max-w-[120px] text-xs">{trade.setup}</span>
-                              </button>
-                              {isNoteHovered && !isNoteExpanded && <NotesTooltip notes={trade.setup!} />}
-                            </div>
-                          ) : (
-                            <span className="text-[--text-muted]">-</span>
+        {/* ── CARD VIEW ── */}
+        {viewMode === "cards" && (
+          sorted.length === 0 ? (
+            <div className="py-12 text-center text-[--text-muted]">{t("noTradesFound")}</div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {sorted.map((trade) => {
+                const isWin = trade.result > 0;
+                const isBreakeven = trade.result === 0;
+                const rr = calculateRR(trade.entry, trade.sl, trade.tp);
+                const isSelected = selectedIds.has(trade.id);
+                const tradeTags = (trade.tags || "").split(",").map((s) => s.trim()).filter(Boolean);
+                const hasNotes = !!trade.setup;
+                const isNoteExpanded = expandedNoteId === trade.id;
+                const dateObj = new Date(trade.date);
+                const dateStr = dateObj.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+                const timeStr = dateObj.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+                return (
+                  <div
+                    key={trade.id}
+                    className={`glass rounded-2xl p-5 transition-all duration-200 hover:shadow-xl hover:shadow-black/10 border ${
+                      isSelected
+                        ? "border-blue-500/50 ring-1 ring-blue-500/30"
+                        : "border-[--border] hover:border-[--border-hover]"
+                    }`}
+                  >
+                    {/* ── Header: direction + asset + date + checkbox ── */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold tracking-wide ${
+                            trade.direction === "LONG"
+                              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                              : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                          }`}
+                        >
+                          {trade.direction === "LONG" ? "\u{1F7E2}" : "\u{1F534}"} {trade.direction}
+                        </span>
+                        <span className="text-lg font-bold text-[--text-primary]">{trade.asset}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[--text-muted]">{dateStr} &bull; {timeStr}</span>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(trade.id)}
+                          className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    {/* ── Price grid: Entry/Exit, SL/TP, Lots ── */}
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 mb-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[--text-muted] text-xs w-16">Entr\u00e9e</span>
+                        <span className="mono font-medium text-[--text-primary]">{trade.entry}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[--text-muted] text-xs w-16">Sortie</span>
+                        <span className="mono font-medium text-[--text-primary]">{trade.exit || t("open")}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[--text-muted] text-xs w-16">SL</span>
+                        <span className="mono text-rose-400/80">{trade.sl}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[--text-muted] text-xs w-16">TP</span>
+                        <span className="mono text-emerald-400/80">{trade.tp}</span>
+                      </div>
+                    </div>
+
+                    {/* ── P&L + R:R + Lots row ── */}
+                    <div className="flex items-center gap-4 mb-4 flex-wrap">
+                      <span
+                        className={`text-xl font-bold mono ${
+                          isBreakeven ? "text-[--text-muted]" : isWin ? "text-emerald-400" : "text-rose-400"
+                        }`}
+                      >
+                        {isWin ? "+" : ""}{trade.result.toFixed(2)}\u20ac
+                      </span>
+                      <span className="text-sm text-[--text-secondary] mono">R:R 1:{rr}</span>
+                      <span className="text-sm text-[--text-muted]">{trade.lots} lots</span>
+                    </div>
+
+                    {/* ── Strategy + Emotion badges ── */}
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-400 text-xs font-medium border border-blue-500/20">
+                        {trade.strategy}
+                      </span>
+                      {trade.emotion && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-purple-500/15 text-purple-400 text-xs font-medium border border-purple-500/20">
+                          {trade.emotion}
+                        </span>
+                      )}
+                      {/* Screenshot badge */}
+                      {trade.screenshots.length > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-medium border border-amber-500/20">
+                          <Image className="w-3 h-3" />{trade.screenshots.length}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* ── Tags ── */}
+                    {(tradeTags.length > 0 || true) && (
+                      <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                        {tradeTags.map((tag, tagIdx) => (
+                          <TagBadge key={`${tag}-${tagIdx}`} tag={tag} onRemove={() => handleRemoveTag(trade.id, tag)} />
+                        ))}
+                        <div className="relative">
+                          <button
+                            onClick={() => setTagPickerTradeId(tagPickerTradeId === trade.id ? null : trade.id)}
+                            className="w-6 h-6 rounded-md flex items-center justify-center text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10 transition"
+                            title={t("journalAddTag")}
+                          >
+                            <Tag className="w-3.5 h-3.5" />
+                          </button>
+                          {tagPickerTradeId === trade.id && (
+                            <QuickTagPicker
+                              currentTags={tradeTags}
+                              onAddTag={(tag) => handleAddTag(trade.id, tag)}
+                              onClose={() => setTagPickerTradeId(null)}
+                            />
                           )}
-                        </td>
-                        <td className="py-4">
-                          {trade.screenshots.length > 0 ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-xs">
-                              <Camera className="w-3 h-3 mr-1" />{trade.screenshots.length}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Notes (expandable) ── */}
+                    {hasNotes && (
+                      <div className="mb-3">
+                        <button
+                          onClick={() => setExpandedNoteId(isNoteExpanded ? null : trade.id)}
+                          className="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span className="truncate max-w-[200px]">{trade.setup}</span>
+                        </button>
+                        {isNoteExpanded && (
+                          <div className="mt-2 rounded-lg bg-[--bg-secondary]/50 border border-[--border] p-3 text-xs text-[--text-secondary] whitespace-pre-wrap">
+                            {trade.setup}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── Action buttons row ── */}
+                    <div className="flex items-center gap-1 pt-3 border-t border-[--border-subtle]">
+                      <button onClick={() => setEditingTrade(trade)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-blue-400 hover:bg-blue-500/10 transition" title={t("editTrade")}>
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Modifier</span>
+                      </button>
+                      <button onClick={() => handleDuplicate(trade)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-cyan-400 hover:bg-cyan-500/10 transition" title={t("journalDuplicate")}>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Dupliquer</span>
+                      </button>
+                      <button onClick={() => setShareTradeId(trade.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-emerald-400 hover:bg-emerald-500/10 transition" title={t("journalShare")}>
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Partager</span>
+                      </button>
+                      <button onClick={() => handleAIReview(trade.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-purple-400 hover:bg-purple-500/10 transition" title="AI Review">
+                        <Brain className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">AI Review</span>
+                      </button>
+                      <div className="ml-auto">
+                        <button onClick={() => handleDelete(trade.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-rose-400 hover:bg-rose-500/10 transition" title={t("delete")}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        )}
+
+        {/* ── TABLE VIEW (compact, for power users) ── */}
+        {viewMode === "table" && (
+          <div className="overflow-x-auto max-h-[75vh] overflow-y-auto rounded-xl">
+            <table className="w-full border-separate border-spacing-0">
+              <thead className="sticky top-0 z-10">
+                <tr className="text-left text-[--text-secondary] text-[11px] uppercase tracking-wider bg-[--bg-card] shadow-[0_1px_0_var(--border)]">
+                  <th className="py-3.5 px-4 w-10 font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      onChange={toggleSelectAll}
+                      disabled={sorted.length === 0}
+                      className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
+                      title={t("selectAll")}
+                    />
+                  </th>
+                  <th className="py-3.5 px-4 font-semibold">{t("dateCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("assetCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("directionCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("strategyCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("setupCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("screenshotsCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("entryExitCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("lotsCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("rrCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("resultCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("emotionCol")}</th>
+                  <th className="py-3.5 px-4 font-semibold">Tags</th>
+                  <th className="py-3.5 px-4 font-semibold">{t("actionsCol")}</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {sorted.length === 0 ? (
+                  <tr>
+                    <td colSpan={14} className="py-8 text-center text-[--text-muted]">{t("noTradesFound")}</td>
+                  </tr>
+                ) : (
+                  sorted.map((trade, rowIndex) => {
+                    const isWin = trade.result > 0;
+                    const rr = calculateRR(trade.entry, trade.sl, trade.tp);
+                    const isSelected = selectedIds.has(trade.id);
+                    const tradeTags = (trade.tags || "").split(",").map((s) => s.trim()).filter(Boolean);
+                    const hasNotes = !!trade.setup;
+                    const isNoteExpanded = expandedNoteId === trade.id;
+                    const isNoteHovered = hoveredNoteId === trade.id;
+                    const zebraClass = rowIndex % 2 === 1 ? "bg-[--bg-secondary]/30" : "";
+                    const emotionEmoji: Record<string, string> = { confident: "\u{1F60E}", calm: "\u{1F60C}", anxious: "\u{1F630}", fearful: "\u{1F628}", greedy: "\u{1F911}", frustrated: "\u{1F624}", euphoric: "\u{1F929}", neutral: "\u{1F610}", doubtful: "\u{1F914}", focused: "\u{1F3AF}", stressed: "\u{1F625}", impatient: "\u23F1\uFE0F", revenge: "\u{1F621}", bored: "\u{1F971}", happy: "\u{1F604}", sad: "\u{1F614}" };
+                    const tradeDate = new Date(trade.date);
+                    const shortDate = tradeDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+                    const fullDate = tradeDate.toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+                    return (
+                      <React.Fragment key={trade.id}>
+                        <tr className={`trade-row border-b border-[--border-subtle] transition-colors duration-150 hover:bg-[--bg-secondary]/50 ${isSelected ? "bg-blue-500/10" : zebraClass}`}>
+                          <td className="py-5 px-4">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelect(trade.id)}
+                              className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
+                            />
+                          </td>
+                          <td className="py-5 px-4 whitespace-nowrap" title={fullDate}>
+                            <span className="text-sm text-[--text-secondary]">{shortDate}</span>
+                          </td>
+                          <td className="py-5 px-4 whitespace-nowrap">
+                            <span className="font-semibold text-base text-[--text-primary]">{trade.asset}</span>
+                          </td>
+                          <td className="py-5 px-4">
+                            <span className={`inline-flex items-center px-3 py-1.5 rounded-md text-xs font-extrabold tracking-wide ${trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/20 text-rose-400 border border-rose-500/30"}`}>
+                              {trade.direction}
                             </span>
-                          ) : "-"}
-                        </td>
-                        <td className="py-4 mono">{trade.entry} → {trade.exit || t("open")}</td>
-                        <td className="py-4 mono">{trade.lots}</td>
-                        <td className="py-4 mono text-[--text-secondary]">1:{rr}</td>
-                        <td className={`py-4 mono font-bold ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
-                          {isWin ? "+" : ""}{trade.result}€
-                        </td>
-                        <td className="py-4 text-xs text-[--text-secondary]">{trade.emotion || "-"}</td>
-                        {/* Tags cell */}
-                        <td className="py-4">
-                          <div className="flex flex-wrap items-center gap-1 relative">
-                            {tradeTags.map((tag, tagIdx) => (
-                              <TagBadge key={`${tag}-${tagIdx}`} tag={tag} onRemove={() => handleRemoveTag(trade.id, tag)} />
-                            ))}
-                            <div className="relative">
-                              <button
-                                onClick={() => setTagPickerTradeId(tagPickerTradeId === trade.id ? null : trade.id)}
-                                className="w-5 h-5 rounded flex items-center justify-center text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10 transition"
-                                title={t("journalAddTag")}
-                              >
-                                <Tag className="w-3 h-3" />
-                              </button>
-                              {tagPickerTradeId === trade.id && (
-                                <QuickTagPicker
-                                  currentTags={tradeTags}
-                                  onAddTag={(tag) => handleAddTag(trade.id, tag)}
-                                  onClose={() => setTagPickerTradeId(null)}
-                                />
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4">
-                          <div className="flex gap-2">
-                            <button onClick={() => setEditingTrade(trade)} className="text-blue-400 hover:text-blue-300" title={t("editTrade")}>
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleDuplicate(trade)} className="text-cyan-400 hover:text-cyan-300" title={t("journalDuplicate")}>
-                              <Copy className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => setShareTradeId(trade.id)} className="text-emerald-400 hover:text-emerald-300 transition" title={t("journalShare")}>
-                              <Share2 className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleAIReview(trade.id)} className="text-purple-400 hover:text-purple-300" title="AI Review">
-                              <Brain className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleDelete(trade.id)} className="text-rose-400 hover:text-rose-300" title={t("delete")}>
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                      {/* Expanded notes row */}
-                      {isNoteExpanded && hasNotes && (
-                        <tr className="border-b border-[--border-subtle]">
-                          <td colSpan={14} className="px-6 py-3">
-                            <div className="rounded-lg bg-[--bg-secondary]/50 border border-[--border] p-4 text-sm text-[--text-secondary] whitespace-pre-wrap">
-                              <div className="flex items-center gap-2 mb-2 text-xs font-medium text-amber-400">
-                                <FileText className="w-3.5 h-3.5" />
-                                {t("journalTradeNotes")}
+                          </td>
+                          <td className="py-5 px-4">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-500/15 text-blue-400 text-xs font-medium border border-blue-500/20">{trade.strategy}</span>
+                          </td>
+                          {/* Setup / Notes cell with preview */}
+                          <td className="py-5 px-4 text-[--text-secondary] max-w-xs">
+                            {hasNotes ? (
+                              <div className="relative inline-flex items-center gap-1.5">
+                                <button
+                                  onClick={() => setExpandedNoteId(isNoteExpanded ? null : trade.id)}
+                                  onMouseEnter={() => setHoveredNoteId(trade.id)}
+                                  onMouseLeave={() => setHoveredNoteId(null)}
+                                  className="inline-flex items-center gap-1.5 text-amber-400 hover:text-amber-300 transition cursor-pointer"
+                                  title={t("journalViewNotes")}
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span className="truncate max-w-[120px] text-xs">{trade.setup}</span>
+                                </button>
+                                {isNoteHovered && !isNoteExpanded && <NotesTooltip notes={trade.setup!} />}
                               </div>
-                              {trade.setup}
+                            ) : (
+                              <span className="text-[--text-muted]">-</span>
+                            )}
+                          </td>
+                          <td className="py-4 pr-4">
+                            {trade.screenshots.length > 0 ? (
+                              <span className="inline-flex items-center px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-xs">
+                                <Camera className="w-3 h-3 mr-1" />{trade.screenshots.length}
+                              </span>
+                            ) : "-"}
+                          </td>
+                          <td className="py-4 pr-4 mono whitespace-nowrap">{trade.entry} &rarr; {trade.exit || t("open")}</td>
+                          <td className="py-4 pr-4 mono">{trade.lots}</td>
+                          <td className="py-4 pr-4 mono text-[--text-secondary]">1:{rr}</td>
+                          <td className={`py-4 pr-4 mono font-bold whitespace-nowrap ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
+                            {isWin ? "+" : ""}{trade.result}\u20ac
+                          </td>
+                          <td className="py-4 pr-4 text-xs text-[--text-secondary]">{trade.emotion || "-"}</td>
+                          {/* Tags cell */}
+                          <td className="py-4 pr-4">
+                            <div className="flex flex-wrap items-center gap-1 relative">
+                              {tradeTags.map((tag, tagIdx) => (
+                                <TagBadge key={`${tag}-${tagIdx}`} tag={tag} onRemove={() => handleRemoveTag(trade.id, tag)} />
+                              ))}
+                              <div className="relative">
+                                <button
+                                  onClick={() => setTagPickerTradeId(tagPickerTradeId === trade.id ? null : trade.id)}
+                                  className="w-5 h-5 rounded flex items-center justify-center text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10 transition"
+                                  title={t("journalAddTag")}
+                                >
+                                  <Tag className="w-3 h-3" />
+                                </button>
+                                {tagPickerTradeId === trade.id && (
+                                  <QuickTagPicker
+                                    currentTags={tradeTags}
+                                    onAddTag={(tag) => handleAddTag(trade.id, tag)}
+                                    onClose={() => setTagPickerTradeId(null)}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4">
+                            <div className="flex gap-2">
+                              <button onClick={() => setEditingTrade(trade)} className="text-blue-400 hover:text-blue-300" title={t("editTrade")}>
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDuplicate(trade)} className="text-cyan-400 hover:text-cyan-300" title={t("journalDuplicate")}>
+                                <Copy className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => setShareTradeId(trade.id)} className="text-emerald-400 hover:text-emerald-300 transition" title={t("journalShare")}>
+                                <Share2 className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleAIReview(trade.id)} className="text-purple-400 hover:text-purple-300" title="AI Review">
+                                <Brain className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDelete(trade.id)} className="text-rose-400 hover:text-rose-300" title={t("delete")}>
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        {/* Expanded notes row */}
+                        {isNoteExpanded && hasNotes && (
+                          <tr className="border-b border-[--border-subtle]">
+                            <td colSpan={14} className="px-6 py-3">
+                              <div className="rounded-lg bg-[--bg-secondary]/50 border border-[--border] p-4 text-sm text-[--text-secondary] whitespace-pre-wrap">
+                                <div className="flex items-center gap-2 mb-2 text-xs font-medium text-amber-400">
+                                  <FileText className="w-3.5 h-3.5" />
+                                  {t("journalTradeNotes")}
+                                </div>
+                                {trade.setup}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Floating action bar for bulk actions */}

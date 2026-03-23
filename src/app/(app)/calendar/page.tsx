@@ -4,6 +4,7 @@ import { useTrades } from "@/hooks/useTrades";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, X, TrendingUp, TrendingDown, Flame, Calendar, BarChart3, Clock, Target, ArrowRight, ArrowUpRight, ArrowDownRight, Zap, Award, Camera } from "lucide-react";
+import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
 
 interface HoverInfo {
@@ -290,6 +291,19 @@ export default function PnLCalendarPage() {
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="text-[--text-secondary]">{t("loading")}</div></div>;
+  }
+
+  if (trades.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <TrendingUp className="w-12 h-12" style={{ color: "var(--text-muted)" }} />
+        <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>P&L Calendar</h2>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("emptyStateMessage")}</p>
+        <Link href="/journal" className="mt-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition hover:opacity-90" style={{ background: "linear-gradient(135deg, var(--accent-primary), #6366f1)" }}>
+          {t("emptyStateCta")}
+        </Link>
+      </div>
+    );
   }
 
   return (

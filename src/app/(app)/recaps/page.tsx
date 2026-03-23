@@ -562,6 +562,19 @@ export default function RecapsPage() {
     );
   }
 
+  if (trades.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <TrendingUp className="w-12 h-12" style={{ color: "var(--text-muted)" }} />
+        <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>Recaps</h2>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("emptyStateMessage")}</p>
+        <Link href="/journal" className="mt-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition hover:opacity-90" style={{ background: "linear-gradient(135deg, var(--accent-primary), #6366f1)" }}>
+          {t("emptyStateCta")}
+        </Link>
+      </div>
+    );
+  }
+
   // SVG chart helpers
   const maxAbsDailyPnl = Math.max(...dailyPnl.map((d) => Math.abs(d.pnl)), 1);
   const maxHistCount = Math.max(...histogram.map((b) => b.count), 1);

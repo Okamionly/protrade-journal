@@ -9,6 +9,7 @@ import { useUser } from "@/hooks/useTrades";
 import { useVipAccess } from "@/hooks/useVipAccess";
 import { TrendingUp, TrendingDown, Zap, Flame, ArrowUpRight, ArrowDownRight, Clock, Activity, ChevronUp, ChevronDown, BarChart3, GitCompare, Tag, Crosshair, Crown, Timer, Target, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import Link from "next/link";
 
 export default function AnalyticsPage() {
   const { t } = useTranslation();
@@ -132,7 +133,10 @@ export default function AnalyticsPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <TrendingUp className="w-12 h-12" style={{ color: "var(--text-muted)" }} />
         <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>{t("analytics")}</h2>
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("addTradesForAnalytics")}</p>
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("emptyStateMessage")}</p>
+        <Link href="/journal" className="mt-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition hover:opacity-90" style={{ background: "linear-gradient(135deg, var(--accent-primary), #6366f1)" }}>
+          {t("emptyStateCta")}
+        </Link>
       </div>
     );
   }

@@ -560,11 +560,14 @@ function usePollVotes() {
     });
   }, []);
 
+  const votesRef = useRef(votes);
+  votesRef.current = votes;
+
   const getVoteData = useCallback(
     (messageId: string) => {
-      return votes[messageId] || null;
+      return votesRef.current[messageId] || null;
     },
-    [votes]
+    [],
   );
 
   return { vote, getVoteData };
@@ -596,9 +599,12 @@ function useShareCounts() {
     });
   }, []);
 
+  const countsRef = useRef(counts);
+  countsRef.current = counts;
+
   const getShareCount = useCallback(
-    (messageId: string) => counts[messageId] || 0,
-    [counts],
+    (messageId: string) => countsRef.current[messageId] || 0,
+    [],
   );
 
   return { incrementShare, getShareCount };

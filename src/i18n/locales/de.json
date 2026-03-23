@@ -1360,5 +1360,8 @@
   "calHoverWorst": "Schlechtester",
   "calWeekShort": "W",
   "calYearHeatmapTitle": "Jahres-Heatmap",
-  "calNoTrades": "Keine Trades"
+  "calNoTrades": "Keine Trades",
+  "emptyStateMessage": "Beginnen Sie mit dem Hinzufügen von Trades, um Ihre Daten hier zu sehen",
+  "emptyStateCta": "Meinen ersten Trade hinzufügen",
+  "goalSuggestion": "Vorschlag: Basierend auf Ihrer Leistung ist ein Ziel von {amount}€ realistisch"
 }

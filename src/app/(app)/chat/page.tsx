@@ -1419,8 +1419,8 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    if (rooms.length > 0 && !activeRoomId) setActiveRoomId(rooms[0].id);
-  }, [rooms, activeRoomId]);
+    if (rooms.length > 0 && !activeRoomId && rooms[0].id) setActiveRoomId(rooms[0].id);
+  }, [rooms.length, activeRoomId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch current user role and banned status
   useEffect(() => {
