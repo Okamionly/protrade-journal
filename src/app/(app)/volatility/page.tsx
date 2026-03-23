@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   RefreshCw,
   Activity,
@@ -15,6 +15,9 @@ import {
   Minus,
 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import { useTrades } from "@/hooks/useTrades";
+import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
+import { Brain, Target, Zap as ZapIcon, ShieldCheck } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -432,6 +435,70 @@ export default function VolatilityPage() {
       }));
   const isContango = termStructure[termStructure.length - 1].value > termStructure[0].value;
 
+  // --- AI Insights: Recommandation IA basée sur le VIX ---
+  const { trades } = useTrades();
+  const volInsights = useMemo<InsightItem[]>(() => {
+    const items: InsightItem[] = [];
+
+    if (vixLevel > 30) {
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: `VIX à ${vixLevel.toFixed(1)} — Volatilité extrême. Réduisez vos positions de 50% et élargissez vos stops`,
+        type: "warning",
+      });
+      items.push({
+        icon: <ShieldCheck className="w-3.5 h-3.5" />,
+        text: "Privilégiez les valeurs refuges (or, CHF, JPY) et évitez les positions overnight",
+        type: "bearish",
+      });
+    } else if (vixLevel > 25) {
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: `VIX à ${vixLevel.toFixed(1)} — Volatilité élevée. Réduisez vos positions de 30% minimum`,
+        type: "warning",
+      });
+      items.push({
+        icon: <Target className="w-3.5 h-3.5" />,
+        text: "Favorisez le day trading sur timeframes courts, limitez le swing trading",
+        type: "neutral",
+      });
+    } else if (vixLevel > 20) {
+      items.push({
+        icon: <Activity className="w-3.5 h-3.5" />,
+        text: `VIX à ${vixLevel.toFixed(1)} — Volatilité modérée. Taille de position standard avec stops ajustés`,
+        type: "neutral",
+      });
+    } else if (vixLevel > 15) {
+      items.push({
+        icon: <TrendingUp className="w-3.5 h-3.5" />,
+        text: `VIX à ${vixLevel.toFixed(1)} — Conditions idéales pour le swing trading et les positions tendance`,
+        type: "bullish",
+      });
+    } else {
+      items.push({
+        icon: <TrendingUp className="w-3.5 h-3.5" />,
+        text: `VIX très bas (${vixLevel.toFixed(1)}) — Marché complaisant. Conditions idéales mais attention aux surprises`,
+        type: "bullish",
+      });
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: "VIX historiquement bas → Achetez de la protection (puts), le calme précède souvent la tempête",
+        type: "warning",
+      });
+    }
+
+    // Term structure insight
+    if (!isContango) {
+      items.push({
+        icon: <ZapIcon className="w-3.5 h-3.5" />,
+        text: "Structure en backwardation → Le marché anticipe plus de volatilité à court terme",
+        type: "warning",
+      });
+    }
+
+    return items.slice(0, 4);
+  }, [vixLevel, isContango]);
+
   const fear = MOCK_FEAR_INDICATORS;
 
   // Data source label
@@ -499,6 +566,16 @@ export default function VolatilityPage() {
             <p className="text-xs text-[--text-muted] mt-1 ml-6">Affichage des données de démonstration</p>
           )}
         </div>
+      )}
+
+      {/* === AI Insights: Recommandation IA === */}
+      {!loading && volInsights.length > 0 && (
+        <AIInsightsCard
+          title="Recommandation IA"
+          insights={volInsights}
+          minimumTrades={5}
+          currentTradeCount={trades.length}
+        />
       )}
 
       {/* ============================================================ */}

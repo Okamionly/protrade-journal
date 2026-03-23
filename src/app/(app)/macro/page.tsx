@@ -321,6 +321,87 @@ export default function MacroPage() {
 
   const hasLiveData = fredData.length > 0;
 
+  // --- AI Insights: Contexte macro actuel ---
+  const { trades } = useTrades();
+  const macroInsights = useMemo<InsightItem[]>(() => {
+    const items: InsightItem[] = [];
+
+    // DXY direction analysis
+    const dxyDir = DXY_DATA.changePct > 0.1 ? "haussier" : DXY_DATA.changePct < -0.1 ? "baissier" : "stable";
+    if (dxyDir === "haussier") {
+      items.push({
+        icon: <DollarSign className="w-3.5 h-3.5" />,
+        text: `DXY en hausse (${DXY_DATA.value.toFixed(1)}) → Environnement défavorable pour EUR/USD, or et matières premières`,
+        type: "bearish",
+      });
+    } else if (dxyDir === "baissier") {
+      items.push({
+        icon: <DollarSign className="w-3.5 h-3.5" />,
+        text: `DXY en baisse (${DXY_DATA.value.toFixed(1)}) → Environnement favorable pour forex majeurs, or et indices`,
+        type: "bullish",
+      });
+    } else {
+      items.push({
+        icon: <DollarSign className="w-3.5 h-3.5" />,
+        text: `DXY stable (${DXY_DATA.value.toFixed(1)}) → Pas de biais directionnel macro fort`,
+        type: "neutral",
+      });
+    }
+
+    // Yield curve status
+    if (usYieldInverted) {
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: "Courbe des taux inversée → Signal de récession, favorisez le risk-off (or, CHF, JPY)",
+        type: "warning",
+      });
+    } else {
+      const spread = (BOND_YIELDS.us[2]?.value ?? 0) - (BOND_YIELDS.us[0]?.value ?? 0);
+      items.push({
+        icon: <BarChart3 className="w-3.5 h-3.5" />,
+        text: `Courbe des taux normale (spread ${spread.toFixed(2)}%) → Conditions favorables pour le risk-on`,
+        type: "bullish",
+      });
+    }
+
+    // Inflation trend
+    const usInflation = inflationData.find((i) => i.country === "US");
+    if (usInflation) {
+      if (usInflation.current > usInflation.target + 1) {
+        items.push({
+          icon: <TrendingUp className="w-3.5 h-3.5" />,
+          text: `Inflation US élevée (${usInflation.current.toFixed(1)}% vs cible ${usInflation.target}%) → Fed hawkish, dollar soutenu`,
+          type: "warning",
+        });
+      } else if (usInflation.current <= usInflation.target + 0.5) {
+        items.push({
+          icon: <TrendingDown className="w-3.5 h-3.5" />,
+          text: `Inflation US maîtrisée (${usInflation.current.toFixed(1)}%) → Fed dovish possible, favorable aux actifs risqués`,
+          type: "bullish",
+        });
+      }
+    }
+
+    // Overall environment summary
+    const bullishCount = items.filter((i) => i.type === "bullish").length;
+    const bearishCount = items.filter((i) => i.type === "bearish" || i.type === "warning").length;
+    if (bullishCount > bearishCount) {
+      items.push({
+        icon: <Zap className="w-3.5 h-3.5" />,
+        text: "Environnement macro globalement favorable → Biais risk-on pour indices et forex",
+        type: "bullish",
+      });
+    } else if (bearishCount > bullishCount) {
+      items.push({
+        icon: <Zap className="w-3.5 h-3.5" />,
+        text: "Environnement macro défavorable → Privilégiez les valeurs refuges (or, JPY, CHF)",
+        type: "bearish",
+      });
+    }
+
+    return items.slice(0, 4);
+  }, [DXY_DATA, BOND_YIELDS, usYieldInverted, inflationData]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -363,6 +444,14 @@ export default function MacroPage() {
           </p>
         </div>
       )}
+
+      {/* === AI Insights: Contexte macro actuel === */}
+      <AIInsightsCard
+        title="Contexte macro actuel"
+        insights={macroInsights}
+        minimumTrades={5}
+        currentTradeCount={trades.length}
+      />
 
       {/* ============================================================ */}
       {/*  MACRO IMPACT SUMMARY — Key indicators as compact pills      */}

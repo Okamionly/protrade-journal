@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { RefreshCw, Activity, ArrowUpRight, ArrowDownRight, Zap, Target, BarChart3 } from "lucide-react";
+import { RefreshCw, Activity, ArrowUpRight, ArrowDownRight, Zap, Target, BarChart3, Brain, TrendingUp, TrendingDown, AlertTriangle, Trophy } from "lucide-react";
 import { useTrades } from "@/hooks/useTrades";
+import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
 import { useTranslation } from "@/i18n/context";
 
 // ---------------------------------------------------------------------------
@@ -948,6 +949,66 @@ export default function CurrencyStrengthPage() {
     return result;
   }, [trades]);
 
+  // --- AI Insights: Paires recommandées ---
+  const currencyInsights = useMemo<InsightItem[]>(() => {
+    if (!data?.strengths) return [];
+    const items: InsightItem[] = [];
+    const ranking = getRanking(data.strengths);
+
+    // Strongest vs weakest
+    if (ranking.length >= 2) {
+      const strongest = ranking[0];
+      const weakest = ranking[ranking.length - 1];
+      items.push({
+        icon: <TrendingUp className="w-3.5 h-3.5" />,
+        text: `Paire idéale : Long ${strongest}/${weakest} — Force max. vs faiblesse max.`,
+        type: "bullish",
+      });
+    }
+
+    // Cross-reference with user's best performing currencies
+    const bestCurrencies = currencyWinRates
+      .filter((c) => c.winRate > 60 && c.total >= 3)
+      .sort((a, b) => b.winRate - a.winRate);
+    const worstCurrencies = currencyWinRates
+      .filter((c) => c.winRate < 40 && c.total >= 3);
+
+    if (bestCurrencies.length > 0) {
+      const topCcy = bestCurrencies[0];
+      const isStrong = ranking.indexOf(topCcy.currency) < 4;
+      items.push({
+        icon: <Trophy className="w-3.5 h-3.5" />,
+        text: `${topCcy.currency} : Votre meilleure devise (${topCcy.winRate.toFixed(0)}% WR) — ${isStrong ? "Actuellement forte, alignement favorable" : "Actuellement faible, attendez un retournement"}`,
+        type: isStrong ? "bullish" : "neutral",
+      });
+    }
+
+    if (worstCurrencies.length > 0) {
+      const worst = worstCurrencies[0];
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: `${worst.currency} : Devise problématique pour vous (${worst.winRate.toFixed(0)}% WR) — Évitez ou réduisez la taille`,
+        type: "warning",
+      });
+    }
+
+    // Best pair combining strength data + user performance
+    if (bestPairs.length > 0 && bestCurrencies.length > 0) {
+      const aligned = bestPairs.find((p) =>
+        bestCurrencies.some((c) => c.currency === p.longCcy || c.currency === p.shortCcy)
+      );
+      if (aligned) {
+        items.push({
+          icon: <Target className="w-3.5 h-3.5" />,
+          text: `${aligned.pair} combine force relative et votre performance — Signal aligné`,
+          type: "bullish",
+        });
+      }
+    }
+
+    return items.slice(0, 4);
+  }, [data?.strengths, currencyWinRates, bestPairs]);
+
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
@@ -995,6 +1056,16 @@ export default function CurrencyStrengthPage() {
       ) : (
         <div className="space-y-8">
           {/* Feature 1: Strength Change Alerts */}
+          {/* === AI Insights: Paires recommandées === */}
+          {currencyInsights.length > 0 && (
+            <AIInsightsCard
+              title="Paires recommandées"
+              insights={currencyInsights}
+              minimumTrades={5}
+              currentTradeCount={trades.length}
+            />
+          )}
+
           <StrengthChangeAlerts changes={rankChanges} t={t} />
 
           {/* Section A: Strength Rankings (with sparklines) */}

@@ -11,13 +11,18 @@ import {
   Search,
   Newspaper,
   TrendingUp,
+  TrendingDown,
   Filter,
   Zap,
   ChevronDown,
   Bookmark,
   BookmarkCheck,
+  Brain,
+  Target,
+  BarChart3,
 } from "lucide-react";
 import { useTrades } from "@/hooks/useTrades";
+import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
 
 // --------------- Types ---------------
 
@@ -549,6 +554,75 @@ export default function NewsPage() {
 
   const trendingTopics = useMemo(() => extractTrendingTopics(news), [news]);
 
+  // --- AI Insights: Résumé des 5 dernières heures ---
+  const newsInsights = useMemo<InsightItem[]>(() => {
+    if (news.length === 0) return [];
+    const fiveHoursAgo = Date.now() / 1000 - 5 * 3600;
+    const recent = news.filter((n) => n.datetime >= fiveHoursAgo);
+    if (recent.length < 3) return [];
+
+    const items: InsightItem[] = [];
+
+    // Aggregate sentiment
+    let bullish = 0, bearish = 0, neutral = 0;
+    for (const article of recent) {
+      const s = analyzeSentiment(article.headline);
+      if (s === "bullish") bullish++;
+      else if (s === "bearish") bearish++;
+      else neutral++;
+    }
+    const total = bullish + bearish + neutral;
+    const bullPct = Math.round((bullish / total) * 100);
+    const bearPct = Math.round((bearish / total) * 100);
+
+    items.push({
+      icon: <BarChart3 className="w-3.5 h-3.5" />,
+      text: `Sentiment 5h : ${bullPct}% haussier, ${bearPct}% baissier, ${100 - bullPct - bearPct}% neutre (${total} articles)`,
+      type: bullPct > bearPct ? "bullish" : bearPct > bullPct ? "bearish" : "neutral",
+    });
+
+    // Dominant theme
+    const topics = extractTrendingTopics(recent, 3);
+    if (topics.length > 0) {
+      items.push({
+        icon: <Zap className="w-3.5 h-3.5" />,
+        text: `Thèmes dominants : ${topics.join(", ")}`,
+        type: "info",
+      });
+    }
+
+    // Impacted assets from user's trades
+    if (tradedAssets.length > 0) {
+      const impacted = new Set<string>();
+      for (const article of recent) {
+        for (const asset of tradedAssets) {
+          if (findMatchingAssets(article.headline, [asset]).length > 0) {
+            impacted.add(asset);
+          }
+        }
+      }
+      if (impacted.size > 0) {
+        items.push({
+          icon: <Target className="w-3.5 h-3.5" />,
+          text: `Actifs impactés dans vos trades : ${[...impacted].slice(0, 5).join(", ")}`,
+          type: "warning",
+        });
+      }
+    }
+
+    // Breaking news count
+    const breakingCount = recent.filter((n) => isBreakingNews(n.datetime)).length;
+    if (breakingCount > 0) {
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: `${breakingCount} actualité${breakingCount > 1 ? "s" : ""} flash dans les 30 dernières minutes`,
+        type: "warning",
+      });
+    }
+
+    return items.slice(0, 4);
+  }, [news, tradedAssets]);
+
   const filtered = useMemo(() => {
     return news.filter((item) => {
       if (showSavedOnly && !bookmarkedIds.has(item.id)) return false;
@@ -633,6 +707,16 @@ export default function NewsPage() {
             </button>
           ))}
         </div>
+      )}
+
+      {/* === AI Insights: Résumé IA des 5 dernières heures === */}
+      {!loading && newsInsights.length > 0 && (
+        <AIInsightsCard
+          title="Résumé IA des 5 dernières heures"
+          insights={newsInsights}
+          minimumTrades={5}
+          currentTradeCount={trades.length}
+        />
       )}
 
       {/* Search + Source filter row */}

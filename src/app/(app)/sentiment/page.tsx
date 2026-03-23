@@ -7,6 +7,9 @@ import {
   Thermometer, Eye, ArrowUpCircle, ArrowDownCircle,
 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import { useTrades } from "@/hooks/useTrades";
+import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
+import { Brain, Target } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -483,6 +486,75 @@ export default function SentimentPage() {
     return { avg: avg.toFixed(0), min, max };
   }, [data]);
 
+  // --- AI Insights: Quand trader? ---
+  const { trades: sentTrades } = useTrades();
+  const sentimentInsights = useMemo<InsightItem[]>(() => {
+    const items: InsightItem[] = [];
+
+    // Current regime analysis
+    if (currentVal <= 20) {
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: "Peur extrême — Historiquement, c'est un signal d'achat contrarian. Cherchez des opportunités long",
+        type: "bullish",
+      });
+      items.push({
+        icon: <Target className="w-3.5 h-3.5" />,
+        text: "Attendez une divergence haussière sur le prix avant d'entrer, ne rattrapez pas un couteau",
+        type: "neutral",
+      });
+    } else if (currentVal <= 40) {
+      items.push({
+        icon: <TrendingDown className="w-3.5 h-3.5" />,
+        text: "Zone de peur — Les marchés surréagissent. Commencez à construire des positions long progressivement",
+        type: "neutral",
+      });
+    } else if (currentVal >= 80) {
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: "Avidité extrême — Signal de prudence. Prenez vos profits et réduisez l'exposition",
+        type: "warning",
+      });
+      items.push({
+        icon: <Target className="w-3.5 h-3.5" />,
+        text: "Évitez les nouveaux longs. Cherchez des setups short ou restez en cash",
+        type: "bearish",
+      });
+    } else if (currentVal >= 60) {
+      items.push({
+        icon: <TrendingUp className="w-3.5 h-3.5" />,
+        text: "Zone d'avidité — Tendance haussière mais soyez sélectif. Serrez vos stops",
+        type: "neutral",
+      });
+    } else {
+      items.push({
+        icon: <Minus className="w-3.5 h-3.5" />,
+        text: "Sentiment neutre — Tradez votre plan, pas d'excès de marché à exploiter",
+        type: "neutral",
+      });
+    }
+
+    // Delta analysis
+    if (weekAvg !== null) {
+      const delta = currentVal - weekAvg;
+      if (delta > 10) {
+        items.push({
+          icon: <Zap className="w-3.5 h-3.5" />,
+          text: `Sentiment en forte hausse (+${delta.toFixed(0)} vs moy. 7j) — Momentum haussier mais attention au retournement`,
+          type: "warning",
+        });
+      } else if (delta < -10) {
+        items.push({
+          icon: <Zap className="w-3.5 h-3.5" />,
+          text: `Sentiment en forte baisse (${delta.toFixed(0)} vs moy. 7j) — Recherchez des opportunités de rebond`,
+          type: "bullish",
+        });
+      }
+    }
+
+    return items.slice(0, 4);
+  }, [currentVal, weekAvg]);
+
   const getBarColor = (v: number) => {
     if (v <= 25) return "#ef4444";
     if (v <= 45) return "#f97316";
@@ -735,6 +807,16 @@ export default function SentimentPage() {
         </div>
       ) : (
         <>
+          {/* === AI Insights: Quand trader? === */}
+          {sentimentInsights.length > 0 && (
+            <AIInsightsCard
+              title="Quand trader ?"
+              insights={sentimentInsights}
+              minimumTrades={5}
+              currentTradeCount={sentTrades.length}
+            />
+          )}
+
           {/* Market Pulse Summary Cards */}
           {hasData && (
             <MarketPulseCards

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useTrades } from "@/hooks/useTrades";
-import { Calendar, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, Clock, Loader2, RefreshCw, Star, Filter } from "lucide-react";
+import { useTrades, type Trade } from "@/hooks/useTrades";
+import { Calendar, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, Clock, Loader2, RefreshCw, Star, Filter, Brain, Target, Zap } from "lucide-react";
+import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
 import { useTranslation } from "@/i18n/context";
 
 interface EarningsEvent {
@@ -170,6 +171,49 @@ export default function EarningsCalendarPage() {
     if (level === "medium") return t("mediumImpact");
     return t("lowImpact");
   };
+
+  // --- AI Insights: Votre historique sur les earnings ---
+  const earningsInsights = useMemo<InsightItem[]>(() => {
+    if (trades.length < 5) return [];
+    const items: InsightItem[] = [];
+
+    // Find trades that happened during earnings weeks
+    const earningsSymbols = new Set(earningsData.map((e) => e.symbol.toUpperCase()));
+    const earningsTrades = trades.filter((tr) => earningsSymbols.has(tr.asset?.toUpperCase()));
+
+    if (earningsTrades.length === 0) return [];
+
+    const wins = earningsTrades.filter((tr) => tr.result > 0).length;
+    const losses = earningsTrades.filter((tr) => tr.result < 0).length;
+    const winRate = earningsTrades.length > 0 ? (wins / earningsTrades.length) * 100 : 0;
+    const totalPnl = earningsTrades.reduce((sum, tr) => sum + (tr.result || 0), 0);
+
+    items.push({
+      icon: <BarChart3 className="w-3.5 h-3.5" />,
+      text: `${earningsTrades.length} trades sur des actifs en période d'earnings : ${wins}W / ${losses}L (${winRate.toFixed(0)}% WR)`,
+      type: winRate >= 50 ? "bullish" : "warning",
+    });
+
+    if (totalPnl !== 0) {
+      items.push({
+        icon: totalPnl > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />,
+        text: `P&L total sur earnings : ${totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)} — ${totalPnl > 0 ? "Continuez cette approche" : "Évitez de trader pendant les earnings"}`,
+        type: totalPnl > 0 ? "bullish" : "bearish",
+      });
+    }
+
+    // Upcoming earnings on assets user trades
+    const upcoming = alertEarnings.filter((e) => e.date >= new Date().toISOString().split("T")[0]);
+    if (upcoming.length > 0) {
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: `${upcoming.length} earnings à venir sur vos actifs : ${upcoming.slice(0, 3).map((e) => e.symbol).join(", ")}`,
+        type: "warning",
+      });
+    }
+
+    return items.slice(0, 4);
+  }, [trades, earningsData, alertEarnings]);
 
   if (loading && earningsData.length === 0) {
     return (
@@ -481,6 +525,16 @@ export default function EarningsCalendarPage() {
             <span className="text-xs text-[--text-muted]">{t("lowImpact")}</span>
           </div>
         </div>
+        {/* === AI Insights: Votre historique sur les earnings === */}
+        {earningsInsights.length > 0 && (
+          <AIInsightsCard
+            title="Votre historique sur les earnings"
+            insights={earningsInsights}
+            minimumTrades={5}
+            currentTradeCount={trades.length}
+          />
+        )}
+
         <div className="flex items-center justify-center mt-3 pt-3 border-t border-[--border-subtle]">
           <span className="text-[10px] text-[--text-muted] tracking-wide">
             Powered by <a href="https://finnhub.io" target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:text-cyan-400 underline underline-offset-2">Finnhub</a>

@@ -5,6 +5,7 @@ import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, A
 import { useTranslation } from "@/i18n/context";
 import { useTrades, type Trade } from "@/hooks/useTrades";
 import { useToast } from "@/components/Toast";
+import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
 
 interface WatchItem {
   symbol: string;
@@ -175,6 +176,40 @@ export default function WatchlistPage() {
 
   // ─── Asset performance from trades ─────────────────────────────────────────
   const assetPerformance = useMemo(() => computeAssetPerformance(trades), [trades]);
+
+  // --- AI Insights: Alertes IA watchlist ---
+  const watchlistInsights = useMemo<InsightItem[]>(() => {
+    if (trades.length < 5 || items.length === 0) return [];
+    const insights: InsightItem[] = [];
+
+    for (const item of items) {
+      const perf = assetPerformance[item.symbol];
+      if (!perf || perf.tradesCount < 3) continue;
+
+      if (perf.winRate < 40) {
+        insights.push({
+          icon: <AlertTriangle className="w-3.5 h-3.5" />,
+          text: `${item.symbol} : Win rate ${perf.winRate.toFixed(0)}% sur ${perf.tradesCount} trades — Vous perdez souvent sur cet actif`,
+          type: "warning",
+        });
+      } else if (perf.winRate > 70) {
+        insights.push({
+          icon: <Trophy className="w-3.5 h-3.5" />,
+          text: `${item.symbol} : Win rate ${perf.winRate.toFixed(0)}% sur ${perf.tradesCount} trades — Actif performant pour vous`,
+          type: "bullish",
+        });
+      }
+    }
+
+    // Sort: warnings first, then bullish
+    insights.sort((a, b) => {
+      if (a.type === "warning" && b.type !== "warning") return -1;
+      if (a.type !== "warning" && b.type === "warning") return 1;
+      return 0;
+    });
+
+    return insights.slice(0, 4);
+  }, [trades, items, assetPerformance]);
 
   // Load items, alert history, and notes from localStorage
   useEffect(() => {
@@ -830,6 +865,16 @@ export default function WatchlistPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* === AI Insights: Alertes IA === */}
+      {watchlistInsights.length > 0 && (
+        <AIInsightsCard
+          title="Alertes IA"
+          insights={watchlistInsights}
+          minimumTrades={5}
+          currentTradeCount={trades.length}
+        />
       )}
 
       {/* Search + Sort Controls */}

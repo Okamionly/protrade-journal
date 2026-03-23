@@ -8,6 +8,9 @@ import {
   Star, Bell, CheckCircle, XCircle, History,
 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import { useTrades } from "@/hooks/useTrades";
+import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
+import { Brain, AlertTriangle, Target, TrendingUp as TrendUp, TrendingDown as TrendDown } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -422,6 +425,85 @@ export default function ScannerPage() {
     return result;
   }, [rows, typeFilter, signalFilter, minStrength, searchQuery, sortKey, sortDir, showOnlyFavorites, favorites]);
 
+  // --- AI Insights: Vos meilleurs signaux ---
+  const { trades: scanTrades } = useTrades();
+  const scannerInsights = useMemo<InsightItem[]>(() => {
+    if (scanTrades.length < 5 || rows.length === 0) return [];
+    const items: InsightItem[] = [];
+
+    // Find scanner symbols the user has traded
+    const tradedSymbols = new Map<string, { wins: number; total: number; pnl: number }>();
+    for (const trade of scanTrades) {
+      const sym = trade.asset?.toUpperCase();
+      if (!sym) continue;
+      const existing = tradedSymbols.get(sym) || { wins: 0, total: 0, pnl: 0 };
+      existing.total++;
+      if (trade.result > 0) existing.wins++;
+      existing.pnl += trade.result || 0;
+      tradedSymbols.set(sym, existing);
+    }
+
+    // Cross-reference with active scanner signals
+    const buySignals = rows.filter((r) => r.signal === "buy" && r.strength >= 60);
+    const sellSignals = rows.filter((r) => r.signal === "sell" && r.strength >= 60);
+
+    // Find matching buy signals on user's good assets
+    const goodMatches = buySignals.filter((r) => {
+      const stats = tradedSymbols.get(r.symbol.toUpperCase());
+      return stats && stats.total >= 2 && (stats.wins / stats.total) > 0.5;
+    });
+
+    if (goodMatches.length > 0) {
+      items.push({
+        icon: <TrendUp className="w-3.5 h-3.5" />,
+        text: `Signal BUY sur ${goodMatches.slice(0, 3).map((r) => r.symbol).join(", ")} — Actif(s) où vous performez bien`,
+        type: "bullish",
+      });
+    }
+
+    // Warn about sell signals on user's assets
+    const badMatches = sellSignals.filter((r) => tradedSymbols.has(r.symbol.toUpperCase()));
+    if (badMatches.length > 0) {
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: `Signal SELL sur ${badMatches.slice(0, 3).map((r) => r.symbol).join(", ")} — Vérifiez vos positions ouvertes`,
+        type: "warning",
+      });
+    }
+
+    // Best signal type analysis from history
+    if (signalHistory.length >= 5) {
+      const buyAccuracy = signalHistory.filter((s) => s.signal === "buy");
+      const sellAccuracy = signalHistory.filter((s) => s.signal === "sell");
+      const buyWins = buyAccuracy.filter((s) => s.correct === true).length;
+      const sellWins = sellAccuracy.filter((s) => s.correct === true).length;
+
+      if (buyAccuracy.length >= 3 && sellAccuracy.length >= 3) {
+        const buyWr = (buyWins / buyAccuracy.length) * 100;
+        const sellWr = (sellWins / sellAccuracy.length) * 100;
+        const best = buyWr > sellWr ? "BUY" : "SELL";
+        const bestWr = Math.max(buyWr, sellWr);
+        items.push({
+          icon: <Target className="w-3.5 h-3.5" />,
+          text: `Vos signaux ${best} ont un taux de réussite de ${bestWr.toFixed(0)}% — Concentrez-vous sur ce type`,
+          type: bestWr > 55 ? "bullish" : "neutral",
+        });
+      }
+    }
+
+    // Count strong signals
+    const strongSignals = rows.filter((r) => r.strength >= 75 && r.signal !== "neutral");
+    if (strongSignals.length > 0) {
+      items.push({
+        icon: <Zap className="w-3.5 h-3.5" />,
+        text: `${strongSignals.length} signaux forts (force > 75) détectés en ce moment`,
+        type: "info",
+      });
+    }
+
+    return items.slice(0, 4);
+  }, [scanTrades, rows, signalHistory]);
+
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   const signalLabel = (s: "buy" | "sell" | "neutral") => {
@@ -609,6 +691,16 @@ export default function ScannerPage() {
           </button>
         </div>
       </div>
+
+      {/* === AI Insights: Vos meilleurs signaux === */}
+      {scannerInsights.length > 0 && (
+        <AIInsightsCard
+          title="Vos meilleurs signaux"
+          insights={scannerInsights}
+          minimumTrades={5}
+          currentTradeCount={scanTrades.length}
+        />
+      )}
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
