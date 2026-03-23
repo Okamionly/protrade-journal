@@ -10,6 +10,7 @@ import {
   Medal, ChevronRight
 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import MilestonesTimeline from "@/components/MilestonesTimeline";
 
 /* ═══════════════════════════════════════════════════════════
    Helper: Score Gauge (SVG donut arc)
@@ -896,6 +897,9 @@ export default function PerformancePage() {
           <span className="text-[10px] text-[--text-muted]">{t("benchmarkLegend")}</span>
         </div>
       </div>
+
+      {/* ═══ Jalons (Milestones Timeline) ═══ */}
+      <MilestonesTimeline trades={trades} />
     </div>
   );
 }

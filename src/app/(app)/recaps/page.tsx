@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
+import WeeklyProgressCard from "@/components/WeeklyProgressCard";
 
 type Period = "week" | "month";
 
@@ -1323,6 +1324,9 @@ export default function RecapsPage() {
           </p>
         )}
       </div>
+
+      {/* Weekly Progress Card */}
+      <WeeklyProgressCard trades={trades} />
 
       {/* Lessons & Plan */}
       <div className="grid md:grid-cols-2 gap-6">

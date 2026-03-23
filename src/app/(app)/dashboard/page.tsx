@@ -19,6 +19,8 @@ import { DailyGoalTracker } from "@/components/DailyGoalTracker";
 import { EmptyDayMotivation } from "@/components/EmptyDayMotivation";
 import { MarketPhaseBadgeCompact } from "@/components/MarketPhaseBadge";
 import { BatchRecap, useUnreviewedCount } from "@/components/BatchRecap";
+import { SmartAlertCenter } from "@/components/SmartAlertCenter";
+import { MarketRegimeWidget } from "@/components/MarketRegimeWidget";
 
 
 /* ─── Trade du Jour Types ──────────────────────────────── */
@@ -682,6 +684,9 @@ export default function DashboardPage() {
       {/* === Morning Briefing === */}
       <MorningBriefing trades={trades} userName={user?.name ?? null} />
 
+      {/* === Smart Alert Center === */}
+      <SmartAlertCenter trades={trades} balance={balance} />
+
       {/* === Empty Day Motivation (after 16h, no trades) === */}
       <EmptyDayMotivation todayTradesCount={todayTrades.length} />
 
@@ -1041,8 +1046,8 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Streak + Forex Sessions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      {/* Streak + Forex Sessions + Market Regime */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Win/Loss Streak */}
         {(() => {
           let bestWin = 0, bestLoss = 0, tempWin = 0, tempLoss = 0;
@@ -1126,6 +1131,9 @@ export default function DashboardPage() {
 
         {/* Forex Sessions */}
         <ForexSessions />
+
+        {/* Régime de Marché */}
+        <MarketRegimeWidget />
       </div>
 
       {/* Best/Worst Trade + Key Metrics */}
