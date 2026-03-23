@@ -1,6 +1,10 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import {
+  fireAndForget,
+  checkPostTradeNotifications,
+} from "@/lib/autoNotifications";
 
 export async function GET() {
   try {
@@ -105,6 +109,15 @@ export async function POST(req: Request) {
       },
       include: { screenshots: true },
     });
+
+    // Fire-and-forget: check streak, goals, review reminder
+    fireAndForget(() =>
+      checkPostTradeNotifications(
+        session.user.id,
+        trade.id,
+        trade.result
+      )
+    );
 
     return NextResponse.json(trade);
   } catch (error) {

@@ -13,6 +13,9 @@ import {
   VolumeX,
   Shield,
   BookOpen,
+  Flame,
+  Target,
+  FileEdit,
 } from "lucide-react";
 import {
   type NotificationPreferences,
@@ -247,6 +250,36 @@ export function NotificationSettings() {
         description="Recevoir des alertes quand un actif atteint votre niveau cible"
         enabled={prefs.priceAlerts}
         onChange={(v) => update({ priceAlerts: v })}
+      />
+
+      {/* Streak Notifications */}
+      <SettingRow
+        icon={Flame}
+        iconColor="text-orange-400"
+        title="Notifications de streak"
+        description="Être alerté quand une série de victoires se termine"
+        enabled={prefs.streakNotifications}
+        onChange={(v) => update({ streakNotifications: v })}
+      />
+
+      {/* Goal Notifications */}
+      <SettingRow
+        icon={Target}
+        iconColor="text-green-400"
+        title="Notifications d'objectif"
+        description="Être alerté sur la progression et l'atteinte de vos objectifs mensuels"
+        enabled={prefs.goalNotifications}
+        onChange={(v) => update({ goalNotifications: v })}
+      />
+
+      {/* Journaling Reminder */}
+      <SettingRow
+        icon={FileEdit}
+        iconColor="text-indigo-400"
+        title="Rappel de journaling"
+        description="Recevoir un rappel pour noter et analyser vos trades"
+        enabled={prefs.journalingReminder}
+        onChange={(v) => update({ journalingReminder: v })}
       />
 
       {/* Sound */}

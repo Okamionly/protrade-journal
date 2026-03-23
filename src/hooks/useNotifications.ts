@@ -35,6 +35,9 @@ export interface NotificationPreferences {
   achievementUnlocked: boolean;
   priceAlerts: boolean;
   soundEnabled: boolean;
+  streakNotifications: boolean;
+  goalNotifications: boolean;
+  journalingReminder: boolean;
 }
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
@@ -46,6 +49,9 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   achievementUnlocked: true,
   priceAlerts: true,
   soundEnabled: true,
+  streakNotifications: true,
+  goalNotifications: true,
+  journalingReminder: true,
 };
 
 /* ── Storage keys ─────────────────────────────────────────────────── */
