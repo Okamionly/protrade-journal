@@ -25,6 +25,9 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Store previous forex rates so we can compute session change %
 let prevForexRates: Record<string, number> = {};
+// Store session-open prices (first fetch of the day) for daily change calculation
+let sessionOpenRates: Record<string, number> = {};
+let sessionOpenDate = "";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,12 +65,31 @@ async function fetchForex(): Promise<{
       { symbol: "GBP/JPY", value: () => (r.JPY || 149) / (r.GBP || 1), decimals: 2 },
     ];
 
+    // Track session-open prices for daily change
+    const today = new Date().toISOString().slice(0, 10);
+    if (sessionOpenDate !== today) {
+      sessionOpenDate = today;
+      sessionOpenRates = {};
+    }
+
     const pairs: PriceItem[] = defs.map((d) => {
       const price = parseFloat(d.value().toFixed(d.decimals));
-      const prev = prevForexRates[d.symbol];
+      // Store session-open price on first fetch of the day
+      if (!sessionOpenRates[d.symbol]) {
+        sessionOpenRates[d.symbol] = price;
+      }
+      // Calculate change from session open (more meaningful than prev tick)
+      const openPrice = sessionOpenRates[d.symbol];
       let change = 0;
-      if (prev && prev !== 0) {
-        change = parseFloat((((price - prev) / prev) * 100).toFixed(2));
+      if (openPrice && openPrice !== 0) {
+        change = parseFloat((((price - openPrice) / openPrice) * 100).toFixed(2));
+      }
+      // Fallback: use prev tick change if session-open gives 0
+      if (change === 0) {
+        const prev = prevForexRates[d.symbol];
+        if (prev && prev !== 0 && prev !== price) {
+          change = parseFloat((((price - prev) / prev) * 100).toFixed(2));
+        }
       }
       return { symbol: d.symbol, price, change };
     });
