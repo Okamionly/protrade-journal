@@ -142,7 +142,7 @@ function StatRow({ label, valueA, valueB, format = "number", invert = false }: {
 }) {
   const fmtVal = (v: number | string) => {
     if (typeof v === "string") return v;
-    if (format === "currency") return `${v >= 0 ? "+" : ""}${v.toFixed(2)} \u20ac`;
+    if (format === "currency") return `${v >= 0 ? "+" : ""}${v.toFixed(2)} \€`;
     if (format === "percent") return `${v.toFixed(1)}%`;
     if (format === "ratio") return v === Infinity ? "\u221e" : v.toFixed(2);
     return v.toString();
@@ -195,7 +195,7 @@ function MetricBarChart({ label, valueA, valueB, format = "number", invert = fal
   const colorBFinal = valueA === valueB ? "#64748b" : colorB;
 
   const fmtVal = (v: number) => {
-    if (format === "currency") return `${v >= 0 ? "+" : ""}${v.toFixed(0)}\u20ac`;
+    if (format === "currency") return `${v >= 0 ? "+" : ""}${v.toFixed(0)}\€`;
     if (format === "percent") return `${v.toFixed(1)}%`;
     if (format === "ratio") return v === Infinity ? "\u221e" : v.toFixed(2);
     return v.toFixed(0);
@@ -263,7 +263,7 @@ function DailyBarChart({ dailyA, dailyB, noDataLabel }: { dailyA: Record<string,
                   background: vA >= 0 ? "#06b6d4" : "#06b6d480",
                   opacity: 0.85,
                 }}
-                title={`A: ${vA.toFixed(2)} \u20ac (${date})`}
+                title={`A: ${vA.toFixed(2)} \€ (${date})`}
               />
             </div>
             <div className="flex flex-col justify-end flex-1" style={{ height: "100%" }}>
@@ -274,7 +274,7 @@ function DailyBarChart({ dailyA, dailyB, noDataLabel }: { dailyA: Record<string,
                   background: vB >= 0 ? "#8b5cf6" : "#8b5cf680",
                   opacity: 0.85,
                 }}
-                title={`B: ${vB.toFixed(2)} \u20ac (${date})`}
+                title={`B: ${vB.toFixed(2)} \€ (${date})`}
               />
             </div>
           </div>
@@ -367,7 +367,7 @@ function generateInsights(a: PeriodStats, b: PeriodStats): Insight[] {
   // Rule: WR up and PnL up
   if (wrDiff > 2 && pnlDiff > 0) {
     insights.push({
-      text: `Votre win rate a augment\u00e9 de ${wrDiff.toFixed(1)}% et votre P&L aussi (+${pnlDiff.toFixed(0)}\u20ac). Excellente p\u00e9riode !`,
+      text: `Votre win rate a augment\u00e9 de ${wrDiff.toFixed(1)}% et votre P&L aussi (+${pnlDiff.toFixed(0)}\€). Excellente p\u00e9riode !`,
       type: "positive",
     });
   }
@@ -426,7 +426,7 @@ function generateInsights(a: PeriodStats, b: PeriodStats): Insight[] {
   // Rule: Worst trade got worse
   if (a.worstTrade < 0 && b.worstTrade < a.worstTrade) {
     insights.push({
-      text: `Votre pire trade s\u2019est aggrav\u00e9 (${a.worstTrade.toFixed(0)}\u20ac \u2192 ${b.worstTrade.toFixed(0)}\u20ac). Renforcez votre discipline de stop-loss.`,
+      text: `Votre pire trade s\u2019est aggrav\u00e9 (${a.worstTrade.toFixed(0)}\€ \u2192 ${b.worstTrade.toFixed(0)}\€). Renforcez votre discipline de stop-loss.`,
       type: "negative",
     });
   }

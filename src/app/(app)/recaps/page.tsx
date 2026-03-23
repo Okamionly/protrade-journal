@@ -394,15 +394,15 @@ export default function RecapsPage() {
       if (bestDay.pnl > 0) {
         const dayDate = new Date(bestDay.date);
         const dayName = dayDate.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-        lines.push(`Votre meilleur jour a \u00E9t\u00E9 ${dayName} avec +${bestDay.pnl.toFixed(2)}\u20AC.`);
+        lines.push(`Votre meilleur jour a \u00E9t\u00E9 ${dayName} avec +${bestDay.pnl.toFixed(2)}\€.`);
       }
     }
 
     // P&L result
     if (stats.pnl >= 0) {
-      lines.push(`R\u00E9sultat net positif ${periodLabel} : +${stats.pnl.toFixed(2)}\u20AC.`);
+      lines.push(`R\u00E9sultat net positif ${periodLabel} : +${stats.pnl.toFixed(2)}\€.`);
     } else {
-      lines.push(`R\u00E9sultat net n\u00E9gatif ${periodLabel} : ${stats.pnl.toFixed(2)}\u20AC.`);
+      lines.push(`R\u00E9sultat net n\u00E9gatif ${periodLabel} : ${stats.pnl.toFixed(2)}\€.`);
     }
 
     // Improvement point
@@ -429,10 +429,10 @@ export default function RecapsPage() {
     return [
       {
         label: "P&L",
-        prev: `${stats.prevPnl >= 0 ? "+" : ""}${stats.prevPnl.toFixed(2)}\u20AC`,
-        curr: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}\u20AC`,
+        prev: `${stats.prevPnl >= 0 ? "+" : ""}${stats.prevPnl.toFixed(2)}\€`,
+        curr: `${stats.pnl >= 0 ? "+" : ""}${stats.pnl.toFixed(2)}\€`,
         delta: stats.pnl - stats.prevPnl,
-        deltaStr: `${stats.pnl - stats.prevPnl >= 0 ? "+" : ""}${(stats.pnl - stats.prevPnl).toFixed(2)}\u20AC`,
+        deltaStr: `${stats.pnl - stats.prevPnl >= 0 ? "+" : ""}${(stats.pnl - stats.prevPnl).toFixed(2)}\€`,
         pctChange: pctChange(stats.pnl, stats.prevPnl),
       },
       {
@@ -1173,7 +1173,7 @@ export default function RecapsPage() {
           <button
             onClick={() => {
               const monthKey = `goals_extended_${range.start.getFullYear()}_${range.start.getMonth()}`;
-              const mdl = prompt("Perte max journali\u00E8re autoris\u00E9e (\u20AC) :", maxDailyLossGoal !== null ? String(Math.abs(maxDailyLossGoal)) : "");
+              const mdl = prompt("Perte max journali\u00E8re autoris\u00E9e (\€) :", maxDailyLossGoal !== null ? String(Math.abs(maxDailyLossGoal)) : "");
               const tpd = prompt("Objectif trades/jour :", tradesPerDayGoal !== null ? String(tradesPerDayGoal) : "");
               const newExt = {
                 maxDailyLoss: mdl ? -Math.abs(parseFloat(mdl)) : null,
@@ -1198,7 +1198,7 @@ export default function RecapsPage() {
                 label="P&L mensuel"
                 current={stats.pnl}
                 target={goals.pnl}
-                format={(v) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}\u20AC`}
+                format={(v) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}\€`}
                 isHigherBetter={true}
               />
             )}
@@ -1220,7 +1220,7 @@ export default function RecapsPage() {
                 label="Perte max journali\u00E8re"
                 current={maxDailyLoss}
                 target={maxDailyLossGoal}
-                format={(v) => `${v.toFixed(2)}\u20AC`}
+                format={(v) => `${v.toFixed(2)}\€`}
                 isHigherBetter={true}
                 invertCheck
               />

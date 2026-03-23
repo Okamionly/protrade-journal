@@ -675,7 +675,7 @@ function JournalPageContent() {
                           isBreakeven ? "text-[--text-muted]" : isWin ? "text-emerald-400" : "text-rose-400"
                         }`}
                       >
-                        {isWin ? "+" : ""}{trade.result.toFixed(2)}\u20ac
+                        {isWin ? "+" : ""}{trade.result.toFixed(2)}€
                       </span>
                       <span className="text-sm text-[--text-secondary] mono">R:R 1:{rr}</span>
                       <span className="text-sm text-[--text-muted]">{trade.lots} lots</span>
@@ -882,7 +882,7 @@ function JournalPageContent() {
                           </td>
                           <td className="py-5 px-4">
                             <span className={`text-base font-bold mono whitespace-nowrap ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
-                              {isWin ? "+" : ""}{trade.result}\u20ac
+                              {isWin ? "+" : ""}{trade.result}€
                             </span>
                           </td>
                           <td className="py-5 px-4">
