@@ -291,7 +291,6 @@ export default function LandingContent() {
   return (
     <div className="bg-white text-gray-900">
       <h1 className="sr-only">Journal de Trading Gratuit — MarketPhase</h1>
-      <h1 className="sr-only">Journal de Trading Gratuit — MarketPhase</h1>
       {/* ==================== NAVBAR ==================== */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
         <div className="max-w-[100vw] mx-auto px-4 sm:px-6 lg:px-8">
@@ -445,7 +444,7 @@ export default function LandingContent() {
                   {t("landing_badge")}
                 </div>
 
-                <h2 className="text-2xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-[1.05] text-gray-900">
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-[1.05] text-gray-900 break-words">
                   {t("landing_heroTitle1")}{" "}
                   <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 bg-clip-text text-transparent">
                     {t("landing_heroTitle2")}
@@ -458,7 +457,7 @@ export default function LandingContent() {
                 </p>
 
                 <div className="mt-8 flex flex-col sm:flex-row items-center lg:items-start gap-4">
-                  <Link href="/register" title="Creer mon journal de trading gratuit" className="group inline-flex items-center gap-2 text-base font-bold text-white px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all hover:-translate-y-0.5">
+                  <Link href="/register" title="Creer mon journal de trading gratuit" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 text-base font-bold text-white px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all hover:-translate-y-0.5">
                     {t("landing_ctaPrimary")}
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -467,6 +466,12 @@ export default function LandingContent() {
                     <ChevronRight className="w-4 h-4" />
                   </Link>
                 </div>
+
+                {/* Urgency / FOMO */}
+                <p className="mt-3 text-xs text-gray-400 flex items-center justify-center lg:justify-start gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Rejoignez les <strong className="text-gray-600">47 traders</strong> qui se sont inscrits cette semaine</span>
+                </p>
 
                 <div className="mt-8 flex flex-col sm:flex-row items-center lg:items-start gap-4 sm:gap-6">
                   <span className="text-sm text-gray-500 font-medium">35+ outils gratuits</span>
@@ -892,10 +897,14 @@ export default function LandingContent() {
                       </li>
                     ))}
                   </ul>
-                  <Link href="/register" className="group w-full inline-flex items-center justify-center gap-2 text-sm font-bold text-gray-700 px-6 py-3 rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all">
+                  <Link href="/register" className="group w-full inline-flex items-center justify-center gap-2 text-sm font-bold text-white px-6 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-lg hover:shadow-blue-500/25 transition-all">
                     {t("landing_pricingCta")}
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
+                  <p className="mt-3 text-xs text-gray-400 flex items-center justify-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-gray-300" />
+                    Pas de carte bancaire requise
+                  </p>
                 </div>
 
                 {/* VIP card */}
@@ -962,10 +971,18 @@ export default function LandingContent() {
               <p className="text-sm sm:text-lg text-gray-500 mb-8 max-w-xl mx-auto">
                 {t("landing_finalSub")}
               </p>
-              <Link href="/register" title="Demarrer le journal de trading gratuit" className="group inline-flex items-center gap-2 text-base sm:text-lg font-bold text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all hover:-translate-y-1">
+              <Link href="/register" title="Demarrer le journal de trading gratuit" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 text-base sm:text-lg font-bold text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all hover:-translate-y-1">
                 {t("landing_finalCta")}
                 <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform" />
               </Link>
+              <p className="mt-4 text-xs text-gray-400 flex items-center justify-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Rejoignez les <strong className="text-gray-600">47 traders</strong> qui se sont inscrits cette semaine</span>
+              </p>
+              <p className="mt-1.5 text-xs text-gray-400 flex items-center justify-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-gray-300" />
+                0&euro;/mois &middot; Pas de carte bancaire
+              </p>
             </div>
 
             {/* Footer */}

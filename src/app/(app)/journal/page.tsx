@@ -653,8 +653,8 @@ function JournalPageContent() {
                         {/* Tags cell */}
                         <td className="py-4">
                           <div className="flex flex-wrap items-center gap-1 relative">
-                            {tradeTags.map((tag) => (
-                              <TagBadge key={tag} tag={tag} onRemove={() => handleRemoveTag(trade.id, tag)} />
+                            {tradeTags.map((tag, tagIdx) => (
+                              <TagBadge key={`${tag}-${tagIdx}`} tag={tag} onRemove={() => handleRemoveTag(trade.id, tag)} />
                             ))}
                             <div className="relative">
                               <button

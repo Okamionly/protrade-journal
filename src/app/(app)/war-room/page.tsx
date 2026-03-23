@@ -7,7 +7,7 @@ import {
   AlertTriangle, CheckSquare, Square, Smile, Meh,
   Zap, BarChart3, ArrowUpRight, ArrowDownRight, Bell, Timer,
   Globe, Moon, Crosshair, Settings, X, Plus, Trash2,
-  ChevronDown, ChevronUp, Newspaper, Tv, Map, Layers,
+  ChevronDown, ChevronUp, Newspaper, Tv, Layers,
   ExternalLink, RefreshCw, Radio,
 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
@@ -298,32 +298,6 @@ function getTradeSession(trade: Trade, sessions: SessionInfo[]): string {
   return "Hors session";
 }
 
-// ─── Market Centers for Geographic Map ──────────────────────────────────────
-
-interface MarketCenter {
-  name: string;
-  city: string;
-  x: number; // SVG x coordinate (0-800)
-  y: number; // SVG y coordinate (0-400)
-  utcOffset: number; // standard offset
-  dstOffset?: number; // offset during DST
-  openHour: number; // local open hour
-  closeHour: number; // local close hour
-  preMarketStart?: number;
-  postMarketEnd?: number;
-  useDst?: "us" | "eu" | "au" | false;
-}
-
-const MARKET_CENTERS: MarketCenter[] = [
-  { name: "NYSE", city: "New York", x: 230, y: 165, utcOffset: -5, dstOffset: -4, openHour: 9.5, closeHour: 16, preMarketStart: 4, postMarketEnd: 20, useDst: "us" },
-  { name: "LSE", city: "London", x: 390, y: 135, utcOffset: 0, dstOffset: 1, openHour: 8, closeHour: 16.5, preMarketStart: 5.5, postMarketEnd: 17.5, useDst: "eu" },
-  { name: "XETRA", city: "Frankfurt", x: 410, y: 140, utcOffset: 1, dstOffset: 2, openHour: 9, closeHour: 17.5, preMarketStart: 8, postMarketEnd: 20, useDst: "eu" },
-  { name: "TSE", city: "Tokyo", x: 660, y: 160, utcOffset: 9, openHour: 9, closeHour: 15, useDst: false },
-  { name: "ASX", city: "Sydney", x: 700, y: 310, utcOffset: 10, dstOffset: 11, openHour: 10, closeHour: 16, useDst: "au" },
-  { name: "HKEX", city: "Hong Kong", x: 630, y: 195, utcOffset: 8, openHour: 9.5, closeHour: 16, useDst: false },
-  { name: "SSE", city: "Shanghai", x: 635, y: 175, utcOffset: 8, openHour: 9.5, closeHour: 15, useDst: false },
-];
-
 function isAuDst(date: Date): boolean {
   const year = date.getFullYear();
   // AU DST: first Sunday in October to first Sunday in April (southern hemisphere)
@@ -337,40 +311,6 @@ function isAuDst(date: Date): boolean {
   const dstEnd = new Date(year, 3, firstSunApr, 3, 0, 0);
   // Southern hemisphere: DST from Oct to Apr (crosses year boundary)
   return date >= dstStart || date < dstEnd;
-}
-
-function getMarketStatus(center: MarketCenter, now: Date): { status: "open" | "closed" | "pre_post"; localTime: string } {
-  let offset = center.utcOffset;
-  if (center.useDst === "us" && isUsDst(now) && center.dstOffset !== undefined) offset = center.dstOffset;
-  if (center.useDst === "eu" && isEuDst(now) && center.dstOffset !== undefined) offset = center.dstOffset;
-  if (center.useDst === "au" && isAuDst(now) && center.dstOffset !== undefined) offset = center.dstOffset;
-
-  const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60;
-  let localHour = (utcHours + offset) % 24;
-  if (localHour < 0) localHour += 24;
-
-  const localDay = new Date(now.getTime() + offset * 3600000).getUTCDay();
-  const isWeekend = localDay === 0 || localDay === 6;
-
-  // Format local time
-  const localH = Math.floor(localHour);
-  const localM = Math.floor((localHour - localH) * 60);
-  const localTime = `${localH.toString().padStart(2, "0")}:${localM.toString().padStart(2, "0")}`;
-
-  if (isWeekend) return { status: "closed", localTime };
-
-  if (localHour >= center.openHour && localHour < center.closeHour) {
-    return { status: "open", localTime };
-  }
-
-  if (center.preMarketStart !== undefined && center.postMarketEnd !== undefined) {
-    if ((localHour >= center.preMarketStart && localHour < center.openHour) ||
-        (localHour >= center.closeHour && localHour < center.postMarketEnd)) {
-      return { status: "pre_post", localTime };
-    }
-  }
-
-  return { status: "closed", localTime };
 }
 
 // ─── Correlation Data ───────────────────────────────────────────────────────
@@ -409,9 +349,6 @@ const DEFAULT_RULES = [
   "J'ai identifié mes niveaux clés",
   "Je suis dans un état émotionnel neutre",
 ];
-
-// Legacy compat
-const CHECKLIST_ITEMS = DEFAULT_RULES;
 
 function getRulesKey(): string {
   return "warroom-custom-rules";
@@ -965,13 +902,13 @@ const ICT_KILLZONES: IctKillzone[] = [
 // ─── Enhanced Session Timeline (with Killzones & UTC Offset) ────────────────
 
 function ForexSessionTimeline({
-  sessions, hour, minute, second, currentTime, sessionPerformance, killzones,
+  sessions, hour, minute, second, sessionPerformance, killzones,
 }: {
   sessions: SessionInfo[];
   hour: number;
   minute: number;
   second: number;
-  currentTime: Date;
+  currentTime?: Date;
   sessionPerformance: Record<string, { pnl: number; trades: number; wins: number }>;
   killzones: KillzoneInfo[];
 }) {

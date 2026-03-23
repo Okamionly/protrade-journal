@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Search, RefreshCw, TrendingUp, TrendingDown, Minus,
   ArrowUpDown, Filter, ChevronDown, ChevronUp, X,
-  Zap, BarChart3, Clock, Radio, Activity, Eye,
+  Zap, BarChart3, Clock, Radio, Activity,
   Star, Bell, CheckCircle, XCircle, History,
 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
@@ -123,28 +123,6 @@ function saveFavorites(favs: string[]) {
 }
 
 // ─── Signal Strength Bars (1-5) ─────────────────────────────────────────────
-
-function SignalStrengthBars({ strength, signal }: { strength: number; signal: "buy" | "sell" | "neutral" }) {
-  // Map 0-100 strength to 1-5 bars
-  const bars = Math.max(1, Math.min(5, Math.ceil(strength / 20)));
-  const color = signal === "buy" ? "rgb(16,185,129)" : signal === "sell" ? "rgb(239,68,68)" : "rgb(245,158,11)";
-  return (
-    <div className="flex items-end gap-0.5" title={`Force : ${strength}/100 (${bars}/5)`}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <div
-          key={i}
-          style={{
-            width: 4,
-            height: 6 + i * 3,
-            borderRadius: 1,
-            background: i < bars ? color : "var(--bg-hover)",
-            transition: "background 0.3s",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -363,7 +341,6 @@ export default function ScannerPage() {
       }
     }
     prevRowsRef.current = rows;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, favorites]);
 
   // Auto-dismiss toasts
@@ -1062,7 +1039,7 @@ export default function ScannerPage() {
                       padding: "10px 12px",
                       color: row.change > 0 ? "rgb(16,185,129)" : row.change < 0 ? "rgb(239,68,68)" : "var(--text-muted)",
                     }}>
-                      {row.change > 0 ? "+" : ""}{row.change.toFixed(2)}%
+                      {row.change === 0 ? "—" : `${row.change > 0 ? "+" : ""}${row.change.toFixed(2)}%`}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
                       {volumeIcon(row.volumeLevel)}
@@ -1125,7 +1102,7 @@ export default function ScannerPage() {
               <span className="text-lg font-bold tabular-nums" style={{
                 color: selectedRow.change > 0 ? "rgb(16,185,129)" : selectedRow.change < 0 ? "rgb(239,68,68)" : "var(--text-muted)",
               }}>
-                {selectedRow.change > 0 ? "+" : ""}{selectedRow.change.toFixed(2)}%
+                {selectedRow.change === 0 ? "—" : `${selectedRow.change > 0 ? "+" : ""}${selectedRow.change.toFixed(2)}%`}
               </span>
             </div>
             <div>
