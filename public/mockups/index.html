@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarketPhase — Choix Design Interface</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #fff; }
+.header { text-align: center; padding: 40px 20px; }
+.header h1 { font-size: 32px; background: linear-gradient(135deg, #06b6d4, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header p { color: #888; margin-top: 8px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; }
+.card { border-radius: 16px; overflow: hidden; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; }
+.card:hover { transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.card-header { padding: 20px; font-size: 20px; font-weight: 700; }
+.card-sub { padding: 0 20px 12px; font-size: 13px; opacity: 0.7; }
+.mockup { width: 100%; aspect-ratio: 16/10; position: relative; overflow: hidden; }
+
+/* Option A — Bloomberg */
+.bloomberg { border: 1px solid #333; }
+.bloomberg .card-header { background: #000; color: #00ff88; font-family: 'Courier New', monospace; }
+.bloomberg .mockup { background: #000; padding: 8px; font-family: 'Courier New', monospace; font-size: 10px; color: #00ff88; display: flex; gap: 4px; }
+.bloomberg .panel { border: 1px solid #333; padding: 6px; flex: 1; }
+.bloomberg .panel-title { color: #ff8800; font-size: 9px; margin-bottom: 4px; text-transform: uppercase; }
+.bloomberg .row { display: flex; justify-content: space-between; margin: 2px 0; font-size: 9px; }
+.bloomberg .green { color: #00ff88; }
+.bloomberg .red { color: #ff4444; }
+.bloomberg .sidebar-b { width: 120px; border: 1px solid #333; padding: 6px; }
+.bloomberg .nav-item { padding: 3px 0; font-size: 9px; color: #888; border-bottom: 1px solid #1a1a1a; }
+.bloomberg .nav-item.active { color: #00ff88; }
+
+/* Option B — Fintech */
+.fintech { border: 1px solid rgba(6,182,212,0.2); background: linear-gradient(135deg, #0a1628, #0f1a2e); }
+.fintech .card-header { background: linear-gradient(135deg, #0a1628, #0f1a2e); color: #fff; }
+.fintech .mockup { background: linear-gradient(135deg, #0a1628, #0f1a2e); padding: 12px; display: flex; gap: 8px; }
+.fintech .sidebar-f { width: 50px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.fintech .nav-dot { width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.fintech .nav-dot.active { background: linear-gradient(135deg, #06b6d4, #3b82f6); }
+.fintech .content-f { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.fintech .glass-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 10px; backdrop-filter: blur(10px); }
+.fintech .stat-row { display: flex; gap: 8px; }
+.fintech .stat { flex: 1; text-align: center; }
+.fintech .stat-value { font-size: 18px; font-weight: 700; color: #06b6d4; }
+.fintech .stat-label { font-size: 9px; color: #666; margin-top: 2px; }
+.fintech .chart-area { flex: 1; background: rgba(6,182,212,0.05); border-radius: 8px; min-height: 80px; position: relative; }
+.fintech .chart-line { position: absolute; bottom: 20%; left: 5%; width: 90%; height: 2px; background: linear-gradient(90deg, #06b6d4, #10b981); border-radius: 2px; }
+
+/* Option C — Minimal */
+.minimal { border: 1px solid #e5e7eb; background: #fff; }
+.minimal .card-header { background: #fff; color: #111; }
+.minimal .card-sub { color: #666; }
+.minimal .mockup { background: #fafafa; padding: 12px; display: flex; gap: 12px; }
+.minimal .sidebar-m { width: 160px; background: #fff; border-right: 1px solid #e5e7eb; padding: 8px; }
+.minimal .nav-m { padding: 6px 8px; font-size: 11px; color: #555; border-radius: 6px; margin-bottom: 2px; }
+.minimal .nav-m.active { background: #f3f4f6; color: #111; font-weight: 600; }
+.minimal .content-m { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.minimal .card-m { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; }
+.minimal .card-m h3 { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+.minimal .card-m .val { font-size: 22px; font-weight: 700; color: #111; margin-top: 4px; }
+.minimal .card-m .val.green { color: #10b981; }
+
+/* Option D — Cockpit */
+.cockpit { border: 1px solid #1e293b; background: #0f172a; }
+.cockpit .card-header { background: #0f172a; color: #e2e8f0; }
+.cockpit .mockup { background: #0f172a; padding: 4px; display: grid; grid-template-columns: 40px 1fr 1fr 200px; grid-template-rows: 1fr 1fr; gap: 3px; }
+.cockpit .mini-sidebar { grid-row: 1/3; display: flex; flex-direction: column; gap: 2px; }
+.cockpit .mini-nav { width: 36px; height: 36px; background: #1e293b; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.cockpit .mini-nav.active { background: #06b6d4; }
+.cockpit .panel-c { background: #1e293b; border-radius: 6px; padding: 6px; }
+.cockpit .panel-c .title { font-size: 8px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.cockpit .panel-c .big { font-size: 16px; font-weight: 700; color: #e2e8f0; }
+.cockpit .panel-c .big.up { color: #10b981; }
+.cockpit .panel-c .big.down { color: #ef4444; }
+.cockpit .right-panel { grid-row: 1/3; display: flex; flex-direction: column; gap: 3px; }
+
+.vote-btn { display: block; width: 100%; padding: 12px; margin-top: 8px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.vote-btn:hover { transform: scale(1.02); }
+.vote-a { background: #00ff88; color: #000; }
+.vote-b { background: linear-gradient(135deg, #06b6d4, #3b82f6); color: #fff; }
+.vote-c { background: #111; color: #fff; }
+.vote-d { background: #1e293b; color: #06b6d4; border: 1px solid #06b6d4; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>MarketPhase — Choix du Design</h1>
+  <p>Clique sur l'option que tu préfères</p>
+</div>
+<div class="grid">
+
+  <!-- Option A -->
+  <div class="card bloomberg">
+    <div class="card-header">A — Bloomberg Terminal</div>
+    <div class="card-sub">Ultra dense, données brutes, monospace vert sur noir</div>
+    <div class="mockup">
+      <div class="sidebar-b">
+        <div class="nav-item active">DASHBOARD</div>
+        <div class="nav-item">JOURNAL</div>
+        <div class="nav-item">ANALYTICS</div>
+        <div class="nav-item">CHART</div>
+        <div class="nav-item">COT</div>
+        <div class="nav-item">MACRO</div>
+        <div class="nav-item">NEWS</div>
+        <div class="nav-item">RISK</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;gap:4px">
+          <div class="panel" style="flex:2">
+            <div class="panel-title">P&L TODAY</div>
+            <div class="row"><span>NET</span><span class="green">+€412.21</span></div>
+            <div class="row"><span>TRADES</span><span>7</span></div>
+            <div class="row"><span>WIN RATE</span><span class="green">71.4%</span></div>
+            <div class="row"><span>BEST</span><span class="green">+€198.50</span></div>
+            <div class="row"><span>WORST</span><span class="red">-€66.25</span></div>
+          </div>
+          <div class="panel" style="flex:2">
+            <div class="panel-title">POSITIONS</div>
+            <div class="row"><span>EUR/USD</span><span class="green">LONG 0.5</span></div>
+            <div class="row"><span>XAU/USD</span><span class="red">SHORT 0.1</span></div>
+            <div class="row"><span>USD/JPY</span><span class="green">LONG 0.2</span></div>
+          </div>
+          <div class="panel" style="flex:1">
+            <div class="panel-title">RISK</div>
+            <div class="row"><span>EXPO</span><span>1.2%</span></div>
+            <div class="row"><span>DD</span><span class="red">-3.1%</span></div>
+            <div class="row"><span>KELLY</span><span>4.2%</span></div>
+          </div>
+        </div>
+        <div class="panel" style="flex:1">
+          <div class="panel-title">EQUITY CURVE — MARCH 2026</div>
+          <div style="color:#00ff88;font-size:8px;margin-top:4px">▁▂▃▅▆▇█▇▆▅▆▇█▇▆▇█████▇▆▇</div>
+        </div>
+      </div>
+    </div>
+    <button class="vote-btn vote-a">Choisir Bloomberg Terminal</button>
+  </div>
+
+  <!-- Option B -->
+  <div class="card fintech">
+    <div class="card-header">B — Fintech Moderne</div>
+    <div class="card-sub">Glass morphism, gradients, animations fluides — comme Revolut</div>
+    <div class="mockup">
+      <div class="sidebar-f">
+        <div class="nav-dot active">📊</div>
+        <div class="nav-dot">📝</div>
+        <div class="nav-dot">📈</div>
+        <div class="nav-dot">💹</div>
+        <div class="nav-dot">🏆</div>
+        <div class="nav-dot">👥</div>
+      </div>
+      <div class="content-f">
+        <div class="glass-card stat-row">
+          <div class="stat"><div class="stat-value">+€16,317</div><div class="stat-label">Profit Net</div></div>
+          <div class="stat"><div class="stat-value" style="color:#10b981">66.9%</div><div class="stat-label">Win Rate</div></div>
+          <div class="stat"><div class="stat-value">1:2.4</div><div class="stat-label">R:R Moyen</div></div>
+          <div class="stat"><div class="stat-value" style="color:#f59e0b">🔥 5</div><div class="stat-label">Série</div></div>
+        </div>
+        <div class="glass-card chart-area">
+          <div class="chart-line"></div>
+          <div style="position:absolute;top:8px;left:10px;font-size:10px;color:#666">Equity Curve</div>
+        </div>
+        <div class="stat-row">
+          <div class="glass-card" style="flex:1;text-align:center"><div style="font-size:11px;color:#10b981">Phase: Markup ↗</div></div>
+          <div class="glass-card" style="flex:1;text-align:center"><div style="font-size:11px;color:#f59e0b">VIX: 26.8</div></div>
+          <div class="glass-card" style="flex:1;text-align:center"><div style="font-size:11px;color:#ef4444">F&G: 8</div></div>
+        </div>
+      </div>
+    </div>
+    <button class="vote-btn vote-b">Choisir Fintech Moderne</button>
+  </div>
+
+  <!-- Option C -->
+  <div class="card minimal">
+    <div class="card-header">C — Clean Minimal</div>
+    <div class="card-sub">Fond blanc, typographie forte, espace — comme Linear/Notion</div>
+    <div class="mockup">
+      <div class="sidebar-m">
+        <div class="nav-m active">Tableau de bord</div>
+        <div class="nav-m">Journal</div>
+        <div class="nav-m">Analytiques</div>
+        <div class="nav-m">Graphique</div>
+        <div class="nav-m" style="margin-top:8px;font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px">Marché</div>
+        <div class="nav-m">COT Report</div>
+        <div class="nav-m">Macro</div>
+        <div class="nav-m">Actualités</div>
+      </div>
+      <div class="content-m">
+        <div style="display:flex;gap:8px">
+          <div class="card-m" style="flex:1"><h3>Profit Net</h3><div class="val green">+€16,317.77</div></div>
+          <div class="card-m" style="flex:1"><h3>Win Rate</h3><div class="val">66.9%</div></div>
+          <div class="card-m" style="flex:1"><h3>Trades</h3><div class="val">118</div></div>
+        </div>
+        <div class="card-m" style="flex:1">
+          <h3>Courbe d'Equity</h3>
+          <div style="height:60px;background:linear-gradient(180deg, rgba(16,185,129,0.08) 0%, transparent 100%);border-radius:4px;margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+    <button class="vote-btn vote-c">Choisir Clean Minimal</button>
+  </div>
+
+  <!-- Option D -->
+  <div class="card cockpit">
+    <div class="card-header">D — Trading Cockpit</div>
+    <div class="card-sub">Multi-panneaux, sidebar fine, maximum de contenu — comme TradingView</div>
+    <div class="mockup">
+      <div class="mini-sidebar">
+        <div class="mini-nav active">📊</div>
+        <div class="mini-nav">📝</div>
+        <div class="mini-nav">📈</div>
+        <div class="mini-nav">💹</div>
+        <div class="mini-nav">🗞</div>
+        <div class="mini-nav">⚙</div>
+      </div>
+      <div class="panel-c">
+        <div class="title">Chart EUR/USD — 1H</div>
+        <div style="height:100%;background:linear-gradient(180deg, rgba(6,182,212,0.1) 0%, transparent 100%);border-radius:4px"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <div class="panel-c">
+          <div class="title">P&L Aujourd'hui</div>
+          <div class="big up">+€412.21</div>
+        </div>
+        <div class="panel-c">
+          <div class="title">Dernier Trade</div>
+          <div style="font-size:10px;color:#94a3b8">EUR/USD LONG +€198.50</div>
+        </div>
+        <div class="panel-c">
+          <div class="title">Win Rate</div>
+          <div class="big">66.9%</div>
+        </div>
+      </div>
+      <div class="right-panel">
+        <div class="panel-c" style="flex:1">
+          <div class="title">Trades Récents</div>
+          <div style="font-size:9px;color:#10b981;margin:2px 0">✓ EUR/USD +€198.50</div>
+          <div style="font-size:9px;color:#10b981;margin:2px 0">✓ XAU/USD +€154.92</div>
+          <div style="font-size:9px;color:#ef4444;margin:2px 0">✗ USD/JPY -€66.25</div>
+          <div style="font-size:9px;color:#10b981;margin:2px 0">✓ GBP/USD +€33.03</div>
+        </div>
+        <div class="panel-c">
+          <div class="title">Sessions</div>
+          <div style="font-size:9px;color:#10b981">● London — Actif</div>
+          <div style="font-size:9px;color:#64748b">○ New York — 2h</div>
+        </div>
+      </div>
+    </div>
+    <button class="vote-btn vote-d">Choisir Trading Cockpit</button>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { TrendingUp, TrendingDown, Minus, ArrowUp, ArrowDown } from "lucide-react";
+import { TrendingUp, ArrowUp, ArrowDown } from "lucide-react";
 import type { Trade } from "@/hooks/useTrades";
 
 /* ═══════════════════════════════════════════════════════════
@@ -214,12 +214,7 @@ export default function WeeklyProgressCard({ trades }: { trades: Trade[] }) {
       };
     }
 
-    // Week labels for sparkline tooltip
-    const weekLabels = weeks.map((w) =>
-      `S${getISOWeekNumber(w.start)}`
-    );
-
-    return { thisWeek, lastWeek, pnlValues, badge, weekLabels };
+    return { thisWeek, lastWeek, pnlValues, badge };
   }, [trades]);
 
   const { thisWeek, lastWeek, pnlValues, badge } = data;
@@ -272,16 +267,3 @@ export default function WeeklyProgressCard({ trades }: { trades: Trade[] }) {
   );
 }
 
-/* ISO week number helper */
-function getISOWeekNumber(d: Date): number {
-  const date = new Date(d.getTime());
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
-  const week1 = new Date(date.getFullYear(), 0, 4);
-  return (
-    1 +
-    Math.round(
-      ((date.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
-    )
-  );
-}
