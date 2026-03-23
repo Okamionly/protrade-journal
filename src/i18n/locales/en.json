@@ -2222,7 +2222,6 @@
   "trumpTrackerNewsFeed": "Trump & Trade News",
   "trumpTrackerNoNews": "No recent Trump news",
   "trumpTrackerNoNewsDesc": "Articles mentioning Trump, tariffs or trade war will appear here.",
-
   "sidebarMarketPhase": "Market Phase",
   "marketPhase_title": "Market Phase",
   "marketPhase_subtitle": "Real-time Wyckoff Detection",
@@ -2296,7 +2295,6 @@
   "ta_corrFavorable": "Favorable condition",
   "ta_corrAboveAvg": "Above average",
   "ta_corrBetter": "Better in trends",
-
   "fundamentals_title": "Fundamentals",
   "fundamentals_overview": "Overview",
   "fundamentals_marketCap": "Market Cap",
@@ -2324,13 +2322,11 @@
   "fundamentals_noData": "No data available for this symbol",
   "fundamentals_clickToView": "Click a symbol to view fundamentals",
   "fundamentals_close": "Close",
-
   "sentiment_avBadge": "AV Sentiment",
   "sentiment_bullish": "Bullish",
   "sentiment_bearish": "Bearish",
   "sentiment_neutral": "Neutral",
   "sentiment_score": "Score",
-
   "commodities_title": "Commodities",
   "commodities_subtitle": "Monthly prices — Energy, Metals, Agriculture",
   "commodities_refresh": "Refresh",
@@ -2348,5 +2344,9 @@
   "commodities_corn": "Corn",
   "commodities_cotton": "Cotton",
   "commodities_sugar": "Sugar",
-  "commodities_coffee": "Coffee"
+  "commodities_coffee": "Coffee",
+  "marketPhase_unavailable": "Data unavailable",
+  "marketPhase_unavailableDesc": "Unable to load data for this asset. Please try again later.",
+  "commodities_fallbackNote": "Cached data",
+  "currStr_needsWork": "Needs work"
 }
