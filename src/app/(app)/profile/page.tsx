@@ -858,14 +858,25 @@ export default function ProfilePage() {
       </div>
 
       {/* ═══════════════════════════ PROFILE HEADER ═══════════════════════════ */}
-      <GlassCard className="relative overflow-hidden">
-        {/* Decorative gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-blue-500/5 to-purple-500/5" />
-        <div className="relative">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-            {/* Avatar */}
+      <GlassCard className="relative overflow-hidden !p-0">
+        {/* Gradient banner (like Twitter profile) */}
+        <div className={`h-32 w-full bg-gradient-to-r ${
+          profile?.role === "ADMIN" ? "from-rose-600/40 via-pink-500/30 to-rose-600/40"
+          : profile?.role === "VIP" ? "from-amber-500/40 via-yellow-400/30 to-amber-500/40"
+          : "from-cyan-500/30 via-blue-500/30 to-purple-500/30"
+        }`}>
+          <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-transparent to-white/5 dark:to-gray-900/30" />
+        </div>
+
+        <div className="relative px-6 pb-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 -mt-14">
+            {/* Avatar — larger, with role ring */}
             <div className="relative group shrink-0">
-              <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-3xl font-bold overflow-hidden shadow-xl shadow-cyan-500/20 ring-4 ring-white/10">
+              <div className={`w-28 h-28 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-3xl font-bold overflow-hidden shadow-xl ring-4 ${
+                profile?.role === "ADMIN" ? "ring-rose-500/60 shadow-rose-500/20"
+                : profile?.role === "VIP" ? "ring-amber-400/60 shadow-amber-500/20"
+                : "ring-cyan-400/40 shadow-cyan-500/20"
+              }`}>
                 {uploadingAvatar ? (
                   <Loader2 className="w-8 h-8 animate-spin" />
                 ) : avatarUrl ? (
@@ -890,7 +901,7 @@ export default function ProfilePage() {
             </div>
 
             {/* User info */}
-            <div className="flex-1 text-center sm:text-left min-w-0">
+            <div className="flex-1 text-center sm:text-left min-w-0 sm:pb-1">
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3">
                 {editingName ? (
                   <div className="flex items-center gap-2">
@@ -940,37 +951,44 @@ export default function ProfilePage() {
                   <Mail className="w-3.5 h-3.5" />
                   {profile?.email}
                 </span>
-                <span className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {t("memberSince")} {profile?.createdAt
-                    ? new Date(profile.createdAt).toLocaleDateString(locale === "en" ? "en-US" : locale === "fr" ? "fr-FR" : "en-US", {
-                        month: "long",
-                        year: "numeric",
-                      })
-                    : "--"}
-                </span>
               </div>
-
-              {/* Quick stats row */}
-              {stats && stats.totalTrades > 0 && (
-                <div className="flex flex-wrap items-center gap-4 mt-4">
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
-                    <span className="text-gray-500 dark:text-gray-400">{stats.totalTrades} trades</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <Target className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-gray-500 dark:text-gray-400">{stats.winRate}% {t("winRate")}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
-                    <span className={`${stats.totalPnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                      {stats.totalPnl >= 0 ? "+" : ""}{stats.totalPnl.toFixed(2)} $
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
+          </div>
+
+          {/* Member since — prominent pill */}
+          <div className="flex flex-wrap items-center gap-3 mt-5 pt-5 border-t border-gray-200 dark:border-gray-800">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+              <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-xs font-medium text-cyan-400">
+                {t("memberSince")} {profile?.createdAt
+                  ? new Date(profile.createdAt).toLocaleDateString(locale === "en" ? "en-US" : locale === "fr" ? "fr-FR" : "en-US", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "--"}
+              </span>
+            </div>
+
+            {/* Quick stats row */}
+            {stats && stats.totalTrades > 0 && (
+              <>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="text-gray-500 dark:text-gray-400">{stats.totalTrades} trades</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Target className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-gray-500 dark:text-gray-400">{stats.winRate}% {t("winRate")}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+                  <span className={`${stats.totalPnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {stats.totalPnl >= 0 ? "+" : ""}{stats.totalPnl.toFixed(2)} $
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </GlassCard>

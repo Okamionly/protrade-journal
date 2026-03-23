@@ -380,6 +380,43 @@ function PerformanceByPhase({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Phase Description Card (educational)                               */
+/* ------------------------------------------------------------------ */
+
+function PhaseDescCard({
+  phase,
+  title,
+  description,
+  signal,
+}: {
+  phase: MarketPhase;
+  title: string;
+  description: string;
+  signal: string;
+}) {
+  const colors = PHASE_COLORS[phase];
+  const PhaseIconComp = PHASE_ICONS[phase];
+
+  return (
+    <div className={`rounded-2xl p-5 bg-gradient-to-br ${colors.bg} border border-white/5 backdrop-blur-xl`}>
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-10 h-10 flex items-center justify-center shrink-0">
+          <div className="scale-[0.35] origin-center">
+            <PhaseIconComp />
+          </div>
+        </div>
+        <h4 className={`text-base font-bold ${colors.text}`}>{title}</h4>
+      </div>
+      <p className="text-sm text-zinc-400 leading-relaxed mb-3">{description}</p>
+      <div className="flex items-start gap-2 text-xs">
+        <TrendingUp className={`w-3.5 h-3.5 ${colors.text} mt-0.5 shrink-0`} />
+        <span className="text-zinc-500"><strong className={colors.text}>Signal :</strong> {signal}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main Page                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -509,16 +546,86 @@ export default function MarketPhasePage() {
         </div>
       )}
 
-      {/* No data state */}
+      {/* No data state — educational fallback */}
       {!loading && !result && (
-        <div className="rounded-2xl p-8 bg-zinc-900/80 border border-white/10 backdrop-blur-xl text-center">
-          <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-white mb-2">
-            {t("marketPhase_unavailable") || "Données indisponibles"}
-          </h3>
-          <p className="text-sm text-zinc-400">
-            {t("marketPhase_unavailableDesc") || "Impossible de charger les bougies pour cet actif. Réessayez ultérieurement."}
-          </p>
+        <div className="space-y-6">
+          <div className="rounded-2xl p-8 bg-zinc-900/80 border border-white/10 backdrop-blur-xl text-center">
+            <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-white mb-2">
+              {t("marketPhase_unavailable") || "Données indisponibles"}
+            </h3>
+            <p className="text-sm text-zinc-400 mb-6">
+              {t("marketPhase_unavailableDesc") || "Impossible de charger les bougies pour cet actif. Réessayez ultérieurement."}
+            </p>
+            <button
+              onClick={handleRefresh}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-500/20 border border-blue-500/30 text-blue-400 text-sm font-medium hover:bg-blue-500/30 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Réessayer
+            </button>
+          </div>
+
+          {/* Wyckoff Cycle Diagram */}
+          <div className="rounded-2xl p-6 bg-zinc-900/80 border border-white/10 backdrop-blur-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <Info className="w-5 h-5 text-blue-400" />
+              <h3 className="text-lg font-semibold text-white">Qu&apos;est-ce que les phases de march&eacute; ?</h3>
+            </div>
+            <p className="text-sm text-zinc-400 leading-relaxed mb-6">
+              La m&eacute;thode Wyckoff identifie 4 phases cycliques dans tout march&eacute; financier.
+              Comprendre ces phases vous aide &agrave; aligner vos trades avec la dynamique dominante
+              et &agrave; &eacute;viter de trader &agrave; contre-courant.
+            </p>
+
+            {/* Cycle visual */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="flex items-center gap-1">
+                {(["accumulation", "markup", "distribution", "markdown"] as MarketPhase[]).map((phase, i) => {
+                  const c = PHASE_COLORS[phase];
+                  return (
+                    <div key={phase} className="flex items-center">
+                      <div className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${c.text} bg-gradient-to-r ${c.bg} border border-white/5`}>
+                        {PHASE_LABELS[phase]}
+                      </div>
+                      {i < 3 && (
+                        <div className="mx-1 text-zinc-600">&rarr;</div>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="mx-1 text-zinc-600">&circlearrowleft;</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Phase description cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <PhaseDescCard
+              phase="accumulation"
+              title="Accumulation"
+              description="Les institutions accumulent des positions dans un range. Le prix &eacute;volue lat&eacute;ralement avec des volumes croissants. C&apos;est le pr&eacute;lude &agrave; une hausse."
+              signal="Range serr&eacute;, volumes croissants, faux breakdowns"
+            />
+            <PhaseDescCard
+              phase="markup"
+              title="Markup"
+              description="Phase de hausse soutenue. La demande exc&egrave;de l&apos;offre, le prix monte avec des pullbacks peu profonds."
+              signal="Tendance haussi&egrave;re, higher highs, pullbacks achet&eacute;s"
+            />
+            <PhaseDescCard
+              phase="distribution"
+              title="Distribution"
+              description="Les institutions distribuent (vendent) leurs positions dans un range. Le volume augmente sur les baisses."
+              signal="Range apr&egrave;s hausse, volumes sur les baisses, faux breakouts"
+            />
+            <PhaseDescCard
+              phase="markdown"
+              title="Markdown"
+              description="Phase de baisse soutenue. L&apos;offre exc&egrave;de la demande, les rebonds sont vendus agressivement."
+              signal="Tendance baissi&egrave;re, lower lows, rallyes vendus"
+            />
+          </div>
         </div>
       )}
 

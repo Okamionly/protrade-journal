@@ -1340,8 +1340,155 @@ export default function AnalyticsPage() {
         );
       })()}
 
+      {/* ═══════════════════════ TOXICITY SCORE PER ASSET ═══════════════════════ */}
+      <ToxicityScoreSection trades={trades} />
+
       {/* ═══════════════════════ VIP PREMIUM ANALYTICS ═══════════════════════ */}
       {isVip && <VipAnalyticsSections trades={trades} getPnl={getPnl} />}
+    </div>
+  );
+}
+
+/* ─────────────────────────── Toxicity Score per Asset ─────────────────────────── */
+
+interface ToxicityData {
+  asset: string;
+  score: number;
+  winRate: number;
+  avgLoss: number;
+  maxConsecLosses: number;
+  tradeCount: number;
+  dominantEmotion: string | null;
+}
+
+function ToxicityScoreSection({ trades }: { trades: ReturnType<typeof useTrades>["trades"] }) {
+  const toxicityData = useMemo<ToxicityData[]>(() => {
+    if (!trades || trades.length === 0) return [];
+
+    type T = typeof trades[number];
+    const assetMap: Record<string, T[]> = {};
+    trades.forEach((t) => {
+      if (!assetMap[t.asset]) assetMap[t.asset] = [];
+      assetMap[t.asset].push(t);
+    });
+
+    const maxWinAll = Math.max(...trades.filter((t) => t.result > 0).map((t) => t.result), 1);
+
+    return Object.entries(assetMap)
+      .filter(([, arr]) => arr.length >= 5)
+      .map(([asset, arr]) => {
+        const sorted = [...arr].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const wins = arr.filter((t) => t.result > 0).length;
+        const winRate = wins / arr.length;
+        const losses = arr.filter((t) => t.result < 0);
+        const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.result, 0) / losses.length) : 0;
+
+        // Max consecutive losses
+        let maxConsec = 0;
+        let curConsec = 0;
+        sorted.forEach((t) => {
+          if (t.result < 0) { curConsec++; maxConsec = Math.max(maxConsec, curConsec); }
+          else curConsec = 0;
+        });
+
+        // Dominant emotion during losses
+        const emotionCounts: Record<string, number> = {};
+        losses.forEach((t) => {
+          const e = t.emotion || "N/A";
+          emotionCounts[e] = (emotionCounts[e] || 0) + 1;
+        });
+        const dominantEmotion = Object.entries(emotionCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+        const score = Math.min(100, Math.max(0,
+          (1 - winRate) * 40 +
+          (avgLoss / maxWinAll) * 30 +
+          (Math.min(maxConsec, 5) / 5) * 30
+        ));
+
+        return { asset, score: Math.round(score), winRate: winRate * 100, avgLoss, maxConsecLosses: maxConsec, tradeCount: arr.length, dominantEmotion };
+      })
+      .sort((a, b) => b.score - a.score);
+  }, [trades]);
+
+  if (toxicityData.length === 0) return null;
+
+  const top3 = toxicityData.slice(0, 3);
+  const scoreColor = (s: number) => s >= 60 ? "#ef4444" : s >= 30 ? "#f59e0b" : "#10b981";
+  const scoreBg = (s: number) => s >= 60 ? "rgba(239,68,68,0.10)" : s >= 30 ? "rgba(245,158,11,0.10)" : "rgba(16,185,129,0.10)";
+  const scoreBorder = (s: number) => s >= 60 ? "rgba(239,68,68,0.3)" : s >= 30 ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.3)";
+  const scoreLabel = (s: number) => s >= 60 ? "Toxique" : s >= 30 ? "A surveiller" : "Sain";
+
+  return (
+    <div className="glass rounded-2xl p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <AlertTriangle className="w-5 h-5 text-rose-400" />
+        <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>Score de Toxicite par Actif</h3>
+      </div>
+      <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
+        Identifiez les actifs qui nuisent a votre performance (min. 5 trades par actif)
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {top3.map((item) => (
+          <div
+            key={item.asset}
+            className="rounded-xl p-4"
+            style={{ background: scoreBg(item.score), border: `1px solid ${scoreBorder(item.score)}` }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>{item.asset}</span>
+              <span
+                className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase"
+                style={{ background: scoreBg(item.score), color: scoreColor(item.score), border: `1px solid ${scoreBorder(item.score)}` }}
+              >
+                {scoreLabel(item.score)}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1 mb-3">
+              <span className="text-3xl font-black mono" style={{ color: scoreColor(item.score) }}>{item.score}</span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>/100</span>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden mb-3" style={{ background: "var(--bg-secondary)" }}>
+              <div className="h-full rounded-full transition-all" style={{ width: `${item.score}%`, background: scoreColor(item.score) }} />
+            </div>
+            <div className="space-y-1 text-xs" style={{ color: "var(--text-secondary)" }}>
+              <p>WR: {item.winRate.toFixed(0)}% — Perte moy: -{item.avgLoss.toFixed(2)}€</p>
+              <p>Max pertes consecutives: {item.maxConsecLosses}</p>
+              {item.dominantEmotion && item.dominantEmotion !== "N/A" && (
+                <p>Emotion dominante: {item.dominantEmotion}</p>
+              )}
+              <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{item.tradeCount} trades</p>
+            </div>
+            {item.score >= 60 && (
+              <div className="mt-3 rounded-lg p-2 text-[11px] font-medium" style={{ background: "rgba(239,68,68,0.08)", color: "#f87171" }}>
+                Evitez cet actif ou reduisez votre taille de position
+              </div>
+            )}
+            {item.score >= 30 && item.score < 60 && (
+              <div className="mt-3 rounded-lg p-2 text-[11px] font-medium" style={{ background: "rgba(245,158,11,0.08)", color: "#fbbf24" }}>
+                Surveillez de pres — ajustez votre approche
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {toxicityData.length > 3 && (
+        <div className="mt-4 space-y-2">
+          {toxicityData.slice(3).map((item) => (
+            <div key={item.asset} className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: "var(--bg-secondary)" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{item.asset}</span>
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>({item.tradeCount} trades)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${item.score}%`, background: scoreColor(item.score) }} />
+                </div>
+                <span className="text-sm font-bold mono" style={{ color: scoreColor(item.score) }}>{item.score}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -116,7 +116,7 @@ function BadgeCard({
       className={`relative group p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:shadow-xl ${
         badge.unlocked
           ? `bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl ${rarity.border} shadow-lg ${rarity.glow}`
-          : "bg-white/30 dark:bg-gray-900/30 backdrop-blur-xl border-gray-200/50 dark:border-gray-800/50 opacity-50 grayscale"
+          : "bg-white/30 dark:bg-gray-900/30 backdrop-blur-xl border-gray-200/50 dark:border-gray-800/50 grayscale"
       }`}
     >
       {/* Legendary shimmer effect */}
@@ -132,6 +132,15 @@ function BadgeCard({
           className="absolute inset-0 rounded-2xl opacity-15 blur-xl transition-opacity group-hover:opacity-25 pointer-events-none"
           style={{ background: `radial-gradient(circle at center, ${badge.color}, transparent 70%)` }}
         />
+      )}
+
+      {/* Lock overlay for locked badges */}
+      {!badge.unlocked && (
+        <div className="absolute inset-0 rounded-2xl flex items-center justify-center z-10 pointer-events-none">
+          <div className="w-8 h-8 rounded-full bg-gray-900/60 flex items-center justify-center backdrop-blur-sm">
+            <Lock className="w-4 h-4 text-gray-400" />
+          </div>
+        </div>
       )}
 
       {/* Showcase star */}
@@ -734,6 +743,58 @@ export default function BadgesPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ═══ Global Progress + Prochain badge ═══ */}
+      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-cyan-400" />
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Progression globale</h2>
+          </div>
+          <span className="text-sm font-bold text-cyan-400">{unlockedCount} / {totalBadges}</span>
+        </div>
+        <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden mb-4">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-700"
+            style={{ width: `${totalBadges > 0 ? (unlockedCount / totalBadges) * 100 : 0}%` }}
+          />
+        </div>
+        {/* Prochain badge */}
+        {(() => {
+          const nextBadge = data.badges
+            .filter((b) => !b.unlocked && b.target > 0)
+            .sort((a, b) => (b.current / b.target) - (a.current / a.target))[0];
+          if (!nextBadge) return null;
+          const NextIcon = ICON_MAP[nextBadge.icon] || Award;
+          const nextProgress = Math.min(nextBadge.current / nextBadge.target, 1);
+          return (
+            <div className="flex items-center gap-4 p-3 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: `linear-gradient(135deg, ${nextBadge.color}22, ${nextBadge.color}44)` }}
+              >
+                <NextIcon className="w-5 h-5" style={{ color: nextBadge.color }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-500">Prochain badge</span>
+                </div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{nextBadge.name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${nextProgress * 100}%`, background: `linear-gradient(90deg, ${nextBadge.color}88, ${nextBadge.color})` }}
+                    />
+                  </div>
+                  <span className="text-[11px] text-gray-500 shrink-0">{nextBadge.current}/{nextBadge.target}</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-amber-400 shrink-0" />
+            </div>
+          );
+        })()}
       </div>
 
       {/* ═══ Rarity breakdown mini-bar ═══ */}

@@ -9,7 +9,7 @@ import { useToast } from "@/components/Toast";
 import { ForexSessions } from "@/components/ForexSessions";
 import { calculateRR, formatDate, computeStats } from "@/lib/utils";
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair, DollarSign, AlertTriangle, Share2, Star, Crown, ExternalLink, Lightbulb, Clock, X, Flag, Brain } from "lucide-react";
+import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair, DollarSign, AlertTriangle, Share2, Star, Crown, ExternalLink, Lightbulb, Clock, X, Flag, Brain, ClipboardEdit } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
 import { ShareStatsCard } from "@/components/ShareStatsCard";
@@ -18,6 +18,7 @@ import { TradingWrapped } from "@/components/TradingWrapped";
 import { DailyGoalTracker } from "@/components/DailyGoalTracker";
 import { EmptyDayMotivation } from "@/components/EmptyDayMotivation";
 import { MarketPhaseBadgeCompact } from "@/components/MarketPhaseBadge";
+import { BatchRecap, useUnreviewedCount } from "@/components/BatchRecap";
 
 
 /* ─── Trade du Jour Types ──────────────────────────────── */
@@ -475,6 +476,8 @@ export default function DashboardPage() {
   const [showShareCard, setShowShareCard] = useState(false);
   const [showWrapped, setShowWrapped] = useState(false);
   const [balanceInput, setBalanceInput] = useState("");
+  const [showBatchRecap, setShowBatchRecap] = useState(false);
+  const unreviewedCount = useUnreviewedCount(trades);
 
   useEffect(() => {
     const saved = localStorage.getItem("monthlyGoal");
@@ -637,6 +640,29 @@ export default function DashboardPage() {
   }, 0);
   const todayRiskPercent = balance > 0 ? (todayRiskExposure / balance) * 100 : 0;
 
+  // === Decision Fatigue Index ===
+  const decisionFatigue = useMemo(() => {
+    const now = new Date();
+    const todayCount = todayTrades.length;
+    const dayMap: Record<string, number> = {};
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    trades.forEach((t) => {
+      const d = new Date(t.date).toISOString().slice(0, 10);
+      const td = new Date(t.date);
+      if (td >= thirtyDaysAgo && d !== todayStr) {
+        dayMap[d] = (dayMap[d] || 0) + 1;
+      }
+    });
+    const tradingDays = Object.keys(dayMap).length;
+    const avgPerDay = tradingDays > 0 ? Object.values(dayMap).reduce((a, b) => a + b, 0) / tradingDays : 0;
+    const ratio = avgPerDay > 0 ? todayCount / avgPerDay : 0;
+    const level: "none" | "amber" | "red" = ratio >= 2 ? "red" : ratio >= 1.5 ? "amber" : "none";
+    const hour = now.getHours();
+    const nextSession = hour < 12 ? "Reprenez apres la pause dejeuner (14h)" : "Reprenez demain matin (9h)";
+    return { todayCount, avgPerDay, ratio, level, nextSession };
+  }, [trades, todayTrades, todayStr]);
+
   // === Weekly sparkline data (last 7 days P&L) ===
   const last7Days: number[] = [];
   for (let i = 6; i >= 0; i--) {
@@ -662,6 +688,9 @@ export default function DashboardPage() {
       {/* === Trading Wrapped Modal === */}
       <TradingWrapped open={showWrapped} onClose={() => setShowWrapped(false)} trades={trades} />
 
+      {/* === Batch Recap Modal === */}
+      <BatchRecap open={showBatchRecap} onClose={() => setShowBatchRecap(false)} />
+
       {/* === Floating Daily Goal Tracker === */}
       <DailyGoalTracker trades={trades} monthlyGoal={monthlyGoal} />
 
@@ -686,6 +715,17 @@ export default function DashboardPage() {
           <Share2 className="w-3.5 h-3.5" />
           Partager mes stats
         </button>
+        {unreviewedCount > 0 && (
+          <button
+            onClick={() => setShowBatchRecap(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105"
+            style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)" }}
+            title="Annoter mes trades"
+          >
+            <ClipboardEdit className="w-3.5 h-3.5" />
+            Annoter mes trades ({unreviewedCount})
+          </button>
+        )}
       </div>
       <div className="glass rounded-2xl p-6 mb-6" style={{ border: "1px solid", borderColor: todayPnL >= 0 ? "rgba(52,211,153,0.3)" : "rgba(248,113,113,0.3)" }}>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -760,6 +800,33 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* === Decision Fatigue Index === */}
+      {decisionFatigue.level !== "none" && (
+        <div
+          className="rounded-2xl p-4 mb-4"
+          style={{
+            background: decisionFatigue.level === "red"
+              ? "linear-gradient(135deg, rgba(239,68,68,0.08), rgba(239,68,68,0.03))"
+              : "linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03))",
+            border: `1px solid ${decisionFatigue.level === "red" ? "rgba(239,68,68,0.25)" : "rgba(245,158,11,0.25)"}`,
+          }}
+        >
+          <div className="flex items-center gap-2.5 mb-2">
+            <Brain className="w-4.5 h-4.5" style={{ color: decisionFatigue.level === "red" ? "#ef4444" : "#f59e0b" }} />
+            <span className="text-sm font-bold" style={{ color: decisionFatigue.level === "red" ? "#ef4444" : "#f59e0b" }}>
+              {decisionFatigue.level === "red" ? "Suractivite detectee — Faites une pause" : "Fatigue decisionnelle possible"}
+            </span>
+          </div>
+          <div className="text-xs space-y-1" style={{ color: "var(--text-secondary)" }}>
+            <p>{decisionFatigue.todayCount} trades aujourd&apos;hui (moy. 30j : {decisionFatigue.avgPerDay.toFixed(1)}/jour)</p>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3 h-3" style={{ color: "var(--text-muted)" }} />
+              <span style={{ color: "var(--text-muted)" }}>Prochaine session recommandee : {decisionFatigue.nextSession}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DashboardCards
         trades={trades}
