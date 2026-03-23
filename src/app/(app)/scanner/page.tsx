@@ -488,13 +488,16 @@ export default function ScannerPage() {
   };
 
   const volumeIcon = (v: "high" | "medium" | "low") => {
-    const colors = { high: "rgb(16,185,129)", medium: "rgb(245,158,11)", low: "var(--text-muted)" };
+    const config = {
+      high: { label: t("scannerVolHigh"), color: "rgb(16,185,129)", bg: "rgba(16,185,129,0.1)" },
+      medium: { label: t("scannerVolMedium"), color: "rgb(245,158,11)", bg: "rgba(245,158,11,0.1)" },
+      low: { label: t("scannerVolLow"), color: "var(--text-muted)", bg: "var(--bg-secondary)" },
+    };
+    const c = config[v];
     return (
-      <div className="flex items-center gap-1">
-        <div style={{ width: 4, height: v === "low" ? 6 : v === "medium" ? 10 : 14, background: colors[v], borderRadius: 2 }} />
-        <div style={{ width: 4, height: v === "low" ? 6 : v === "medium" ? 10 : 14, background: colors[v], borderRadius: 2, opacity: v === "low" ? 0.3 : 1 }} />
-        <div style={{ width: 4, height: v === "low" ? 6 : 14, background: colors[v], borderRadius: 2, opacity: v === "high" ? 1 : 0.3 }} />
-      </div>
+      <span className="text-[11px] font-medium rounded-full px-2 py-0.5" style={{ color: c.color, background: c.bg }}>
+        {c.label}
+      </span>
     );
   };
 
@@ -1007,8 +1010,6 @@ export default function ScannerPage() {
                   <th className="text-left text-xs font-semibold px-3 py-2.5" style={{ color: "var(--text-secondary)", padding: "10px 12px" }}>Volume</th>
                   <SortHeader label="Signal" sortKeyName="signal" />
                   <SortHeader label="Force" sortKeyName="strength" />
-                  <th className="text-xs font-semibold text-center" style={{ color: "var(--text-secondary)", padding: "10px 8px" }}>Barres</th>
-                  <th className="text-xs font-semibold" style={{ color: "var(--text-secondary)", padding: "10px 12px", width: 40 }} />
                 </tr>
               </thead>
               <tbody>
@@ -1078,12 +1079,6 @@ export default function ScannerPage() {
                     </td>
                     <td style={{ padding: "10px 12px" }}>
                       {strengthBar(row.strength)}
-                    </td>
-                    <td style={{ padding: "10px 8px", textAlign: "center" }}>
-                      <SignalStrengthBars strength={row.strength} signal={row.signal} />
-                    </td>
-                    <td style={{ padding: "10px 12px" }}>
-                      <Eye size={14} style={{ color: "var(--text-muted)", opacity: 0.5 }} />
                     </td>
                   </tr>
                 ))}

@@ -56,7 +56,6 @@
   "silverFix": "Argent",
   "platPmFix": "Platine (PM Fix)",
   "pallPmFix": "Palladium (PM Fix)",
-
   "logout": "Déconnexion",
   "theme": "Thème",
   "zenModeOn": "Mode Zen activé — P&L masqués",
@@ -66,7 +65,6 @@
   "themeOled": "OLED",
   "language": "Langue",
   "collapse": "Réduire",
-
   "dashboard": "Tableau de bord",
   "journal": "Journal",
   "analytics": "Analytiques",
@@ -121,7 +119,6 @@
   "indicators": "Indicateurs",
   "macroAnalyses": "Analyses macro",
   "adminPanel": "Panneau admin",
-
   "pnlToday": "P&L Aujourd'hui",
   "vsYesterday": "vs hier",
   "trades": "Trades",
@@ -182,7 +179,6 @@
   "monthlyGoalTitle": "Objectif mensuel",
   "monthlyGoalDesc": "Définissez votre objectif de profit mensuel en euros.",
   "enterValidNumber": "Veuillez entrer un nombre positif valide.",
-
   "tradeCreated": "Trade créé avec succès",
   "tradeCreateError": "Erreur lors de la création",
   "tradeEdited": "Trade modifié avec succès",
@@ -193,7 +189,6 @@
   "balanceUpdated": "Balance mise à jour",
   "balanceUpdateError": "Erreur lors de la mise à jour",
   "goalUpdated": "Objectif mensuel mis à jour",
-
   "fullHistory": "Historique complet",
   "exportCsv": "Exporter CSV",
   "search": "Rechercher...",
@@ -215,7 +210,6 @@
   "deleting": "Suppression...",
   "csvExported": "Export CSV terminé",
   "deleteError": "Erreur lors de la suppression",
-
   "dateCol": "Date",
   "assetCol": "Actif",
   "directionCol": "Direction",
@@ -228,7 +222,6 @@
   "resultCol": "Résultat",
   "emotionCol": "Émotion",
   "actionsCol": "Actions",
-
   "editTrade": "Modifier le trade",
   "newTradeTitle": "Nouveau trade",
   "dateTime": "Date & Heure",
@@ -258,7 +251,6 @@
   "saving": "Enregistrement...",
   "saveChanges": "Sauvegarder les modifications",
   "saveTrade": "Enregistrer le trade",
-
   "confident": "Confiant",
   "fear": "Peur",
   "greedy": "Gourmand",
@@ -267,7 +259,6 @@
   "stressed": "Stressé",
   "frustrated": "Frustré",
   "euphoric": "Euphorique",
-
   "errorDetection": "Détection d'erreurs",
   "errorDetectionDesc": "Identifiez automatiquement vos mauvaises habitudes de trading.",
   "noTradesToAnalyze": "Aucun trade à analyser",
@@ -287,7 +278,6 @@
   "tipTradingTilt": "Après 3 pertes consécutives, arrêtez de trader pour la journée. Le marché sera encore là demain.",
   "tipEarlyExit": "Laissez courir vos gagnants. Utilisez un trailing stop pour sécuriser les profits sans couper trop tôt.",
   "tipWeekendTrading": "Le marché forex est fermé le weekend. Les gaps d'ouverture lundi comportent des risques supplémentaires.",
-
   "earningsCalendar": "Calendrier des résultats",
   "earningsDesc": "Résultats d'entreprises à venir et impact sur vos trades",
   "thisWeek": "Cette semaine",
@@ -318,7 +308,6 @@
   "impact": "Impact",
   "beforeMarket": "Avant marché",
   "afterMarket": "Après marché",
-
   "marketSentiment": "Sentiment du marché",
   "marketPulse": "Pouls du marché",
   "riskFactors": "Facteurs de risque",
@@ -343,7 +332,6 @@
   "greed": "Avidité",
   "riskOff": "RISK OFF",
   "riskOn": "RISK ON",
-
   "cotReportTitle": "Rapport COT",
   "cotReportSubtitle": "Positions des grandes institutions — données CFTC hebdomadaires",
   "searchSymbols": "Rechercher des symboles...",
@@ -357,7 +345,6 @@
   "cotLongVsShortLastWeek": "Long vs Short — Dernière semaine",
   "cotRawDataLast10Weeks": "Données brutes — 10 dernières semaines",
   "noResultsWithFilters": "Aucun résultat avec ces filtres",
-
   "newsTitle": "Actualités",
   "watchlistTitle": "Watchlist",
   "addSymbol": "Ajouter",
@@ -368,34 +355,28 @@
   "miniChart": "Mini Chart",
   "actions": "Actions",
   "latestNews": "Dernières news",
-
   "sentimentTitle": "Sentiment du marché",
   "chatTitle": "Chat",
   "profileTitle": "Profil",
   "vipTitle": "VIP",
   "indicatorsTitle": "Indicateurs",
   "macroAnalysesTitle": "Analyses macro",
-
   "allCategories": "Toutes catégories",
   "sortByDate": "Date (récent)",
   "sortByResult": "Résultat",
   "sortByAsset": "Actif",
-
   "weeklyRecap": "Récapitulatif hebdomadaire",
   "monthlyRecap": "Récapitulatif mensuel",
   "topTrades": "Top 3 trades",
   "worstTrades": "Pires 3 trades",
   "lessonsLearned": "Leçons apprises",
   "comparedToPrev": "vs période précédente",
-
   "forexSessions": "Sessions Forex",
   "dailyGoalProgress": "Progression objectif journalier",
-
   "updateBalance": "Modifier la balance",
   "type": "Type",
   "entry": "Entrée",
   "exit": "Sortie",
-
   "noData": "Aucune donnée",
   "retry": "Réessayer",
   "close": "Fermer",
@@ -417,12 +398,10 @@
   "of": "de",
   "to": "à",
   "from": "de",
-
   "long": "LONG",
   "short": "SHORT",
   "buy": "Achat",
   "sell": "Vente",
-
   "loss": "Perte",
   "gain": "Gain",
   "lots": "Lots",
@@ -430,7 +409,6 @@
   "edit": "Modifier",
   "comingSoon": "Bientôt disponible",
   "dir": "Dir.",
-
   "customDashboard": "Tableau de Bord",
   "configureWidgets": "Configurer les Widgets",
   "widgets": "Widgets",
@@ -455,7 +433,6 @@
   "noStreak": "Aucune série en cours",
   "dailyTarget": "Objectif : {{target}} €",
   "noEmotionRecorded": "Aucune émotion enregistrée",
-
   "widgetSessions": "Sessions de Trading",
   "widgetFearGreed": "Fear & Greed",
   "widgetDailyBias": "Biais du Jour",
@@ -467,7 +444,6 @@
   "widgetCatalog": "Catalogue de Widgets",
   "allWidgetsActive": "Tous les widgets sont déjà actifs !",
   "done": "Terminer",
-
   "replayTitle": "Replay de Trade",
   "replaySubtitle": "Revivez vos trades et analysez vos décisions",
   "replayNoClosedTrades": "Aucun trade clôturé à rejouer",
@@ -506,7 +482,6 @@
   "replayAltCutAt1R": "Sortie à 1R",
   "replayAltLetRun": "Laisser courir",
   "replayAltDouble": "Doubler la mise",
-
   "adminManage": "Gérez les utilisateurs, les trades et le contenu de la plateforme.",
   "adminTotalUsers": "Total utilisateurs",
   "adminTotalTrades": "Total trades",
@@ -560,7 +535,6 @@
   "adminMaintenanceActive": "Système en maintenance",
   "adminSystemOnline": "Système en ligne",
   "adminRecentSignups": "Inscriptions récentes",
-
   "adminVipContent2": "Contenu VIP",
   "vipNewPublication": "Nouvelle publication",
   "vipEditPublication": "Modifier la publication",
@@ -587,7 +561,6 @@
   "vipTypeMacro": "Macro",
   "vipTypeOptions": "Options",
   "vipTypeFutures": "Futures",
-
   "coachAddTrades": "Ajoutez des trades pour obtenir une analyse",
   "coachAutoAnalysis": "Analyse automatique",
   "coachConfidenceScore": "Score de confiance",
@@ -669,7 +642,6 @@
   "coachSizingNormalWinDetail": "Série gagnante de {{count}}. Maintenez votre gestion habituelle.",
   "coachSizingNormalNoStreakDetail": "Aucune série en cours. Gestion standard.",
   "coachPerfDecayChange": "{{change}}",
-
   "monthJan": "Janvier",
   "monthFeb": "Février",
   "monthMar": "Mars",
@@ -836,7 +808,6 @@
   "perfByStrategy": "Performance par stratégie",
   "recapSummary": "Résumé de vos performances par période.",
   "avgGain": "Gain moy.",
-
   "biasBullish": "Haussier",
   "biasBearish": "Baissier",
   "biasNeutral": "Neutre",
@@ -857,7 +828,6 @@
   "saveBtn": "Sauvegarder",
   "addRulesChecklist": "Ajoutez vos règles de trading pour créer votre checklist pre-trade.",
   "reviewPlaceholder": "Comment s'est passée la journée ? Qu'as-tu bien fait ? Que peux-tu améliorer ?",
-
   "landing_navFeatures": "Fonctions",
   "landing_navPreview": "Aperçu",
   "landing_navCompare": "Comparatif",
@@ -982,18 +952,18 @@
   "landing_footerAnalytics": "Analytics",
   "landing_footerAiCoach": "AI Coach",
   "landing_footerChallenges": "Challenges",
-  "landing_footerCommunity": "Communaut\u00e9",
+  "landing_footerCommunity": "Communauté",
   "landing_footerResources": "Ressources",
   "landing_footerBlog": "Blog",
-  "landing_footerGuide": "Guide du d\u00e9butant",
+  "landing_footerGuide": "Guide du débutant",
   "landing_footerFAQ": "FAQ",
   "landing_footerComparatifs": "Comparatifs",
   "landing_footerCompany": "Entreprise",
-  "landing_footerAbout": "\u00c0 propos",
+  "landing_footerAbout": "À propos",
   "landing_footerContact": "Contact",
-  "landing_footerLegal": "Mentions l\u00e9gales",
-  "landing_footerPrivacy": "Politique de confidentialit\u00e9",
-  "landing_footerCopyright": "\u00a9 2026 MarketPhase. Tous droits r\u00e9serv\u00e9s.",
+  "landing_footerLegal": "Mentions légales",
+  "landing_footerPrivacy": "Politique de confidentialité",
+  "landing_footerCopyright": "© 2026 MarketPhase. Tous droits réservés.",
   "landing_tabAnalytics": "Analytics",
   "landing_tabJournal": "Journal",
   "landing_tabAiCoach": "AI Coach",
@@ -1053,7 +1023,6 @@
   "landing_socialStat3Label": "Trades analysés",
   "landing_socialStat4": "4.9/5",
   "landing_socialStat4Label": "Note moyenne",
-
   "profileSubtitle": "Gérez votre compte, vos préférences et consultez vos statistiques",
   "profileLoading": "Chargement du profil...",
   "profileLoadError": "Erreur lors du chargement du profil",
@@ -1237,7 +1206,7 @@
   "avoidHoursReco": "Evitez : {hours} (WR: {wr}%)",
   "recommendedSessionReco": "Session recommandee : {session}",
   "noRecoAvailable": "Ajoutez plus de trades pour obtenir des recommandations",
-  "tradesLabel": "Trades",
+  "tradesLabel": "trades",
   "avgPnlShort": "P&L Moy.",
   "overlapTrades": "{count} trades",
   "overlapWinRate": "WR: {wr}%",
@@ -1256,7 +1225,6 @@
   "underperforming": "Sous-performance",
   "quickTradeTitle": "Trade rapide",
   "quickTradeSubmit": "Enregistrer le trade",
-
   "recapProfitFactor": "Profit Factor",
   "recapAvgRR": "R:R Moyen",
   "recapSessionPerf": "Performance par Session",
@@ -1282,7 +1250,6 @@
   "recapPrevPeriod": "Période préc.",
   "recapCurrentPeriod": "Période actuelle",
   "recapDelta": "Delta",
-
   "perfNoTrades": "Aucun trade enregistré. Ajoute des trades pour voir ton score.",
   "perfPerfectDD": "Aucun drawdown — performance parfaite",
   "perfCategoryBreakdown": "Analyse par catégorie",
@@ -1355,7 +1322,6 @@
   "searchSymbolPlaceholder": "Rechercher un symbole...",
   "majorIndices": "Indices Majeurs",
   "manageStrategiesDesc": "Gérez vos stratégies de trading et analysez leurs performances",
-
   "reportsAndExport": "Rapports & Export",
   "generateProfessionalReports": "Générez des rapports professionnels de vos performances",
   "period": "Période",
@@ -1392,7 +1358,6 @@
   "insightBestDay": "Meilleur jour : {{day}} avec {{pnl}} de P&L.",
   "insightMaxDrawdown": "Drawdown maximum de {{dd}} — surveillez votre gestion du risque.",
   "insightPeriodOk": "Période stable, continuez à suivre votre plan.",
-
   "sidebarAdminPanel": "Panneau Admin",
   "sidebarSecTrading": "TRADING",
   "sidebarDashboard": "Tableau de bord",
@@ -1491,8 +1456,6 @@
   "heatmapDescription": "Win rate par asset et heure UTC. Survolez une cellule pour les détails.",
   "winsLabel": "wins",
   "lossesLabel": "losses",
-  "tradesLabel": "trades",
-
   "riskManagementTitle": "Gestion du risque",
   "riskManagementDesc": "Métriques de risque avancées et calculateur de taille de position.",
   "riskExpectancy": "Expectancy",
@@ -1549,7 +1512,6 @@
   "riskPipsAtRisk": "Pips at risk",
   "riskPerUnit": "Risque/unite",
   "riskKellyRecommends": "Kelly recommandé",
-
   "avgPnl": "P&L moyen",
   "noGoalSet": "Définissez un objectif mensuel pour suivre vos progrès.",
   "aheadOfSchedule": "En avance",
@@ -1588,7 +1550,6 @@
   "createRuleError": "Impossible de créer la règle",
   "cannotAddRule": "Impossible d'ajouter la règle",
   "cannotDeleteRule": "Impossible de supprimer la règle",
-
   "andMoreErrors": "et plus d'erreurs",
   "autoDetection": "Détection auto",
   "columns": "colonnes",
@@ -1627,7 +1588,6 @@
   "stepResult": "Résultat",
   "tradesImported": "trades importés",
   "tradesTotal": "trades au total",
-
   "fiftyTwoWeeks": "52 semaines",
   "lastUpdatedAt": "Dernière mise à jour",
   "loadError": "Erreur de chargement",
@@ -1635,7 +1595,6 @@
   "noOptionsData": "Aucune donnée d'options",
   "noResultsForSymbol": "Aucun résultat pour ce symbole",
   "symbolNotFound": "Symbole non trouvé",
-
   "channels": "Canaux",
   "confirmDeleteMessage": "Voulez-vous vraiment supprimer ce message ?",
   "details": "Détails",
@@ -1656,9 +1615,7 @@
   "sidePanel": "Panneau latéral",
   "statistics": "Statistiques",
   "unpin": "Désépingler",
-
   "emotion": "Émotion",
-
   "maxPerDay": "Max par jour",
   "removeLosing": "Retirer les perdants",
   "removeWorst": "Retirer le pire",
@@ -1666,7 +1623,6 @@
   "slModifier": "Modificateur SL",
   "strategyFilter": "Filtre stratégie",
   "tpRR": "TP R:R",
-
   "avgPnlIncreased": "P&L moyen en hausse",
   "betterLossManagement": "Meilleure gestion des pertes",
   "compareTwoPeriodsDesc": "Comparez deux périodes pour identifier vos progrès",
@@ -1686,7 +1642,6 @@
   "tradedMoreThisPeriod": "Plus de trades cette période",
   "winRateDecreased": "Win Rate en baisse",
   "winRateIncreased": "Win Rate en hausse",
-
   "abovePrice": "Au-dessus du prix",
   "addInstrument": "Ajouter un instrument",
   "alertFor": "Alerte pour",
@@ -1714,11 +1669,9 @@
   "watchlistEmpty": "Watchlist vide",
   "watchlistEmptyHint": "Ajoutez des instruments pour suivre leurs prix en temps réel",
   "watchlistSubtitle": "Suivez vos instruments favoris en temps réel",
-
   "preferences": "Préférences",
   "security": "Sécurité",
   "style": "Style",
-
   "macroAt": "au",
   "macroBondYields": "Rendements obligataires",
   "macroCbDown": "Baissier",
@@ -1769,7 +1722,6 @@
   "macroYieldCurve": "Courbe des taux",
   "macroYieldCurveLabel": "Courbe des taux",
   "macroYieldInversionDesc": "L'inversion de la courbe des taux signale un risque de récession",
-
   "cannotLoadNews": "Impossible de charger les actualités",
   "cannotLoadNewsCheckConnection": "Vérifiez votre connexion internet",
   "clearFilters": "Effacer les filtres",
@@ -1777,7 +1729,6 @@
   "noNewsFound": "Aucune actualité trouvée",
   "tryOtherKeyword": "Essayez un autre mot-clé",
   "unexpectedApiFormat": "Format API inattendu",
-
   "color": "Couleur",
   "create": "Créer",
   "descriptionOptional": "Description (optionnel)",
@@ -1787,7 +1738,6 @@
   "noStrategies": "Aucune stratégie",
   "noStrategiesDesc": "Créez votre première stratégie pour analyser vos performances",
   "strategyDescriptionPlaceholder": "Décrivez votre stratégie...",
-
   "landing_pricingFreeLabel": "CE QUI EST INCLUS",
   "landing_pricingVipBadge": "RECOMMANDÉ",
   "landing_pricingVipLabel": "TOUT LE FREE, PLUS :",
@@ -1798,7 +1748,6 @@
   "landing_pricingVip4": "Niveaux GPS supports/résistances",
   "landing_pricingVip5": "Badge VIP doré + support prioritaire",
   "landing_pricingVipCta": "Essayer VIP →",
-
   "landing_faqTitle": "Questions fréquentes",
   "landing_faqQ1": "C'est vraiment gratuit ? Quel est le piège ?",
   "landing_faqA1": "Aucun piège. MarketPhase est 100% gratuit avec 35+ outils. Nous proposons un abonnement VIP optionnel (9,99€/mois) pour des analyses macro et indicateurs exclusifs, mais l'app complète reste gratuite pour toujours.",
@@ -1816,21 +1765,20 @@
   "calYearHeatmapTitle": "Heatmap Annuelle",
   "calNoTrades": "Aucun trade",
   "wlNotes": "Notes",
-  "wlNotesPlaceholder": "Niveau cl\u00e9, setup, plan...",
-  "wlNotesSaved": "Note sauvegard\u00e9e",
+  "wlNotesPlaceholder": "Niveau clé, setup, plan...",
+  "wlNotesSaved": "Note sauvegardée",
   "wlPerformance": "Performance",
   "wlTradesCount": "Trades",
   "wlWinRate": "Win Rate",
   "wlPnl": "P&L",
   "wlNoTrades": "Aucun trade",
-  "wlHeatTitle": "Activit\u00e9",
-  "wlHeatHot": "Tr\u00e8s actif (3+ trades / 7j)",
+  "wlHeatTitle": "Activité",
+  "wlHeatHot": "Très actif (3+ trades / 7j)",
   "wlHeatWarm": "Actif (1-2 trades / 7j)",
   "wlHeatCold": "Inactif (30+ jours)",
   "wlHeatNeutral": "Normal",
-  "wlAlertTriggered": "Alerte d\u00e9clench\u00e9e : {symbol} a atteint {price}",
+  "wlAlertTriggered": "Alerte déclenchée : {symbol} a atteint {price}",
   "wlActiveAlerts": "{count} alerte(s) active(s)",
-
   "phasePre": "Pré-Trade",
   "phaseDuring": "En cours",
   "phasePost": "Post-Trade",
@@ -1842,7 +1790,6 @@
   "streakDaysMessage": "jours de discipline parfaite",
   "streakStartToday": "Commencez aujourd'hui pour lancer votre série !",
   "complianceByPhase": "Conformité par phase",
-
   "importHistoryTitle": "Historique des imports",
   "importQuickStats": "Résumé de l'import",
   "importStatTrades": "Trades importés",
@@ -1851,7 +1798,6 @@
   "importStatPnl": "P&L Total",
   "importStatTopAsset": "Actif principal",
   "deleteImportHistory": "Supprimer de l'historique",
-
   "journalTagAdded": "Tag ajouté",
   "journalTagAddedBulk": "Tag \"{tag}\" ajouté à {count} trade(s)",
   "journalSelectionExportedCsv": "Sélection exportée en CSV",
@@ -1887,7 +1833,6 @@
   "journalAddComment": "Ajouter un commentaire, votre analyse, votre raisonnement...",
   "journalChangeStrategyBtn": "Stratégie",
   "journalStrategy": "Stratégie",
-
   "chartClosePanel": "Fermer le panneau",
   "chartViewTrades": "Voir les trades",
   "chartAddTrade": "Ajouter un trade",
@@ -1911,7 +1856,6 @@
   "chartSaving": "Enregistrement...",
   "chartNoTradesFor": "Aucun trade pour {symbol}",
   "chartView": "Voir",
-
   "perfWinRate": "Win Rate",
   "perfRiskReward": "Risque/Rendement",
   "perfProfitFactor": "Profit Factor",
@@ -1919,7 +1863,6 @@
   "perfPnL": "P&L",
   "perfMaxDrawdownEuro": "Drawdown Max (€)",
   "perfAvgRR": "R:R Moyen",
-
   "daySunday": "Dimanche",
   "dayMonday": "Lundi",
   "dayTuesday": "Mardi",
@@ -1942,7 +1885,6 @@
   "severityCritical": "Critique",
   "severityWarning": "Attention",
   "severityInfo": "Info",
-
   "warRoomOutOfSession": "Hors session",
   "warRoomSave": "Sauvegarder",
   "warRoomCancel": "Annuler",
@@ -1953,7 +1895,6 @@
   "warRoomMoodAnxious": "Anxieux",
   "warRoomMoodNeutral": "Neutre",
   "warRoomMoodConfident": "Confiant",
-
   "backtestSniperMode": "Sniper Mode",
   "backtestSniperDesc": "Retirer tous les trades avec R:R < 2",
   "backtestDiscipline": "Discipline",
@@ -1982,7 +1923,6 @@
   "backtestReliabilityModerate": "Modéré",
   "backtestReliabilityLow": "Faible",
   "backtestReliabilityVeryLow": "Très faible",
-
   "calcPositionSize": "Taille position",
   "calcPotentialLoss": "Perte potentielle",
   "calcPotentialProfit": "Profit potentiel",
@@ -1990,7 +1930,6 @@
   "calcRatioRR": "Ratio R:R",
   "calcPipValue": "Valeur Pip",
   "calcRiskReward": "Risque/Rendement",
-
   "corrExcellentDiv": "Excellente diversification",
   "corrGoodDiv": "Bonne diversification",
   "corrModerateDiv": "Diversification modérée",
@@ -2023,7 +1962,6 @@
   "corrPeriod30d": "30 jours",
   "corrPeriod90d": "90 jours",
   "corrPeriodAll": "Tout",
-
   "calEco_title": "Calendrier Économique",
   "calEco_subtitle": "Événements macro-économiques et publications",
   "calEco_staticData": "Données statiques",
@@ -2094,7 +2032,6 @@
   "calEco_inDays": "Dans {days}j",
   "calEco_inHoursMin": "Dans {hours}h {mins}min",
   "calEco_inMin": "Dans {mins}min",
-
   "currStr_title": "Force des Devises",
   "currStr_refreshTitle": "Rafraîchir",
   "currStr_dollarUS": "Dollar US",
@@ -2120,7 +2057,6 @@
   "currStr_ratesUnavailable": "Taux de change non disponibles (source: fallback)",
   "currStr_strongestDivergence": "Plus forte divergence",
   "currStr_weakestDivergence": "Plus faible divergence",
-
   "scanner_title": "Scanner de Marché",
   "scanner_subtitle": "Analyse en temps réel de tous les instruments",
   "scanner_myFavorites": "Mes Favoris",
@@ -2151,7 +2087,6 @@
   "scanner_moderateBearish": "Biais baissier modéré",
   "scanner_noDirection": "Pas de direction claire",
   "scanner_updating": "Mise à jour...",
-
   "sectorHeatmap_title": "Heatmap Sectorielle",
   "sectorHeatmap_subtitle": "Performance des secteurs en temps réel",
   "sectorHeatmap_demoData": "Données de démonstration — API indisponible",
@@ -2165,7 +2100,6 @@
   "sectorHeatmap_all": "Tous",
   "sectorHeatmap_yourPnl": "Votre P&L:",
   "sectorHeatmap_watchSectors": "Secteurs à surveiller",
-
   "sentiment_avgPnl": "P&L moy.",
   "sentiment_trades": "Trades",
   "sentiment_perfVsSentiment": "Votre Performance vs Sentiment",
@@ -2187,7 +2121,6 @@
   "sentiment_winRate": "Win Rate",
   "sentiment_tradeBetterIn": "Vous tradez mieux en conditions",
   "sentiment_vs": "vs",
-
   "vol_vixZoneLow": "Volatilité Basse",
   "vol_vixZoneNormal": "Normal",
   "vol_vixZoneElevated": "Élevée",
@@ -2236,5 +2169,8 @@
   "vol_riskOffDesc": "VIX élevé + SPY baissier",
   "vol_complacencyDesc": "VIX très bas — attention",
   "vol_complacencyLabel": "Complaisance",
-  "vol_todayLabel": "aujourd'hui"
+  "vol_todayLabel": "aujourd'hui",
+  "scannerVolHigh": "Élevé",
+  "scannerVolMedium": "Moyen",
+  "scannerVolLow": "Faible"
 }

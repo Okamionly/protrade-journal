@@ -56,7 +56,6 @@
   "silverFix": "Silver",
   "platPmFix": "Platinum (PM Fix)",
   "pallPmFix": "Palladium (PM Fix)",
-
   "logout": "Logout",
   "theme": "Theme",
   "zenModeOn": "Zen Mode ON — P&L hidden",
@@ -66,7 +65,6 @@
   "themeOled": "OLED",
   "language": "Language",
   "collapse": "Collapse",
-
   "dashboard": "Dashboard",
   "journal": "Journal",
   "analytics": "Analytics",
@@ -121,7 +119,6 @@
   "indicators": "Indicators",
   "macroAnalyses": "Macro Analyses",
   "adminPanel": "Admin Panel",
-
   "pnlToday": "P&L Today",
   "vsYesterday": "vs yesterday",
   "trades": "Trades",
@@ -182,7 +179,6 @@
   "monthlyGoalTitle": "Monthly Goal",
   "monthlyGoalDesc": "Set your monthly profit goal in euros.",
   "enterValidNumber": "Please enter a valid positive number.",
-
   "tradeCreated": "Trade created successfully",
   "tradeCreateError": "Error creating trade",
   "tradeEdited": "Trade edited successfully",
@@ -193,7 +189,6 @@
   "balanceUpdated": "Balance updated",
   "balanceUpdateError": "Error updating balance",
   "goalUpdated": "Monthly goal updated",
-
   "fullHistory": "Full History",
   "exportCsv": "Export CSV",
   "search": "Search...",
@@ -215,7 +210,6 @@
   "deleting": "Deleting...",
   "csvExported": "CSV export completed",
   "deleteError": "Error deleting",
-
   "dateCol": "Date",
   "assetCol": "Asset",
   "directionCol": "Direction",
@@ -228,7 +222,6 @@
   "resultCol": "Result",
   "emotionCol": "Emotion",
   "actionsCol": "Actions",
-
   "editTrade": "Edit Trade",
   "newTradeTitle": "New Trade",
   "dateTime": "Date & Time",
@@ -258,7 +251,6 @@
   "saving": "Saving...",
   "saveChanges": "Save changes",
   "saveTrade": "Save trade",
-
   "confident": "Confident",
   "fear": "Fear",
   "greedy": "Greedy",
@@ -267,7 +259,6 @@
   "stressed": "Stressed",
   "frustrated": "Frustrated",
   "euphoric": "Euphoric",
-
   "errorDetection": "Error Detection",
   "errorDetectionDesc": "Automatically identify your bad trading habits.",
   "noTradesToAnalyze": "No trades to analyze",
@@ -287,7 +278,6 @@
   "tipTradingTilt": "After 3 consecutive losses, stop trading for the day. The market will still be there tomorrow.",
   "tipEarlyExit": "Let your winners run. Use a trailing stop to lock in profits without cutting too early.",
   "tipWeekendTrading": "The forex market is closed on weekends. Monday opening gaps carry additional risks.",
-
   "earningsCalendar": "Earnings Calendar",
   "earningsDesc": "Upcoming company results and impact on your trades",
   "thisWeek": "This Week",
@@ -318,7 +308,6 @@
   "impact": "Impact",
   "beforeMarket": "Before market",
   "afterMarket": "After market",
-
   "marketSentiment": "Market Sentiment",
   "marketPulse": "Market Pulse",
   "riskFactors": "Risk Factors",
@@ -343,7 +332,6 @@
   "greed": "Greed",
   "riskOff": "RISK OFF",
   "riskOn": "RISK ON",
-
   "cotReportTitle": "COT Report",
   "cotReportSubtitle": "Large institution positions — weekly CFTC data",
   "searchSymbols": "Search symbols...",
@@ -357,7 +345,6 @@
   "cotLongVsShortLastWeek": "Long vs Short — Last week",
   "cotRawDataLast10Weeks": "Raw data — Last 10 weeks",
   "noResultsWithFilters": "No results with these filters",
-
   "newsTitle": "News",
   "watchlistTitle": "Watchlist",
   "addSymbol": "Add",
@@ -368,34 +355,28 @@
   "miniChart": "Mini Chart",
   "actions": "Actions",
   "latestNews": "Latest News",
-
   "sentimentTitle": "Market Sentiment",
   "chatTitle": "Chat",
   "profileTitle": "Profile",
   "vipTitle": "VIP",
   "indicatorsTitle": "Indicators",
   "macroAnalysesTitle": "Macro Analyses",
-
   "allCategories": "All categories",
   "sortByDate": "Date (recent)",
   "sortByResult": "Result",
   "sortByAsset": "Asset",
-
   "weeklyRecap": "Weekly Recap",
   "monthlyRecap": "Monthly Recap",
   "topTrades": "Top 3 trades",
   "worstTrades": "Worst 3 trades",
   "lessonsLearned": "Lessons learned",
   "comparedToPrev": "vs previous period",
-
   "forexSessions": "Forex Sessions",
   "dailyGoalProgress": "Daily Goal Progress",
-
   "updateBalance": "Update Balance",
   "type": "Type",
   "entry": "Entry",
   "exit": "Exit",
-
   "noData": "No data",
   "retry": "Retry",
   "close": "Close",
@@ -417,12 +398,10 @@
   "of": "of",
   "to": "to",
   "from": "from",
-
   "long": "LONG",
   "short": "SHORT",
   "buy": "Buy",
   "sell": "Sell",
-
   "loss": "Loss",
   "gain": "Gain",
   "lots": "Lots",
@@ -430,7 +409,6 @@
   "edit": "Edit",
   "comingSoon": "Coming soon",
   "dir": "Dir.",
-
   "customDashboard": "Dashboard",
   "configureWidgets": "Configure Widgets",
   "widgets": "Widgets",
@@ -455,7 +433,6 @@
   "noStreak": "No active streak",
   "dailyTarget": "Target: {{target}} €",
   "noEmotionRecorded": "No emotion recorded",
-
   "widgetSessions": "Trading Sessions",
   "widgetFearGreed": "Fear & Greed",
   "widgetDailyBias": "Daily Bias",
@@ -467,7 +444,6 @@
   "widgetCatalog": "Widget Catalog",
   "allWidgetsActive": "All widgets are already active!",
   "done": "Done",
-
   "replayTitle": "Trade Replay",
   "replaySubtitle": "Relive your trades and analyze your decisions",
   "replayNoClosedTrades": "No closed trades to replay",
@@ -506,7 +482,6 @@
   "replayAltCutAt1R": "Exit at 1R",
   "replayAltLetRun": "Let it run",
   "replayAltDouble": "Double the size",
-
   "adminManage": "Manage users, trades and platform content.",
   "adminTotalUsers": "Total users",
   "adminTotalTrades": "Total trades",
@@ -560,7 +535,6 @@
   "adminMaintenanceActive": "System under maintenance",
   "adminSystemOnline": "System online",
   "adminRecentSignups": "Recent signups",
-
   "adminVipContent2": "VIP Content",
   "vipNewPublication": "New publication",
   "vipEditPublication": "Edit publication",
@@ -587,7 +561,6 @@
   "vipTypeMacro": "Macro",
   "vipTypeOptions": "Options",
   "vipTypeFutures": "Futures",
-
   "coachAddTrades": "Add trades to get an analysis",
   "coachAutoAnalysis": "Auto analysis",
   "coachConfidenceScore": "Confidence score",
@@ -669,7 +642,6 @@
   "coachSizingNormalWinDetail": "Win streak of {{count}}. Maintain your usual management.",
   "coachSizingNormalNoStreakDetail": "No active streak. Standard management.",
   "coachPerfDecayChange": "{{change}}",
-
   "monthJan": "January",
   "monthFeb": "February",
   "monthMar": "March",
@@ -836,7 +808,6 @@
   "perfByStrategy": "Performance by strategy",
   "recapSummary": "Summary of your performance by period.",
   "avgGain": "Avg gain",
-
   "biasBullish": "Bullish",
   "biasBearish": "Bearish",
   "biasNeutral": "Neutral",
@@ -857,7 +828,6 @@
   "saveBtn": "Save",
   "addRulesChecklist": "Add your trading rules to create your pre-trade checklist.",
   "reviewPlaceholder": "How was the day? What did you do well? What can you improve?",
-
   "landing_navFeatures": "Features",
   "landing_navPreview": "Preview",
   "landing_navCompare": "Compare",
@@ -1053,7 +1023,6 @@
   "landing_socialStat3Label": "Trades analyzed",
   "landing_socialStat4": "4.9/5",
   "landing_socialStat4Label": "Average rating",
-
   "profileSubtitle": "Manage your account, preferences and view your statistics",
   "profileLoading": "Loading profile...",
   "profileLoadError": "Error loading profile",
@@ -1237,7 +1206,7 @@
   "avoidHoursReco": "Avoid: {hours} (WR: {wr}%)",
   "recommendedSessionReco": "Recommended session: {session}",
   "noRecoAvailable": "Add more trades for recommendations",
-  "tradesLabel": "Trades",
+  "tradesLabel": "trades",
   "avgPnlShort": "Avg P&L",
   "overlapTrades": "{count} trades",
   "overlapWinRate": "WR: {wr}%",
@@ -1256,7 +1225,6 @@
   "underperforming": "Underperforming",
   "quickTradeTitle": "Quick Trade",
   "quickTradeSubmit": "Save Trade",
-
   "recapProfitFactor": "Profit Factor",
   "recapAvgRR": "Avg R:R",
   "recapSessionPerf": "Session Performance",
@@ -1282,7 +1250,6 @@
   "recapPrevPeriod": "Prev. Period",
   "recapCurrentPeriod": "Current Period",
   "recapDelta": "Delta",
-
   "perfNoTrades": "No trades recorded. Add trades to see your score.",
   "perfPerfectDD": "No drawdown — perfect performance",
   "perfCategoryBreakdown": "Category Breakdown",
@@ -1355,7 +1322,6 @@
   "searchSymbolPlaceholder": "Search a symbol...",
   "majorIndices": "Major Indices",
   "manageStrategiesDesc": "Manage your trading strategies and analyze their performance",
-
   "reportsAndExport": "Reports & Export",
   "generateProfessionalReports": "Generate professional reports of your performance",
   "period": "Period",
@@ -1392,7 +1358,6 @@
   "insightBestDay": "Best day: {{day}} with {{pnl}} P&L.",
   "insightMaxDrawdown": "Maximum drawdown of {{dd}} — watch your risk management.",
   "insightPeriodOk": "Stable period, keep following your plan.",
-
   "sidebarAdminPanel": "Admin Panel",
   "sidebarSecTrading": "TRADING",
   "sidebarDashboard": "Dashboard",
@@ -1491,8 +1456,6 @@
   "heatmapDescription": "Win rate by asset and UTC hour. Hover a cell for details.",
   "winsLabel": "wins",
   "lossesLabel": "losses",
-  "tradesLabel": "trades",
-
   "riskManagementTitle": "Risk Management",
   "riskManagementDesc": "Advanced risk metrics and position size calculator.",
   "riskExpectancy": "Expectancy",
@@ -1549,7 +1512,6 @@
   "riskPipsAtRisk": "Pips at risk",
   "riskPerUnit": "Risk/unit",
   "riskKellyRecommends": "Kelly recommends",
-
   "avgPnl": "Avg P&L",
   "noGoalSet": "Set a monthly goal to track your progress.",
   "aheadOfSchedule": "Ahead of schedule",
@@ -1588,7 +1550,6 @@
   "createRuleError": "Could not create the rule",
   "cannotAddRule": "Could not add the rule",
   "cannotDeleteRule": "Could not delete the rule",
-
   "andMoreErrors": "and more errors",
   "autoDetection": "Auto detection",
   "columns": "columns",
@@ -1627,7 +1588,6 @@
   "stepResult": "Result",
   "tradesImported": "trades imported",
   "tradesTotal": "trades total",
-
   "fiftyTwoWeeks": "52 weeks",
   "lastUpdatedAt": "Last updated",
   "loadError": "Load error",
@@ -1635,7 +1595,6 @@
   "noOptionsData": "No options data",
   "noResultsForSymbol": "No results for this symbol",
   "symbolNotFound": "Symbol not found",
-
   "channels": "Channels",
   "confirmDeleteMessage": "Are you sure you want to delete this message?",
   "details": "Details",
@@ -1656,9 +1615,7 @@
   "sidePanel": "Side panel",
   "statistics": "Statistics",
   "unpin": "Unpin",
-
   "emotion": "Emotion",
-
   "maxPerDay": "Max per day",
   "removeLosing": "Remove losing",
   "removeWorst": "Remove worst",
@@ -1666,7 +1623,6 @@
   "slModifier": "SL modifier",
   "strategyFilter": "Strategy filter",
   "tpRR": "TP R:R",
-
   "avgPnlIncreased": "Avg P&L increased",
   "betterLossManagement": "Better loss management",
   "compareTwoPeriodsDesc": "Compare two periods to identify your progress",
@@ -1686,7 +1642,6 @@
   "tradedMoreThisPeriod": "Traded more this period",
   "winRateDecreased": "Win Rate decreased",
   "winRateIncreased": "Win Rate increased",
-
   "abovePrice": "Above price",
   "addInstrument": "Add instrument",
   "alertFor": "Alert for",
@@ -1714,11 +1669,9 @@
   "watchlistEmpty": "Watchlist empty",
   "watchlistEmptyHint": "Add instruments to track their prices in real time",
   "watchlistSubtitle": "Track your favorite instruments in real time",
-
   "preferences": "Preferences",
   "security": "Security",
   "style": "Style",
-
   "macroAt": "at",
   "macroBondYields": "Bond Yields",
   "macroCbDown": "Dovish",
@@ -1769,7 +1722,6 @@
   "macroYieldCurve": "Yield Curve",
   "macroYieldCurveLabel": "Yield Curve",
   "macroYieldInversionDesc": "Yield curve inversion signals recession risk",
-
   "cannotLoadNews": "Cannot load news",
   "cannotLoadNewsCheckConnection": "Check your internet connection",
   "clearFilters": "Clear filters",
@@ -1777,7 +1729,6 @@
   "noNewsFound": "No news found",
   "tryOtherKeyword": "Try another keyword",
   "unexpectedApiFormat": "Unexpected API format",
-
   "color": "Color",
   "create": "Create",
   "descriptionOptional": "Description (optional)",
@@ -1787,7 +1738,6 @@
   "noStrategies": "No strategies",
   "noStrategiesDesc": "Create your first strategy to analyze your performance",
   "strategyDescriptionPlaceholder": "Describe your strategy...",
-
   "landing_pricingFreeLabel": "WHAT'S INCLUDED",
   "landing_pricingVipBadge": "RECOMMENDED",
   "landing_pricingVipLabel": "EVERYTHING IN FREE, PLUS:",
@@ -1798,7 +1748,6 @@
   "landing_pricingVip4": "GPS support/resistance levels",
   "landing_pricingVip5": "Gold VIP badge + priority support",
   "landing_pricingVipCta": "Try VIP →",
-
   "landing_faqTitle": "Frequently Asked Questions",
   "landing_faqQ1": "Is it really free? What's the catch?",
   "landing_faqA1": "No catch. MarketPhase is 100% free with 35+ tools. We offer an optional VIP subscription (€9.99/month) for exclusive macro analyses and indicators, but the full app stays free forever.",
@@ -1830,7 +1779,6 @@
   "wlHeatNeutral": "Normal",
   "wlAlertTriggered": "Alert triggered: {symbol} reached {price}",
   "wlActiveAlerts": "{count} active alert(s)",
-
   "phasePre": "Pre-Trade",
   "phaseDuring": "During Trade",
   "phasePost": "Post-Trade",
@@ -1842,7 +1790,6 @@
   "streakDaysMessage": "days of perfect discipline",
   "streakStartToday": "Start today to begin your streak!",
   "complianceByPhase": "Compliance by Phase",
-
   "importHistoryTitle": "Import History",
   "importQuickStats": "Import Summary",
   "importStatTrades": "Trades Imported",
@@ -1851,7 +1798,6 @@
   "importStatPnl": "Total P&L",
   "importStatTopAsset": "Top Asset",
   "deleteImportHistory": "Delete from history",
-
   "journalTagAdded": "Tag added",
   "journalTagAddedBulk": "Tag \"{tag}\" added to {count} trade(s)",
   "journalSelectionExportedCsv": "Selection exported as CSV",
@@ -1887,7 +1833,6 @@
   "journalAddComment": "Add a comment, your analysis, your reasoning...",
   "journalChangeStrategyBtn": "Strategy",
   "journalStrategy": "Strategy",
-
   "chartClosePanel": "Close panel",
   "chartViewTrades": "View trades",
   "chartAddTrade": "Add a trade",
@@ -1911,7 +1856,6 @@
   "chartSaving": "Saving...",
   "chartNoTradesFor": "No trades for {symbol}",
   "chartView": "View",
-
   "perfWinRate": "Win Rate",
   "perfRiskReward": "Risk/Reward",
   "perfProfitFactor": "Profit Factor",
@@ -1919,7 +1863,6 @@
   "perfPnL": "P&L",
   "perfMaxDrawdownEuro": "Max Drawdown (€)",
   "perfAvgRR": "Avg R:R",
-
   "daySunday": "Sunday",
   "dayMonday": "Monday",
   "dayTuesday": "Tuesday",
@@ -1942,7 +1885,6 @@
   "severityCritical": "Critical",
   "severityWarning": "Warning",
   "severityInfo": "Info",
-
   "warRoomOutOfSession": "Off session",
   "warRoomSave": "Save",
   "warRoomCancel": "Cancel",
@@ -1953,7 +1895,6 @@
   "warRoomMoodAnxious": "Anxious",
   "warRoomMoodNeutral": "Neutral",
   "warRoomMoodConfident": "Confident",
-
   "backtestSniperMode": "Sniper Mode",
   "backtestSniperDesc": "Remove all trades with R:R < 2",
   "backtestDiscipline": "Discipline",
@@ -1982,7 +1923,6 @@
   "backtestReliabilityModerate": "Moderate",
   "backtestReliabilityLow": "Low",
   "backtestReliabilityVeryLow": "Very Low",
-
   "calcPositionSize": "Position Size",
   "calcPotentialLoss": "Potential Loss",
   "calcPotentialProfit": "Potential Profit",
@@ -1990,7 +1930,6 @@
   "calcRatioRR": "R:R Ratio",
   "calcPipValue": "Pip Value",
   "calcRiskReward": "Risk/Reward",
-
   "corrExcellentDiv": "Excellent diversification",
   "corrGoodDiv": "Good diversification",
   "corrModerateDiv": "Moderate diversification",
@@ -2023,7 +1962,6 @@
   "corrPeriod30d": "30 days",
   "corrPeriod90d": "90 days",
   "corrPeriodAll": "All",
-
   "calEco_title": "Economic Calendar",
   "calEco_subtitle": "Macroeconomic events and publications",
   "calEco_staticData": "Static data",
@@ -2094,7 +2032,6 @@
   "calEco_inDays": "In {days}d",
   "calEco_inHoursMin": "In {hours}h {mins}min",
   "calEco_inMin": "In {mins}min",
-
   "currStr_title": "Currency Strength",
   "currStr_refreshTitle": "Refresh",
   "currStr_dollarUS": "US Dollar",
@@ -2120,7 +2057,6 @@
   "currStr_ratesUnavailable": "Exchange rates unavailable (source: fallback)",
   "currStr_strongestDivergence": "Strongest divergence",
   "currStr_weakestDivergence": "Weakest divergence",
-
   "scanner_title": "Market Scanner",
   "scanner_subtitle": "Real-time analysis of all instruments",
   "scanner_myFavorites": "My Favorites",
@@ -2151,7 +2087,6 @@
   "scanner_moderateBearish": "Moderate bearish bias",
   "scanner_noDirection": "No clear direction",
   "scanner_updating": "Updating...",
-
   "sectorHeatmap_title": "Sector Heatmap",
   "sectorHeatmap_subtitle": "Real-time sector performance",
   "sectorHeatmap_demoData": "Demo data — API unavailable",
@@ -2165,7 +2100,6 @@
   "sectorHeatmap_all": "All",
   "sectorHeatmap_yourPnl": "Your P&L:",
   "sectorHeatmap_watchSectors": "Sectors to watch",
-
   "sentiment_avgPnl": "Avg P&L",
   "sentiment_trades": "Trades",
   "sentiment_perfVsSentiment": "Your Performance vs Sentiment",
@@ -2187,7 +2121,6 @@
   "sentiment_winRate": "Win Rate",
   "sentiment_tradeBetterIn": "You trade better in",
   "sentiment_vs": "vs",
-
   "vol_vixZoneLow": "Low Volatility",
   "vol_vixZoneNormal": "Normal",
   "vol_vixZoneElevated": "Elevated",
@@ -2236,5 +2169,8 @@
   "vol_riskOffDesc": "High VIX + SPY bearish",
   "vol_complacencyDesc": "Very low VIX — watch out",
   "vol_complacencyLabel": "Complacency",
-  "vol_todayLabel": "today"
+  "vol_todayLabel": "today",
+  "scannerVolHigh": "High",
+  "scannerVolMedium": "Medium",
+  "scannerVolLow": "Low"
 }
