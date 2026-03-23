@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Compass, RefreshCw, TrendingUp, TrendingDown, Info } from "lucide-react";
+import { Compass, RefreshCw, TrendingUp, TrendingDown, Info, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 import { useTrades, type Trade } from "@/hooks/useTrades";
 import {
@@ -506,6 +506,19 @@ export default function MarketPhasePage() {
             </div>
             <span className="text-zinc-400 text-sm">Analyse en cours...</span>
           </div>
+        </div>
+      )}
+
+      {/* No data state */}
+      {!loading && !result && (
+        <div className="rounded-2xl p-8 bg-zinc-900/80 border border-white/10 backdrop-blur-xl text-center">
+          <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-white mb-2">
+            {t("marketPhase_unavailable") || "Données indisponibles"}
+          </h3>
+          <p className="text-sm text-zinc-400">
+            {t("marketPhase_unavailableDesc") || "Impossible de charger les bougies pour cet actif. Réessayez ultérieurement."}
+          </p>
         </div>
       )}
 

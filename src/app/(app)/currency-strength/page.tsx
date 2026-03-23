@@ -803,6 +803,7 @@ function MatrixSkeleton() {
 export default function CurrencyStrengthPage() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string>("");
   const [history, setHistory] = useState<StrengthSnapshot[]>([]);
   const [prevRanking, setPrevRanking] = useState<Currency[] | null>(null);
@@ -818,34 +819,43 @@ export default function CurrencyStrengthPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/currency-strength");
-      if (res.ok) {
-        const json: ApiResponse = await res.json();
-
-        // Save previous ranking before updating
-        if (data?.strengths) {
-          setPrevRanking(getRanking(data.strengths));
+      if (!res.ok) {
+        // If we have no previous data, show error
+        if (!data) {
+          setError("Données indisponibles — Réessayez ultérieurement");
         }
-
-        setData(json);
-        setLastUpdate(new Date().toLocaleTimeString("fr-FR"));
-
-        // Append to history
-        const snapshot: StrengthSnapshot = {
-          strengths: json.strengths,
-          timestamp: Date.now(),
-        };
-        setHistory((prev) => {
-          const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-          const filtered = prev.filter((s) => s.timestamp > cutoff);
-          const updated = [...filtered, snapshot].slice(-MAX_HISTORY_POINTS);
-          saveHistory(updated);
-          return updated;
-        });
+        return;
       }
+      const json: ApiResponse = await res.json();
+
+      // Save previous ranking before updating
+      if (data?.strengths) {
+        setPrevRanking(getRanking(data.strengths));
+      }
+
+      setData(json);
+      setLastUpdate(new Date().toLocaleTimeString("fr-FR"));
+
+      // Append to history
+      const snapshot: StrengthSnapshot = {
+        strengths: json.strengths,
+        timestamp: Date.now(),
+      };
+      setHistory((prev) => {
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        const filtered = prev.filter((s) => s.timestamp > cutoff);
+        const updated = [...filtered, snapshot].slice(-MAX_HISTORY_POINTS);
+        saveHistory(updated);
+        return updated;
+      });
     } catch {
-      // keep previous data
+      // keep previous data, but show error if no data loaded yet
+      if (!data) {
+        setError("Données indisponibles — Réessayez ultérieurement");
+      }
     } finally {
       setLoading(false);
     }
@@ -1040,6 +1050,15 @@ export default function CurrencyStrengthPage() {
           </button>
         </div>
       </div>
+
+      {/* Error state */}
+      {error && !data && !loading && (
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-6 text-center">
+          <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
+          <p className="text-amber-300 font-semibold mb-1">Données indisponibles</p>
+          <p className="text-sm text-[var(--text-muted)]">{error}</p>
+        </div>
+      )}
 
       {/* Loading state */}
       {loading && !data ? (

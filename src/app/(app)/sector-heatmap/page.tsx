@@ -117,7 +117,7 @@ export default function SectorHeatmapPage() {
   const { t } = useTranslation();
   const [quotes, setQuotes] = useState<Record<string, StockQuote>>({});
   const [previousQuotes, setPreviousQuotes] = useState<Record<string, StockQuote>>({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingFallback, setUsingFallback] = useState(false);
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
