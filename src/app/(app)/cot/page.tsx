@@ -4,7 +4,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
 import { fetchCotData, type CotParsed } from "@/lib/market/cot";
 import { COT_CONTRACTS, COT_CATEGORIES } from "@/lib/market/constants";
-import { RefreshCw, Search, TrendingUp, TrendingDown, ArrowLeft, AlertTriangle, Zap, BarChart3, Target } from "lucide-react";
+import { RefreshCw, Search, TrendingUp, TrendingDown, ArrowLeft, AlertTriangle, Zap, BarChart3, Target, Brain } from "lucide-react";
+import { useTrades } from "@/hooks/useTrades";
+import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
 import { useTranslation } from "@/i18n/context";
 import { useTheme } from "next-themes";
 
@@ -442,6 +444,84 @@ export default function CotPage() {
   const cotSignals = useMemo(() => generateSignals(overviewData), [overviewData]);
   const tradingImplications = useMemo(() => generateImplications(overviewData), [overviewData]);
 
+  // --- AI Insights: "Comment trader le COT cette semaine" ---
+  const { trades } = useTrades();
+  const cotWeeklyInsights = useMemo<InsightItem[]>(() => {
+    if (overviewData.length === 0) return [];
+    const items: InsightItem[] = [];
+
+    // Find strongest commercial accumulation signals
+    const commBullish = overviewData
+      .filter((r) => r.commPercentile >= 70)
+      .sort((a, b) => b.commPercentile - a.commPercentile);
+    const commBearish = overviewData
+      .filter((r) => r.commPercentile <= 30)
+      .sort((a, b) => a.commPercentile - b.commPercentile);
+
+    if (commBullish.length > 0) {
+      const top = commBullish[0];
+      const pair = FX_PAIR_MAP[top.key] || top.key;
+      items.push({
+        icon: <TrendingUp className="w-3.5 h-3.5" />,
+        text: `Commerciaux accumulent ${pair} longs (P${top.commPercentile}) → Biais haussier moyen terme`,
+        type: "bullish",
+      });
+    }
+
+    if (commBearish.length > 0) {
+      const top = commBearish[0];
+      const pair = FX_PAIR_MAP[top.key] || top.key;
+      items.push({
+        icon: <TrendingDown className="w-3.5 h-3.5" />,
+        text: `Commerciaux réduisent ${pair} (P${top.commPercentile}) → Biais baissier moyen terme`,
+        type: "bearish",
+      });
+    }
+
+    // Find extreme speculator positions (reversal candidates)
+    const extremeLong = overviewData.filter((r) => r.percentileRank >= 90);
+    const extremeShort = overviewData.filter((r) => r.percentileRank <= 10);
+
+    if (extremeLong.length > 0) {
+      const names = extremeLong.map((r) => FX_PAIR_MAP[r.key] || r.key).join(", ");
+      items.push({
+        icon: <AlertTriangle className="w-3.5 h-3.5" />,
+        text: `Spéculateurs en extrême long sur ${names} → Risque de correction, prudence`,
+        type: "warning",
+      });
+    }
+
+    if (extremeShort.length > 0) {
+      const names = extremeShort.map((r) => FX_PAIR_MAP[r.key] || r.key).join(", ");
+      items.push({
+        icon: <Zap className="w-3.5 h-3.5" />,
+        text: `Spéculateurs en extrême short sur ${names} → Potentiel de short squeeze`,
+        type: "bullish",
+      });
+    }
+
+    // Cross-reference with user trades
+    if (trades.length >= 5) {
+      const tradedAssets = new Set(trades.map((t) => t.asset?.toUpperCase()));
+      const matchingSignals = overviewData.filter((r) => {
+        const pair = FX_PAIR_MAP[r.key] || r.key;
+        return tradedAssets.has(pair.toUpperCase()) || tradedAssets.has(r.key.toUpperCase());
+      });
+      if (matchingSignals.length > 0) {
+        const aligned = matchingSignals.filter((r) => r.commPercentile >= 60 || r.commPercentile <= 40);
+        if (aligned.length > 0) {
+          items.push({
+            icon: <Target className="w-3.5 h-3.5" />,
+            text: `${aligned.length} de vos actifs tradés ont un signal COT actif — vérifiez l'alignement`,
+            type: "info",
+          });
+        }
+      }
+    }
+
+    return items.slice(0, 4);
+  }, [overviewData, trades]);
+
   // Detail charts
   useEffect(() => {
     if (view !== "detail" || !netChartRef.current || detailData.length === 0) return;
@@ -760,6 +840,16 @@ export default function CotPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* === AI Insights: Comment trader le COT cette semaine === */}
+      {!loading && cotWeeklyInsights.length > 0 && (
+        <AIInsightsCard
+          title="Comment trader le COT cette semaine"
+          insights={cotWeeklyInsights}
+          minimumTrades={5}
+          currentTradeCount={trades.length}
+        />
       )}
 
       {/* === 4. COT Index (0-100) === */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   RefreshCw,
   TrendingUp,
@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { fetchMultipleFredSeries, type FredSeriesData } from "@/lib/market/fred";
 import { useTranslation } from "@/i18n/context";
+import { useTrades } from "@/hooks/useTrades";
+import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
 
 /* ------------------------------------------------------------------ */
 /*  FRED series keys we want for the macro overlay                     */
