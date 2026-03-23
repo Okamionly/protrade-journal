@@ -931,8 +931,9 @@ function ForexSessionTimeline({
   const displayMinute = minute;
   const displaySecond = second;
 
-  // Position on 24h bar (always UTC-based internally, display shifted)
-  const timePosition = ((hour * 3600 + minute * 60 + second) / 86400) * 100;
+  // Position on 24h bar (shifted by UTC offset)
+  const shiftedSeconds = (shiftHour(hour) * 3600 + minute * 60 + second);
+  const timePosition = (shiftedSeconds / 86400) * 100;
 
   // Format hour in selected offset
   const fmtH = (utcH: number): string => {
@@ -940,13 +941,16 @@ function ForexSessionTimeline({
     return `${Math.floor(shifted).toString().padStart(2, "0")}:00`;
   };
 
-  // Compute session bar position (handle overnight sessions wrapping)
+  // Compute session bar position with UTC offset applied
   const getBarStyle = (start: number, end: number) => {
-    if (start <= end) {
-      return { left: (start / 24) * 100, width: ((end - start) / 24) * 100 };
+    const s = shiftHour(start);
+    const e = shiftHour(end);
+    const duration = ((end - start) + 24) % 24 || (end === start ? 24 : 0);
+    if (s + duration <= 24) {
+      return { left: (s / 24) * 100, width: (duration / 24) * 100 };
     }
-    // Overnight: render from start to 24
-    return { left: (start / 24) * 100, width: ((24 - start + end) / 24) * 100 };
+    // Overnight wrap
+    return { left: (s / 24) * 100, width: (duration / 24) * 100 };
   };
 
   // Check if session is active
