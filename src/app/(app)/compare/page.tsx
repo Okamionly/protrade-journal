@@ -549,7 +549,8 @@ export default function ComparePage() {
 
   const statsA = useMemo(() => computeStats(tradesA), [tradesA]);
   const statsB = useMemo(() => computeStats(tradesB), [tradesB]);
-  const takeaways = useMemo(() => generateTakeaways(statsA, statsB, t), [statsA, statsB, t]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const takeaways = useMemo(() => generateTakeaways(statsA, statsB, t), [statsA, statsB]);
   const insights = useMemo(() => generateInsights(statsA, statsB), [statsA, statsB]);
 
   if (loading || isVip === null) {

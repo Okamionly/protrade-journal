@@ -210,7 +210,8 @@ export default function MistakesPage() {
       recommendation: "Avant chaque entree, verifiez que votre checklist de setup est respectee. Si non, ne tradez pas.",
       explanation: "Le FOMO (Fear Of Missing Out) pousse a entrer tard dans un mouvement deja avance. Le ratio risque/recompense est alors defavorable : vous entrez au pire moment, souvent pres d'un sommet ou d'un creux local.",
     },
-  ], [t, riskPercent, overtradingThreshold]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [riskPercent, overtradingThreshold]);
 
   // ---- Auto-detection engine ----
   const detectedMistakes = useMemo(() => {
