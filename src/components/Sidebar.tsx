@@ -187,7 +187,7 @@ const sections: SectionDef[] = [
       { href: "/pricing", labelKey: "sidebarPricing", icon: CreditCard },
     ],
   },
-  // PREMIUM (always expanded, highlighted in amber)
+  // PREMIUM (always expanded, highlighted)
   {
     id: "premium",
     labelKey: "sidebarSecPremium",
@@ -304,26 +304,35 @@ export function Sidebar() {
       <Link
         key={item.href}
         href={item.href}
-        className={`flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all group relative ${
+        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all group relative ${
           isVipItem
             ? isActive
-              ? "bg-amber-500/15 text-amber-400"
-              : "text-amber-500/80 dark:text-amber-400/80 hover:text-amber-400 hover:bg-amber-500/10"
+              ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+              : "text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800"
             : isActive
-              ? "bg-cyan-500/15 text-cyan-400"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)]"
+              ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+              : "text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800"
         }`}
         title={sidebarCollapsed ? t(item.labelKey) : undefined}
       >
         {isActive && (
-          <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full ${isVipItem ? "bg-amber-400" : "bg-cyan-400"}`} />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-blue-500 dark:bg-blue-400" />
         )}
         <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${
-          isVipItem
-            ? isActive ? "text-amber-400" : "text-amber-500/70 dark:text-amber-400/70 group-hover:text-amber-400"
-            : isActive ? "text-cyan-400" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+          isActive
+            ? "text-blue-600 dark:text-blue-400"
+            : "text-gray-400 dark:text-zinc-500 group-hover:text-gray-600 dark:group-hover:text-zinc-300"
         }`} />
-        {!sidebarCollapsed && <span className="truncate">{t(item.labelKey)}</span>}
+        {!sidebarCollapsed && (
+          <span className="truncate">
+            {t(item.labelKey)}
+          </span>
+        )}
+        {!sidebarCollapsed && isVipItem && !isActive && (
+          <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-500 dark:bg-blue-500/10 dark:text-blue-400">
+            VIP
+          </span>
+        )}
       </Link>
     );
   };
@@ -331,42 +340,51 @@ export function Sidebar() {
   const renderSection = (section: SectionDef, idx: number) => {
     const isCollapsible = !section.alwaysExpanded;
     const isOpen = section.alwaysExpanded || !sectionCollapsed[section.id];
+    const isVipSection = !!section.isVip;
 
     return (
       <div key={section.id}>
-        {/* Section header */}
-        <div className={`${idx > 0 ? "pt-3" : ""} pb-1`}>
-          {!sidebarCollapsed ? (
-            isCollapsible ? (
-              <button
-                onClick={() => toggleSection(section.id)}
-                className="flex items-center justify-between w-full px-3 text-[10px] font-bold tracking-widest text-gray-400 dark:text-gray-600 uppercase hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
-              >
-                <span>{t(section.labelKey)}</span>
-                {isOpen ? (
-                  <ChevronUp className="w-3 h-3" />
-                ) : (
-                  <ChevronDown className="w-3 h-3" />
-                )}
-              </button>
-            ) : (
-              <span className="px-3 text-[10px] font-bold tracking-widest text-gray-400 dark:text-gray-600 uppercase">
-                {t(section.labelKey)}
-              </span>
-            )
-          ) : (
-            <div className="border-t border-gray-200 dark:border-gray-800 mx-2" />
-          )}
-        </div>
+        {/* Separator line above each section (except first) */}
+        {idx > 0 && (
+          <div className="mx-3 my-2 border-t border-gray-100 dark:border-zinc-800" />
+        )}
 
-        {/* Section items with smooth collapse */}
-        <div
-          className={`overflow-hidden transition-all duration-200 ease-in-out ${
-            isOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          <div className="space-y-0.5">
-            {section.items.map(renderNavItem)}
+        {/* VIP section wrapper */}
+        <div className={isVipSection ? "mx-2 my-1 px-1 py-1 rounded-lg bg-blue-50/50 dark:bg-blue-500/5" : ""}>
+          {/* Section header */}
+          <div className="pb-1">
+            {!sidebarCollapsed ? (
+              isCollapsible ? (
+                <button
+                  onClick={() => toggleSection(section.id)}
+                  className="flex items-center justify-between w-full px-3 text-xs font-medium tracking-widest text-gray-400 dark:text-zinc-500 uppercase hover:text-gray-600 dark:hover:text-zinc-400 transition-colors"
+                >
+                  <span>{t(section.labelKey)}</span>
+                  {isOpen ? (
+                    <ChevronUp className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
+                </button>
+              ) : (
+                <span className="px-3 text-xs font-medium tracking-widest text-gray-400 dark:text-zinc-500 uppercase">
+                  {t(section.labelKey)}
+                </span>
+              )
+            ) : (
+              <div className="border-t border-gray-100 dark:border-zinc-800 mx-2" />
+            )}
+          </div>
+
+          {/* Section items with smooth collapse */}
+          <div
+            className={`overflow-hidden transition-all duration-200 ease-in-out ${
+              isOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
+            }`}
+          >
+            <div className="space-y-0.5">
+              {section.items.map(renderNavItem)}
+            </div>
           </div>
         </div>
       </div>
@@ -377,15 +395,15 @@ export function Sidebar() {
     <aside
       className={`fixed left-0 top-8 h-[calc(100%-2rem)] z-50 flex-col transition-all duration-300 ${
         sidebarCollapsed ? "w-16" : "w-56"
-      } bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800 ${
+      } bg-white dark:bg-zinc-900 border-r border-[--border] ${
         mobileOpen ? "flex" : "hidden md:flex"
       }`}
     >
-      {/* Logo area — click to go to dashboard */}
-      <Link href="/dashboard" className="flex items-center h-16 px-3 border-b border-gray-200 dark:border-gray-800 hover:opacity-80 transition-opacity">
+      {/* Logo area */}
+      <Link href="/dashboard" className="flex items-center h-16 px-3 border-b border-gray-100 dark:border-zinc-800 hover:opacity-80 transition-opacity">
         <Image src="/logo-icon.png" alt="MarketPhase" width={44} height={44} className="w-11 h-11 rounded-xl flex-shrink-0" />
         {!sidebarCollapsed && (
-          <span className="ml-2.5 text-lg font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent whitespace-nowrap">
+          <span className="ml-2.5 text-lg font-bold text-gray-900 dark:text-white whitespace-nowrap">
             MarketPhase
           </span>
         )}
@@ -399,23 +417,25 @@ export function Sidebar() {
           const AdminIcon = adminItem.icon;
           return (
             <>
-              <Link
-                href={adminItem.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all group relative ${
-                  isActive
-                    ? "bg-rose-500/15 text-rose-400"
-                    : "text-rose-500/80 dark:text-rose-400/80 hover:text-rose-400 hover:bg-rose-500/10"
-                }`}
-                title={sidebarCollapsed ? t(adminItem.labelKey) : undefined}
-              >
-                {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-rose-400" />
-                )}
-                <AdminIcon className={`w-[18px] h-[18px] flex-shrink-0 ${
-                  isActive ? "text-rose-400" : "text-rose-500/70 dark:text-rose-400/70 group-hover:text-rose-400"
-                }`} />
-                {!sidebarCollapsed && <span className="truncate">{t(adminItem.labelKey)}</span>}
-              </Link>
+              <div className="mx-2 mb-2 px-1 py-1 rounded-lg bg-red-50 dark:bg-red-500/5">
+                <Link
+                  href={adminItem.href}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all group relative ${
+                    isActive
+                      ? "bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400"
+                      : "text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10"
+                  }`}
+                  title={sidebarCollapsed ? t(adminItem.labelKey) : undefined}
+                >
+                  {isActive && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-red-500" />
+                  )}
+                  <AdminIcon className={`w-[18px] h-[18px] flex-shrink-0 ${
+                    isActive ? "text-red-600 dark:text-red-400" : "text-red-400 dark:text-red-500 group-hover:text-red-600 dark:group-hover:text-red-400"
+                  }`} />
+                  {!sidebarCollapsed && <span className="truncate">{t(adminItem.labelKey)}</span>}
+                </Link>
+              </div>
             </>
           );
         })()}
@@ -424,10 +444,10 @@ export function Sidebar() {
       </nav>
 
       {/* Collapse button */}
-      <div className="p-2 border-t border-gray-200 dark:border-gray-800 space-y-1">
+      <div className="p-2 border-t border-gray-100 dark:border-zinc-800 space-y-1">
         <button
           onClick={toggleSidebarCollapsed}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition text-xs"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition text-xs"
         >
           {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /><span>{t("sidebarCollapse")}</span></>}
         </button>

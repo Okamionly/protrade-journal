@@ -65,14 +65,14 @@ export function LoginStreak() {
   const count = streak.count;
 
   // Color tiers
-  let colorClass = "text-orange-400"; // default
+  let colorClass = "text-orange-400/80"; // default
   let glowStyle = {};
   if (count >= 30) {
-    colorClass = "text-yellow-400";
-    glowStyle = { textShadow: "0 0 8px rgba(234,179,8,0.6)" };
+    colorClass = "text-yellow-500/80";
+    glowStyle = { textShadow: "0 0 4px rgba(234,179,8,0.3)" };
   } else if (count >= 7) {
-    colorClass = "text-amber-500";
-    glowStyle = { textShadow: "0 0 6px rgba(217,119,6,0.4)" };
+    colorClass = "text-amber-500/80";
+    glowStyle = { textShadow: "0 0 3px rgba(217,119,6,0.2)" };
   }
 
   return (

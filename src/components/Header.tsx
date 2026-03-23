@@ -47,7 +47,7 @@ export function Header() {
   }, [langOpen]);
 
   return (
-    <header className="fixed top-8 right-0 left-0 z-40 h-14 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+    <header className="fixed top-8 right-0 left-0 z-40 h-14 border-b border-[var(--border)] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm">
       <div className="h-full flex items-center gap-2 px-4 sm:px-6">
         {/* News ticker in the middle */}
         <NewsTicker />
@@ -59,15 +59,15 @@ export function Header() {
             else if (theme === "light") setTheme("oled");
             else setTheme("dark");
           }}
-          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           title={mounted ? `${t("theme")}: ${theme === "oled" ? t("themeOled") : theme === "dark" ? t("themeDark") : t("themeLight")}` : t("theme")}
         >
           {mounted && (theme === "dark" ? (
-            <Sun className="w-[18px] h-[18px] text-yellow-500" />
+            <Sun className="w-[18px] h-[18px]" />
           ) : theme === "light" ? (
-            <Monitor className="w-[18px] h-[18px] text-purple-500" />
+            <Monitor className="w-[18px] h-[18px]" />
           ) : (
-            <Moon className="w-[18px] h-[18px] text-blue-500" />
+            <Moon className="w-[18px] h-[18px]" />
           ))}
         </button>
 
@@ -83,7 +83,7 @@ export function Header() {
               document.documentElement.classList.remove("zen-mode");
             }
           }}
-          className={`p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition ${zenMode ? "text-blue-500" : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"}`}
+          className={`p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[var(--bg-hover)] transition ${zenMode ? "text-gray-700 dark:text-gray-200" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
           title={zenMode ? t("zenModeOn") : t("zenModeOff")}
         >
           {zenMode ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
@@ -106,8 +106,7 @@ export function Header() {
           </button>
           {langOpen && (
             <div
-              className="absolute top-full right-0 mt-1 w-40 rounded-xl overflow-hidden shadow-xl z-50"
-              style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}
+              className="absolute top-full right-0 mt-1 w-40 rounded-xl overflow-hidden shadow-lg border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-zinc-900 z-50"
             >
               {(Object.keys(LOCALE_FLAGS) as Locale[]).map((l) => {
                 const isActive = locale === l;
@@ -116,12 +115,12 @@ export function Header() {
                   <button
                     key={l}
                     onClick={() => { setLocale(l); setLangOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs transition hover:bg-[var(--bg-hover)] ${isActive ? "bg-blue-500/10" : ""}`}
-                    style={{ color: isActive ? "rgb(59,130,246)" : "var(--text-primary, #e5e7eb)" }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs transition hover:bg-gray-50 dark:hover:bg-[var(--bg-hover)] ${isActive ? "bg-gray-100 dark:bg-[var(--bg-hover)]" : ""}`}
+                    style={{ color: isActive ? "var(--text-primary)" : "var(--text-secondary, #6b7280)" }}
                   >
                     <span className="text-base leading-none">{flag}</span>
                     <span className="font-medium">{short}</span>
-                    {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                    {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-gray-500" />}
                   </button>
                 );
               })}
@@ -132,7 +131,7 @@ export function Header() {
         {/* Logout */}
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition text-sm border border-rose-200 dark:border-rose-500/30 flex items-center gap-1.5"
+          className="px-3 py-1.5 rounded-xl bg-white dark:bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[var(--bg-hover)] transition text-sm border border-gray-200 dark:border-[var(--border)] flex items-center gap-1.5"
         >
           <LogOut className="w-4 h-4" />
           <span className="hidden sm:inline">{t("logout")}</span>

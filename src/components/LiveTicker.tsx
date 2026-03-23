@@ -176,7 +176,7 @@ export function LiveTicker() {
   const doubled = [...tickers, ...tickers];
 
   return (
-    <div className="w-full h-8 bg-gray-100/90 dark:bg-gray-950/80 oled:bg-black border-b border-gray-200 dark:border-gray-800 overflow-hidden relative">
+    <div className="w-full h-8 bg-white/95 dark:bg-zinc-900/95 oled:bg-black border-b border-[var(--border)] overflow-hidden relative">
       <div
         ref={containerRef}
         className="flex items-center h-full gap-8 whitespace-nowrap absolute"

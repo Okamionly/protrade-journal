@@ -3,87 +3,91 @@
 @custom-variant dark (&:where(.dark, .dark *, .oled, .oled *));
 
 @theme inline {
-  --color-primary: #0ea5e9;
+  --color-primary: #3b82f6;
   --color-success: #10b981;
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
-  --color-dark-bg: #0f172a;
-  --color-dark-card: #1e293b;
+  --color-dark-bg: #09090b;
+  --color-dark-card: #18181b;
 }
 
-/* ========== SEMANTIC THEME VARIABLES ========== */
+/* ========== SEMANTIC THEME VARIABLES — Clean Minimal ========== */
+/* LIGHT is the default */
 :root {
-  --bg-primary: #f1f5f9;
-  --bg-secondary: #e2e8f0;
-  --bg-card: rgba(255, 255, 255, 0.8);
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-card: #ffffff;
   --bg-card-solid: #ffffff;
-  --bg-card-gradient: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  --bg-card-gradient: none;
   --bg-input: #ffffff;
-  --bg-hover: rgba(14, 165, 233, 0.05);
-  --text-primary: #1e293b;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --border: rgba(0, 0, 0, 0.1);
-  --border-subtle: rgba(0, 0, 0, 0.05);
-  --border-input: #cbd5e1;
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(0, 0, 0, 0.1);
+  --bg-hover: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --border: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --border-input: #d1d5db;
+  --glass-bg: #ffffff;
+  --glass-border: #e5e7eb;
+  --accent: #3b82f6;
 }
 
 .dark {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-card: rgba(30, 41, 59, 0.7);
-  --bg-card-solid: #1e293b;
-  --bg-card-gradient: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-  --bg-input: rgba(30, 41, 59, 0.9);
-  --bg-hover: rgba(255, 255, 255, 0.05);
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --border: rgba(255, 255, 255, 0.1);
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border-input: rgba(255, 255, 255, 0.2);
-  --glass-bg: rgba(30, 41, 59, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --bg-primary: #09090b;
+  --bg-secondary: #18181b;
+  --bg-card: #18181b;
+  --bg-card-solid: #18181b;
+  --bg-card-gradient: none;
+  --bg-input: #18181b;
+  --bg-hover: #27272a;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --border: #27272a;
+  --border-subtle: #1f1f23;
+  --border-input: #3f3f46;
+  --glass-bg: #18181b;
+  --glass-border: #27272a;
+  --accent: #3b82f6;
 }
 
 .oled {
   --bg-primary: #000000;
   --bg-secondary: #0a0a0a;
-  --bg-card: rgba(10, 10, 10, 0.9);
+  --bg-card: #0a0a0a;
   --bg-card-solid: #0a0a0a;
-  --bg-card-gradient: linear-gradient(145deg, #0a0a0a 0%, #000000 100%);
-  --bg-input: rgba(10, 10, 10, 0.95);
-  --bg-hover: rgba(255, 255, 255, 0.03);
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --border: rgba(255, 255, 255, 0.06);
-  --border-subtle: rgba(255, 255, 255, 0.04);
-  --border-input: rgba(255, 255, 255, 0.15);
-  --glass-bg: rgba(10, 10, 10, 0.9);
-  --glass-border: rgba(255, 255, 255, 0.06);
+  --bg-card-gradient: none;
+  --bg-input: #0a0a0a;
+  --bg-hover: #171717;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --border: #1a1a1a;
+  --border-subtle: #111111;
+  --border-input: #2a2a2a;
+  --glass-bg: #0a0a0a;
+  --glass-border: #1a1a1a;
+  --accent: #3b82f6;
 }
 
 /* ========== GRID & TABLE SEMANTIC VARIABLES ========== */
 :root {
-  --grid-row-odd: rgba(0, 0, 0, 0.02);
+  --grid-row-odd: #f9fafb;
   --grid-row-even: transparent;
-  --grid-row-hover: rgba(14, 165, 233, 0.06);
-  --grid-header-bg: rgba(0, 0, 0, 0.04);
-  --grid-cell-border: rgba(0, 0, 0, 0.06);
+  --grid-row-hover: #f3f4f6;
+  --grid-header-bg: #f9fafb;
+  --grid-cell-border: #e5e7eb;
   --heatmap-positive: #059669;
   --heatmap-negative: #dc2626;
-  --heatmap-neutral: rgba(0, 0, 0, 0.03);
+  --heatmap-neutral: #f3f4f6;
 }
 
 .dark {
   --grid-row-odd: rgba(255, 255, 255, 0.03);
   --grid-row-even: transparent;
-  --grid-row-hover: rgba(14, 165, 233, 0.08);
+  --grid-row-hover: rgba(255, 255, 255, 0.06);
   --grid-header-bg: rgba(255, 255, 255, 0.05);
-  --grid-cell-border: rgba(255, 255, 255, 0.06);
+  --grid-cell-border: #27272a;
   --heatmap-positive: #22c55e;
   --heatmap-negative: #ef4444;
   --heatmap-neutral: rgba(255, 255, 255, 0.03);
@@ -92,9 +96,9 @@
 .oled {
   --grid-row-odd: rgba(255, 255, 255, 0.04);
   --grid-row-even: transparent;
-  --grid-row-hover: rgba(14, 165, 233, 0.1);
+  --grid-row-hover: rgba(255, 255, 255, 0.07);
   --grid-header-bg: rgba(255, 255, 255, 0.06);
-  --grid-cell-border: rgba(255, 255, 255, 0.05);
+  --grid-cell-border: #1a1a1a;
   --heatmap-positive: #22c55e;
   --heatmap-negative: #ef4444;
   --heatmap-neutral: rgba(255, 255, 255, 0.03);
@@ -118,6 +122,7 @@ table thead th {
   text-transform: uppercase;
   font-size: 0.65rem;
   letter-spacing: 0.05em;
+  color: var(--text-secondary);
 }
 
 /* Grid card subtle separator */
@@ -127,7 +132,6 @@ table thead th {
 }
 
 /* ========== LIGHT MODE CONTRAST FIXES (COMPREHENSIVE) ========== */
-/* Shorthand: L = html:not(.dark):not(.oled) */
 
 /* ---- GLOBAL TEXT RESET ---- */
 html:not(.dark):not(.oled) .metric-card,
@@ -167,8 +171,7 @@ html:not(.dark):not(.oled) tbody tr {
   border-color: var(--border-subtle) !important;
 }
 
-/* ---- TEXT-WHITE → dark text in light mode ---- */
-/* Only override text-white when NOT inside a colored/gradient background */
+/* ---- TEXT-WHITE -> dark text in light mode ---- */
 html:not(.dark):not(.oled) .text-white:not([style*="background"]):not([class*="bg-gradient"]):not([class*="bg-blue"]):not([class*="bg-cyan"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-emerald"]):not([class*="bg-purple"]):not([class*="bg-indigo"]):not([class*="bg-orange"]):not([class*="bg-amber"]):not([class*="bg-rose"]) {
   color: var(--text-primary) !important;
 }
@@ -210,7 +213,7 @@ html:not(.dark):not(.oled) .btn-primary * {
   color: #ffffff !important;
 }
 
-/* ---- LIGHT GRAY TEXT → visible on white ---- */
+/* ---- LIGHT GRAY TEXT -> visible on white ---- */
 html:not(.dark):not(.oled) .text-gray-100,
 html:not(.dark):not(.oled) .text-gray-200,
 html:not(.dark):not(.oled) .text-gray-300 {
@@ -223,7 +226,7 @@ html:not(.dark):not(.oled) .text-gray-500 {
   color: var(--text-muted) !important;
 }
 
-/* ---- DARK BACKGROUNDS → light in light mode ---- */
+/* ---- DARK BACKGROUNDS -> light in light mode ---- */
 html:not(.dark):not(.oled) .bg-gray-800,
 html:not(.dark):not(.oled) .bg-gray-900,
 html:not(.dark):not(.oled) .bg-gray-950 {
@@ -243,23 +246,23 @@ html:not(.dark):not(.oled) .bg-gray-950\/80 {
   background-color: var(--bg-card) !important;
 }
 
-/* ---- WHITE ALPHA BACKGROUNDS → visible in light mode ---- */
+/* ---- WHITE ALPHA BACKGROUNDS -> visible in light mode ---- */
 html:not(.dark):not(.oled) .bg-white\/5,
 html:not(.dark):not(.oled) .bg-white\/10,
 html:not(.dark):not(.oled) .bg-white\/15,
 html:not(.dark):not(.oled) .bg-white\/20 {
-  background-color: rgba(0, 0, 0, 0.06) !important;
+  background-color: rgba(0, 0, 0, 0.04) !important;
 }
 
-/* ---- WHITE ALPHA BORDERS → visible in light mode ---- */
+/* ---- WHITE ALPHA BORDERS -> visible in light mode ---- */
 html:not(.dark):not(.oled) .border-white\/5,
 html:not(.dark):not(.oled) .border-white\/10,
 html:not(.dark):not(.oled) .border-white\/15,
 html:not(.dark):not(.oled) .border-white\/20 {
-  border-color: rgba(0, 0, 0, 0.1) !important;
+  border-color: #e5e7eb !important;
 }
 
-/* ---- DARK BORDERS → light borders ---- */
+/* ---- DARK BORDERS -> light borders ---- */
 html:not(.dark):not(.oled) .border-gray-600,
 html:not(.dark):not(.oled) .border-gray-700,
 html:not(.dark):not(.oled) .border-gray-800,
@@ -280,16 +283,16 @@ html:not(.dark):not(.oled) .hover\:text-white:hover {
 }
 html:not(.dark):not(.oled) .hover\:bg-white\/5:hover,
 html:not(.dark):not(.oled) .hover\:bg-white\/10:hover {
-  background-color: rgba(0, 0, 0, 0.05) !important;
+  background-color: #f3f4f6 !important;
 }
 html:not(.dark):not(.oled) .hover\:bg-gray-700:hover,
 html:not(.dark):not(.oled) .hover\:bg-gray-800:hover,
 html:not(.dark):not(.oled) .hover\:bg-gray-900:hover {
-  background-color: rgba(0, 0, 0, 0.05) !important;
+  background-color: #f3f4f6 !important;
 }
 html:not(.dark):not(.oled) .hover\:border-white\/20:hover,
 html:not(.dark):not(.oled) .hover\:border-white\/30:hover {
-  border-color: rgba(0, 0, 0, 0.15) !important;
+  border-color: #d1d5db !important;
 }
 
 /* ---- RING/OUTLINE COLORS ---- */
@@ -308,7 +311,6 @@ html:not(.dark):not(.oled) .placeholder\:text-gray-600::placeholder {
 }
 
 /* ---- NUMBER/STAT VISIBILITY ---- */
-/* Only set default color when no explicit color is provided via style attr */
 html:not(.dark):not(.oled) .text-2xl:not([style*="color"]),
 html:not(.dark):not(.oled) .text-3xl:not([style*="color"]),
 html:not(.dark):not(.oled) .text-4xl:not([style*="color"]),
@@ -325,19 +327,19 @@ html:not(.dark):not(.oled) textarea {
   background-color: var(--bg-card-solid);
 }
 
-/* ---- CARD VISIBILITY — shadows + borders ---- */
+/* ---- CARD VISIBILITY — clean shadows ---- */
 html:not(.dark):not(.oled) .glass {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb !important;
 }
 html:not(.dark):not(.oled) .metric-card {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb !important;
 }
 
-/* ---- ROUNDED CARDS WITH NO BORDER → add subtle border ---- */
+/* ---- ROUNDED CARDS WITH NO BORDER -> add subtle border ---- */
 html:not(.dark):not(.oled) [class*="rounded"][class*="p-"]:not(.btn-primary):not(button):not(a):not(input):not(select) {
-  border-color: rgba(0, 0, 0, 0.06);
+  border-color: #e5e7eb;
 }
 
 /* ---- COLORED TEXT should stay colored ---- */
@@ -380,28 +382,28 @@ html:not(.dark):not(.oled) .text-pink-500 {
   color: #db2777 !important;
 }
 
-/* ---- COLORED BACKGROUNDS stay darker for contrast ---- */
+/* ---- COLORED BACKGROUNDS stay for contrast ---- */
 html:not(.dark):not(.oled) .bg-green-500\/10,
 html:not(.dark):not(.oled) .bg-emerald-500\/10 {
-  background-color: rgba(16, 185, 129, 0.1) !important;
+  background-color: rgba(16, 185, 129, 0.08) !important;
 }
 html:not(.dark):not(.oled) .bg-red-500\/10 {
-  background-color: rgba(239, 68, 68, 0.1) !important;
+  background-color: rgba(239, 68, 68, 0.08) !important;
 }
 html:not(.dark):not(.oled) .bg-blue-500\/10,
 html:not(.dark):not(.oled) .bg-cyan-500\/10 {
-  background-color: rgba(14, 165, 233, 0.1) !important;
+  background-color: rgba(59, 130, 246, 0.08) !important;
 }
 html:not(.dark):not(.oled) .bg-yellow-500\/10,
 html:not(.dark):not(.oled) .bg-amber-500\/10 {
-  background-color: rgba(245, 158, 11, 0.1) !important;
+  background-color: rgba(245, 158, 11, 0.08) !important;
 }
 html:not(.dark):not(.oled) .bg-purple-500\/10,
 html:not(.dark):not(.oled) .bg-violet-500\/10 {
-  background-color: rgba(139, 92, 246, 0.1) !important;
+  background-color: rgba(139, 92, 246, 0.08) !important;
 }
 
-/* ---- ROSE/EMERALD TEXT → darker in light mode ---- */
+/* ---- ROSE/EMERALD TEXT -> darker in light mode ---- */
 html:not(.dark):not(.oled) .text-rose-400,
 html:not(.dark):not(.oled) .text-rose-500 {
   color: #e11d48 !important;
@@ -427,7 +429,6 @@ html:not(.dark):not(.oled) [style*="border: 2px solid white"] {
 }
 
 /* ---- METRIC VALUES ENSURE VISIBLE ---- */
-/* Only override mono text when no explicit color is set via style attr */
 html:not(.dark):not(.oled) .metric-card .mono:not([style*="color"]),
 html:not(.dark):not(.oled) .glass .mono:not([style*="color"]) {
   color: var(--text-primary);
@@ -438,7 +439,7 @@ html:not(.dark):not(.oled) tr:hover {
   background-color: var(--grid-row-hover) !important;
 }
 html:not(.dark):not(.oled) .hover\:bg-white\/5:hover {
-  background-color: rgba(0, 0, 0, 0.04) !important;
+  background-color: #f3f4f6 !important;
 }
 
 /* ---- SCROLLBAR ---- */
@@ -446,14 +447,14 @@ html:not(.dark):not(.oled) ::-webkit-scrollbar-track {
   background: var(--bg-secondary);
 }
 html:not(.dark):not(.oled) ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: #d1d5db;
   border-radius: 4px;
 }
 
 /* ---- SIDEBAR in light mode ---- */
 html:not(.dark):not(.oled) aside {
-  background-color: rgba(255, 255, 255, 0.98) !important;
-  border-color: rgba(0, 0, 0, 0.1) !important;
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
 }
 
 /* ========== BODY ========== */
@@ -464,12 +465,13 @@ body {
   color: var(--text-primary);
 }
 
-.dark body {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+/* Light mode: clean flat white, no gradient */
+html:not(.dark):not(.oled) body {
+  background: #ffffff;
 }
 
-html:not(.dark):not(.oled) body {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+.dark body {
+  background: var(--bg-primary);
 }
 
 .oled body {
@@ -479,41 +481,44 @@ html:not(.dark):not(.oled) body {
 /* ========== UTILITIES ========== */
 .mono { font-family: var(--font-mono), monospace; }
 
+/* Glass: clean card style, NO backdrop-filter */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .glass:hover {
-  border-color: rgba(14, 165, 233, 0.15);
-  box-shadow: 0 4px 24px rgba(14, 165, 233, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Metric card: clean, no gradient, minimal hover */
 .metric-card {
-  background: var(--bg-card-gradient);
-  border: 1px solid var(--border-subtle);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.2s ease;
 }
 
-html:not(.dark):not(.oled) .metric-card {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+.metric-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-
-.metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); }
 .metric-card.clickable { cursor: pointer; }
-.metric-card.clickable:hover { transform: translateY(-4px); box-shadow: 0 15px 50px rgba(14, 165, 233, 0.2); border-color: rgba(14, 165, 233, 0.3); }
+.metric-card.clickable:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-color: var(--accent);
+}
 
-.dark .metric-card:hover { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); }
-.dark .metric-card.clickable:hover { box-shadow: 0 15px 50px rgba(14, 165, 233, 0.3); }
-.oled .metric-card:hover { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); }
-.oled .metric-card.clickable:hover { box-shadow: 0 15px 50px rgba(14, 165, 233, 0.4); }
+.dark .metric-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+.dark .metric-card.clickable:hover { box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15); border-color: var(--accent); }
+.oled .metric-card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6); }
+.oled .metric-card.clickable:hover { box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2); border-color: var(--accent); }
 
-/* Input field utility */
+/* Input field utility — clean style */
 .input-field {
   background: var(--bg-input);
   border: 1px solid var(--border-input);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   padding-top: 0.625rem;
   padding-bottom: 0.625rem;
   padding-left: 0.875rem;
@@ -522,56 +527,63 @@ html:not(.dark):not(.oled) .metric-card {
   font-size: 0.875rem;
   width: 100%;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input-field:focus {
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 .input-field::placeholder { color: var(--text-muted); }
 
 .modal-input {
   background: var(--bg-input);
   border: 1px solid var(--border-input);
-  border-radius: 8px;
+  border-radius: 0.5rem;
   padding: 12px 16px;
   color: var(--text-primary);
   font-size: 1.1rem;
   width: 100%;
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .modal-input:focus {
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 /* ========== INTERACTIVE ELEMENTS ========== */
-.glow-success { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
-.glow-danger { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+/* Remove glow effects, use clean subtle indicators */
+.glow-success { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3); }
+.glow-danger { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3); }
 
-.trade-row { transition: all 0.3s ease; }
-.trade-row:hover { transform: translateX(5px); background: var(--bg-hover); }
+.trade-row { transition: background-color 0.15s ease; }
+.trade-row:hover { background: var(--bg-hover); }
 
+/* btn-primary: solid blue, no gradient */
 .btn-primary {
-  background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
-  transition: all 0.3s ease;
+  background: #3b82f6;
+  color: #ffffff;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(14, 165, 233, 0.4); }
+.btn-primary:hover {
+  background: #2563eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
 
 .tab-active {
-  background: rgba(14, 165, 233, 0.2);
-  border-bottom: 2px solid #0ea5e9;
+  background: rgba(59, 130, 246, 0.1);
+  border-bottom: 2px solid #3b82f6;
 }
 
 /* ========== ANIMATIONS ========== */
 @keyframes pulse-green {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
 }
 
 @keyframes pulse-red {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
 }
 
 .animate-win { animation: pulse-green 2s infinite; }
@@ -585,16 +597,20 @@ html:not(.dark):not(.oled) .metric-card {
   animation: fade-in-up 0.5s ease-out both;
 }
 
+/* btn-glow: now matches btn-primary (no glow) */
 .btn-glow {
-  background: linear-gradient(135deg, #0ea5e9, #3b82f6);
-  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.3);
-  transition: all 0.25s ease;
+  background: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 .btn-glow:hover:not(:disabled) {
-  box-shadow: 0 8px 32px rgba(14, 165, 233, 0.45);
+  background: #2563eb;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 .btn-glow:active:not(:disabled) {
-  box-shadow: 0 2px 12px rgba(14, 165, 233, 0.2);
+  background: #1d4ed8;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes shake-subtle {
@@ -626,9 +642,9 @@ html:not(.dark):not(.oled) .metric-card {
 /* ========== SCREENSHOTS ========== */
 .screenshot-preview {
   border: 2px dashed var(--border-input);
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
-.screenshot-preview:hover { border-color: #0ea5e9; background: rgba(14, 165, 233, 0.05); }
+.screenshot-preview:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.04); }
 .screenshot-preview.has-image { border-style: solid; border-color: #10b981; }
 
 .screenshot-gallery {
@@ -643,19 +659,19 @@ html:not(.dark):not(.oled) .metric-card {
   overflow: hidden;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease;
   position: relative;
 }
-.screenshot-thumb:hover { border-color: #0ea5e9; transform: scale(1.05); }
+.screenshot-thumb:hover { border-color: #3b82f6; }
 
 /* ========== CALENDAR ========== */
 .calendar-day {
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 .calendar-day:hover {
-  transform: scale(1.05);
-  border-color: #0ea5e9 !important;
+  border-color: #3b82f6 !important;
+  background-color: var(--bg-hover);
 }
 
 /* ========== TOAST ========== */
@@ -664,7 +680,7 @@ html:not(.dark):not(.oled) .metric-card {
   bottom: 20px;
   right: 20px;
   padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 0.5rem;
   color: white;
   font-weight: 500;
   z-index: 9999;
@@ -684,20 +700,20 @@ html:not(.dark):not(.oled) .metric-card {
 .theme-toggle {
   cursor: pointer;
   padding: 8px;
-  border-radius: 8px;
-  transition: background 0.3s;
+  border-radius: 0.5rem;
+  transition: background 0.15s ease;
 }
 .theme-toggle:hover { background: var(--bg-hover); }
 
 /* ========== BALANCE ========== */
 .balance-editable {
   cursor: pointer;
-  border-bottom: 2px dashed rgba(14, 165, 233, 0.5);
-  transition: all 0.2s ease;
+  border-bottom: 2px dashed #9ca3af;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 .balance-editable:hover {
-  border-bottom-color: #0ea5e9;
-  color: #0ea5e9;
+  border-bottom-color: #3b82f6;
+  color: #3b82f6;
 }
 
 /* ========== LIGHTBOX ========== */
@@ -720,14 +736,14 @@ html:not(.dark):not(.oled) .metric-card {
   background-color: var(--bg-hover);
 }
 .chat-message.pinned {
-  border-left: 3px solid #0ea5e9;
-  background-color: rgba(14, 165, 233, 0.05);
+  border-left: 3px solid #3b82f6;
+  background-color: rgba(59, 130, 246, 0.04);
 }
 
 .chat-sidebar-item.active {
-  background: rgba(14, 165, 233, 0.15);
-  color: #0ea5e9;
-  border: 1px solid rgba(14, 165, 233, 0.3);
+  background: rgba(59, 130, 246, 0.08);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .chat-input {
@@ -749,26 +765,25 @@ html:not(.dark):not(.oled) .metric-card {
 }
 
 /* ========== SVG LIGHT MODE FIXES ========== */
-/* Override hardcoded white-alpha SVG strokes/fills for light mode */
 html:not(.dark):not(.oled) svg line[stroke*="rgba(255,255,255"],
 html:not(.dark):not(.oled) svg line[stroke*="rgba(255, 255, 255"] {
-  stroke: rgba(0, 0, 0, 0.08) !important;
+  stroke: rgba(0, 0, 0, 0.06) !important;
 }
 html:not(.dark):not(.oled) svg circle[stroke*="rgba(255,255,255"],
 html:not(.dark):not(.oled) svg circle[stroke*="rgba(255, 255, 255"] {
-  stroke: rgba(0, 0, 0, 0.1) !important;
+  stroke: rgba(0, 0, 0, 0.08) !important;
 }
 html:not(.dark):not(.oled) svg rect[fill*="rgba(0,0,0,0.3)"],
 html:not(.dark):not(.oled) svg rect[fill*="rgba(0, 0, 0, 0.3)"] {
   fill: rgba(255, 255, 255, 0.85) !important;
-  stroke: rgba(0, 0, 0, 0.1);
+  stroke: rgba(0, 0, 0, 0.08);
 }
 html:not(.dark):not(.oled) div[style*="rgba(255,255,255,0.03)"],
 html:not(.dark):not(.oled) div[style*="rgba(255,255,255,0.05)"] {
-  background: rgba(0, 0, 0, 0.03) !important;
+  background: rgba(0, 0, 0, 0.02) !important;
 }
 html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"] {
-  background: rgba(0, 0, 0, 0.06) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
 }
 
 /* ========== TICKER SCROLL ANIMATION ========== */
@@ -786,69 +801,51 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
 
 /* ========== MOBILE RESPONSIVE ========== */
 @media (max-width: 767px) {
-  /* Tables: ensure horizontal scroll */
   table {
     font-size: 12px;
   }
 
-  /* Smaller text for metric cards on mobile */
   .metric-card h3 {
     font-size: 1.5rem;
   }
 
-  /* Glass cards: reduce padding on mobile */
   .glass {
     padding-left: 1rem;
     padding-right: 1rem;
   }
 
-  /* Modal inputs full width */
   .modal-input {
     width: 100%;
   }
 }
 
 /* ====================================================================
-   RESPONSIVE AVANCÉ — Améliorations mobile / tablette
-   Ajouté de façon additive (aucun style existant modifié).
-   Points de rupture :
-     640px  → mobile
-     768px  → petite tablette
-     1024px → tablette
+   RESPONSIVE AVANCE
    ==================================================================== */
 
-/* ─────────────────────────────────────────────────────────────────────
-   Tablettes (max-width: 1024px)
-   ───────────────────────────────────────────────────────────────────── */
+/* Tablets (max-width: 1024px) */
 @media (max-width: 1024px) {
-  /* Grilles de metric-cards : 2 colonnes max sur tablette */
   .grid.grid-cols-4,
   .grid[class*="lg:grid-cols-4"],
   .grid[class*="lg:grid-cols-3"] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
-  /* Réduire le padding des cartes sur tablette */
   .metric-card {
     padding: 1rem !important;
   }
 
-  /* Graphiques : hauteur adaptée */
   .chart-container {
     height: 250px;
   }
 
-  /* Galerie de screenshots : colonnes réduites */
   .screenshot-gallery {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────────
-   Petites tablettes (max-width: 768px)
-   ───────────────────────────────────────────────────────────────────── */
+/* Small tablets (max-width: 768px) */
 @media (max-width: 768px) {
-  /* Grilles de metric-cards : 2 colonnes sur petite tablette */
   .grid[class*="md:grid-cols-2"],
   .grid[class*="md:grid-cols-3"],
   .grid[class*="md:grid-cols-4"],
@@ -857,7 +854,6 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
-  /* Tables : conteneur scrollable horizontalement */
   .overflow-x-auto,
   div:has(> table) {
     overflow-x: auto;
@@ -867,7 +863,6 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     min-width: 600px;
   }
 
-  /* Modales et popovers : pleine largeur */
   [role="dialog"],
   [class*="fixed"][class*="inset"],
   .fixed.inset-0 > div,
@@ -879,13 +874,11 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     margin-right: auto !important;
   }
 
-  /* Formulaires dans les modales : pleine largeur */
   [role="dialog"] form,
   [class*="modal"] form {
     width: 100% !important;
   }
 
-  /* Réduire les tailles de police pour lisibilité */
   h1, .text-4xl, .text-5xl {
     font-size: 1.5rem !important;
     line-height: 1.3 !important;
@@ -901,24 +894,19 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     line-height: 1.3 !important;
   }
 
-  /* Contenu principal : padding réduit */
   main {
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
   }
 
-  /* Lightbox : padding réduit sur tablette */
   .lightbox {
     padding: 1rem;
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────────
-   Mobile (max-width: 640px)
-   ───────────────────────────────────────────────────────────────────── */
+/* Mobile (max-width: 640px) */
 @media (max-width: 640px) {
 
-  /* ── Grilles : 1 colonne sur mobile ── */
   .grid[class*="grid-cols-2"],
   .grid[class*="grid-cols-3"],
   .grid[class*="grid-cols-4"],
@@ -927,28 +915,23 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     grid-template-columns: 1fr !important;
   }
 
-  /* ── Gap réduit dans les grilles ── */
   .grid {
     gap: 0.75rem !important;
   }
 
-  /* ── Metric cards : padding compact ── */
   .metric-card {
     padding: 0.875rem !important;
   }
 
-  /* Pas d'animation de survol sur mobile (éviter les décalages) */
   .metric-card:hover {
     transform: none !important;
   }
 
-  /* ── Glass cards : padding réduit sur mobile ── */
   .glass {
     padding: 0.75rem !important;
     border-radius: 0.75rem !important;
   }
 
-  /* ── Tables : police plus petite, scroll horizontal ── */
   table {
     font-size: 11px !important;
     min-width: 500px;
@@ -958,13 +941,11 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     padding: 0.375rem 0.5rem !important;
     white-space: nowrap;
   }
-  /* Wrapper de table : scroll fluide */
   .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
   }
 
-  /* ── Barre de ticker : texte plus petit, toujours défilant ── */
   .flex.items-center.gap-8 {
     gap: 1rem !important;
   }
@@ -975,7 +956,6 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     font-size: 9px !important;
   }
 
-  /* ── Typographie mobile ── */
   body {
     font-size: 14px !important;
   }
@@ -1003,7 +983,6 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     font-size: 0.875rem !important;
   }
 
-  /* ── Modales / Popovers : pleine largeur mobile ── */
   [role="dialog"],
   [class*="fixed"][class*="rounded-2xl"],
   [class*="fixed"][class*="rounded-xl"] {
@@ -1019,29 +998,25 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     overflow-y: auto !important;
   }
 
-  /* ── Formulaire de trade (TradeForm) : pleine largeur ── */
   [role="dialog"] .grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* ── Champs de saisie : taille tactile (minimum 44px) ── */
   .input-field,
   .modal-input,
   input,
   select,
   textarea {
     min-height: 44px !important;
-    font-size: 16px !important; /* Empêcher le zoom auto sur iOS */
+    font-size: 16px !important;
   }
 
-  /* ── Boutons : taille tactile ── */
   button:not(#mobile-hamburger),
   a[class*="btn"],
   .btn-primary {
     min-height: 44px;
   }
 
-  /* ── Hamburger menu : taille fixe ── */
   #mobile-hamburger {
     width: 40px !important;
     height: 40px !important;
@@ -1049,13 +1024,11 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     right: auto !important;
   }
 
-  /* ── Calendrier : cellules plus petites sur mobile ── */
   .calendar-day {
     font-size: 0.7rem !important;
     padding: 0.25rem !important;
   }
 
-  /* ── Toast : centré en bas sur mobile ── */
   .toast {
     left: 1rem !important;
     right: 1rem !important;
@@ -1064,40 +1037,33 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     text-align: center;
   }
 
-  /* ── Graphiques : hauteur réduite ── */
   .chart-container {
     height: 200px !important;
   }
 
-  /* ── Galerie de screenshots : 2 colonnes compactes ── */
   .screenshot-gallery {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.5rem !important;
   }
 
-  /* ── Lightbox : padding minimal ── */
   .lightbox {
     padding: 0.5rem !important;
   }
 
-  /* ── Chat : zone de saisie adaptée ── */
   .chat-input {
-    font-size: 16px !important; /* Empêcher le zoom iOS */
+    font-size: 16px !important;
   }
 
-  /* ── Sidebar mobile : pleine hauteur, glissement depuis la gauche ── */
   aside {
     width: 75vw !important;
     max-width: 280px !important;
   }
 
-  /* ── Bouton hamburger mobile : placement amélioré ── */
   .fixed.top-10.left-3 {
     top: 0.625rem !important;
     left: 0.5rem !important;
   }
 
-  /* ── Contenu principal : espacement mobile ── */
   main {
     padding-top: 3.5rem !important;
     padding-left: 0.5rem !important;
@@ -1105,18 +1071,15 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     padding-bottom: 2rem !important;
   }
 
-  /* ── Flex containers : wrap sur mobile pour éviter le débordement ── */
   .flex.items-center.justify-between {
     flex-wrap: wrap;
     gap: 0.5rem;
   }
 
-  /* ── Masquer les éléments décoratifs sur mobile ── */
   .metric-card .absolute.top-0.right-0 {
     display: none !important;
   }
 
-  /* ── Tabs : scroll horizontal si trop nombreux ── */
   [role="tablist"],
   .flex.border-b {
     overflow-x: auto;
@@ -1133,14 +1096,13 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
     -ms-overflow-style: none;
   }
 
-  /* ── Balance éditable : taille tactile ── */
   .balance-editable {
     font-size: 1.125rem !important;
     padding: 0.25rem 0 !important;
   }
 }
 
-/* ── Hero screenshot floating animation ── */
+/* ---- Hero screenshot floating animation ---- */
 @keyframes hero-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
@@ -1166,18 +1128,19 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
 .animate-fire-pulse {
   animation: fire-pulse 1s ease-in-out infinite;
 }
+/* Streak glows: toned down for clean minimal */
 .streak-glow-green {
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.4), 0 0 24px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
 }
 .streak-glow-gold {
-  box-shadow: 0 0 16px rgba(234, 179, 8, 0.5), 0 0 32px rgba(234, 179, 8, 0.2);
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.3);
 }
 .streak-glow-rainbow {
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4), 0 0 40px rgba(59, 130, 246, 0.2), 0 0 60px rgba(236, 72, 153, 0.15);
-  background-image: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(59, 130, 246, 0.08), rgba(236, 72, 153, 0.08));
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.2), 0 0 24px rgba(59, 130, 246, 0.1);
+  background-image: linear-gradient(135deg, rgba(168, 85, 247, 0.05), rgba(59, 130, 246, 0.05), rgba(236, 72, 153, 0.05));
 }
 .streak-glow-ice {
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4), 0 0 24px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
 }
 .streak-text-rainbow {
   background: linear-gradient(90deg, #a855f7, #3b82f6, #ec4899, #f59e0b);
@@ -1190,68 +1153,4 @@ html:not(.dark):not(.oled) .relative > div[style*="background: rgba(255,255,255"
 @keyframes rainbow-shift {
   0% { background-position: 0% center; }
   100% { background-position: 200% center; }
-}
-
-/* ========== ZEN MODE (BLUR P&L) ========== */
-.zen-mode .pnl-value {
-  filter: blur(8px);
-  user-select: none;
-  transition: filter 0.3s ease;
-}
-.zen-mode .pnl-value:hover {
-  filter: blur(0);
-}
-
-/* ========== TRADING SEASONS ========== */
-
-/* Rank badge colors */
-.season-rank-bronze { --rank-color: #CD7F32; --rank-glow: rgba(205, 127, 50, 0.3); }
-.season-rank-argent { --rank-color: #C0C0C0; --rank-glow: rgba(192, 192, 192, 0.3); }
-.season-rank-or { --rank-color: #FFD700; --rank-glow: rgba(255, 215, 0, 0.3); }
-.season-rank-platine { --rank-color: #E5E4E2; --rank-glow: rgba(229, 228, 226, 0.4); }
-.season-rank-diamant { --rank-color: #B9F2FF; --rank-glow: rgba(185, 242, 255, 0.4); }
-
-.season-rank-badge {
-  position: relative;
-  border: 2px solid var(--rank-color);
-  box-shadow: 0 0 20px var(--rank-glow), inset 0 0 20px var(--rank-glow);
-  background: radial-gradient(ellipse at 30% 20%, var(--rank-glow), transparent 60%);
-}
-
-.season-rank-badge::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, var(--rank-color), transparent 50%, var(--rank-color));
-  opacity: 0.15;
-  pointer-events: none;
-}
-
-/* Season progress bar gradient */
-.season-progress-bar {
-  background: linear-gradient(90deg, #CD7F32, #C0C0C0, #FFD700, #E5E4E2, #B9F2FF);
-  background-size: 200% 100%;
-  animation: season-gradient-shift 4s ease infinite;
-}
-
-@keyframes season-gradient-shift {
-  0%, 100% { background-position: 0% center; }
-  50% { background-position: 100% center; }
-}
-
-/* Season rank shimmer */
-@keyframes season-rank-pulse {
-  0%, 100% { box-shadow: 0 0 15px var(--rank-glow); }
-  50% { box-shadow: 0 0 30px var(--rank-glow), 0 0 50px var(--rank-glow); }
-}
-
-.season-rank-badge-animated {
-  animation: season-rank-pulse 3s ease-in-out infinite;
-}
-
-/* Leaderboard highlight for current user */
-.season-leaderboard-highlight {
-  background: linear-gradient(90deg, rgba(6, 182, 212, 0.08), rgba(59, 130, 246, 0.08));
-  border-left: 3px solid #06b6d4;
 }

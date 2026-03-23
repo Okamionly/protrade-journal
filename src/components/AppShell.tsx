@@ -89,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </button>
 
         <main
-          className={`pt-24 pb-10 px-4 md:pr-6 transition-all duration-300 min-h-screen ${
+          className={`pt-24 pb-10 px-4 md:pr-6 transition-all duration-300 min-h-screen bg-[var(--bg-secondary)] ${
             collapsed ? "md:pl-20" : "md:pl-60"
           }`}
         >
