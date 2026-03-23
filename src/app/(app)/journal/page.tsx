@@ -868,30 +868,41 @@ function JournalPageContent() {
                               <span className="text-[--text-muted]">-</span>
                             )}
                           </td>
-                          <td className="py-4 pr-4">
+                          <td className="py-5 px-4">
                             {trade.screenshots.length > 0 ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-xs">
-                                <Camera className="w-3 h-3 mr-1" />{trade.screenshots.length}
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-500/15 text-blue-400 text-xs font-medium border border-blue-500/20">
+                                <Camera className="w-3.5 h-3.5 mr-1.5" />{trade.screenshots.length}
                               </span>
-                            ) : "-"}
+                            ) : <span className="text-[--text-muted]">-</span>}
                           </td>
-                          <td className="py-4 pr-4 mono whitespace-nowrap">{trade.entry} &rarr; {trade.exit || t("open")}</td>
-                          <td className="py-4 pr-4 mono">{trade.lots}</td>
-                          <td className="py-4 pr-4 mono text-[--text-secondary]">1:{rr}</td>
-                          <td className={`py-4 pr-4 mono font-bold whitespace-nowrap ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
-                            {isWin ? "+" : ""}{trade.result}\u20ac
+                          <td className="py-5 px-4 mono whitespace-nowrap text-sm">{trade.entry} &rarr; {trade.exit || t("open")}</td>
+                          <td className="py-5 px-4 mono text-sm">{trade.lots}</td>
+                          <td className="py-5 px-4">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[--bg-secondary]/60 text-[--text-secondary] text-xs font-semibold mono border border-[--border]">1:{rr}</span>
                           </td>
-                          <td className="py-4 pr-4 text-xs text-[--text-secondary]">{trade.emotion || "-"}</td>
+                          <td className="py-5 px-4">
+                            <span className={`text-base font-bold mono whitespace-nowrap ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
+                              {isWin ? "+" : ""}{trade.result}\u20ac
+                            </span>
+                          </td>
+                          <td className="py-5 px-4">
+                            {trade.emotion ? (
+                              <span className="inline-flex items-center gap-1.5 text-sm text-[--text-secondary]" title={trade.emotion}>
+                                <span className="text-base">{emotionEmoji[trade.emotion.toLowerCase()] || "\u{1F610}"}</span>
+                                <span className="text-xs capitalize">{trade.emotion}</span>
+                              </span>
+                            ) : <span className="text-[--text-muted]">-</span>}
+                          </td>
                           {/* Tags cell */}
-                          <td className="py-4 pr-4">
-                            <div className="flex flex-wrap items-center gap-1 relative">
+                          <td className="py-5 px-4">
+                            <div className="flex flex-wrap items-center gap-1.5 relative">
                               {tradeTags.map((tag, tagIdx) => (
                                 <TagBadge key={`${tag}-${tagIdx}`} tag={tag} onRemove={() => handleRemoveTag(trade.id, tag)} />
                               ))}
                               <div className="relative">
                                 <button
                                   onClick={() => setTagPickerTradeId(tagPickerTradeId === trade.id ? null : trade.id)}
-                                  className="w-5 h-5 rounded flex items-center justify-center text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10 transition"
+                                  className="w-6 h-6 rounded-md flex items-center justify-center text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10 transition"
                                   title={t("journalAddTag")}
                                 >
                                   <Tag className="w-3 h-3" />
@@ -906,21 +917,21 @@ function JournalPageContent() {
                               </div>
                             </div>
                           </td>
-                          <td className="py-4">
-                            <div className="flex gap-2">
-                              <button onClick={() => setEditingTrade(trade)} className="text-blue-400 hover:text-blue-300" title={t("editTrade")}>
+                          <td className="py-5 px-4">
+                            <div className="flex gap-2.5">
+                              <button onClick={() => setEditingTrade(trade)} className="text-blue-400 hover:text-blue-300 transition" title={t("editTrade")}>
                                 <Pencil className="w-4 h-4" />
                               </button>
-                              <button onClick={() => handleDuplicate(trade)} className="text-cyan-400 hover:text-cyan-300" title={t("journalDuplicate")}>
+                              <button onClick={() => handleDuplicate(trade)} className="text-cyan-400 hover:text-cyan-300 transition" title={t("journalDuplicate")}>
                                 <Copy className="w-4 h-4" />
                               </button>
                               <button onClick={() => setShareTradeId(trade.id)} className="text-emerald-400 hover:text-emerald-300 transition" title={t("journalShare")}>
                                 <Share2 className="w-4 h-4" />
                               </button>
-                              <button onClick={() => handleAIReview(trade.id)} className="text-purple-400 hover:text-purple-300" title="AI Review">
+                              <button onClick={() => handleAIReview(trade.id)} className="text-purple-400 hover:text-purple-300 transition" title="AI Review">
                                 <Brain className="w-4 h-4" />
                               </button>
-                              <button onClick={() => handleDelete(trade.id)} className="text-rose-400 hover:text-rose-300" title={t("delete")}>
+                              <button onClick={() => handleDelete(trade.id)} className="text-rose-400 hover:text-rose-300 transition" title={t("delete")}>
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -929,7 +940,7 @@ function JournalPageContent() {
                         {/* Expanded notes row */}
                         {isNoteExpanded && hasNotes && (
                           <tr className="border-b border-[--border-subtle]">
-                            <td colSpan={14} className="px-6 py-3">
+                            <td colSpan={14} className="px-6 py-4">
                               <div className="rounded-lg bg-[--bg-secondary]/50 border border-[--border] p-4 text-sm text-[--text-secondary] whitespace-pre-wrap">
                                 <div className="flex items-center gap-2 mb-2 text-xs font-medium text-amber-400">
                                   <FileText className="w-3.5 h-3.5" />
