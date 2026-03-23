@@ -577,7 +577,8 @@ export default function PerformancePage() {
       pfScore: Math.round(Math.min(profitFactor === Infinity ? 100 : profitFactor * 25, 100)),
       ddScore: Math.round(maxDD > 0 ? Math.max(0, 100 - (maxDD / Math.max(peak, 1)) * 100) : 80),
     };
-  }, [trades, t]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trades]);
 
   if (loading) return <div className="flex items-center justify-center h-64 text-[--text-secondary]">{t("loading")}</div>;
 
