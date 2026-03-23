@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "@/i18n/context";
 import { useTrades } from "@/hooks/useTrades";
 import {
@@ -47,16 +47,20 @@ interface TariffEntry {
   estimatedImpact: string;
 }
 
-interface NewsItem {
-  id: number;
-  category: string;
-  datetime: number;
-  headline: string;
-  image: string;
-  related: string;
-  source: string;
-  summary: string;
+interface TrumpNewsArticle {
+  title: string;
+  description: string;
   url: string;
+  source: string;
+  publishedAt: string;
+  sentiment: "bullish" | "bearish" | "neutral";
+  imageUrl: string;
+}
+
+interface MarketQuote {
+  symbol: string;
+  price: number;
+  change: number;
 }
 
 // ============================================================
@@ -255,8 +259,6 @@ const TARIFF_DATA: TariffEntry[] = [
   { country: "Vietnam", rate: 35, effectiveDate: "2025-09-01", status: "Actif", estimatedImpact: "Fort - reorientation des chaines d'approvisionnement" },
 ];
 
-const TRUMP_KEYWORDS = ["trump", "tariff", "tarifs", "tarif", "douane", "trade war", "sanctions", "guerre commerciale", "droits de douane"];
-
 // ============================================================
 // Helpers
 // ============================================================
@@ -319,6 +321,51 @@ function timelineEntryBorderColor(entry: TimelineEntry): string {
   return "border-l-gray-500";
 }
 
+/** Relative time string in French */
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  if (isNaN(then)) return "";
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "il y a quelques secondes";
+  if (diffMin < 60) return `il y a ${diffMin} min`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `il y a ${diffH}h`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD === 1) return "il y a 1 jour";
+  return `il y a ${diffD} jours`;
+}
+
+function sentimentBadge(s: "bullish" | "bearish" | "neutral") {
+  if (s === "bullish")
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+        <TrendingUp className="w-3 h-3" /> Haussier
+      </span>
+    );
+  if (s === "bearish")
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/30">
+        <TrendingDown className="w-3 h-3" /> Baissier
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-gray-500/15 text-gray-400 border border-gray-500/30">
+      <Minus className="w-3 h-3" /> Neutre
+    </span>
+  );
+}
+
+function sourceBadgeColor(source: string): string {
+  const map: Record<string, string> = {
+    MarketAux: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+    Finnhub: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+    NewsData: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
+  };
+  return map[source] || "bg-gray-500/15 text-gray-400 border-gray-500/30";
+}
+
 // ============================================================
 // Components
 // ============================================================
@@ -340,34 +387,85 @@ function GlassCard({ children, className = "" }: { children: React.ReactNode; cl
 export default function TrumpTrackerPage() {
   const { t } = useTranslation();
   const { trades } = useTrades();
-  const [trumpNews, setTrumpNews] = useState<NewsItem[]>([]);
+  const [trumpNews, setTrumpNews] = useState<TrumpNewsArticle[]>([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
-  const [lastUpdated] = useState(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [marketQuotes, setMarketQuotes] = useState<MarketQuote[]>([]);
+  const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ---- fetch news ----
-  const fetchNews = useCallback(async () => {
+  // ---- fetch trump news from dedicated API ----
+  const fetchTrumpNews = useCallback(async () => {
     setNewsLoading(true);
     try {
-      const res = await fetch("/api/news");
+      const res = await fetch("/api/trump-news");
       if (res.ok) {
-        const data: NewsItem[] = await res.json();
-        const filtered = data.filter((n) => {
-          const txt = `${n.headline} ${n.summary}`.toLowerCase();
-          return TRUMP_KEYWORDS.some((kw) => txt.includes(kw));
-        });
-        setTrumpNews(filtered.slice(0, 5));
+        const data = await res.json();
+        if (data?.articles && Array.isArray(data.articles)) {
+          setTrumpNews(data.articles);
+        }
       }
     } catch {
       /* silent */
     } finally {
       setNewsLoading(false);
+      setLastUpdated(new Date());
     }
   }, []);
 
+  // ---- fetch market quotes (DXY, Gold, S&P500) ----
+  const fetchMarketQuotes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/live-prices");
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const quotes: MarketQuote[] = [];
+
+      // Try to find DXY in indices or forex
+      const dxy = data?.indices?.find((i: MarketQuote) => i.symbol === "DXY" || i.symbol === "DX-Y.NYB") ||
+        data?.forex?.find((i: MarketQuote) => i.symbol === "DXY");
+      if (dxy) {
+        quotes.push({ symbol: "DXY", price: dxy.price, change: dxy.change });
+      }
+
+      // Gold from commodities
+      const gold = data?.commodities?.find((c: MarketQuote) => c.symbol === "XAU/USD" || c.symbol === "GOLD" || c.symbol === "GC=F");
+      if (gold) {
+        quotes.push({ symbol: "Gold", price: gold.price, change: gold.change });
+      }
+
+      // S&P 500 from indices
+      const sp500 = data?.indices?.find((i: MarketQuote) => i.symbol === "SPY" || i.symbol === "^GSPC" || i.symbol === "S&P500" || i.symbol === "ES=F");
+      if (sp500) {
+        quotes.push({ symbol: "S&P 500", price: sp500.price, change: sp500.change });
+      }
+
+      setMarketQuotes(quotes);
+    } catch {
+      /* silent */
+    }
+  }, []);
+
+  // ---- Initial fetch + auto-refresh every 5 min ----
   useEffect(() => {
-    fetchNews();
-  }, [fetchNews]);
+    fetchTrumpNews();
+    fetchMarketQuotes();
+
+    refreshTimerRef.current = setInterval(() => {
+      fetchTrumpNews();
+      fetchMarketQuotes();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+    };
+  }, [fetchTrumpNews, fetchMarketQuotes]);
+
+  const handleManualRefresh = useCallback(() => {
+    fetchTrumpNews();
+    fetchMarketQuotes();
+  }, [fetchTrumpNews, fetchMarketQuotes]);
 
   // ---- trade impact analysis ----
   const tradeImpactAnalysis = useMemo(() => {
@@ -450,17 +548,46 @@ export default function TrumpTrackerPage() {
         <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
           <Clock className="w-3.5 h-3.5" />
           <span>
-            {t("trumpTrackerUpdated")} {lastUpdated.toLocaleDateString("fr-FR")} {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+            Derni&egrave;re mise &agrave; jour : {lastUpdated.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
           </span>
           <button
-            onClick={fetchNews}
-            className="ml-2 p-1.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
-            title={t("trumpTrackerRefresh")}
+            onClick={handleManualRefresh}
+            className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-hover)] hover:bg-cyan-500/15 text-[var(--text-secondary)] hover:text-cyan-400 transition-colors text-xs font-medium"
+            title="Actualiser"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className={`w-3.5 h-3.5 ${newsLoading ? "animate-spin" : ""}`} />
+            Actualiser
           </button>
         </div>
       </div>
+
+      {/* ================================================================
+          1b. LIVE MARKET IMPACT INDICATORS
+      ================================================================ */}
+      {marketQuotes.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {marketQuotes.map((q) => {
+            const isUp = q.change >= 0;
+            return (
+              <div
+                key={q.symbol}
+                className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)]/60 backdrop-blur-xl p-4 flex items-center justify-between"
+              >
+                <div>
+                  <p className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-medium">{q.symbol}</p>
+                  <p className="text-xl font-bold text-[var(--text-primary)] font-mono mt-0.5">
+                    {q.price.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className={`flex items-center gap-1.5 text-sm font-bold ${isUp ? "text-emerald-400" : "text-red-400"}`}>
+                  {isUp ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownRight className="w-5 h-5" />}
+                  <span>{isUp ? "+" : ""}{q.change.toFixed(2)}%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ================================================================
           2. KEY METRICS (4 cards)
@@ -738,66 +865,87 @@ export default function TrumpTrackerPage() {
       </div>
 
       {/* ================================================================
-          6. NEWS FEED
+          6. NEWS FEED (from /api/trump-news)
       ================================================================ */}
       <GlassCard>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
             <Newspaper className="w-5 h-5 text-blue-400" />
-            {t("trumpTrackerNewsFeed")}
+            Actualites Trump &amp; Commerce
           </h2>
-          <button
-            onClick={fetchNews}
-            className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${newsLoading ? "animate-spin" : ""}`} />
-            {t("trumpTrackerRefresh")}
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-[var(--text-muted)]">
+              Mise &agrave; jour auto : 5 min
+            </span>
+            <button
+              onClick={handleManualRefresh}
+              className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-cyan-400 transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${newsLoading ? "animate-spin" : ""}`} />
+              Actualiser
+            </button>
+          </div>
         </div>
 
         {newsLoading ? (
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse rounded-xl bg-[var(--bg-hover)] h-20" />
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="animate-pulse rounded-xl bg-[var(--bg-hover)] h-24" />
             ))}
           </div>
         ) : trumpNews.length > 0 ? (
-          <div className="space-y-3">
-            {trumpNews.map((article) => (
-              <a
-                key={article.id}
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start gap-4 p-3 rounded-xl hover:bg-[var(--bg-hover)] transition-colors group"
+          <div className="space-y-2">
+            {trumpNews.map((article, idx) => (
+              <div
+                key={idx}
+                className="flex items-start gap-4 p-4 rounded-xl hover:bg-[var(--bg-hover)] transition-colors border border-transparent hover:border-[var(--border)] group"
               >
-                {article.image && (
+                {article.imageUrl && (
                   <img
-                    src={article.image}
+                    src={article.imageUrl}
                     alt=""
-                    className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                    className="w-20 h-16 rounded-lg object-cover flex-shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                   />
                 )}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-medium text-[var(--text-primary)] group-hover:text-cyan-400 transition-colors line-clamp-2">
-                    {article.headline}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-[10px] text-[var(--text-muted)]">{article.source}</span>
+                  <div className="flex flex-wrap items-center gap-2 mb-1.5">
                     <span className="text-[10px] text-[var(--text-muted)]">
-                      {new Date(article.datetime * 1000).toLocaleDateString("fr-FR")}
+                      {timeAgo(article.publishedAt)}
                     </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${sourceBadgeColor(article.source)}`}>
+                      {article.source}
+                    </span>
+                    {sentimentBadge(article.sentiment)}
+                  </div>
+                  <h3 className="text-sm font-medium text-[var(--text-primary)] group-hover:text-cyan-400 transition-colors line-clamp-2">
+                    {article.title}
+                  </h3>
+                  {article.description && (
+                    <p className="text-xs text-[var(--text-muted)] mt-1 line-clamp-2">
+                      {article.description}
+                    </p>
+                  )}
+                  <div className="mt-2">
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
+                    >
+                      Lire
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
                   </div>
                 </div>
-                <ExternalLink className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </a>
+              </div>
             ))}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Newspaper className="w-8 h-8 text-[var(--text-muted)] mb-2" />
-            <p className="text-sm text-[var(--text-muted)]">{t("trumpTrackerNoNews")}</p>
-            <p className="text-xs text-[var(--text-muted)] mt-1">{t("trumpTrackerNoNewsDesc")}</p>
+            <p className="text-sm text-[var(--text-muted)]">Aucune actualite Trump disponible</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Les articles apparaitront automatiquement lors de la prochaine mise a jour</p>
           </div>
         )}
       </GlassCard>
