@@ -28,10 +28,8 @@ export default function PnLCalendarPage() {
 
   useEffect(() => { setCurrentDate(new Date()); }, []);
 
-  if (!currentDate) return null;
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  const year = currentDate?.getFullYear() ?? new Date().getFullYear();
+  const month = currentDate?.getMonth() ?? new Date().getMonth();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startOffset = firstDay === 0 ? 6 : firstDay - 1;
