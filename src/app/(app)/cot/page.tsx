@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
-import { fetchCotData, type CotParsed } from "@/lib/market/cot";
+import { fetchCotData, fetchCotDisaggregated, type CotParsed, type CotDisaggregated } from "@/lib/market/cot";
 import { COT_CONTRACTS, COT_CATEGORIES } from "@/lib/market/constants";
 import { RefreshCw, Search, TrendingUp, TrendingDown, ArrowLeft, AlertTriangle, Zap, BarChart3, Target, Brain } from "lucide-react";
 import { useTrades } from "@/hooks/useTrades";
@@ -340,6 +340,8 @@ export default function CotPage() {
   const [search, setSearch] = useState("");
   const [overviewData, setOverviewData] = useState<CotOverviewRow[]>([]);
   const [detailData, setDetailData] = useState<CotParsed[]>([]);
+  const [disaggData, setDisaggData] = useState<CotDisaggregated[]>([]);
+  const [detailTab, setDetailTab] = useState<"legacy" | "managed">("legacy");
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState("");
@@ -419,10 +421,15 @@ export default function CotPage() {
   const loadDetail = useCallback(async (key: string) => {
     setDetailLoading(true);
     try {
-      const result = await fetchCotData(key, 52);
-      setDetailData(result);
+      const [legacy, disagg] = await Promise.allSettled([
+        fetchCotData(key, 52),
+        fetchCotDisaggregated(key, 52),
+      ]);
+      setDetailData(legacy.status === "fulfilled" ? legacy.value : []);
+      setDisaggData(disagg.status === "fulfilled" ? disagg.value : []);
     } catch {
       setDetailData([]);
+      setDisaggData([]);
     } finally {
       setDetailLoading(false);
     }
@@ -680,32 +687,109 @@ export default function CotPage() {
               </div>
             </div>
 
-            <div className="glass rounded-2xl p-6">
-              <h3 className="text-lg font-semibold mb-4">{t("cotRawDataLast10Weeks")}</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-[--text-secondary] border-b border-[--border]">
-                      <th className="pb-3 px-2">Date</th><th className="pb-3 px-2">NC Long</th><th className="pb-3 px-2">NC Short</th>
-                      <th className="pb-3 px-2">NC Net</th><th className="pb-3 px-2">Comm Net</th><th className="pb-3 px-2">Retail Net</th><th className="pb-3 px-2">OI</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detailData.slice(-10).reverse().map((r) => (
-                      <tr key={r.date} className="border-b border-[--border-subtle] hover:bg-[var(--bg-hover)]">
-                        <td className="py-2.5 px-2 mono text-[--text-secondary]">{r.date}</td>
-                        <td className="py-2.5 px-2 mono">{r.nonCommLong.toLocaleString()}</td>
-                        <td className="py-2.5 px-2 mono">{r.nonCommShort.toLocaleString()}</td>
-                        <td className={`py-2.5 px-2 mono font-bold ${r.nonCommNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{r.nonCommNet.toLocaleString()}</td>
-                        <td className={`py-2.5 px-2 mono ${r.commNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{r.commNet.toLocaleString()}</td>
-                        <td className={`py-2.5 px-2 mono ${r.retailNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{r.retailNet.toLocaleString()}</td>
-                        <td className="py-2.5 px-2 mono text-[--text-secondary]">{r.openInterest.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {/* Tab toggle: Legacy / Managed Money */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDetailTab("legacy")}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+                  detailTab === "legacy"
+                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
+                    : "text-[--text-secondary] hover:text-[--text-primary] hover:bg-[--bg-hover] border border-[--border]"
+                }`}
+              >
+                Legacy (Non-Comm / Comm)
+              </button>
+              <button
+                onClick={() => setDetailTab("managed")}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+                  detailTab === "managed"
+                    ? "bg-violet-500/20 text-violet-400 border border-violet-500/50"
+                    : "text-[--text-secondary] hover:text-[--text-primary] hover:bg-[--bg-hover] border border-[--border]"
+                }`}
+              >
+                Managed Money (Disaggregated)
+              </button>
             </div>
+
+            {detailTab === "legacy" ? (
+              <div className="glass rounded-2xl p-6">
+                <h3 className="text-lg font-semibold mb-4">{t("cotRawDataLast10Weeks")}</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-[--text-secondary] border-b border-[--border]">
+                        <th className="pb-3 px-2">Date</th><th className="pb-3 px-2">NC Long</th><th className="pb-3 px-2">NC Short</th>
+                        <th className="pb-3 px-2">NC Net</th><th className="pb-3 px-2">Comm Net</th><th className="pb-3 px-2">Retail Net</th><th className="pb-3 px-2">OI</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detailData.slice(-10).reverse().map((r) => (
+                        <tr key={r.date} className="border-b border-[--border-subtle] hover:bg-[var(--bg-hover)]">
+                          <td className="py-2.5 px-2 mono text-[--text-secondary]">{r.date}</td>
+                          <td className="py-2.5 px-2 mono">{r.nonCommLong.toLocaleString()}</td>
+                          <td className="py-2.5 px-2 mono">{r.nonCommShort.toLocaleString()}</td>
+                          <td className={`py-2.5 px-2 mono font-bold ${r.nonCommNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{r.nonCommNet.toLocaleString()}</td>
+                          <td className={`py-2.5 px-2 mono ${r.commNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{r.commNet.toLocaleString()}</td>
+                          <td className={`py-2.5 px-2 mono ${r.retailNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{r.retailNet.toLocaleString()}</td>
+                          <td className="py-2.5 px-2 mono text-[--text-secondary]">{r.openInterest.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="glass rounded-2xl p-6">
+                <h3 className="text-lg font-semibold mb-2">Managed Money — Disaggregated Report</h3>
+                <p className="text-xs text-[--text-muted] mb-4">
+                  Positions des fonds (Managed Money), producteurs, swap dealers et autres reportables. Source : CFTC Disaggregated.
+                </p>
+                {disaggData.length === 0 ? (
+                  <p className="text-sm text-[--text-muted] py-4 text-center">
+                    Pas de données Disaggregated disponibles pour ce contrat.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-[--text-secondary] border-b border-[--border] text-xs">
+                          <th className="pb-3 px-2">Date</th>
+                          <th className="pb-3 px-2">MM Long</th>
+                          <th className="pb-3 px-2">MM Short</th>
+                          <th className="pb-3 px-2">MM Net</th>
+                          <th className="pb-3 px-2">Prod Net</th>
+                          <th className="pb-3 px-2">Swap Net</th>
+                          <th className="pb-3 px-2">Other Net</th>
+                          <th className="pb-3 px-2">OI</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {disaggData.slice(-10).reverse().map((r) => (
+                          <tr key={r.date} className="border-b border-[--border-subtle] hover:bg-[var(--bg-hover)]">
+                            <td className="py-2.5 px-2 mono text-[--text-secondary]">{r.date}</td>
+                            <td className="py-2.5 px-2 mono">{r.managedMoneyLong.toLocaleString()}</td>
+                            <td className="py-2.5 px-2 mono">{r.managedMoneyShort.toLocaleString()}</td>
+                            <td className={`py-2.5 px-2 mono font-bold ${r.managedMoneyNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                              {r.managedMoneyNet.toLocaleString()}
+                            </td>
+                            <td className={`py-2.5 px-2 mono ${r.producerNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                              {r.producerNet.toLocaleString()}
+                            </td>
+                            <td className={`py-2.5 px-2 mono ${r.swapDealerNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                              {r.swapDealerNet.toLocaleString()}
+                            </td>
+                            <td className={`py-2.5 px-2 mono ${r.otherReportableNet >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                              {r.otherReportableNet.toLocaleString()}
+                            </td>
+                            <td className="py-2.5 px-2 mono text-[--text-secondary]">{r.openInterest.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

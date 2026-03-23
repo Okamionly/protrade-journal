@@ -61,6 +61,33 @@ function analyzeSentiment(title: string): "bullish" | "bearish" | "neutral" {
 }
 
 // ============================================================
+// MarketAux sentiment: use API's entity sentiment_score when available
+// Map: score > 0.3 = bullish, score < -0.3 = bearish, else neutral
+// ============================================================
+
+function marketAuxSentiment(item: Record<string, unknown>): "bullish" | "bearish" | "neutral" {
+  try {
+    const entities = item.entities as Array<{ sentiment_score?: number }> | undefined;
+    if (entities && entities.length > 0) {
+      // Average sentiment across all entities in the article
+      const scores = entities
+        .map((e) => e.sentiment_score)
+        .filter((s): s is number => typeof s === "number");
+      if (scores.length > 0) {
+        const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+        if (avg > 0.3) return "bullish";
+        if (avg < -0.3) return "bearish";
+        return "neutral";
+      }
+    }
+  } catch {
+    // fall through to keyword fallback
+  }
+  // Fallback: keyword-based (should rarely trigger for MarketAux)
+  return analyzeSentiment((item.title as string) || "");
+}
+
+// ============================================================
 // Source 1: MarketAux
 // ============================================================
 
@@ -80,7 +107,7 @@ async function fetchMarketAux(): Promise<TrumpNewsArticle[]> {
       url: (item.url as string) || "",
       source: "MarketAux",
       publishedAt: (item.published_at as string) || new Date().toISOString(),
-      sentiment: analyzeSentiment((item.title as string) || ""),
+      sentiment: marketAuxSentiment(item),
       imageUrl: (item.image_url as string) || "",
     }));
   } catch {

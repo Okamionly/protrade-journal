@@ -76,4 +76,5 @@ export const FRED_SERIES: Record<string, { id: string; label: string; unit: stri
 };
 
 export const CFTC_API_BASE = "https://publicreporting.cftc.gov/resource/6dca-aqww.json";
+export const CFTC_DISAGGREGATED_API_BASE = "https://publicreporting.cftc.gov/resource/jun7-fc8e.json";
 export const FRED_API_BASE = "https://api.stlouisfed.org/fred/series/observations";
