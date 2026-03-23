@@ -54,6 +54,7 @@ import {
   GitBranch,
   LineChart,
   Webhook,
+  Flag,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@/i18n/context";
@@ -143,6 +144,7 @@ const sections: SectionDef[] = [
       { href: "/scanner", labelKey: "sidebarScanner", icon: Search },
       { href: "/sector-heatmap", labelKey: "sidebarSectorHeatmap", icon: LayoutGrid },
       { href: "/flow", labelKey: "sidebarOptionsFlow", icon: GitBranch },
+      { href: "/trump-tracker", labelKey: "sidebarTrumpTracker", icon: Flag },
     ],
   },
   // AVANCÉ — advanced tools (collapsible, collapsed by default)
