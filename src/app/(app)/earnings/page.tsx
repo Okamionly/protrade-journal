@@ -2,9 +2,68 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useTrades, type Trade } from "@/hooks/useTrades";
-import { Calendar, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, Clock, Loader2, RefreshCw, Star, Filter, Brain, Target, Zap, Rocket } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, Clock, Loader2, RefreshCw, Star, Filter, Brain, Target, Zap, Rocket, X, Building2, DollarSign, Percent, Activity } from "lucide-react";
 import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
 import { useTranslation } from "@/i18n/context";
+
+// ─── Fundamentals Types ────────────────────────────────────────────────────
+
+interface CompanyOverview {
+  symbol: string;
+  name: string;
+  sector: string;
+  industry: string;
+  exchange: string;
+  currency: string;
+  marketCap: number | null;
+  peRatio: number | null;
+  eps: number | null;
+  dividendPerShare: number | null;
+  dividendYield: number | null;
+  week52High: number | null;
+  week52Low: number | null;
+  movingAvg50: number | null;
+  movingAvg200: number | null;
+  profitMargin: number | null;
+  beta: number | null;
+  analystTargetPrice: number | null;
+  revenueTTM: number | null;
+}
+
+interface QuarterlyEarning {
+  fiscalDate: string;
+  reportedDate: string;
+  epsActual: number | null;
+  epsEstimate: number | null;
+  surprise: number | null;
+  surprisePercent: number | null;
+}
+
+interface AnnualEarning {
+  fiscalDate: string;
+  eps: number | null;
+}
+
+interface FundamentalsData {
+  overview: CompanyOverview | null;
+  earnings: {
+    quarterly: QuarterlyEarning[];
+    annual: AnnualEarning[];
+  };
+}
+
+function formatLargeNumber(value: number | null): string {
+  if (value == null) return "—";
+  if (value >= 1e12) return `${(value / 1e12).toFixed(2)}T`;
+  if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
+  return value.toLocaleString("fr-FR");
+}
+
+function formatPercent(value: number | null): string {
+  if (value == null) return "—";
+  return `${(value * 100).toFixed(2)}%`;
+}
 
 interface EarningsEvent {
   symbol: string;
@@ -84,6 +143,12 @@ export default function EarningsCalendarPage() {
   const [ipoData, setIpoData] = useState<IpoEvent[]>([]);
   const [ipoLoading, setIpoLoading] = useState(false);
 
+  // Fundamentals detail panel
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const [fundamentals, setFundamentals] = useState<FundamentalsData | null>(null);
+  const [fundLoading, setFundLoading] = useState(false);
+  const [fundError, setFundError] = useState<string | null>(null);
+
   const TIME_LABELS: Record<string, { label: string; color: string }> = {
     bmo: { label: t("beforeOpen"), color: "text-amber-400 bg-amber-500/20" },
     amc: { label: t("afterClose"), color: "text-violet-400 bg-violet-500/20" },
@@ -119,6 +184,34 @@ export default function EarningsCalendarPage() {
       setIpoLoading(false);
     }
   }, []);
+
+  const fetchFundamentals = useCallback(async (symbol: string) => {
+    setFundLoading(true);
+    setFundError(null);
+    setFundamentals(null);
+    try {
+      const res = await fetch(`/api/fundamentals?symbol=${encodeURIComponent(symbol)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setFundamentals({ overview: data.overview, earnings: data.earnings });
+    } catch (e) {
+      console.error("[Fundamentals] Erreur:", e);
+      setFundError(e instanceof Error ? e.message : "Erreur inconnue");
+    } finally {
+      setFundLoading(false);
+    }
+  }, []);
+
+  const handleSymbolClick = useCallback((symbol: string) => {
+    if (selectedSymbol === symbol) {
+      setSelectedSymbol(null);
+      setFundamentals(null);
+      return;
+    }
+    setSelectedSymbol(symbol);
+    fetchFundamentals(symbol);
+  }, [selectedSymbol, fetchFundamentals]);
 
   useEffect(() => {
     fetchEarnings();
@@ -242,6 +335,26 @@ export default function EarningsCalendarPage() {
 
     return items.slice(0, 4);
   }, [trades, earningsData, alertEarnings]);
+
+  // Beat/miss streak
+  const beatMissStreak = useMemo(() => {
+    if (!fundamentals?.earnings.quarterly.length) return { type: "none" as const, count: 0 };
+    const quarters = fundamentals.earnings.quarterly;
+    let streak = 0;
+    const firstBeat = quarters[0]?.surprisePercent != null ? quarters[0].surprisePercent > 0 : null;
+    if (firstBeat === null) return { type: "none" as const, count: 0 };
+    const type = firstBeat ? "beat" : "miss";
+    for (const q of quarters) {
+      if (q.surprisePercent == null) break;
+      const isBeat = q.surprisePercent > 0;
+      if ((type === "beat" && isBeat) || (type === "miss" && !isBeat)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return { type: type as "beat" | "miss", count: streak };
+  }, [fundamentals]);
 
   if (loading && earningsData.length === 0) {
     return (
@@ -478,7 +591,11 @@ export default function EarningsCalendarPage() {
                 const epsBeat = e.epsActual != null && e.epsEstimate != null ? e.epsActual >= e.epsEstimate : null;
                 const impact = getImpactLevel(e.symbol);
                 return (
-                  <tr key={`${e.symbol}-${e.date}-${idx}`} className={`border-b border-[--border-subtle] hover:bg-[--bg-hover] ${isTraded ? "bg-amber-500/5" : ""}`}>
+                  <tr
+                    key={`${e.symbol}-${e.date}-${idx}`}
+                    className={`border-b border-[--border-subtle] hover:bg-[--bg-hover] cursor-pointer transition-colors ${isTraded ? "bg-amber-500/5" : ""} ${selectedSymbol === e.symbol ? "bg-cyan-500/5 border-l-2 border-l-cyan-500" : ""}`}
+                    onClick={() => handleSymbolClick(e.symbol)}
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         {isTraded && (
@@ -522,6 +639,165 @@ export default function EarningsCalendarPage() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ─── Fundamentals Detail Panel ─── */}
+      {selectedSymbol && (
+        <div className="glass rounded-2xl p-5 border border-cyan-500/30 bg-gradient-to-br from-cyan-500/3 to-violet-500/3">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-cyan-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[--text-primary]">
+                  {selectedSymbol}
+                  {fundamentals?.overview?.name && (
+                    <span className="ml-2 text-sm font-normal text-[--text-secondary]">{fundamentals.overview.name}</span>
+                  )}
+                </h3>
+                <p className="text-xs text-[--text-muted]">{t("fundamentals_title")}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => { setSelectedSymbol(null); setFundamentals(null); }}
+              className="p-2 rounded-xl glass text-[--text-secondary] hover:text-[--text-primary]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {fundLoading && (
+            <div className="flex items-center justify-center py-8 gap-3">
+              <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
+              <span className="text-sm text-[--text-secondary]">{t("fundamentals_loading")}</span>
+            </div>
+          )}
+
+          {fundError && (
+            <div className="text-sm text-rose-400 py-4 text-center">{t("fundamentals_error")}: {fundError}</div>
+          )}
+
+          {!fundLoading && !fundError && fundamentals && (
+            <>
+              {/* Overview */}
+              {fundamentals.overview && (
+                <div className="mb-5">
+                  <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    {t("fundamentals_overview")}
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-xl p-3 bg-[--bg-secondary]/50">
+                      <span className="text-[10px] text-[--text-muted] block">{t("fundamentals_marketCap")}</span>
+                      <span className="text-sm font-bold text-[--text-primary]">{formatLargeNumber(fundamentals.overview.marketCap)}</span>
+                    </div>
+                    <div className="rounded-xl p-3 bg-[--bg-secondary]/50">
+                      <span className="text-[10px] text-[--text-muted] block">{t("fundamentals_peRatio")}</span>
+                      <span className="text-sm font-bold text-[--text-primary]">{fundamentals.overview.peRatio?.toFixed(1) ?? "—"}</span>
+                    </div>
+                    <div className="rounded-xl p-3 bg-[--bg-secondary]/50">
+                      <span className="text-[10px] text-[--text-muted] block">{t("fundamentals_eps")}</span>
+                      <span className="text-sm font-bold text-[--text-primary]">{fundamentals.overview.eps != null ? `$${fundamentals.overview.eps.toFixed(2)}` : "—"}</span>
+                    </div>
+                    <div className="rounded-xl p-3 bg-[--bg-secondary]/50">
+                      <span className="text-[10px] text-[--text-muted] block">{t("fundamentals_dividendYield")}</span>
+                      <span className="text-sm font-bold text-[--text-primary]">{fundamentals.overview.dividendYield != null ? formatPercent(fundamentals.overview.dividendYield) : "—"}</span>
+                    </div>
+                    <div className="rounded-xl p-3 bg-[--bg-secondary]/50">
+                      <span className="text-[10px] text-[--text-muted] block">{t("fundamentals_52wRange")}</span>
+                      <span className="text-sm font-bold text-[--text-primary]">
+                        {fundamentals.overview.week52Low != null && fundamentals.overview.week52High != null
+                          ? `$${fundamentals.overview.week52Low.toFixed(2)} — $${fundamentals.overview.week52High.toFixed(2)}`
+                          : "—"}
+                      </span>
+                    </div>
+                    <div className="rounded-xl p-3 bg-[--bg-secondary]/50">
+                      <span className="text-[10px] text-[--text-muted] block">{t("fundamentals_sector")}</span>
+                      <span className="text-sm font-bold text-[--text-primary]">{fundamentals.overview.sector || "—"}</span>
+                    </div>
+                    <div className="rounded-xl p-3 bg-[--bg-secondary]/50">
+                      <span className="text-[10px] text-[--text-muted] block">{t("fundamentals_profitMargin")}</span>
+                      <span className="text-sm font-bold text-[--text-primary]">{fundamentals.overview.profitMargin != null ? formatPercent(fundamentals.overview.profitMargin) : "—"}</span>
+                    </div>
+                    <div className="rounded-xl p-3 bg-[--bg-secondary]/50">
+                      <span className="text-[10px] text-[--text-muted] block">{t("fundamentals_beta")}</span>
+                      <span className="text-sm font-bold text-[--text-primary]">{fundamentals.overview.beta?.toFixed(2) ?? "—"}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quarterly Earnings */}
+              {fundamentals.earnings.quarterly.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-xs font-semibold text-[--text-muted] uppercase tracking-wider flex items-center gap-2">
+                      <DollarSign className="w-3.5 h-3.5" />
+                      {t("fundamentals_quarterlyEarnings")}
+                    </h4>
+                    {beatMissStreak.count > 0 && (
+                      <span className={`text-xs px-2 py-1 rounded-lg ${
+                        beatMissStreak.type === "beat"
+                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                          : "bg-rose-500/15 text-rose-400 border border-rose-500/30"
+                      }`}>
+                        {beatMissStreak.type === "beat"
+                          ? t("fundamentals_consecutiveBeats").replace("{count}", String(beatMissStreak.count))
+                          : t("fundamentals_consecutiveMisses").replace("{count}", String(beatMissStreak.count))}
+                      </span>
+                    )}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[--border-subtle]">
+                          <th className="text-left text-xs font-semibold text-[--text-muted] px-3 py-2">{t("date")}</th>
+                          <th className="text-right text-xs font-semibold text-[--text-muted] px-3 py-2">{t("fundamentals_epsEstimate")}</th>
+                          <th className="text-right text-xs font-semibold text-[--text-muted] px-3 py-2">{t("fundamentals_epsActual")}</th>
+                          <th className="text-right text-xs font-semibold text-[--text-muted] px-3 py-2">{t("fundamentals_surprise")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fundamentals.earnings.quarterly.slice(0, 4).map((q, i) => {
+                          const beat = q.surprisePercent != null ? q.surprisePercent > 0 : null;
+                          return (
+                            <tr key={i} className="border-b border-[--border-subtle]/50">
+                              <td className="px-3 py-2 text-[--text-secondary] mono text-xs">
+                                {new Date(q.fiscalDate + "T00:00:00").toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}
+                              </td>
+                              <td className="px-3 py-2 text-right mono text-[--text-secondary]">
+                                {q.epsEstimate != null ? `$${q.epsEstimate.toFixed(2)}` : "—"}
+                              </td>
+                              <td className={`px-3 py-2 text-right mono font-semibold ${beat === true ? "text-emerald-400" : beat === false ? "text-rose-400" : "text-[--text-muted]"}`}>
+                                {q.epsActual != null ? `$${q.epsActual.toFixed(2)}` : "—"}
+                              </td>
+                              <td className={`px-3 py-2 text-right mono text-xs font-semibold ${beat === true ? "text-emerald-400" : beat === false ? "text-rose-400" : "text-[--text-muted]"}`}>
+                                {q.surprisePercent != null ? `${q.surprisePercent > 0 ? "+" : ""}${q.surprisePercent.toFixed(2)}%` : "—"}
+                                {beat === true && <span className="ml-1">&#10003;</span>}
+                                {beat === false && <span className="ml-1">&#10007;</span>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {!fundamentals.overview && fundamentals.earnings.quarterly.length === 0 && (
+                <p className="text-sm text-[--text-muted] text-center py-4">{t("fundamentals_noData")}</p>
+              )}
+            </>
+          )}
+
+          <div className="flex items-center justify-center mt-3 pt-2 border-t border-[--border-subtle]">
+            <span className="text-[10px] text-[--text-muted]">
+              Powered by <a href="https://www.alphavantage.co" target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:text-cyan-400 underline underline-offset-2">Alpha Vantage</a>
+            </span>
+          </div>
         </div>
       )}
 

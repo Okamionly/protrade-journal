@@ -56,6 +56,7 @@ import {
   Webhook,
   Flag,
   Compass,
+  Wheat,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@/i18n/context";
@@ -144,6 +145,7 @@ const sections: SectionDef[] = [
       { href: "/sentiment", labelKey: "sidebarSentiment", icon: Heart },
       { href: "/currency-strength", labelKey: "sidebarCurrencyStrength", icon: ArrowUpDown },
       { href: "/lbma", labelKey: "sidebarLbmaMetals", icon: Gem },
+      { href: "/commodities", labelKey: "sidebarCommodities", icon: Wheat },
       { href: "/scanner", labelKey: "sidebarScanner", icon: Search },
       { href: "/sector-heatmap", labelKey: "sidebarSectorHeatmap", icon: LayoutGrid },
       { href: "/flow", labelKey: "sidebarOptionsFlow", icon: GitBranch },

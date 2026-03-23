@@ -315,6 +315,9 @@ export default function ScannerPage() {
   const [toasts, setToasts] = useState<{ id: string; message: string; symbol: string; signal: string }[]>([]);
   const prevRowsRef = useRef<ScannerRow[]>([]);
 
+  // AV News Sentiment
+  const [avSentiment, setAvSentiment] = useState<Record<string, { score: number; label: string }>>({});
+
   // Auto-refresh
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const signalHistoryRef = useRef(signalHistory);
@@ -427,6 +430,46 @@ export default function ScannerPage() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [fetchData]);
+
+  // ─── Fetch AV News Sentiment for stock-like symbols ──────────────────────
+  useEffect(() => {
+    if (rows.length === 0) return;
+    // Only fetch for symbols that look like stock tickers (indices, no slashes)
+    const stockSymbols = rows
+      .filter((r) => r.type === "indices" || (!r.symbol.includes("/") && !r.symbol.includes("BTC") && !r.symbol.includes("ETH")))
+      .map((r) => r.symbol.replace("^", "").replace("$", ""))
+      .slice(0, 5); // Limit to 5 to avoid rate limits
+    if (stockSymbols.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/news-sentiment?tickers=${stockSymbols.join(",")}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || data.error) return;
+        // Aggregate sentiment per ticker from all articles
+        const sentMap: Record<string, { totalScore: number; count: number }> = {};
+        for (const article of data.articles || []) {
+          for (const ts of article.tickers || []) {
+            if (!sentMap[ts.ticker]) sentMap[ts.ticker] = { totalScore: 0, count: 0 };
+            sentMap[ts.ticker].totalScore += ts.score;
+            sentMap[ts.ticker].count++;
+          }
+        }
+        const result: Record<string, { score: number; label: string }> = {};
+        for (const [ticker, { totalScore, count }] of Object.entries(sentMap)) {
+          const avg = totalScore / count;
+          const label = avg > 0.15 ? "Bullish" : avg < -0.15 ? "Bearish" : "Neutral";
+          result[ticker] = { score: Math.round(avg * 100) / 100, label };
+        }
+        if (!cancelled) setAvSentiment(result);
+      } catch (e) {
+        console.warn("[AV Sentiment] Erreur:", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [rows.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Favorites persistence ───────────────────────────────────────────────
   useEffect(() => { saveFavorites(favorites); }, [favorites]);
@@ -1293,14 +1336,38 @@ export default function ScannerPage() {
                       {volumeIcon(row.volumeLevel)}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
-                      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
-                        style={{
-                          background: signalBg(row.signal),
-                          color: signalColor(row.signal),
-                        }}>
-                        <SignalIcon signal={row.signal} />
-                        {signalLabel(row.signal)}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
+                          style={{
+                            background: signalBg(row.signal),
+                            color: signalColor(row.signal),
+                          }}>
+                          <SignalIcon signal={row.signal} />
+                          {signalLabel(row.signal)}
+                        </span>
+                        {avSentiment[row.symbol] && (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold border"
+                            style={{
+                              background: avSentiment[row.symbol].label === "Bullish" ? "rgba(16,185,129,0.1)"
+                                : avSentiment[row.symbol].label === "Bearish" ? "rgba(239,68,68,0.1)"
+                                : "rgba(245,158,11,0.1)",
+                              color: avSentiment[row.symbol].label === "Bullish" ? "rgb(16,185,129)"
+                                : avSentiment[row.symbol].label === "Bearish" ? "rgb(239,68,68)"
+                                : "rgb(245,158,11)",
+                              borderColor: avSentiment[row.symbol].label === "Bullish" ? "rgba(16,185,129,0.3)"
+                                : avSentiment[row.symbol].label === "Bearish" ? "rgba(239,68,68,0.3)"
+                                : "rgba(245,158,11,0.3)",
+                            }}
+                            title={`Alpha Vantage Sentiment: ${avSentiment[row.symbol].score}`}
+                          >
+                            AV: {avSentiment[row.symbol].label === "Bullish" ? t("sentiment_bullish")
+                              : avSentiment[row.symbol].label === "Bearish" ? t("sentiment_bearish")
+                              : t("sentiment_neutral")}
+                            {" "}({avSentiment[row.symbol].score.toFixed(2)})
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ padding: "10px 12px" }}>
                       {strengthBar(row.strength)}

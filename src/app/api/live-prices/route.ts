@@ -40,69 +40,130 @@ async function safeFetch(url: string): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
-// Forex (open.er-api.com  free, no key)
+// Alpha Vantage fallback for individual forex pairs
+// ---------------------------------------------------------------------------
+const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY ?? "";
+
+async function fetchForexPairAlphaVantage(
+  from: string,
+  to: string
+): Promise<{ rate: number } | null> {
+  if (!AV_KEY) return null;
+  try {
+    const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${from}&to_currency=${to}&apikey=${AV_KEY}`;
+    const res = await safeFetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const rateStr =
+      data?.["Realtime Currency Exchange Rate"]?.["5. Exchange Rate"];
+    if (!rateStr) return null;
+    return { rate: parseFloat(rateStr) };
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Forex (open.er-api.com  free, no key — Alpha Vantage fallback)
 // ---------------------------------------------------------------------------
 async function fetchForex(): Promise<{
   pairs: PriceItem[];
   rates: Record<string, number>;
 }> {
+  // --- Primary source: open.er-api.com ---
+  let r: Record<string, number> = {};
+  let primaryOk = false;
+
   try {
     const res = await safeFetch("https://open.er-api.com/v6/latest/USD");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    const r: Record<string, number> = data.rates ?? {};
-
-    const defs: { symbol: string; value: () => number; decimals: number }[] = [
-      { symbol: "EUR/USD", value: () => 1 / (r.EUR || 1), decimals: 4 },
-      { symbol: "GBP/USD", value: () => 1 / (r.GBP || 1), decimals: 4 },
-      { symbol: "USD/JPY", value: () => r.JPY || 149, decimals: 2 },
-      { symbol: "AUD/USD", value: () => 1 / (r.AUD || 1), decimals: 4 },
-      { symbol: "USD/CAD", value: () => r.CAD || 1.36, decimals: 4 },
-      { symbol: "USD/CHF", value: () => r.CHF || 0.88, decimals: 4 },
-      { symbol: "NZD/USD", value: () => 1 / (r.NZD || 1), decimals: 4 },
-      { symbol: "EUR/GBP", value: () => (r.GBP || 1) / (r.EUR || 1), decimals: 4 },
-      { symbol: "EUR/JPY", value: () => (r.JPY || 149) / (r.EUR || 1), decimals: 2 },
-      { symbol: "GBP/JPY", value: () => (r.JPY || 149) / (r.GBP || 1), decimals: 2 },
-    ];
-
-    // Track session-open prices for daily change
-    const today = new Date().toISOString().slice(0, 10);
-    if (sessionOpenDate !== today) {
-      sessionOpenDate = today;
-      sessionOpenRates = {};
-    }
-
-    const pairs: PriceItem[] = defs.map((d) => {
-      const price = parseFloat(d.value().toFixed(d.decimals));
-      // Store session-open price on first fetch of the day
-      if (!sessionOpenRates[d.symbol]) {
-        sessionOpenRates[d.symbol] = price;
-      }
-      // Calculate change from session open (more meaningful than prev tick)
-      const openPrice = sessionOpenRates[d.symbol];
-      let change = 0;
-      if (openPrice && openPrice !== 0) {
-        change = parseFloat((((price - openPrice) / openPrice) * 100).toFixed(2));
-      }
-      // Fallback: use prev tick change if session-open gives 0
-      if (change === 0) {
-        const prev = prevForexRates[d.symbol];
-        if (prev && prev !== 0 && prev !== price) {
-          change = parseFloat((((price - prev) / prev) * 100).toFixed(2));
-        }
-      }
-      return { symbol: d.symbol, price, change };
-    });
-
-    // Update stored rates for next diff
-    defs.forEach((d) => {
-      prevForexRates[d.symbol] = parseFloat(d.value().toFixed(d.decimals));
-    });
-
-    return { pairs, rates: r };
+    r = data.rates ?? {};
+    if (Object.keys(r).length > 0) primaryOk = true;
   } catch {
+    // primary failed
+  }
+
+  // --- Fallback: Alpha Vantage CURRENCY_EXCHANGE_RATE ---
+  if (!primaryOk && AV_KEY) {
+    const avPairs: { from: string; to: string; key: string }[] = [
+      { from: "EUR", to: "USD", key: "EUR" },
+      { from: "GBP", to: "USD", key: "GBP" },
+      { from: "USD", to: "JPY", key: "JPY" },
+      { from: "AUD", to: "USD", key: "AUD" },
+      { from: "USD", to: "CAD", key: "CAD" },
+      { from: "USD", to: "CHF", key: "CHF" },
+      { from: "NZD", to: "USD", key: "NZD" },
+    ];
+    const results = await Promise.all(
+      avPairs.map((p) => fetchForexPairAlphaVantage(p.from, p.to))
+    );
+    results.forEach((res, i) => {
+      if (!res) return;
+      const p = avPairs[i];
+      // AV returns the rate as from->to, we need USD-based rates like open.er-api
+      if (p.from === "USD") {
+        // USD/JPY -> JPY rate
+        r[p.key] = res.rate;
+      } else {
+        // EUR/USD -> EUR = 1/rate (since open.er uses USD base)
+        r[p.key] = 1 / res.rate;
+      }
+    });
+  }
+
+  if (Object.keys(r).length === 0) {
     return { pairs: [], rates: {} };
   }
+
+  const defs: { symbol: string; value: () => number; decimals: number }[] = [
+    { symbol: "EUR/USD", value: () => 1 / (r.EUR || 1), decimals: 4 },
+    { symbol: "GBP/USD", value: () => 1 / (r.GBP || 1), decimals: 4 },
+    { symbol: "USD/JPY", value: () => r.JPY || 149, decimals: 2 },
+    { symbol: "AUD/USD", value: () => 1 / (r.AUD || 1), decimals: 4 },
+    { symbol: "USD/CAD", value: () => r.CAD || 1.36, decimals: 4 },
+    { symbol: "USD/CHF", value: () => r.CHF || 0.88, decimals: 4 },
+    { symbol: "NZD/USD", value: () => 1 / (r.NZD || 1), decimals: 4 },
+    { symbol: "EUR/GBP", value: () => (r.GBP || 1) / (r.EUR || 1), decimals: 4 },
+    { symbol: "EUR/JPY", value: () => (r.JPY || 149) / (r.EUR || 1), decimals: 2 },
+    { symbol: "GBP/JPY", value: () => (r.JPY || 149) / (r.GBP || 1), decimals: 2 },
+  ];
+
+  // Track session-open prices for daily change
+  const today = new Date().toISOString().slice(0, 10);
+  if (sessionOpenDate !== today) {
+    sessionOpenDate = today;
+    sessionOpenRates = {};
+  }
+
+  const pairs: PriceItem[] = defs.map((d) => {
+    const price = parseFloat(d.value().toFixed(d.decimals));
+    // Store session-open price on first fetch of the day
+    if (!sessionOpenRates[d.symbol]) {
+      sessionOpenRates[d.symbol] = price;
+    }
+    // Calculate change from session open (more meaningful than prev tick)
+    const openPrice = sessionOpenRates[d.symbol];
+    let change = 0;
+    if (openPrice && openPrice !== 0) {
+      change = parseFloat((((price - openPrice) / openPrice) * 100).toFixed(2));
+    }
+    // Fallback: use prev tick change if session-open gives 0
+    if (change === 0) {
+      const prev = prevForexRates[d.symbol];
+      if (prev && prev !== 0 && prev !== price) {
+        change = parseFloat((((price - prev) / prev) * 100).toFixed(2));
+      }
+    }
+    return { symbol: d.symbol, price, change };
+  });
+
+  // Update stored rates for next diff
+  defs.forEach((d) => {
+    prevForexRates[d.symbol] = parseFloat(d.value().toFixed(d.decimals));
+  });
+
+  return { pairs, rates: r };
 }
 
 // ---------------------------------------------------------------------------

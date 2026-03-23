@@ -9,6 +9,10 @@ const TREASURY_API = "https://api.fiscaldata.treasury.gov/services/api/fiscal_se
 // World Bank API (no key required)
 const WORLD_BANK_API = "https://api.worldbank.org/v2/country/US/indicator";
 
+// Alpha Vantage API (fallback pour yields et indicateurs macro)
+const AV_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || "";
+const AV_BASE = "https://www.alphavantage.co/query";
+
 // Hardcoded recent values as last resort (updated 2025-03)
 const HARDCODED_FALLBACK: Record<string, { observations: { date: string; value: string }[]; asOf: string }> = {
   DGS10: {
@@ -66,6 +70,17 @@ const WORLD_BANK_MAP: Record<string, string> = {
   UNRATE: "SL.UEM.TOTL.ZS", // Unemployment
   FEDFUNDS: "FR.INR.RINR",   // Real interest rate
   CPIAUCSL: "FP.CPI.TOTL",   // CPI
+};
+
+// Map FRED series to Alpha Vantage functions (yields + macro)
+const AV_SERIES_MAP: Record<string, { fn: string; params?: string }> = {
+  DGS10: { fn: "TREASURY_YIELD", params: "&maturity=10year" },
+  DGS2:  { fn: "TREASURY_YIELD", params: "&maturity=2year" },
+  DGS5:  { fn: "TREASURY_YIELD", params: "&maturity=5year" },
+  DGS30: { fn: "TREASURY_YIELD", params: "&maturity=30year" },
+  FEDFUNDS: { fn: "FEDERAL_FUNDS_RATE" },
+  UNRATE:   { fn: "UNEMPLOYMENT" },
+  CPIAUCSL: { fn: "CPI" },
 };
 
 async function fetchFromFred(seriesId: string, start: string): Promise<Response | null> {
@@ -141,6 +156,32 @@ async function fetchFromWorldBank(seriesId: string): Promise<{ observations: { d
   }
 }
 
+async function fetchFromAlphaVantage(seriesId: string): Promise<{ observations: { date: string; value: string }[] } | null> {
+  const avCfg = AV_SERIES_MAP[seriesId];
+  if (!avCfg || !AV_API_KEY) return null;
+
+  try {
+    const url = `${AV_BASE}?function=${avCfg.fn}${avCfg.params ?? ""}&apikey=${AV_API_KEY}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const json = await res.json();
+
+    const entries: { date: string; value: string }[] = json?.data;
+    if (!Array.isArray(entries) || entries.length === 0) return null;
+
+    // Alpha Vantage renvoie du plus récent au plus ancien — on inverse
+    const observations = entries
+      .filter((e) => e.value !== "." && !isNaN(parseFloat(e.value)))
+      .reverse()
+      .map((e) => ({ date: e.date, value: e.value }));
+
+    if (observations.length === 0) return null;
+    return { observations };
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const seriesId = req.nextUrl.searchParams.get("series_id");
   const start = req.nextUrl.searchParams.get("observation_start") || "2020-01-01";
@@ -170,7 +211,17 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // 3) Try World Bank (for macro indicators)
+  // 3) Try Alpha Vantage (yields + macro indicators)
+  const avData = await fetchFromAlphaVantage(seriesId);
+  if (avData) {
+    return NextResponse.json({
+      observations: avData.observations,
+      _source: "alpha_vantage",
+      _note: "Données Alpha Vantage (fallback)",
+    });
+  }
+
+  // 4) Try World Bank (for macro indicators)
   const worldBankData = await fetchFromWorldBank(seriesId);
   if (worldBankData) {
     return NextResponse.json({
@@ -180,7 +231,7 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // 4) Hardcoded fallback
+  // 5) Hardcoded fallback
   const fallback = HARDCODED_FALLBACK[seriesId];
   if (fallback) {
     return NextResponse.json({

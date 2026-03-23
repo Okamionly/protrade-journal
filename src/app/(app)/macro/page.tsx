@@ -27,6 +27,7 @@ import { fetchMultipleFredSeries, type FredSeriesData } from "@/lib/market/fred"
 import { useTranslation } from "@/i18n/context";
 import { useTrades } from "@/hooks/useTrades";
 import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
+import type { NormalizedIndicator } from "@/app/api/economic-data/route";
 
 /* ------------------------------------------------------------------ */
 /*  FRED series keys we want for the macro overlay                     */
@@ -256,9 +257,31 @@ export default function MacroPage() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // --- Alpha Vantage economic indicators ---
+  const [econData, setEconData] = useState<NormalizedIndicator[]>([]);
+  const [econLoading, setEconLoading] = useState(false);
+
+  const loadEconData = useCallback(async () => {
+    setEconLoading(true);
+    try {
+      const res = await fetch("/api/economic-data?indicators=GDP,CPI,INFLATION,UNEMPLOYMENT,TREASURY_10Y,TREASURY_2Y,FED_RATE,RETAIL,NONFARM");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data && Array.isArray(json.data)) {
+          setEconData(json.data);
+        }
+      }
+    } catch {
+      // silencieux — section optionnelle
+    } finally {
+      setEconLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadFred();
-  }, [loadFred]);
+    loadEconData();
+  }, [loadFred, loadEconData]);
 
   // Map FRED data for quick access by key
   const fredMap: Record<string, FredSeriesData> = {};
@@ -604,6 +627,69 @@ export default function MacroPage() {
           </div>
         );
       })()}
+
+      {/* ============================================================ */}
+      {/*  SECTION 0b — Indicateurs Économiques US (Alpha Vantage)     */}
+      {/* ============================================================ */}
+      {(econData.length > 0 || econLoading) && (
+        <div className="glass rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <BarChart3 className="w-5 h-5 text-cyan-400" />
+            <h2 className="font-semibold text-[--text-primary]">Indicateurs Économiques US (temps réel)</h2>
+            <span className="text-[9px] ml-2 px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium">ALPHA VANTAGE</span>
+          </div>
+          {econLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <div key={i} className="metric-card rounded-xl p-4 animate-pulse">
+                  <div className="h-3 bg-[--bg-secondary]/50 rounded w-1/2 mb-3" />
+                  <div className="h-7 bg-[--bg-secondary]/50 rounded w-2/3" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {econData.map((ind) => {
+                const hasChange = ind.change !== null && ind.changePercent !== null;
+                const isPositiveChange = (ind.change ?? 0) >= 0;
+                // Pour chômage et inflation, une baisse est positive
+                const invertGood = ind.indicator === "UNEMPLOYMENT" || ind.indicator === "INFLATION";
+                const isGood = invertGood ? !isPositiveChange : isPositiveChange;
+                return (
+                  <div key={ind.indicator} className="metric-card rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-[--text-secondary] font-medium">{ind.name}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[--bg-secondary] text-[--text-muted]">{ind.unit}</span>
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <span className="text-xl font-bold mono text-[--text-primary]">
+                        {ind.unit === "%" ? ind.value.toFixed(2) : ind.value.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                        {ind.unit === "%" && "%"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1.5">
+                      {ind.previousValue !== null && (
+                        <span className="text-[10px] text-[--text-muted]">
+                          Préc. {ind.unit === "%" ? ind.previousValue.toFixed(2) + "%" : ind.previousValue.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                        </span>
+                      )}
+                      {hasChange && (
+                        <div className={`flex items-center gap-1 text-xs ${isGood ? "text-emerald-400" : "text-rose-400"}`}>
+                          {isPositiveChange ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                          <span className="mono">
+                            {isPositiveChange ? "+" : ""}{ind.change!.toFixed(2)} ({ind.changePercent!.toFixed(2)}%)
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-[--text-muted] mt-1">{ind.date}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ============================================================ */}
       {/*  SECTION 1 — Central Bank Rates                              */}
