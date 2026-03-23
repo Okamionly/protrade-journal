@@ -216,6 +216,8 @@
   "setupCol": "Setup",
   "screenshotsCol": "Capturas",
   "entryExitCol": "Entrada/Salida",
+  "entryCol": "Entrada",
+  "exitCol": "Salida",
   "lotsCol": "Lotes",
   "rrCol": "R:R",
   "resultCol": "Resultado",

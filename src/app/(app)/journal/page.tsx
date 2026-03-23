@@ -775,178 +775,200 @@ function JournalPageContent() {
 
         {/* ── TABLE VIEW (compact, for power users) ── */}
         {viewMode === "table" && (
-          <div className="overflow-x-auto max-h-[75vh] overflow-y-auto rounded-xl">
-            <table className="w-full border-separate border-spacing-0">
+          <div className="overflow-x-auto max-h-[75vh] overflow-y-auto rounded-xl border border-[--border]">
+            <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: 40, minWidth: 40 }} />
+                <col style={{ width: 100, minWidth: 100 }} />
+                <col style={{ width: 110, minWidth: 110 }} />
+                <col style={{ width: 80, minWidth: 80 }} />
+                <col style={{ width: 120, minWidth: 120 }} />
+                <col style={{ width: 100, minWidth: 100 }} />
+                <col style={{ width: 100, minWidth: 100 }} />
+                <col style={{ width: 60, minWidth: 60 }} />
+                <col style={{ width: 70, minWidth: 70 }} />
+                <col style={{ width: 100, minWidth: 100 }} />
+                <col style={{ width: 100, minWidth: 100 }} />
+                <col />
+              </colgroup>
               <thead className="sticky top-0 z-10">
-                <tr className="text-left text-[--text-secondary] text-[11px] uppercase tracking-wider bg-[--bg-card] shadow-[0_1px_0_var(--border)]">
-                  <th className="py-3.5 px-4 w-10 font-semibold">
+                <tr className="text-[10px] uppercase tracking-widest font-semibold" style={{ background: "var(--bg-secondary)", color: "var(--text-muted)" }}>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 40, minWidth: 40 }}>
                     <input
                       type="checkbox"
                       checked={allFilteredSelected}
                       onChange={toggleSelectAll}
                       disabled={sorted.length === 0}
-                      className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
+                      className="w-3.5 h-3.5 rounded border-[--border] accent-blue-500 cursor-pointer"
                       title={t("selectAll")}
                     />
                   </th>
-                  <th className="py-3.5 px-4 font-semibold">{t("dateCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("assetCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("directionCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("strategyCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("setupCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("screenshotsCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("entryExitCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("lotsCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("rrCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("resultCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("emotionCol")}</th>
-                  <th className="py-3.5 px-4 font-semibold">Tags</th>
-                  <th className="py-3.5 px-4 font-semibold">{t("actionsCol")}</th>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 100, minWidth: 100 }}>{t("dateCol")}</th>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 110, minWidth: 110 }}>{t("assetCol")}</th>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 80, minWidth: 80 }}>{t("directionCol")}</th>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 120, minWidth: 120 }}>{t("strategyCol")}</th>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 100, minWidth: 100 }}>{t("entryCol") || "Entry"}</th>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 100, minWidth: 100 }}>{t("exitCol") || "Exit"}</th>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 60, minWidth: 60 }}>{t("lotsCol")}</th>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 70, minWidth: 70 }}>{t("rrCol")}</th>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 100, minWidth: 100 }}>{t("resultCol")}</th>
+                  <th className="py-3 px-3 text-center" style={{ borderRight: "1px solid var(--border)", width: 100, minWidth: 100 }}>{t("emotionCol")}</th>
+                  <th className="py-3 px-3 text-center">{t("actionsCol")}</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 {sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={14} className="py-8 text-center text-[--text-muted]">{t("noTradesFound")}</td>
+                    <td colSpan={12} className="py-8 text-center text-[--text-muted]">{t("noTradesFound")}</td>
                   </tr>
                 ) : (
                   sorted.map((trade, rowIndex) => {
                     const isWin = trade.result > 0;
                     const rr = calculateRR(trade.entry, trade.sl, trade.tp);
                     const isSelected = selectedIds.has(trade.id);
-                    const tradeTags = (trade.tags || "").split(",").map((s) => s.trim()).filter(Boolean);
                     const hasNotes = !!trade.setup;
                     const isNoteExpanded = expandedNoteId === trade.id;
-                    const isNoteHovered = hoveredNoteId === trade.id;
-                    const zebraClass = rowIndex % 2 === 1 ? "bg-[--bg-secondary]/30" : "";
+                    const tradeTags = (trade.tags || "").split(",").map((s) => s.trim()).filter(Boolean);
+                    const zebraClass = rowIndex % 2 === 1 ? "bg-[--bg-secondary]/20" : "";
                     const emotionEmoji: Record<string, string> = { confident: "\u{1F60E}", calm: "\u{1F60C}", anxious: "\u{1F630}", fearful: "\u{1F628}", greedy: "\u{1F911}", frustrated: "\u{1F624}", euphoric: "\u{1F929}", neutral: "\u{1F610}", doubtful: "\u{1F914}", focused: "\u{1F3AF}", stressed: "\u{1F625}", impatient: "\u23F1\uFE0F", revenge: "\u{1F621}", bored: "\u{1F971}", happy: "\u{1F604}", sad: "\u{1F614}" };
                     const tradeDate = new Date(trade.date);
                     const shortDate = tradeDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
                     const fullDate = tradeDate.toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+                    const cellBorder = { borderRight: "1px solid var(--border)" } as const;
                     return (
                       <React.Fragment key={trade.id}>
-                        <tr className={`trade-row border-b border-[--border-subtle] transition-colors duration-150 hover:bg-[--bg-secondary]/50 ${isSelected ? "bg-blue-500/10" : zebraClass}`}>
-                          <td className="py-5 px-4">
+                        <tr
+                          className={`trade-row transition-colors duration-150 hover:bg-[--bg-secondary]/50 cursor-pointer ${isSelected ? "bg-blue-500/10" : zebraClass}`}
+                          style={{ borderBottom: "1px solid var(--border)" }}
+                          onClick={(e) => {
+                            // Expand row on click (unless clicking checkbox/button)
+                            const target = e.target as HTMLElement;
+                            if (target.tagName === "INPUT" || target.tagName === "BUTTON" || target.closest("button")) return;
+                            setExpandedNoteId(isNoteExpanded ? null : trade.id);
+                          }}
+                        >
+                          <td className="py-3 px-3 text-center" style={{ ...cellBorder, width: 40, minWidth: 40 }}>
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => toggleSelect(trade.id)}
-                              className="w-4 h-4 rounded border-[--border] accent-blue-500 cursor-pointer"
+                              className="w-3.5 h-3.5 rounded border-[--border] accent-blue-500 cursor-pointer"
                             />
                           </td>
-                          <td className="py-5 px-4 whitespace-nowrap" title={fullDate}>
-                            <span className="text-sm text-[--text-secondary]">{shortDate}</span>
+                          <td className="py-3 px-3 text-center whitespace-nowrap" style={{ ...cellBorder, width: 100, minWidth: 100 }} title={fullDate}>
+                            <span className="text-xs text-[--text-secondary]">{shortDate}</span>
                           </td>
-                          <td className="py-5 px-4 whitespace-nowrap">
-                            <span className="font-semibold text-base text-[--text-primary]">{trade.asset}</span>
+                          <td className="py-3 px-3 text-center whitespace-nowrap" style={{ ...cellBorder, width: 110, minWidth: 110 }}>
+                            <span className="font-semibold text-sm text-[--text-primary]">{trade.asset}</span>
                           </td>
-                          <td className="py-5 px-4">
-                            <span className={`inline-flex items-center px-3 py-1.5 rounded-md text-xs font-extrabold tracking-wide ${trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/20 text-rose-400 border border-rose-500/30"}`}>
+                          <td className="py-3 px-3 text-center" style={{ ...cellBorder, width: 80, minWidth: 80 }}>
+                            <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide ${trade.direction === "LONG" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
                               {trade.direction}
                             </span>
                           </td>
-                          <td className="py-5 px-4">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-500/15 text-blue-400 text-xs font-medium border border-blue-500/20">{trade.strategy}</span>
+                          <td className="py-3 px-3 text-center" style={{ ...cellBorder, width: 120, minWidth: 120 }}>
+                            <span className="text-xs text-blue-400 font-medium truncate block">{trade.strategy}</span>
                           </td>
-                          {/* Setup / Notes cell with preview */}
-                          <td className="py-5 px-4 text-[--text-secondary] max-w-xs">
-                            {hasNotes ? (
-                              <div className="relative inline-flex items-center gap-1.5">
-                                <button
-                                  onClick={() => setExpandedNoteId(isNoteExpanded ? null : trade.id)}
-                                  onMouseEnter={() => setHoveredNoteId(trade.id)}
-                                  onMouseLeave={() => setHoveredNoteId(null)}
-                                  className="inline-flex items-center gap-1.5 text-amber-400 hover:text-amber-300 transition cursor-pointer"
-                                  title={t("journalViewNotes")}
-                                >
-                                  <FileText className="w-3.5 h-3.5" />
-                                  <span className="truncate max-w-[120px] text-xs">{trade.setup}</span>
-                                </button>
-                                {isNoteHovered && !isNoteExpanded && <NotesTooltip notes={trade.setup!} />}
-                              </div>
-                            ) : (
-                              <span className="text-[--text-muted]">-</span>
-                            )}
+                          <td className="py-3 px-3 text-center mono text-xs" style={{ ...cellBorder, width: 100, minWidth: 100 }}>{trade.entry}</td>
+                          <td className="py-3 px-3 text-center mono text-xs" style={{ ...cellBorder, width: 100, minWidth: 100 }}>{trade.exit || <span className="text-[--text-muted]">{t("open")}</span>}</td>
+                          <td className="py-3 px-3 text-center mono text-xs" style={{ ...cellBorder, width: 60, minWidth: 60 }}>{trade.lots}</td>
+                          <td className="py-3 px-3 text-center" style={{ ...cellBorder, width: 70, minWidth: 70 }}>
+                            <span className="mono text-xs font-semibold text-[--text-secondary]">1:{rr}</span>
                           </td>
-                          <td className="py-5 px-4">
-                            {trade.screenshots.length > 0 ? (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-500/15 text-blue-400 text-xs font-medium border border-blue-500/20">
-                                <Camera className="w-3.5 h-3.5 mr-1.5" />{trade.screenshots.length}
-                              </span>
-                            ) : <span className="text-[--text-muted]">-</span>}
-                          </td>
-                          <td className="py-5 px-4 mono whitespace-nowrap text-sm">{trade.entry} &rarr; {trade.exit || t("open")}</td>
-                          <td className="py-5 px-4 mono text-sm">{trade.lots}</td>
-                          <td className="py-5 px-4">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[--bg-secondary]/60 text-[--text-secondary] text-xs font-semibold mono border border-[--border]">1:{rr}</span>
-                          </td>
-                          <td className="py-5 px-4">
-                            <span className={`text-base font-bold mono whitespace-nowrap ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
-                              {isWin ? "+" : ""}{trade.result}€
+                          <td className="py-3 px-3 text-center" style={{ ...cellBorder, width: 100, minWidth: 100 }}>
+                            <span className={`text-sm font-bold mono whitespace-nowrap ${isWin ? "text-emerald-400" : "text-rose-400"}`}>
+                              {isWin ? "+" : ""}{trade.result.toFixed(2)}
                             </span>
                           </td>
-                          <td className="py-5 px-4">
+                          <td className="py-3 px-3 text-center" style={{ ...cellBorder, width: 100, minWidth: 100 }}>
                             {trade.emotion ? (
-                              <span className="inline-flex items-center gap-1.5 text-sm text-[--text-secondary]" title={trade.emotion}>
-                                <span className="text-base">{emotionEmoji[trade.emotion.toLowerCase()] || "\u{1F610}"}</span>
-                                <span className="text-xs capitalize">{trade.emotion}</span>
+                              <span className="inline-flex items-center justify-center gap-1 text-xs text-[--text-secondary]" title={trade.emotion}>
+                                <span>{emotionEmoji[trade.emotion.toLowerCase()] || "\u{1F610}"}</span>
+                                <span className="capitalize hidden xl:inline">{trade.emotion}</span>
                               </span>
                             ) : <span className="text-[--text-muted]">-</span>}
                           </td>
-                          {/* Tags cell */}
-                          <td className="py-5 px-4">
-                            <div className="flex flex-wrap items-center gap-1.5 relative">
-                              {tradeTags.map((tag, tagIdx) => (
-                                <TagBadge key={`${tag}-${tagIdx}`} tag={tag} onRemove={() => handleRemoveTag(trade.id, tag)} />
-                              ))}
-                              <div className="relative">
-                                <button
-                                  onClick={() => setTagPickerTradeId(tagPickerTradeId === trade.id ? null : trade.id)}
-                                  className="w-6 h-6 rounded-md flex items-center justify-center text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10 transition"
-                                  title={t("journalAddTag")}
-                                >
-                                  <Tag className="w-3 h-3" />
-                                </button>
-                                {tagPickerTradeId === trade.id && (
-                                  <QuickTagPicker
-                                    currentTags={tradeTags}
-                                    onAddTag={(tag) => handleAddTag(trade.id, tag)}
-                                    onClose={() => setTagPickerTradeId(null)}
-                                  />
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-5 px-4">
-                            <div className="flex gap-2.5">
-                              <button onClick={() => setEditingTrade(trade)} className="text-blue-400 hover:text-blue-300 transition" title={t("editTrade")}>
-                                <Pencil className="w-4 h-4" />
+                          <td className="py-3 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button onClick={() => setEditingTrade(trade)} className="text-blue-400 hover:text-blue-300 transition p-1 rounded hover:bg-blue-500/10" title={t("editTrade")}>
+                                <Pencil className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => handleDuplicate(trade)} className="text-cyan-400 hover:text-cyan-300 transition" title={t("journalDuplicate")}>
-                                <Copy className="w-4 h-4" />
+                              <button onClick={() => handleDuplicate(trade)} className="text-cyan-400 hover:text-cyan-300 transition p-1 rounded hover:bg-cyan-500/10" title={t("journalDuplicate")}>
+                                <Copy className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => setShareTradeId(trade.id)} className="text-emerald-400 hover:text-emerald-300 transition" title={t("journalShare")}>
-                                <Share2 className="w-4 h-4" />
+                              <button onClick={() => handleAIReview(trade.id)} className="text-purple-400 hover:text-purple-300 transition p-1 rounded hover:bg-purple-500/10" title="AI Review">
+                                <Brain className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => handleAIReview(trade.id)} className="text-purple-400 hover:text-purple-300 transition" title="AI Review">
-                                <Brain className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => handleDelete(trade.id)} className="text-rose-400 hover:text-rose-300 transition" title={t("delete")}>
-                                <Trash2 className="w-4 h-4" />
+                              <button onClick={() => handleDelete(trade.id)} className="text-rose-400 hover:text-rose-300 transition p-1 rounded hover:bg-rose-500/10" title={t("delete")}>
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
                         </tr>
-                        {/* Expanded notes row */}
-                        {isNoteExpanded && hasNotes && (
-                          <tr className="border-b border-[--border-subtle]">
-                            <td colSpan={14} className="px-6 py-4">
-                              <div className="rounded-lg bg-[--bg-secondary]/50 border border-[--border] p-4 text-sm text-[--text-secondary] whitespace-pre-wrap">
-                                <div className="flex items-center gap-2 mb-2 text-xs font-medium text-amber-400">
-                                  <FileText className="w-3.5 h-3.5" />
-                                  {t("journalTradeNotes")}
+                        {/* Expanded detail row (shows notes, tags, screenshots, setup on click) */}
+                        {isNoteExpanded && (
+                          <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                            <td colSpan={12} className="px-4 py-3" style={{ background: "var(--bg-secondary)", opacity: 0.85 }}>
+                              <div className="flex flex-wrap gap-4 text-xs">
+                                {/* Notes / Setup */}
+                                {hasNotes && (
+                                  <div className="flex-1 min-w-[200px]">
+                                    <div className="flex items-center gap-1.5 mb-1.5 text-amber-400 font-medium">
+                                      <FileText className="w-3.5 h-3.5" />
+                                      {t("journalTradeNotes")}
+                                    </div>
+                                    <div className="rounded-lg bg-[--bg-card]/60 border border-[--border] p-3 text-[--text-secondary] whitespace-pre-wrap text-xs max-h-32 overflow-y-auto">
+                                      {trade.setup}
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Tags */}
+                                <div className="min-w-[150px]">
+                                  <div className="flex items-center gap-1.5 mb-1.5 text-cyan-400 font-medium">
+                                    <Tag className="w-3.5 h-3.5" />
+                                    Tags
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    {tradeTags.length > 0 ? tradeTags.map((tag, tagIdx) => (
+                                      <TagBadge key={`${tag}-${tagIdx}`} tag={tag} onRemove={() => handleRemoveTag(trade.id, tag)} />
+                                    )) : <span className="text-[--text-muted]">-</span>}
+                                    <div className="relative">
+                                      <button
+                                        onClick={() => setTagPickerTradeId(tagPickerTradeId === trade.id ? null : trade.id)}
+                                        className="w-5 h-5 rounded flex items-center justify-center text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10 transition"
+                                        title={t("journalAddTag")}
+                                      >
+                                        <Tag className="w-3 h-3" />
+                                      </button>
+                                      {tagPickerTradeId === trade.id && (
+                                        <QuickTagPicker
+                                          currentTags={tradeTags}
+                                          onAddTag={(tag) => handleAddTag(trade.id, tag)}
+                                          onClose={() => setTagPickerTradeId(null)}
+                                        />
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                                {trade.setup}
+                                {/* Screenshots */}
+                                {trade.screenshots.length > 0 && (
+                                  <div className="min-w-[100px]">
+                                    <div className="flex items-center gap-1.5 mb-1.5 text-blue-400 font-medium">
+                                      <Camera className="w-3.5 h-3.5" />
+                                      Screenshots
+                                    </div>
+                                    <span className="inline-flex items-center px-2 py-1 rounded bg-blue-500/15 text-blue-400 text-xs font-medium border border-blue-500/20">
+                                      <Camera className="w-3 h-3 mr-1" />{trade.screenshots.length}
+                                    </span>
+                                  </div>
+                                )}
+                                {/* Share button in expanded row */}
+                                <div className="flex items-end">
+                                  <button onClick={() => setShareTradeId(trade.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-emerald-400 hover:bg-emerald-500/10 transition" title={t("journalShare")}>
+                                    <Share2 className="w-3.5 h-3.5" />
+                                    {t("journalShare")}
+                                  </button>
+                                </div>
                               </div>
                             </td>
                           </tr>

@@ -216,6 +216,8 @@
   "setupCol": "الإعداد",
   "screenshotsCol": "لقطات الشاشة",
   "entryExitCol": "الدخول/الخروج",
+  "entryCol": "الدخول",
+  "exitCol": "الخروج",
   "lotsCol": "اللوت",
   "rrCol": "م:ع",
   "resultCol": "النتيجة",

@@ -217,6 +217,8 @@
   "setupCol": "Setup",
   "screenshotsCol": "Screenshots",
   "entryExitCol": "Entry/Exit",
+  "entryCol": "Entry",
+  "exitCol": "Exit",
   "lotsCol": "Lots",
   "rrCol": "R:R",
   "resultCol": "Result",

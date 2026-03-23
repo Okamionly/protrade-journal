@@ -216,6 +216,8 @@
   "setupCol": "Setup",
   "screenshotsCol": "Screenshots",
   "entryExitCol": "Einstieg/Ausstieg",
+  "entryCol": "Einstieg",
+  "exitCol": "Ausstieg",
   "lotsCol": "Lots",
   "rrCol": "CRV",
   "resultCol": "Ergebnis",
