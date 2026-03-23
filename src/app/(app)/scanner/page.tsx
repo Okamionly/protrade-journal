@@ -1464,6 +1464,40 @@ export default function ScannerPage() {
                 </span>
               </div>
             </div>
+
+            {/* AV Sentiment in detail panel */}
+            {avSentiment[selectedRow.symbol] && (
+              <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="rounded-lg p-3" style={{ background: "var(--bg-secondary)" }}>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>
+                    {t("sentiment_avBadge")} (Alpha Vantage)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold border"
+                      style={{
+                        background: avSentiment[selectedRow.symbol].label === "Bullish" ? "rgba(16,185,129,0.12)"
+                          : avSentiment[selectedRow.symbol].label === "Bearish" ? "rgba(239,68,68,0.12)"
+                          : "rgba(245,158,11,0.12)",
+                        color: avSentiment[selectedRow.symbol].label === "Bullish" ? "rgb(16,185,129)"
+                          : avSentiment[selectedRow.symbol].label === "Bearish" ? "rgb(239,68,68)"
+                          : "rgb(245,158,11)",
+                        borderColor: avSentiment[selectedRow.symbol].label === "Bullish" ? "rgba(16,185,129,0.3)"
+                          : avSentiment[selectedRow.symbol].label === "Bearish" ? "rgba(239,68,68,0.3)"
+                          : "rgba(245,158,11,0.3)",
+                      }}
+                    >
+                      {avSentiment[selectedRow.symbol].label === "Bullish" ? t("sentiment_bullish")
+                        : avSentiment[selectedRow.symbol].label === "Bearish" ? t("sentiment_bearish")
+                        : t("sentiment_neutral")}
+                    </span>
+                    <span className="text-xs tabular-nums font-medium" style={{ color: "var(--text-secondary)" }}>
+                      {t("sentiment_score")}: {avSentiment[selectedRow.symbol].score.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
