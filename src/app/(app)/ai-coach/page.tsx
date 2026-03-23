@@ -12,6 +12,7 @@ import {
   ShieldAlert, Eye, ListChecks, CircleGauge,
   ThumbsUp, ThumbsDown, Star, Ban, Info, ChevronRight,
 } from "lucide-react";
+import { MarketPhaseCoachSection } from "@/components/MarketPhaseBadge";
 
 const DAY_KEYS = ["daySunday", "dayMonday", "dayTuesday", "dayWednesday", "dayThursday", "dayFriday", "daySaturday"] as const;
 const DAY_SHORT_KEYS = ["dayShortSun", "dayShortMon", "dayShortTue", "dayShortWed", "dayShortThu", "dayShortFri", "dayShortSat"] as const;
@@ -808,6 +809,9 @@ export default function AICoachPage() {
           ))}
         </div>
       )}
+
+      {/* Phase de Marché — Contexte Wyckoff */}
+      <MarketPhaseCoachSection />
 
       {/* Confidence Score + Position Sizing + Best Window */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

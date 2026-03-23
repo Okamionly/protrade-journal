@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslation } from "@/i18n/context";
 import { useTrades, Trade } from "@/hooks/useTrades";
 import { calculateRR, computeStats, formatCurrency } from "@/lib/utils";
@@ -20,10 +20,33 @@ import {
   Lock,
   Crown,
   Check,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 type PeriodKey = "week" | "month" | "last_month" | "custom";
 type ReportType = "summary" | "detailed" | "prop_audit";
+type SectionKey = "summary" | "equityCurve" | "topTrades" | "worstTrades" | "strategyBreakdown" | "emotionAnalysis" | "monthlyReturns";
+
+const SECTION_LABELS: Record<SectionKey, string> = {
+  summary: "Résumé",
+  equityCurve: "Courbe d'équité",
+  topTrades: "Meilleurs trades",
+  worstTrades: "Pires trades",
+  strategyBreakdown: "Analyse par stratégie",
+  emotionAnalysis: "Analyse des émotions",
+  monthlyReturns: "Retours mensuels",
+};
+
+const DEFAULT_SECTIONS: Record<SectionKey, boolean> = {
+  summary: true,
+  equityCurve: true,
+  topTrades: true,
+  worstTrades: true,
+  strategyBreakdown: true,
+  emotionAnalysis: true,
+  monthlyReturns: true,
+};
 
 interface ReportHistoryEntry {
   id: string;
@@ -84,6 +107,12 @@ export default function ReportsPage() {
   const [generated, setGenerated] = useState(false);
   const [history, setHistory] = useState<ReportHistoryEntry[]>([]);
   const [copied, setCopied] = useState(false);
+  const [sections, setSections] = useState<Record<SectionKey, boolean>>({ ...DEFAULT_SECTIONS });
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const toggleSection = (key: SectionKey) => {
+    setSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     fetch("/api/user/role")
@@ -179,6 +208,20 @@ export default function ReportsPage() {
       });
   }, [filteredTrades]);
 
+  const emotionPerformance = useMemo(() => {
+    const map: Record<string, { count: number; wins: number; pnl: number }> = {};
+    filteredTrades.forEach((tr) => {
+      const e = tr.emotion || "Non défini";
+      if (!map[e]) map[e] = { count: 0, wins: 0, pnl: 0 };
+      map[e].count++;
+      map[e].pnl += tr.result;
+      if (tr.result > 0) map[e].wins++;
+    });
+    return Object.entries(map)
+      .map(([name, d]) => ({ name, ...d, winRate: d.count > 0 ? (d.wins / d.count) * 100 : 0 }))
+      .sort((a, b) => b.pnl - a.pnl);
+  }, [filteredTrades]);
+
   const insights = useMemo(() => {
     const msgs: string[] = [];
     if (filteredTrades.length === 0) return [t("insightNoTrades")];
@@ -239,6 +282,27 @@ export default function ReportsPage() {
     }
     setGenerated(true);
   };
+
+  const handleDownloadPdf = useCallback(async () => {
+    const el = reportRef.current;
+    if (!el) return;
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        backgroundColor: "#0f172a",
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement("a");
+      link.download = `MarketPhase_Report_${new Date().toISOString().split("T")[0]}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch {
+      // Fallback: use print
+      window.print();
+    }
+  }, []);
 
   // SVG helpers
   const maxEq = Math.max(...equityPoints.map(Math.abs), 1);
@@ -384,9 +448,73 @@ export default function ReportsPage() {
           )}
         </div>
 
+        {/* Aperçu du rapport - Section selector */}
+        <div className="glass rounded-2xl p-6 no-print">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <Eye className="w-4 h-4 text-purple-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Aperçu du rapport</h2>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>Sélectionnez les sections à inclure dans votre rapport</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {(Object.entries(SECTION_LABELS) as [SectionKey, string][]).map(([key, label]) => {
+              const active = sections[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleSection(key)}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-all text-sm font-medium"
+                  style={{
+                    background: active ? "rgba(6,182,212,0.12)" : "var(--bg-hover)",
+                    border: `1px solid ${active ? "rgba(6,182,212,0.4)" : "var(--border)"}`,
+                    color: active ? "#06b6d4" : "var(--text-muted)",
+                  }}
+                >
+                  <div
+                    className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
+                    style={{
+                      background: active ? "#06b6d4" : "transparent",
+                      border: active ? "none" : "1.5px solid var(--border)",
+                    }}
+                  >
+                    {active && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Live preview summary */}
+          <div className="mt-4 rounded-xl p-3" style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+                {Object.values(sections).filter(Boolean).length} / {Object.keys(sections).length} sections sélectionnées
+              </span>
+              <div className="flex gap-1.5">
+                {(Object.entries(sections) as [SectionKey, boolean][]).map(([key, active]) => (
+                  <div
+                    key={key}
+                    className="w-2 h-2 rounded-full transition-all"
+                    title={SECTION_LABELS[key]}
+                    style={{ background: active ? "#06b6d4" : "var(--border)" }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Export Options */}
         {generated && (
           <div className="flex flex-wrap gap-3 no-print">
+            <button onClick={handleDownloadPdf} className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg shadow-blue-600/20">
+              <Download className="w-4 h-4" /> Générer le PDF
+            </button>
             <button onClick={handlePrint} className="glass rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2 hover:opacity-80 transition-opacity" style={{ color: "var(--text-primary)" }}>
               <Printer className="w-4 h-4" /> {t("downloadPdf")}
             </button>
@@ -401,7 +529,7 @@ export default function ReportsPage() {
 
         {/* Report Preview */}
         {generated && (
-          <div id="report-preview" className="glass rounded-2xl overflow-hidden">
+          <div id="report-preview" ref={reportRef} className="glass rounded-2xl overflow-hidden">
             {/* Header */}
             <div className="px-8 py-6" style={{ borderBottom: "1px solid var(--border)" }}>
               <div className="flex items-center justify-between">
@@ -423,7 +551,7 @@ export default function ReportsPage() {
 
             <div className="px-8 py-6 space-y-8">
               {/* Section 1: Summary Stats */}
-              <section>
+              {sections.summary && <section>
                 <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
                   1. {t("generalStats")}
                 </h3>
@@ -444,10 +572,10 @@ export default function ReportsPage() {
                     </div>
                   ))}
                 </div>
-              </section>
+              </section>}
 
               {/* Section 2: Equity Curve */}
-              {equityPoints.length > 1 && (
+              {sections.equityCurve && equityPoints.length > 1 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
                     2. {t("equityCurve")}
@@ -476,14 +604,14 @@ export default function ReportsPage() {
               )}
 
               {/* Section 3: Best & Worst Trades */}
-              {(reportType === "detailed" || reportType === "prop_audit") && filteredTrades.length > 0 && (
+              {(sections.topTrades || sections.worstTrades) && filteredTrades.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
                     3. {t("topTrades")}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <TradeTable title={t("top3Best")} trades={bestTrades} icon={<TrendingUp className="w-4 h-4 text-emerald-400" />} />
-                    <TradeTable title={t("top3Worst")} trades={worstTrades} icon={<TrendingDown className="w-4 h-4 text-rose-400" />} />
+                    {sections.topTrades && <TradeTable title={t("top3Best")} trades={bestTrades} icon={<TrendingUp className="w-4 h-4 text-emerald-400" />} />}
+                    {sections.worstTrades && <TradeTable title={t("top3Worst")} trades={worstTrades} icon={<TrendingDown className="w-4 h-4 text-rose-400" />} />}
                   </div>
                 </section>
               )}
@@ -526,7 +654,7 @@ export default function ReportsPage() {
               </section>
 
               {/* Section 5: Strategy Performance */}
-              {strategyPerformance.length > 0 && (
+              {sections.strategyBreakdown && strategyPerformance.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
                     {reportType === "detailed" || reportType === "prop_audit" ? "5" : "4"}. {t("performanceByStrategy")}
@@ -560,8 +688,43 @@ export default function ReportsPage() {
                 </section>
               )}
 
+              {/* Section 5b: Emotion Analysis */}
+              {sections.emotionAnalysis && emotionPerformance.length > 0 && (
+                <section>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
+                    Analyse des émotions
+                  </h3>
+                  <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                          <th className="text-left px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Émotion</th>
+                          <th className="text-right px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Trades</th>
+                          <th className="text-right px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>Win Rate</th>
+                          <th className="text-right px-4 py-2.5 font-medium" style={{ color: "var(--text-muted)" }}>P&L</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {emotionPerformance.map((e) => (
+                          <tr key={e.name} style={{ borderBottom: "1px solid var(--border)" }}>
+                            <td className="px-4 py-2.5 font-medium" style={{ color: "var(--text-primary)" }}>{e.name}</td>
+                            <td className="px-4 py-2.5 text-right mono" style={{ color: "var(--text-secondary)" }}>{e.count}</td>
+                            <td className="px-4 py-2.5 text-right mono" style={{ color: e.winRate >= 50 ? "#34d399" : "#fb7185" }}>
+                              {e.winRate.toFixed(0)}%
+                            </td>
+                            <td className={`px-4 py-2.5 text-right mono font-medium ${e.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                              {formatCurrency(e.pnl)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
+
               {/* Section 6: Monthly Comparison */}
-              {monthlyData.length > 1 && (
+              {sections.monthlyReturns && monthlyData.length > 1 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-secondary)" }}>
                     {reportType === "detailed" || reportType === "prop_audit" ? "6" : "5"}. {t("monthlyComparison")}

@@ -1,12 +1,12 @@
-# MarketPhase - Feature Inventory (Final QA)
+# MarketPhase - Feature Inventory (Final)
 
 **Date:** 2026-03-23
-**Build status:** PASS (Next.js 16.1.6, 158 static pages, 0 errors)
-**Codebase:** ~90,400 lines of TypeScript/TSX, 47 components, 76 API routes
+**Build status:** PASS (Next.js 16.1.6 Turbopack, 165 static pages, 0 errors)
+**Codebase:** 98,462 lines of TypeScript/TSX, 48 components, 81 API routes, 77 pages
 
 ---
 
-## Sidebar Pages (50 linked pages + admin)
+## Sidebar Pages (57 app pages + admin)
 
 ### 1. TRADING (core daily workflow)
 
@@ -50,6 +50,7 @@
 | `/calendar-eco` | Economic calendar, impact filters (high/medium/low), trade correlation with events |
 | `/news` | Market news aggregator, category filtering, watchlist-linked news, relevance scoring |
 | `/market` | Live market data, quotes, indices overview, market status |
+| `/market-phase` | Market phase detection/visualization |
 | `/watchlist` | Symbol watchlist with alerts, price tracking, notes, trade history per symbol, news links, trend indicators |
 | `/volatility` | VIX dashboard, volatility gauges, historical volatility charts, options-implied vol |
 | `/earnings` | Earnings calendar, live/fallback data, past/upcoming earnings, star favorites, impact tracking |
@@ -59,6 +60,7 @@
 | `/scanner` | Live market scanner, filters, sorting, real-time price streaming, sector-based scanning |
 | `/sector-heatmap` | S&P 500 sector treemap, table view toggle, sector performance, stock-level detail |
 | `/flow` | Options flow analysis (PLACEHOLDER - coming soon) |
+| `/trump-tracker` | Trump-related market news tracker |
 
 ### 5. ADVANCED TOOLS
 
@@ -79,6 +81,7 @@
 | `/custom-dashboard` | Drag-and-drop widget dashboard, configurable panels, personal KPI selection |
 | `/reports` | PDF report generation, period selection, multi-section reports, export |
 | `/screenshots` | Screenshot gallery, trade-linked screenshots, lightbox viewer, annotation notes, before/after comparison |
+| `/import` | CSV/broker import tool |
 
 ### 7. MY SPACE
 
@@ -111,11 +114,11 @@
 
 | Page | Key Features |
 |------|-------------|
-| `/` (landing) | Marketing homepage |
+| `/` (landing) | Marketing homepage with feature tabs, live ticker, morning briefing |
 | `/about` | About page |
 | `/features` | Feature showcase |
 | `/blog` | SEO blog with 15+ articles |
-| `/blog/[slug]` | Dynamic blog posts |
+| `/blog/[slug]` | Dynamic blog posts (15 slugs) |
 | `/login` | Authentication |
 | `/register` | Registration |
 | `/forgot-password` | Password reset request |
@@ -141,24 +144,65 @@
 | Trading (Core) | 5 | ~25 |
 | Analytics | 7 | ~35 |
 | Performance | 6 | ~30 |
-| Market Data | 14 | ~55 |
+| Market Data | 16 | ~60 |
 | Advanced Tools | 7 | ~35 |
-| Tools | 3 | ~12 |
+| Tools | 4 | ~14 |
 | My Space | 2 | ~10 |
 | Premium/VIP | 7 | ~30 |
 | Admin | 3 | ~8 |
-| Public/Marketing | 17 | ~20 |
-| **TOTAL** | **71 pages** | **~260 features** |
+| Public/Marketing | 20 | ~22 |
+| **TOTAL** | **77 pages** | **~269 features** |
 
 Additional infrastructure:
-- 76 API routes
-- 47 reusable components
-- i18n (French + English)
+- 81 API routes
+- 48 reusable components (34 top-level + 14 widgets)
+- 2,234 i18n keys (French + English, fully synced)
 - Stripe billing integration
-- NextAuth authentication
+- NextAuth authentication (credentials + OAuth)
 - Real-time WebSocket chat
 - Gamification engine (badges, quests, XP)
 - Social features (follow, share, leaderboard)
+- Auto-notifications system
+- Email weekly digest
+- Webhook trade ingestion API
+
+---
+
+## API Routes (81 total)
+
+### Authentication & User (15)
+`auth/[...nextauth]`, `auth/forgot-password`, `auth/reset-password`, `register`, `user`, `user/avatar`, `user/change-password`, `user/delete`, `user/delete-trades`, `user/export`, `user/profile`, `user/role`, `users/[id]`, `users/follow`, `users/follow/list`, `users/suggested`
+
+### Trading Core (12)
+`trades`, `trades/[id]`, `trades/export`, `trades/import`, `strategies`, `strategies/[id]`, `tags`, `tags/[id]`, `trading-rules`, `trading-rules/[id]`, `calendar`, `daily-plan`, `daily-plan/export`, `daily-plan/history`
+
+### Market Data (16)
+`btc-price`, `currency-strength`, `earnings`, `fear-greed`, `fred`, `lbma`, `live-prices`, `market-data/candles`, `market-data/global`, `market-data/global-indices`, `market-data/ipo`, `market-data/options`, `market-data/put-call`, `market-data/quotes`, `market-data/social-sentiment`, `market-data/vix`
+
+### Analytics & Gamification (5)
+`gamification`, `leaderboard`, `monthly-goals`, `trade-of-day`, `ai/trade-review`
+
+### Community & Chat (8)
+`chat/messages`, `chat/messages/[id]`, `chat/messages/[id]/pin`, `chat/reactions`, `chat/likes`, `chat/rooms`, `chat/upload`, `chat/ban`
+
+### VIP & Premium (6)
+`vip/posts`, `vip/posts/[id]`, `vip/posts/admin`, `vip/seed`, `vip/upload`, `checkout`
+
+### Admin (5)
+`admin/seed`, `admin/stats`, `admin/users`, `admin/users/[id]`, `admin/users/[id]/role`
+
+### External & Utility (14)
+`geo`, `news`, `trump-news`, `notifications`, `email/weekly-digest`, `subscription`, `upload`, `public/profile/[username]`, `challenges`, `webhook/trade`, `webhooks/stripe`
+
+---
+
+## Components (48 total)
+
+### Core UI (34)
+AIInsightsCard, AdvancedFilters, AppShell, ChartComponents, CommandPalette, CommunityShareTradeModal, DailyGoalTracker, DashboardCards, EmptyDayMotivation, ErrorBoundary, ForexSessions, Header, LandingContent, LandingFeatureTabs, LiveTicker, LoginStreak, MorningBriefing, NewsTicker, NotificationCenter, NotificationSettings, OnboardingWizard, QuickTradeButton, SessionProvider, ShareButton, ShareStatsCard, ShortcutsHelpModal, Sidebar, Skeleton, TagPicker, ThemeProvider, Toast, TradeCard, TradeForm, TradeShareModal, TradingWrapped
+
+### Dashboard Widgets (14)
+CalendarMiniWidget, ChatPreviewWidget, DailyBiasWidget, EquityCurveMiniWidget, FearGreedWidget, GoalsProgressWidget, PnlTodayWidget, QuickStatsWidget, RecentTradesWidget, StreakWidget, TradingSessionsWidget, WidgetWrapper, WinRateWidget
 
 ---
 
@@ -191,6 +235,7 @@ Additional infrastructure:
 | Watchlist with alerts | YES | NO | NO | NO |
 | Market scanner | YES | NO | NO | NO |
 | Macro dashboard (FRED) | YES | NO | NO | NO |
+| Trump market tracker | YES | NO | NO | NO |
 | **Advanced Tools** | | | | |
 | AI trade coach | YES | NO | NO | NO |
 | War room (multi-widget) | YES | NO | NO | NO |
@@ -225,13 +270,9 @@ Additional infrastructure:
 | Daily bias planning | YES | NO | NO | NO |
 | Pre-trade checklist | YES | NO | NO | YES |
 | TradingView charting | YES | YES | NO | NO |
-| **Unique features** | **~35** | ~3 | ~1 | ~2 |
-
-### Summary vs Competitors
-- **TradeZella** ($30-50/mo): Solid journaling + replay, but no market data, no AI, no social features, no advanced analytics
-- **Tradervue** ($30-50/mo): Strong journal + basic analytics, very limited feature set, no market data integration
-- **Edgewonk** ($170 one-time): Good analytics + backtesting, but desktop-only, no real-time data, no community, no AI
-- **MarketPhase**: All-in-one platform with ~260 features across 71 pages. The only trading journal that integrates live market data (13 market tools), AI coaching, social community with real-time chat, gamification, and advanced risk analytics into a single web application.
+| Command palette (Ctrl+K) | YES | NO | NO | NO |
+| Auto-notifications | YES | NO | NO | NO |
+| **Unique features** | **~37** | ~3 | ~1 | ~2 |
 
 ---
 
@@ -239,24 +280,5 @@ Additional infrastructure:
 
 | Page | Status | Detail |
 |------|--------|--------|
-| `/flow` (Options Flow) | PLACEHOLDER | Full "coming soon" page, 45 lines |
+| `/flow` (Options Flow) | PLACEHOLDER | Full "coming soon" page |
 | `/community` | PARTIAL | One tooltip says "Disponible prochainement" (video sharing feature) |
-| `/vip/indicateurs` | OK | "Aucun indicateur pour le moment" is an empty-state message, not a placeholder |
-| `/vip/analyses` | OK | "Aucune analyse pour le moment" is an empty-state message, not a placeholder |
-
----
-
-## QA Checklist Summary
-
-| Check | Result |
-|-------|--------|
-| `npx next build` | PASS (0 errors, 158 pages) |
-| TypeScript | PASS (compiled successfully) |
-| All sidebar links resolve | PASS (50/50 pages exist) |
-| English text in French UI | PASS (0 hardcoded English strings in page files) |
-| Coming Soon placeholders | 1 page (`/flow`), 1 minor tooltip (`/community`) |
-| i18n coverage | All pages use `useTranslation` + `t()` calls |
-| Total pages | 71 (50 app + 3 admin + 17 public + 1 dynamic blog) |
-| Total features | ~260 |
-| API routes | 76 |
-| Components | 47 |

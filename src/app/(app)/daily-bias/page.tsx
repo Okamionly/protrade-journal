@@ -10,6 +10,7 @@ import {
 import { useTradingRules } from "@/hooks/useTradingRules";
 import { useTranslation } from "@/i18n/context";
 import { useNotificationSystem } from "@/hooks/useNotifications";
+import { MarketPhasePill } from "@/components/MarketPhaseBadge";
 
 const GRADE_OPTIONS = ["A+", "A", "B", "C", "D", "F"];
 
@@ -1346,6 +1347,9 @@ export default function DailyBiasPage() {
           )}
         </div>
       </div>
+
+      {/* Phase Marché — contexte pour le biais */}
+      <MarketPhasePill />
 
       {/* Market Snapshot + Sessions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

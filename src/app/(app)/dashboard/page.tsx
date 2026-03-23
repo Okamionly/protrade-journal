@@ -17,6 +17,7 @@ import { MorningBriefing } from "@/components/MorningBriefing";
 import { TradingWrapped } from "@/components/TradingWrapped";
 import { DailyGoalTracker } from "@/components/DailyGoalTracker";
 import { EmptyDayMotivation } from "@/components/EmptyDayMotivation";
+import { MarketPhaseBadgeCompact } from "@/components/MarketPhaseBadge";
 
 
 /* ─── Trade du Jour Types ──────────────────────────────── */
@@ -665,7 +666,8 @@ export default function DashboardPage() {
       <DailyGoalTracker trades={trades} monthlyGoal={monthlyGoal} />
 
       {/* === Share button + PROMINENT DAILY P&L CARD === */}
-      <div className="flex justify-end gap-2 mb-2">
+      <div className="flex justify-end gap-2 mb-2 flex-wrap">
+        <MarketPhaseBadgeCompact />
         <button
           onClick={() => setShowWrapped(true)}
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105"

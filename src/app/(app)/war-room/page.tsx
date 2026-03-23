@@ -11,6 +11,7 @@ import {
   ExternalLink, RefreshCw, Radio,
 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
+import { MarketPhaseCard } from "@/components/MarketPhaseBadge";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -2644,6 +2645,9 @@ export default function WarRoomPage() {
       <CollapsibleSection title="Statut des Marchés Mondiaux" icon={Globe} sectionKey="market-status">
         <MarketStatusGrid now={currentTime} />
       </CollapsibleSection>
+
+      {/* ═══ PHASE DE MARCHÉ (WYCKOFF) ═══ */}
+      <MarketPhaseCard />
 
       {/* ═══ Second Grid: Performance + Key Levels + Correlation ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
