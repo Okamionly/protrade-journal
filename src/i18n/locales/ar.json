@@ -1365,5 +1365,6 @@
   "calNoTrades": "لا توجد صفقات",
   "emptyStateMessage": "ابدأ بإضافة صفقات لرؤية بياناتك هنا",
   "emptyStateCta": "أضف أول صفقة",
-  "goalSuggestion": "اقتراح: بناءً على أدائك، هدف {amount}€ واقعي"
+  "goalSuggestion": "اقتراح: بناءً على أدائك، هدف {amount}€ واقعي",
+  "sidebarTechnicalAnalysis": "التحليل الفني"
 }

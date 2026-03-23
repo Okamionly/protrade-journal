@@ -136,6 +136,7 @@ const sections: SectionDef[] = [
       { href: "/macro", labelKey: "sidebarMacro", icon: Globe },
       { href: "/calendar-eco", labelKey: "sidebarEcoCalendar", icon: CalendarDays },
       { href: "/news", labelKey: "sidebarNews", icon: Newspaper },
+      { href: "/technical-analysis", labelKey: "sidebarTechnicalAnalysis", icon: Activity },
       { href: "/market", labelKey: "sidebarMarketData", icon: Activity },
       { href: "/watchlist", labelKey: "sidebarWatchlist", icon: Eye },
       { href: "/volatility", labelKey: "sidebarVolatility", icon: Gauge },

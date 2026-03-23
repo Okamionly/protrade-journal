@@ -1365,5 +1365,6 @@
   "calNoTrades": "Sin operaciones",
   "emptyStateMessage": "Comienza a agregar trades para ver tus datos aquí",
   "emptyStateCta": "Agregar mi primer trade",
-  "goalSuggestion": "Sugerencia: basado en tu rendimiento, un objetivo de {amount}€ es realista"
+  "goalSuggestion": "Sugerencia: basado en tu rendimiento, un objetivo de {amount}€ es realista",
+  "sidebarTechnicalAnalysis": "Análisis Técnico"
 }
