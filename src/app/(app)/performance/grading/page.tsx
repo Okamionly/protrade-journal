@@ -2,7 +2,7 @@
 
 import { useTrades } from "@/hooks/useTrades";
 import { calculateRR } from "@/lib/utils";
-import { Award, TrendingUp, TrendingDown, Target, AlertTriangle, Star, ChevronRight, Download, BarChart3, Users, FileText } from "lucide-react";
+import { Award, TrendingUp, TrendingDown, Target, AlertTriangle, Star, ChevronRight, Download, BarChart3, Users, FileText, Brain } from "lucide-react";
 import { useState, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "@/i18n/context";
 
@@ -941,6 +941,51 @@ export default function GradingPage() {
           );
         })}
       </div>
+
+      {/* ═══════════════════════ INSIGHTS IA ═══════════════════════ */}
+      {(() => {
+        const insights: string[] = [];
+
+        // Best sub-score
+        if (subScores.length > 0) {
+          const best = [...subScores].sort((a, b) => b.value - a.value)[0];
+          insights.push(`Votre point fort : ${best.label.toLowerCase()} (${best.value.toFixed(0)}/${best.max})`);
+
+          const worst = [...subScores].sort((a, b) => a.value - b.value)[0];
+          if (worst.key !== best.key) {
+            insights.push(`Point à améliorer : ${worst.label.toLowerCase()} (${worst.value.toFixed(0)}/${worst.max})`);
+          }
+        }
+
+        // Rank progression advice
+        const currentGrade = stats.avgGrade.grade;
+        if (currentGrade === "A+" || currentGrade === "A") {
+          insights.push("Performance excellente — maintenez votre discipline et votre consistance");
+        } else if (currentGrade === "B+" || currentGrade === "B") {
+          insights.push("Pour passer au rang suivant, améliorez votre R:R moyen et votre consistance");
+        } else {
+          insights.push("Concentrez-vous sur la gestion du risque et la discipline émotionnelle pour progresser");
+        }
+
+        if (insights.length === 0) return null;
+
+        return (
+          <div className="metric-card rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="w-5 h-5 text-purple-400" />
+              <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Insights IA</h3>
+            </div>
+            <div className="space-y-3">
+              {insights.map((insight, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "rgba(168, 85, 247, 0.05)", border: "1px solid rgba(168, 85, 247, 0.1)" }}>
+                  <span className="text-purple-400 mt-0.5 text-lg">&#x2728;</span>
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{insight}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Average Grade + Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, AlertTriangle, X, Clock, Flame, BellRing, History, Newspaper, Link2, ArrowUpDown, Trophy, ThumbsDown, StickyNote, BarChart3 } from "lucide-react";
+import { Eye, Plus, Trash2, RefreshCw, TrendingUp, TrendingDown, Bell, Search, AlertTriangle, X, Clock, Flame, BellRing, History, Newspaper, Link2, ArrowUpDown, Trophy, ThumbsDown, StickyNote, BarChart3, Brain, Target } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 import { useTrades, type Trade } from "@/hooks/useTrades";
 import { useToast } from "@/components/Toast";
@@ -534,6 +534,60 @@ export default function WatchlistPage() {
     .sort((a, b) => Math.abs(b.changepct) - Math.abs(a.changepct))
     .slice(0, 5);
 
+  // ---- AI Market Insight ----
+  const aiWatchlistInsights = useMemo(() => {
+    if (!trades.length) return [];
+    const insights: { text: string; type: "positive" | "warning" | "neutral" }[] = [];
+
+    // Top 3 assets by win rate (with at least 5 trades)
+    const perfEntries = Object.entries(assetPerformance)
+      .filter(([, p]) => p.tradesCount >= 5)
+      .sort((a, b) => b[1].winRate - a[1].winRate);
+
+    if (perfEntries.length > 0) {
+      const [bestAsset, bestPerf] = perfEntries[0];
+      insights.push({
+        text: `${bestAsset} : votre WR est de ${bestPerf.winRate.toFixed(0)}% sur ${bestPerf.tradesCount} trades — continuez a surveiller`,
+        type: "positive",
+      });
+    }
+
+    // Assets with strong recent price movement aligned with user's bias
+    for (const item of watchlist.slice(0, 10)) {
+      const q = quotes[item.symbol];
+      const perf = assetPerformance[item.symbol.toUpperCase()];
+      if (!q || !perf || perf.tradesCount < 3) continue;
+
+      if (q.changepct > 1 && perf.winRate >= 60) {
+        insights.push({
+          text: `${item.symbol} : en hausse de +${q.changepct.toFixed(1)}%, aligne avec votre biais haussier (WR ${perf.winRate.toFixed(0)}%)`,
+          type: "positive",
+        });
+        break;
+      }
+      if (q.changepct < -1 && perf.winRate < 45) {
+        insights.push({
+          text: `${item.symbol} : en baisse de ${q.changepct.toFixed(1)}% — attention, votre WR est faible (${perf.winRate.toFixed(0)}%)`,
+          type: "warning",
+        });
+        break;
+      }
+    }
+
+    // Worst performing asset warning
+    if (perfEntries.length >= 2) {
+      const [worstAsset, worstPerf] = perfEntries[perfEntries.length - 1];
+      if (worstPerf.winRate < 45) {
+        insights.push({
+          text: `${worstAsset} : WR de ${worstPerf.winRate.toFixed(0)}% — envisagez de reduire votre exposition`,
+          type: "warning",
+        });
+      }
+    }
+
+    return insights.slice(0, 3);
+  }, [trades, assetPerformance, watchlist, quotes]);
+
   return (
     <div className="space-y-6">
       {/* Retry Banner */}
@@ -573,6 +627,38 @@ export default function WatchlistPage() {
             <span className="text-sm">{t("staleData")}</span>
           </div>
           <button onClick={fetchQuotes} className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-medium transition">{t("refresh")}</button>
+        </div>
+      )}
+
+      {/* ====== AI Market Insight ====== */}
+      {aiWatchlistInsights.length > 0 && (
+        <div className="glass rounded-2xl p-5 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.04]" style={{
+            background: "linear-gradient(135deg, #a78bfa 0%, #6366f1 50%, #818cf8 100%)",
+          }} />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
+                <Brain className="w-4.5 h-4.5 text-violet-400" />
+              </div>
+              <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Insight IA Watchlist</span>
+            </div>
+            <div className="space-y-3">
+              {aiWatchlistInsights.map((insight, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-lg" style={{
+                  background: insight.type === "positive" ? "rgba(16,185,129,0.06)" : insight.type === "warning" ? "rgba(245,158,11,0.06)" : "rgba(139,92,246,0.06)",
+                  border: `1px solid ${insight.type === "positive" ? "rgba(16,185,129,0.12)" : insight.type === "warning" ? "rgba(245,158,11,0.12)" : "rgba(139,92,246,0.12)"}`,
+                }}>
+                  {insight.type === "positive" ? (
+                    <Target className="w-4 h-4 mt-0.5 text-emerald-400 flex-shrink-0" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                  )}
+                  <span className="text-sm" style={{ color: "var(--text-primary)" }}>{insight.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

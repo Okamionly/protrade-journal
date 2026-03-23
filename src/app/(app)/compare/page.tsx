@@ -18,6 +18,8 @@ import {
   Lightbulb,
   Download,
   Loader2,
+  Brain,
+  Zap,
 } from "lucide-react";
 
 function getWeekRange(offset: number) {
@@ -431,6 +433,32 @@ function generateInsights(a: PeriodStats, b: PeriodStats): Insight[] {
     });
   }
 
+  // AI Trend: WR weekly improvement rate
+  if (wrDiff !== 0 && a.tradeCount > 0 && b.tradeCount > 0) {
+    const weeklyWrImprovement = wrDiff; // between two periods
+    if (weeklyWrImprovement > 0) {
+      insights.push({
+        text: `Tendance : votre WR s\u2019am\u00e9liore de ${weeklyWrImprovement.toFixed(1)}% entre les deux p\u00e9riodes`,
+        type: "positive",
+      });
+      // Projection to 65% if not there yet
+      if (b.winRate < 65 && weeklyWrImprovement > 0) {
+        const weeksTo65 = Math.ceil((65 - b.winRate) / Math.max(weeklyWrImprovement, 0.5));
+        if (weeksTo65 > 0 && weeksTo65 <= 52) {
+          insights.push({
+            text: `Projection : \u00e0 ce rythme, vous atteindrez 65% WR dans ${weeksTo65} semaine${weeksTo65 > 1 ? "s" : ""}`,
+            type: "positive",
+          });
+        }
+      }
+    } else {
+      insights.push({
+        text: `Tendance : votre WR recule de ${Math.abs(weeklyWrImprovement).toFixed(1)}% — restez concentr\u00e9 sur la discipline`,
+        type: "warning",
+      });
+    }
+  }
+
   if (insights.length === 0) {
     insights.push({ text: "Pas de changement notable entre les deux p\u00e9riodes.", type: "neutral" });
   }
@@ -768,9 +796,14 @@ export default function ComparePage() {
         </div>
 
         {/* ---- "Qu'est-ce qui a change?" Insights (new) ---- */}
-        <div className="glass rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-5">
-            <Lightbulb size={18} style={{ color: "#f59e0b" }} />
+        <div className="glass rounded-xl p-5 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.04]" style={{
+            background: "linear-gradient(135deg, #a78bfa 0%, #6366f1 50%, #818cf8 100%)",
+          }} />
+          <div className="relative flex items-center gap-2 mb-5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
+              <Brain size={16} className="text-violet-400" />
+            </div>
             <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
               Qu&apos;est-ce qui a chang\u00e9 ?
             </span>

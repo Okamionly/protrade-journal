@@ -1021,6 +1021,44 @@ export default function PnLCalendarPage() {
                       );
                     })}
                   </div>
+
+                  {/* AI Day Comment */}
+                  {(() => {
+                    const losses = dt.filter(t => t.result < 0);
+                    let maxConsecLoss = 0;
+                    let curLoss = 0;
+                    const sortedForStreak = [...sorted];
+                    for (const t of sortedForStreak) {
+                      if (t.result < 0) { curLoss++; maxConsecLoss = Math.max(maxConsecLoss, curLoss); }
+                      else curLoss = 0;
+                    }
+
+                    let comment = "";
+                    if (totalPnl > 0 && wr >= 60) {
+                      const topAsset = dt.reduce((b, t) => t.result > b.result ? t : b, dt[0]);
+                      comment = `Journée profitable grâce à votre discipline${topAsset.asset ? ` sur ${topAsset.asset}` : ""}.`;
+                    } else if (totalPnl > 0 && wr < 60) {
+                      comment = "Journée positive malgré un win rate modeste — bonne gestion du risque.";
+                    } else if (maxConsecLoss >= 3) {
+                      comment = `Journée difficile — ${maxConsecLoss} pertes consécutives, possible revenge trading.`;
+                    } else if (totalPnl < 0 && losses.length > wins) {
+                      comment = "Journée négative — analysez vos entrées pour identifier les erreurs récurrentes.";
+                    } else if (totalPnl < 0) {
+                      comment = "Journée en perte — restez discipliné, les marchés offriront de meilleures opportunités.";
+                    } else {
+                      comment = "Journée neutre — continuez à suivre votre plan de trading.";
+                    }
+
+                    return (
+                      <p
+                        className="mt-4 text-xs italic leading-relaxed flex items-start gap-2"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        <span style={{ color: "#a78bfa" }}>🧠</span>
+                        {comment}
+                      </p>
+                    );
+                  })()}
                 </>
               )}
             </div>

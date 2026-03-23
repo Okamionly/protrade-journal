@@ -1182,6 +1182,41 @@ function SetupCard({ strategy, trades }: { strategy: Strategy; trades: Trade[] }
               {stats.currentStreak.count} {stats.currentStreak.type === "win" ? "victoires" : "pertes"}
             </span>
           )}
+          {/* AI Recommendation Badge */}
+          {stats.total >= 3 && (() => {
+            let label = "";
+            let bgColor = "";
+            let textColor = "";
+            if (stats.profitFactor > 2) {
+              label = "Excellent ratio gain/perte";
+              bgColor = "rgba(16,185,129,0.12)";
+              textColor = "#10b981";
+            } else if (stats.winRate > 60) {
+              label = "Stratégie performante — continuez";
+              bgColor = "rgba(16,185,129,0.12)";
+              textColor = "#10b981";
+            } else if (stats.winRate < 40) {
+              label = "Stratégie à revoir — analysez vos entrées";
+              bgColor = "rgba(239,68,68,0.12)";
+              textColor = "#ef4444";
+            } else if (stats.profitFactor < 1 && stats.profitFactor > 0) {
+              label = "Profit factor < 1 — ajustez vos sorties";
+              bgColor = "rgba(245,158,11,0.12)";
+              textColor = "#f59e0b";
+            } else {
+              label = "Performance correcte";
+              bgColor = "rgba(6,182,212,0.12)";
+              textColor = "#06b6d4";
+            }
+            return (
+              <span
+                className="text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1"
+                style={{ backgroundColor: bgColor, color: textColor }}
+              >
+                🧠 {label}
+              </span>
+            );
+          })()}
         </div>
         <button
           onClick={() => setExpanded(!expanded)}

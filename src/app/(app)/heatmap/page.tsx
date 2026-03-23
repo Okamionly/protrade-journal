@@ -1,7 +1,8 @@
 "use client";
 
 import { useTrades } from "@/hooks/useTrades";
-import { Flame, TrendingUp } from "lucide-react";
+import { Flame, TrendingUp, Brain } from "lucide-react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -203,6 +204,78 @@ export default function HeatmapPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* ═══════════════════════ INSIGHTS IA ═══════════════════════ */}
+      <HeatmapInsights trades={trades} dailyCount={dailyCount} monthPnL={monthPnL} dayPnL={dayPnL} MONTHS_FR={MONTHS_FR} DAYS_FR={DAYS_FR} />
+    </div>
+  );
+}
+
+function HeatmapInsights({ trades, dailyCount, monthPnL, dayPnL, MONTHS_FR, DAYS_FR }: {
+  trades: { date: string; result: number }[];
+  dailyCount: Record<string, number>;
+  monthPnL: Record<string, number>;
+  dayPnL: Record<number, number>;
+  MONTHS_FR: string[];
+  DAYS_FR: string[];
+}) {
+  const insights = useMemo(() => {
+    if (trades.length === 0) return [];
+    const result: string[] = [];
+
+    // Most active days of the week
+    const dayEntries = Object.entries(dayPnL)
+      .map(([d, pnl]) => ({ day: Number(d), pnl, label: DAYS_FR[Number(d)] }))
+      .filter(d => d.label);
+    const countByDay: Record<number, number> = {};
+    trades.forEach(tr => {
+      const dow = new Date(tr.date).getDay();
+      countByDay[dow] = (countByDay[dow] || 0) + 1;
+    });
+    const activeDays = Object.entries(countByDay)
+      .sort((a, b) => Number(b[1]) - Number(a[1]))
+      .slice(0, 2)
+      .map(([d]) => DAYS_FR[Number(d)])
+      .filter(Boolean);
+    if (activeDays.length >= 2) {
+      result.push(`Vos journées les plus actives sont le ${activeDays[0]} et ${activeDays[1]}`);
+    }
+
+    // Average trades per day
+    const uniqueDays = Object.keys(dailyCount).length;
+    if (uniqueDays > 0) {
+      const avgPerDay = (trades.length / uniqueDays).toFixed(1);
+      result.push(`Vous tradez en moyenne ${avgPerDay} fois par jour de trading`);
+    }
+
+    // Most profitable month
+    const monthEntries = Object.entries(monthPnL);
+    if (monthEntries.length > 0) {
+      const bestMonth = monthEntries.sort((a, b) => b[1] - a[1])[0];
+      const [y, m] = bestMonth[0].split("-");
+      const monthLabel = `${MONTHS_FR[parseInt(m) - 1]} ${y}`;
+      result.push(`Mois le plus profitable : ${monthLabel} (+€${bestMonth[1].toFixed(0)})`);
+    }
+
+    return result;
+  }, [trades, dailyCount, monthPnL, dayPnL, MONTHS_FR, DAYS_FR]);
+
+  if (insights.length === 0) return null;
+
+  return (
+    <div className="glass rounded-2xl p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Brain className="w-5 h-5 text-purple-400" />
+        <h3 className="font-semibold text-[--text-primary]">Insights IA</h3>
+      </div>
+      <div className="space-y-3">
+        {insights.map((insight, i) => (
+          <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
+            <span className="text-purple-400 mt-0.5 text-lg">&#x2728;</span>
+            <p className="text-sm text-[--text-secondary]">{insight}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

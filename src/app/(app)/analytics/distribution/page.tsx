@@ -646,6 +646,70 @@ export default function DistributionPage() {
           </div>
         </div>
       )}
+
+      {/* ═══════════════════════ INSIGHTS IA ═══════════════════════ */}
+      {(() => {
+        const insights: string[] = [];
+
+        // Asset concentration risk
+        if (assetSegments.length > 0) {
+          const totalTrades = assetSegments.reduce((s, seg) => s + seg.value, 0);
+          const topAsset = assetSegments[0];
+          const topPct = totalTrades > 0 ? Math.round((topAsset.value / totalTrades) * 100) : 0;
+          if (topPct >= 40) {
+            insights.push(`${topAsset.label} représente ${topPct}% de vos trades — risque de surexposition`);
+          } else {
+            insights.push(`Bonne diversification : ${topAsset.label} ne représente que ${topPct}% de vos trades`);
+          }
+        }
+
+        // Best emotion by win rate
+        if (emotionData.length > 0) {
+          const emotionWR = (trades as unknown as { date: string; result: number; emotion: string | null }[]).reduce<Record<string, { wins: number; total: number }>>((acc, tr) => {
+            const em = tr.emotion || "Non défini";
+            if (!acc[em]) acc[em] = { wins: 0, total: 0 };
+            acc[em].total++;
+            if (tr.result > 0) acc[em].wins++;
+            return acc;
+          }, {});
+          const bestEmotion = Object.entries(emotionWR)
+            .filter(([, d]) => d.total >= 3)
+            .sort((a, b) => (b[1].wins / b[1].total) - (a[1].wins / a[1].total))[0];
+          if (bestEmotion) {
+            const wr = Math.round((bestEmotion[1].wins / bestEmotion[1].total) * 100);
+            insights.push(`Votre émotion "${bestEmotion[0]}" produit le meilleur WR (${wr}%)`);
+          }
+        }
+
+        // Worst day of week
+        const { entries: dayEntries } = dayOfWeekWinRate;
+        const activeDayEntries = dayEntries.filter(e => e.trades > 0);
+        if (activeDayEntries.length > 0) {
+          const worstDayEntry = activeDayEntries.sort((a, b) => a.winRate - b.winRate)[0];
+          if (worstDayEntry.winRate < 45) {
+            insights.push(`${worstDayEntry.day} est votre pire jour (${worstDayEntry.winRate.toFixed(0)}% WR) — envisagez de réduire le trading`);
+          }
+        }
+
+        if (insights.length === 0) return null;
+
+        return (
+          <div className="metric-card rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="w-5 h-5 text-purple-400" />
+              <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Insights IA</h3>
+            </div>
+            <div className="space-y-3">
+              {insights.map((insight, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "rgba(168, 85, 247, 0.05)", border: "1px solid rgba(168, 85, 247, 0.1)" }}>
+                  <span className="text-purple-400 mt-0.5 text-lg">&#x2728;</span>
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{insight}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

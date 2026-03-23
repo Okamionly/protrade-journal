@@ -716,6 +716,74 @@ export default function RecapsPage() {
         </div>
       )}
 
+      {/* Conseil IA — smarter insights with comparison */}
+      {periodTrades.length > 0 && (() => {
+        const pnlDelta = stats.pnl - stats.prevPnl;
+        const wrDelta = stats.winRate - stats.prevWinRate;
+        const pfCurr = stats.profitFactor === Infinity ? 999 : stats.profitFactor;
+        const pfPrev = stats.prevPF === Infinity ? 999 : stats.prevPF;
+        const pfDeltaVal = pfCurr - pfPrev;
+
+        // Identify biggest improvement or regression
+        let changeNote = "";
+        const absPnlDelta = Math.abs(pnlDelta);
+        const absWrDelta = Math.abs(wrDelta);
+        const absPfDelta = Math.abs(pfDeltaVal);
+
+        if (stats.prevTotal > 0) {
+          // Rank changes
+          if (absWrDelta >= 5 && wrDelta > 0) {
+            changeNote = `Amélioration notable : votre win rate a progressé de +${wrDelta.toFixed(1)}pp par rapport à la période précédente.`;
+          } else if (absWrDelta >= 5 && wrDelta < 0) {
+            changeNote = `Régression : votre win rate a reculé de ${wrDelta.toFixed(1)}pp — revoyez la qualité de vos setups.`;
+          } else if (pnlDelta > 0 && absPnlDelta > 50) {
+            changeNote = `Amélioration : votre P&L a progressé de +${pnlDelta.toFixed(2)}€ par rapport à la période précédente.`;
+          } else if (pnlDelta < 0 && absPnlDelta > 50) {
+            changeNote = `Régression : votre P&L a baissé de ${pnlDelta.toFixed(2)}€ — analysez vos pertes.`;
+          } else if (absPfDelta > 0.3 && pfDeltaVal > 0) {
+            changeNote = `Amélioration : votre profit factor a augmenté de +${pfDeltaVal.toFixed(2)}.`;
+          } else if (absPfDelta > 0.3 && pfDeltaVal < 0) {
+            changeNote = `Régression : votre profit factor a baissé de ${pfDeltaVal.toFixed(2)}.`;
+          } else {
+            changeNote = "Performance stable par rapport à la période précédente.";
+          }
+        }
+
+        // Suggest one specific action
+        let conseil = "";
+        if (stats.winRate < 40) {
+          conseil = "Concentrez-vous sur la qualité de vos entrées — attendez les confirmations avant d'entrer en position.";
+        } else if (stats.profitFactor < 1 && stats.profitFactor !== 0) {
+          conseil = "Votre profit factor est sous 1. Laissez courir vos gains plus longtemps ou réduisez vos stop-loss.";
+        } else if (stats.avgRR !== null && stats.avgRR < 1) {
+          conseil = "Visez un R:R minimum de 1:1.5 sur vos prochains trades pour améliorer votre espérance.";
+        } else if (stats.winRate > 60 && stats.profitFactor > 1.5) {
+          conseil = "Excellente période ! Maintenez votre discipline et ne changez pas une formule gagnante.";
+        } else {
+          conseil = "Revoyez vos 3 pires trades de la période — identifiez un pattern commun à corriger.";
+        }
+
+        return (
+          <div
+            className="metric-card rounded-2xl p-5"
+            style={{
+              background: "linear-gradient(135deg, rgba(234,179,8,0.06), rgba(234,179,8,0.02))",
+              border: "1px solid rgba(234,179,8,0.15)",
+            }}
+          >
+            <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+              <Lightbulb className="w-5 h-5 text-yellow-400" /> Conseil IA
+            </h3>
+            <div className="space-y-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+              {changeNote && <p>{changeNote}</p>}
+              <p className="font-medium" style={{ color: "#eab308" }}>
+                💡 {conseil}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Comparison Table - Enhanced with arrows and % change */}
       <div className="metric-card rounded-2xl p-5">
         <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>

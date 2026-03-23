@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   Star,
+  Brain,
 } from "lucide-react";
 
 Chart.register(...registerables, Filler);
@@ -989,6 +990,51 @@ export default function SessionsPage() {
 
       {/* 4. Recommended Trading Windows */}
       <RecommendationsSection hourlyStats={hourlyStats} bestSession={bestSession} />
+
+      {/* ═══════════════════════ INSIGHTS IA ═══════════════════════ */}
+      {(() => {
+        const insights: string[] = [];
+
+        // Best session
+        const sessionsWithTrades = stats.filter((s: SessionStats) => s.trades > 0);
+        if (sessionsWithTrades.length > 0) {
+          const best = [...sessionsWithTrades].sort((a: SessionStats, b: SessionStats) => b.winRate - a.winRate)[0];
+          if (best.winRate > 0) {
+            insights.push(`La session ${best.session} est votre meilleure (${best.winRate.toFixed(0)}% WR)`);
+          }
+
+          const worst = [...sessionsWithTrades].sort((a: SessionStats, b: SessionStats) => a.winRate - b.winRate)[0];
+          if (worst.winRate < 50 && worst.session !== best.session) {
+            insights.push(`Évitez la session ${worst.session} — votre WR tombe à ${worst.winRate.toFixed(0)}%`);
+          }
+        }
+
+        // Overlap insight
+        if (overlapData.londonNy.trades > 0 && overlapData.londonNy.winRate > 55) {
+          insights.push(`L'overlap London/NY est votre fenêtre optimale (${overlapData.londonNy.winRate.toFixed(0)}% WR, ${overlapData.londonNy.trades} trades)`);
+        } else if (overlapData.londonNy.trades > 0) {
+          insights.push(`L'overlap London/NY : ${overlapData.londonNy.winRate.toFixed(0)}% WR sur ${overlapData.londonNy.trades} trades`);
+        }
+
+        if (insights.length === 0) return null;
+
+        return (
+          <div className="glass rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="w-5 h-5 text-purple-400" />
+              <h3 className="font-semibold text-[--text-primary]">Insights IA</h3>
+            </div>
+            <div className="space-y-3">
+              {insights.map((insight, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                  <span className="text-purple-400 mt-0.5 text-lg">&#x2728;</span>
+                  <p className="text-sm text-[--text-secondary]">{insight}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

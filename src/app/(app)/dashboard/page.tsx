@@ -8,8 +8,8 @@ import { DashboardSkeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
 import { ForexSessions } from "@/components/ForexSessions";
 import { calculateRR, formatDate, computeStats } from "@/lib/utils";
-import { useState, useEffect } from "react";
-import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair, DollarSign, AlertTriangle, Share2, Star, Crown, ExternalLink, Lightbulb, Clock, X, Flag } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Trash2, Pencil, Camera, Target, Flame, TrendingUp, TrendingDown, Calendar, BarChart3, ArrowUpRight, ArrowDownRight, Trophy, Skull, PieChart, Activity, ChevronRight, Percent, Zap, Crosshair, DollarSign, AlertTriangle, Share2, Star, Crown, ExternalLink, Lightbulb, Clock, X, Flag, Brain } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "@/i18n/context";
 import { ShareStatsCard } from "@/components/ShareStatsCard";
@@ -373,6 +373,88 @@ function AstuceDuJourWidget() {
       </div>
       <p className="text-xs leading-relaxed pr-4" style={{ color: "var(--text-primary)" }}>
         &laquo; {tip} &raquo;
+      </p>
+    </div>
+  );
+}
+
+/* ─── AI Résumé du Jour ──────────────────────────────── */
+
+function AIResumeDuJour({ trades }: { trades: Trade[] }) {
+  const insight = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayTrades = trades.filter(
+      (t) => new Date(t.date).toISOString().slice(0, 10) === todayStr
+    );
+    if (todayTrades.length === 0) return null;
+
+    const totalPnl = todayTrades.reduce((s, t) => s + t.result, 0);
+    const wins = todayTrades.filter((t) => t.result > 0).length;
+    const wr = Math.round((wins / todayTrades.length) * 100);
+    const best = todayTrades.reduce((best, t) => (t.result > best.result ? t : best), todayTrades[0]);
+
+    const lines: string[] = [];
+
+    // Main summary
+    lines.push(
+      `Aujourd'hui, ${todayTrades.length} trade${todayTrades.length > 1 ? "s" : ""} avec ${wr}% WR${totalPnl >= 0 ? ` (+${totalPnl.toFixed(2)}€)` : ` (${totalPnl.toFixed(2)}€)`}.`
+    );
+
+    // Best trade highlight
+    if (best.result > 0) {
+      lines.push(
+        `Votre meilleur trade ${best.asset} (+${best.result.toFixed(2)}€)${best.strategy ? ` via ${best.strategy}` : ""}.`
+      );
+    }
+
+    // Behavioral warnings
+    const timestamps = todayTrades.map((t) => new Date(t.date).getTime()).sort((a, b) => a - b);
+    let rapidTrades = 0;
+    for (let i = 1; i < timestamps.length; i++) {
+      if (timestamps[i] - timestamps[i - 1] < 15 * 60 * 1000) rapidTrades++;
+    }
+    if (rapidTrades >= 2) {
+      lines.push("Attention : plusieurs trades en moins de 15 minutes — possible scalping impulsif.");
+    }
+
+    // Consecutive losses check
+    const sorted = [...todayTrades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let maxConsecLoss = 0;
+    let curLoss = 0;
+    for (const t of sorted) {
+      if (t.result < 0) { curLoss++; maxConsecLoss = Math.max(maxConsecLoss, curLoss); }
+      else curLoss = 0;
+    }
+    if (maxConsecLoss >= 3) {
+      lines.push("Alerte : 3+ pertes consécutives aujourd'hui — attention au revenge trading.");
+    }
+
+    return lines.join(" ");
+  }, [trades]);
+
+  if (!insight) return null;
+
+  return (
+    <div
+      className="glass rounded-2xl p-5 mb-6"
+      style={{
+        background: "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(139,92,246,0.02))",
+        border: "1px solid rgba(139,92,246,0.2)",
+      }}
+    >
+      <div className="flex items-center gap-2.5 mb-3">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center"
+          style={{ background: "rgba(139,92,246,0.15)" }}
+        >
+          <Brain className="w-4 h-4" style={{ color: "#a78bfa" }} />
+        </div>
+        <span className="font-bold text-sm" style={{ color: "#a78bfa" }}>
+          AI Résumé du Jour
+        </span>
+      </div>
+      <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+        {insight}
       </p>
     </div>
   );
@@ -1378,6 +1460,9 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* AI Résumé du Jour */}
+      <AIResumeDuJour trades={trades} />
 
       {/* Share Stats Card Modal */}
       <ShareStatsCard

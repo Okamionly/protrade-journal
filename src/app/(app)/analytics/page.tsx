@@ -7,7 +7,7 @@ import { WeekdayChart, EquityChart, MonthlyComparisonChart, EmotionChart, Advanc
 import { AnalyticsSkeleton } from "@/components/Skeleton";
 import { useUser } from "@/hooks/useTrades";
 import { useVipAccess } from "@/hooks/useVipAccess";
-import { TrendingUp, TrendingDown, Zap, Flame, ArrowUpRight, ArrowDownRight, Clock, Activity, ChevronUp, ChevronDown, BarChart3, GitCompare, Tag, Crosshair, Crown, Timer, Target, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, Zap, Flame, ArrowUpRight, ArrowDownRight, Clock, Activity, ChevronUp, ChevronDown, BarChart3, GitCompare, Tag, Crosshair, Crown, Timer, Target, AlertTriangle, Brain } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 import Link from "next/link";
 
@@ -1224,6 +1224,86 @@ export default function AnalyticsPage() {
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ═══════════════════════ INSIGHTS IA ═══════════════════════ */}
+      {(() => {
+        const insights: string[] = [];
+
+        // Best asset by total PnL
+        if (assetPerf.length > 0) {
+          const best = [...assetPerf].sort((a, b) => b.totalPnL - a.totalPnL)[0];
+          insights.push(`Votre actif le plus rentable est ${best.asset} avec un PnL de +€${best.totalPnL.toFixed(0)} (WR ${best.winRate.toFixed(0)}%)`);
+        }
+
+        // Best vs worst day
+        const dayPnLMap: Record<number, { pnl: number; count: number }> = {};
+        const dayNames = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+        trades.forEach(tr => {
+          const dow = new Date(tr.date).getDay();
+          if (!dayPnLMap[dow]) dayPnLMap[dow] = { pnl: 0, count: 0 };
+          dayPnLMap[dow].pnl += tr.result;
+          dayPnLMap[dow].count++;
+        });
+        const activeDays = Object.entries(dayPnLMap).filter(([, d]) => d.count > 0);
+        if (activeDays.length >= 2) {
+          const sortedDays = activeDays.sort((a, b) => b[1].pnl - a[1].pnl);
+          const bestDay = dayNames[Number(sortedDays[0][0])];
+          const worstDay = dayNames[Number(sortedDays[sortedDays.length - 1][0])];
+          const diff = sortedDays[0][1].pnl > 0 && sortedDays[sortedDays.length - 1][1].pnl < 0
+            ? Math.round(((sortedDays[0][1].pnl - sortedDays[sortedDays.length - 1][1].pnl) / Math.abs(sortedDays[sortedDays.length - 1][1].pnl)) * 100)
+            : null;
+          insights.push(
+            diff !== null
+              ? `Vous performez ${Math.abs(diff)}% mieux le ${bestDay.toLowerCase()} que le ${worstDay.toLowerCase()}`
+              : `Votre meilleur jour est le ${bestDay.toLowerCase()}, le pire est le ${worstDay.toLowerCase()}`
+          );
+        }
+
+        // Sortino ratio insight
+        if (advancedStats.sortino > 2) {
+          insights.push(`Votre Sortino ratio est excellent (${advancedStats.sortino.toFixed(1)}), bonne gestion du risque baissier`);
+        } else if (advancedStats.sortino > 1) {
+          insights.push(`Votre Sortino ratio est correct (${advancedStats.sortino.toFixed(1)}), marge d'amélioration sur la gestion baissière`);
+        } else if (advancedStats.sortino > 0) {
+          insights.push(`Votre Sortino ratio est faible (${advancedStats.sortino.toFixed(1)}) — réduisez vos pertes pour l'améliorer`);
+        }
+
+        // Emotion insight
+        if (emotionPerf.length > 0) {
+          const bestEmotion = [...emotionPerf]
+            .filter(e => e.trades >= 3)
+            .sort((a, b) => b.winRate - a.winRate)[0];
+          if (bestEmotion) {
+            insights.push(`L'émotion "${bestEmotion.emotion}" produit votre meilleur WR (${bestEmotion.winRate.toFixed(0)}%)`);
+          }
+        }
+
+        // Profit factor quality
+        if (stats.profitFactor >= 2) {
+          insights.push(`Votre Profit Factor global (${stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)}) est au-dessus du seuil professionnel de 2.0`);
+        } else if (stats.profitFactor >= 1.5) {
+          insights.push(`Votre Profit Factor (${stats.profitFactor.toFixed(2)}) est correct — visez 2.0+ pour un edge solide`);
+        }
+
+        if (insights.length === 0) return null;
+
+        return (
+          <div className="glass rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Brain className="w-5 h-5 text-purple-400" />
+              <h3 className="font-semibold text-[--text-primary]">Insights IA</h3>
+            </div>
+            <div className="space-y-3">
+              {insights.map((insight, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                  <span className="text-purple-400 mt-0.5 text-lg">&#x2728;</span>
+                  <p className="text-sm text-[--text-secondary]">{insight}</p>
+                </div>
+              ))}
             </div>
           </div>
         );

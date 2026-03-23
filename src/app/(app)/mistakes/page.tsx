@@ -27,6 +27,7 @@ import {
   Layers,
   Compass,
   Award,
+  Brain,
 } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 import { useTheme } from "next-themes";
@@ -596,6 +597,65 @@ export default function MistakesPage() {
     return weeks;
   }, [trades, detectedMistakes]);
 
+  // ---- AI Insight: Conseil IA ----
+  const aiInsights = useMemo(() => {
+    if (!detectedMistakes.length || !trades.length) return null;
+
+    // Most costly mistake category this month
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+    const recentMistakes = detectedMistakes.filter((m) =>
+      m.tradeIds.some((id) => {
+        const tr = trades.find((t2) => t2.id === id);
+        return tr && new Date(tr.date) >= thirtyDaysAgo;
+      })
+    );
+
+    const worstMistake = [...recentMistakes].sort((a, b) => a.impactPnl - b.impactPnl)[0];
+    const worstLabel = worstMistake
+      ? categories.find((c) => c.id === worstMistake.categoryId)?.label ?? worstMistake.categoryId
+      : null;
+    const worstCost = worstMistake ? worstMistake.impactPnl : 0;
+
+    // Improvement: compare no-SL count last 30d vs previous 30d
+    const noSlNow = trades.filter(
+      (t2) => new Date(t2.date) >= thirtyDaysAgo && (!t2.sl || t2.sl === 0)
+    ).length;
+    const noSlPrev = trades.filter(
+      (t2) => new Date(t2.date) >= sixtyDaysAgo && new Date(t2.date) < thirtyDaysAgo && (!t2.sl || t2.sl === 0)
+    ).length;
+    const noSlImprovement = noSlPrev > 0 ? Math.round(((noSlPrev - noSlNow) / noSlPrev) * 100) : 0;
+
+    // Priority: biggest impact category
+    const totalPnl = trades.reduce((s, t2) => s + t2.result, 0);
+    const potentialGain = worstCost !== 0 ? Math.abs(worstCost) : 0;
+    const pctGain = totalPnl !== 0 ? Math.round((potentialGain / Math.abs(totalPnl)) * 100) : 0;
+
+    // Actionable recommendation
+    const topCategory = worstMistake?.categoryId;
+    const recommendation =
+      topCategory === "revenge"
+        ? "Instaurez une pause obligatoire de 15 min apres chaque perte. Cela casse le cycle du revenge trading."
+        : topCategory === "no-sl"
+        ? "Activez le SL automatique sur votre plateforme pour ne plus jamais oublier."
+        : topCategory === "overtrading"
+        ? "Fixez un maximum de 3 trades par jour et respectez cette regle sans exception."
+        : topCategory === "oversizing"
+        ? "Calculez votre taille de position AVANT chaque trade. Ne depassez jamais 2% de risque."
+        : "Revoyez vos 3 dernieres erreurs et identifiez le pattern commun.";
+
+    return {
+      worstLabel,
+      worstCost,
+      noSlImprovement,
+      pctGain,
+      recommendation,
+      topCategory: worstLabel,
+    };
+  }, [detectedMistakes, trades, categories]);
+
   // ---- Chart refs ----
   const barChartRef = useRef<HTMLCanvasElement>(null);
   const barChartInstance = useRef<Chart | null>(null);
@@ -775,6 +835,53 @@ export default function MistakesPage() {
                 className="w-full mt-1 rounded-lg px-3 py-2 text-sm glass"
                 style={{ color: "var(--text-primary)" }}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== CONSEIL IA ====== */}
+      {aiInsights && (
+        <div className="glass rounded-2xl p-5 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.04]" style={{
+            background: "linear-gradient(135deg, #a78bfa 0%, #6366f1 50%, #818cf8 100%)",
+          }} />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
+                <Brain className="w-4.5 h-4.5 text-violet-400" />
+              </div>
+              <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Conseil IA</span>
+            </div>
+            <div className="space-y-3">
+              {aiInsights.worstLabel && (
+                <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.12)" }}>
+                  <TrendingDown className="w-4 h-4 mt-0.5 text-rose-400 flex-shrink-0" />
+                  <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                    Votre erreur la plus couteuse : <strong>{aiInsights.worstLabel}</strong> ({aiInsights.worstCost.toFixed(0)}&euro; ce mois)
+                  </span>
+                </div>
+              )}
+              {aiInsights.noSlImprovement > 0 && (
+                <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.12)" }}>
+                  <TrendingUp className="w-4 h-4 mt-0.5 text-emerald-400 flex-shrink-0" />
+                  <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                    Vous avez ameliore : <strong>{aiInsights.noSlImprovement}% moins de trades sans SL</strong> vs le mois dernier
+                  </span>
+                </div>
+              )}
+              {aiInsights.pctGain > 0 && (
+                <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.12)" }}>
+                  <Zap className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                  <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                    Priorite : reduire le <strong>{aiInsights.topCategory}</strong> vous ferait gagner <strong>+{aiInsights.pctGain}% de P&amp;L</strong>
+                  </span>
+                </div>
+              )}
+              <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.12)" }}>
+                <Lightbulb className="w-4 h-4 mt-0.5 text-violet-400 flex-shrink-0" />
+                <span className="text-sm" style={{ color: "var(--text-primary)" }}>{aiInsights.recommendation}</span>
+              </div>
             </div>
           </div>
         </div>

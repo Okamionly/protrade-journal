@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useTrades, useUser } from "@/hooks/useTrades";
 import { computeRiskMetrics, computeDrawdownCurve, calculatePositionSize, computeKellyRaw, type Trade, type AssetType } from "@/lib/advancedStats";
-import { Shield, AlertTriangle, Calculator, TrendingDown, Percent, DollarSign, BarChart3, Activity, RotateCcw, Crosshair, Zap, Shuffle, Clock, Target } from "lucide-react";
+import { Shield, AlertTriangle, Calculator, TrendingDown, Percent, DollarSign, BarChart3, Activity, RotateCcw, Crosshair, Zap, Shuffle, Clock, Target, Brain, TrendingUp } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 
 export default function RiskPage() {
@@ -296,6 +296,38 @@ export default function RiskPage() {
 
   const kellyDisplay = kellyRaw < 0;
 
+  // ---- AI Risk Assessment ----
+  const aiRiskInsight = useMemo(() => {
+    const typedTrades = trades as unknown as Trade[];
+    if (typedTrades.length < 3) return null;
+
+    // Average risk per trade (as % of balance)
+    const risksPerTrade = typedTrades
+      .filter((t) => t.result < 0)
+      .map((t) => (Math.abs(t.result) / balance) * 100);
+    const avgRiskPct = risksPerTrade.length > 0
+      ? risksPerTrade.reduce((a, b) => a + b, 0) / risksPerTrade.length
+      : 0;
+
+    // Risk zone
+    const riskZone: "green" | "yellow" | "red" =
+      avgRiskPct <= 2 ? "green" : avgRiskPct <= 3 ? "yellow" : "red";
+    const zoneLabel = riskZone === "green" ? "zone verte" : riskZone === "yellow" ? "zone orange" : "zone rouge";
+
+    // Trades exceeding 3% risk this week
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const highRiskThisWeek = typedTrades.filter((t) => {
+      if (new Date(t.date) < sevenDaysAgo) return false;
+      return t.result < 0 && (Math.abs(t.result) / balance) * 100 > 3;
+    }).length;
+
+    // Kelly optimal
+    const kellyOptimal = kellyRaw > 0 ? (kellyRaw * 100).toFixed(1) : null;
+
+    return { avgRiskPct: avgRiskPct.toFixed(1), riskZone, zoneLabel, highRiskThisWeek, kellyOptimal };
+  }, [trades, balance, kellyRaw]);
+
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div>
@@ -306,6 +338,50 @@ export default function RiskPage() {
           {t("riskManagementDesc")}
         </p>
       </div>
+
+      {/* ====== AI Risk Assessment ====== */}
+      {aiRiskInsight && (
+        <div className="glass rounded-2xl p-5 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.04]" style={{
+            background: "linear-gradient(135deg, #a78bfa 0%, #6366f1 50%, #818cf8 100%)",
+          }} />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
+                <Brain className="w-4.5 h-4.5 text-violet-400" />
+              </div>
+              <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Analyse IA du Risque</span>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg" style={{
+                background: aiRiskInsight.riskZone === "green" ? "rgba(16,185,129,0.06)" : aiRiskInsight.riskZone === "yellow" ? "rgba(245,158,11,0.06)" : "rgba(239,68,68,0.06)",
+                border: `1px solid ${aiRiskInsight.riskZone === "green" ? "rgba(16,185,129,0.12)" : aiRiskInsight.riskZone === "yellow" ? "rgba(245,158,11,0.12)" : "rgba(239,68,68,0.12)"}`,
+              }}>
+                <Shield className={`w-4 h-4 mt-0.5 flex-shrink-0 ${aiRiskInsight.riskZone === "green" ? "text-emerald-400" : aiRiskInsight.riskZone === "yellow" ? "text-amber-400" : "text-rose-400"}`} />
+                <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                  Votre risque moyen par trade : <strong>{aiRiskInsight.avgRiskPct}%</strong> — dans la <strong>{aiRiskInsight.zoneLabel}</strong>
+                </span>
+              </div>
+              {aiRiskInsight.highRiskThisWeek > 0 && (
+                <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.12)" }}>
+                  <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                  <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                    Attention : <strong>{aiRiskInsight.highRiskThisWeek} trade{aiRiskInsight.highRiskThisWeek > 1 ? "s" : ""}</strong> cette semaine depassent 3% de risque
+                  </span>
+                </div>
+              )}
+              {aiRiskInsight.kellyOptimal && (
+                <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(14,165,233,0.06)", border: "1px solid rgba(14,165,233,0.12)" }}>
+                  <Calculator className="w-4 h-4 mt-0.5 text-sky-400 flex-shrink-0" />
+                  <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                    Votre Kelly optimal suggere <strong>{aiRiskInsight.kellyOptimal}%</strong> par trade
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Key Risk Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

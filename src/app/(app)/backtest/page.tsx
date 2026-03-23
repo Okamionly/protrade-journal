@@ -640,6 +640,41 @@ export default function BacktestPage() {
   const fmtNum = (v: number) => `${v}`;
   const fmtRatio = (v: number) => (isFinite(v) ? v.toFixed(2) : "\∞");
 
+  // ---- AI Backtest Insight ----
+  const aiBacktestInsight = useMemo(() => {
+    if (actualStats.totalTrades < 5) return null;
+
+    const pnlDiff = simStats.totalPnL - actualStats.totalPnL;
+    const pctImprovement = actualStats.totalPnL !== 0
+      ? ((pnlDiff) / Math.abs(actualStats.totalPnL)) * 100
+      : 0;
+
+    // Annualized projection (12 months)
+    const tradeDays = sortedTrades.length > 1
+      ? (new Date(sortedTrades[sortedTrades.length - 1].date).getTime() - new Date(sortedTrades[0].date).getTime()) / (1000 * 60 * 60 * 24)
+      : 30;
+    const months = Math.max(tradeDays / 30, 1);
+    const annualizedImprovement = pnlDiff > 0 ? (pnlDiff / months) * 12 : 0;
+    const annualizedPct = actualStats.totalPnL !== 0
+      ? ((annualizedImprovement) / Math.abs(actualStats.totalPnL)) * 100
+      : 0;
+
+    // Find biggest impact factor
+    let biggestImpact = "la configuration actuelle";
+    if (config.removeLosing) biggestImpact = "la suppression des revenge trades";
+    else if (config.removeWorst > 0) biggestImpact = `la suppression des ${config.removeWorst} pires trades`;
+    else if (config.maxPerDay < 10) biggestImpact = `la limite a ${config.maxPerDay} trades/jour`;
+    else if (config.strategyFilter !== "all") biggestImpact = `le filtrage par strategie (${config.strategyFilter})`;
+    else if (config.tpRR > 0) biggestImpact = `l'ajustement du TP a ${config.tpRR}R`;
+
+    return {
+      pctImprovement: Math.round(pctImprovement),
+      annualizedPct: Math.round(annualizedPct),
+      biggestImpact,
+      isPositive: pnlDiff > 0,
+    };
+  }, [actualStats, simStats, sortedTrades, config]);
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
@@ -809,6 +844,37 @@ export default function BacktestPage() {
 
           {/* Confidence Score */}
           <ConfidenceScore tradeCount={simStats.totalTrades} />
+
+          {/* ====== AI Backtest Insight ====== */}
+          {aiBacktestInsight && aiBacktestInsight.isPositive && (
+            <div className="glass rounded-2xl p-5 relative overflow-hidden">
+              <div className="absolute inset-0 opacity-[0.04]" style={{
+                background: "linear-gradient(135deg, #a78bfa 0%, #6366f1 50%, #818cf8 100%)",
+              }} />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
+                    <Brain className="w-4.5 h-4.5 text-violet-400" />
+                  </div>
+                  <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Insight IA Backtest</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.12)" }}>
+                    <Rocket className="w-4 h-4 mt-0.5 text-emerald-400 flex-shrink-0" />
+                    <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                      Ce scenario ameliorerait votre P&amp;L de <strong>{aiBacktestInsight.annualizedPct}%</strong> sur 12 mois
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.12)" }}>
+                    <Target className="w-4 h-4 mt-0.5 text-violet-400 flex-shrink-0" />
+                    <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                      Impact principal : <strong>{aiBacktestInsight.biggestImpact}</strong> a le plus grand effet
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Equity Curve */}
           <EquityChart actual={actualEquity} simulated={simEquity} />
