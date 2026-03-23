@@ -529,29 +529,9 @@ export default function ChartPage() {
     return ASSETS_LEGACY.find((a) => normalizeSymbol(a) === norm) || raw;
   }, [currentSymbol]);
 
-  /* ── Listen for TradingView symbol/interval changes ── */
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      try {
-        if (typeof e.data === "string" && e.data.includes("symbolChange")) {
-          const data = JSON.parse(e.data);
-          if (data?.name === "symbolChange" && data?.data) {
-            setCurrentSymbol(data.data);
-          }
-        }
-        if (typeof e.data === "string" && e.data.includes("intervalChange")) {
-          const data = JSON.parse(e.data);
-          if (data?.name === "intervalChange" && data?.data) {
-            setMainInterval(data.data);
-          }
-        }
-      } catch {
-        // ignore non-TV messages
-      }
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, []);
+  /* TradingView embed widget does not support postMessage — symbol/interval
+     changes are handled by the widget internally. We persist the initial
+     selection only. */
 
   return (
     <div
