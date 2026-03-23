@@ -694,7 +694,7 @@ function JournalPageContent() {
                       {/* Screenshot badge */}
                       {trade.screenshots.length > 0 && (
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-medium border border-amber-500/20">
-                          <Image className="w-3 h-3" />{trade.screenshots.length}
+                          <ImageIcon className="w-3 h-3" />{trade.screenshots.length}
                         </span>
                       )}
                     </div>
