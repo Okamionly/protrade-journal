@@ -22,6 +22,7 @@ import {
   Award,
 } from "lucide-react";
 import { useTrades } from "@/hooks/useTrades";
+import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
 import { LocaleProvider, useTranslation } from "@/i18n/context";
 import { LOCALE_LABELS, Locale } from "@/i18n/types";
 
@@ -763,6 +764,7 @@ function FixingCountdown() {
 /* ─── Inner Content Component ─── */
 function LBMAContent() {
   const { t, locale, setLocale, dir, dateFmt } = useTranslation();
+  const { trades } = useTrades();
 
   const [data, setData] = useState<LbmaData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -866,6 +868,109 @@ function LBMAContent() {
       palladium: calcSpreads(data.palladium_am, data.palladium_pm),
     };
   }, [data, idx]);
+
+  // --- AI Insights: Corrélation Or/Dollar ---
+  const lbmaInsights = useMemo<InsightItem[]>(() => {
+    if (trades.length < 5) return [];
+    const items: InsightItem[] = [];
+
+    // Gold trades
+    const goldTrades = trades.filter((tr) => {
+      const a = tr.asset.toUpperCase();
+      return a.includes("XAUUSD") || a.includes("GOLD") || a.includes("XAU");
+    });
+
+    // Dollar trades (DXY, USDX, or USD pairs)
+    const dollarTrades = trades.filter((tr) => {
+      const a = tr.asset.toUpperCase();
+      return a.includes("DXY") || a.includes("USDX") || a.startsWith("USD") || a.endsWith("USD");
+    });
+
+    // Gold WR vs gold direction
+    if (goldTrades.length >= 3) {
+      const wins = goldTrades.filter((tr) => tr.result > 0).length;
+      const wr = (wins / goldTrades.length) * 100;
+      const totalPnl = goldTrades.reduce((s, tr) => s + tr.result, 0);
+      items.push({
+        icon: <BarChart3 className="w-3.5 h-3.5" />,
+        text: `${goldTrades.length} trades sur l'or : ${wr.toFixed(0)}% WR, P&L ${totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}`,
+        type: wr >= 55 ? "bullish" : wr <= 40 ? "bearish" : "neutral",
+      });
+    }
+
+    // Gold vs Dollar inverse correlation insight
+    if (goldTrades.length >= 2 && dollarTrades.length >= 2) {
+      const goldLongs = goldTrades.filter((tr) => tr.direction.toLowerCase() === "long" || tr.direction.toLowerCase() === "buy");
+      const dollarShorts = dollarTrades.filter((tr) => tr.direction.toLowerCase() === "short" || tr.direction.toLowerCase() === "sell");
+      const inverseTrades = goldLongs.length + dollarShorts.length;
+      const totalRelevant = goldTrades.length + dollarTrades.length;
+      const inverseRatio = totalRelevant > 0 ? (inverseTrades / totalRelevant) * 100 : 0;
+      if (inverseRatio > 60) {
+        items.push({
+          icon: <Activity className="w-3.5 h-3.5" />,
+          text: `Vous exploitez la corrélation inverse Or/Dollar — ${inverseRatio.toFixed(0)}% de trades alignés`,
+          type: "bullish",
+        });
+      } else {
+        items.push({
+          icon: <Activity className="w-3.5 h-3.5" />,
+          text: `Corrélation Or/Dollar peu exploitée (${inverseRatio.toFixed(0)}%) — pensez à shorter le $ quand l'or monte`,
+          type: "info",
+        });
+      }
+    }
+
+    // Gold/Silver ratio trading opportunity
+    const ratioVal = currentGoldPm?.v[idx] && currentSilver?.v[idx]
+      ? currentGoldPm.v[idx]! / currentSilver.v[idx]!
+      : null;
+    if (ratioVal) {
+      if (ratioVal > 80) {
+        items.push({
+          icon: <Target className="w-3.5 h-3.5" />,
+          text: `Ratio Or/Argent à ${ratioVal.toFixed(1)} — historiquement élevé, l'argent pourrait rattraper`,
+          type: "warning",
+        });
+      } else if (ratioVal < 65) {
+        items.push({
+          icon: <Target className="w-3.5 h-3.5" />,
+          text: `Ratio Or/Argent à ${ratioVal.toFixed(1)} — historiquement bas, l'or pourrait surperformer`,
+          type: "info",
+        });
+      } else {
+        items.push({
+          icon: <Target className="w-3.5 h-3.5" />,
+          text: `Ratio Or/Argent à ${ratioVal.toFixed(1)} — zone neutre, pas de signal clair`,
+          type: "neutral",
+        });
+      }
+    }
+
+    // Best session for gold trades
+    if (goldTrades.length >= 5) {
+      const amTrades = goldTrades.filter((tr) => {
+        const h = new Date(tr.date).getHours();
+        return h >= 8 && h < 14;
+      });
+      const pmTrades = goldTrades.filter((tr) => {
+        const h = new Date(tr.date).getHours();
+        return h >= 14 && h <= 22;
+      });
+      const amWr = amTrades.length > 0 ? (amTrades.filter((tr) => tr.result > 0).length / amTrades.length) * 100 : 0;
+      const pmWr = pmTrades.length > 0 ? (pmTrades.filter((tr) => tr.result > 0).length / pmTrades.length) * 100 : 0;
+      if (amTrades.length >= 2 && pmTrades.length >= 2) {
+        const best = amWr > pmWr ? "AM (Londres)" : "PM (New York)";
+        const bestWr = Math.max(amWr, pmWr);
+        items.push({
+          icon: <Clock className="w-3.5 h-3.5" />,
+          text: `Meilleure session pour l'or : ${best} avec ${bestWr.toFixed(0)}% WR`,
+          type: bestWr >= 55 ? "bullish" : "neutral",
+        });
+      }
+    }
+
+    return items.slice(0, 4);
+  }, [trades, currentGoldPm, currentSilver, idx]);
 
   // Export CSV
   const handleExport = () => {
@@ -1286,6 +1391,16 @@ function LBMAContent() {
 
           {/* Trade Impact */}
           <TradeImpactSection goldDirection={goldSparkline.length >= 2 ? (goldSparkline[goldSparkline.length - 1] > goldSparkline[0] ? "up" : goldSparkline[goldSparkline.length - 1] < goldSparkline[0] ? "down" : "flat") : "flat"} />
+
+          {/* === AI Insights: Corrélation Or/Dollar === */}
+          {lbmaInsights.length > 0 && (
+            <AIInsightsCard
+              title="Corrélation Or/Dollar"
+              insights={lbmaInsights}
+              minimumTrades={5}
+              currentTradeCount={trades.length}
+            />
+          )}
 
           {/* Price Alerts */}
           <PriceAlerts

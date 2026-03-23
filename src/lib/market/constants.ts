@@ -73,6 +73,12 @@ export const FRED_SERIES: Record<string, { id: string; label: string; unit: stri
   TREASURY_2Y: { id: "DGS2", label: "Trésor 2 ans", unit: "%", frequency: "Quotidien" },
   DXY: { id: "DTWEXBGS", label: "Dollar Index (DXY)", unit: "Index", frequency: "Quotidien" },
   PCE: { id: "PCEPI", label: "PCE Inflation", unit: "Index", frequency: "Mensuel" },
+  RETAIL_SALES: { id: "RSAFS", label: "Ventes au détail", unit: "M $", frequency: "Mensuel" },
+  CONSUMER_SENTIMENT: { id: "UMCSENT", label: "Confiance consommateurs", unit: "Index", frequency: "Mensuel" },
+  HOUSING_STARTS: { id: "HOUST", label: "Mises en chantier", unit: "Milliers", frequency: "Mensuel" },
+  INITIAL_CLAIMS: { id: "ICSA", label: "Inscriptions chômage", unit: "Milliers", frequency: "Hebdomadaire" },
+  ISM_MANUFACTURING: { id: "MANEMP", label: "ISM Manufacturier", unit: "Index", frequency: "Mensuel" },
+  M2_MONEY_SUPPLY: { id: "M2SL", label: "Masse monétaire M2", unit: "Mrd $", frequency: "Mensuel" },
 };
 
 export const CFTC_API_BASE = "https://publicreporting.cftc.gov/resource/6dca-aqww.json";

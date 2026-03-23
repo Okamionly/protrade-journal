@@ -352,6 +352,235 @@ function MarketPulseSection({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Put/Call Ratio (CBOE) Section                                       */
+/* ------------------------------------------------------------------ */
+
+interface PutCallEntry {
+  date: string;
+  ratio: number;
+  puts: number;
+  calls: number;
+}
+
+function classifyPutCall(ratio: number): {
+  label: string;
+  color: string;
+  bg: string;
+  border: string;
+} {
+  if (ratio < 0.7) return { label: "Marché complaisant (haussier)", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30" };
+  if (ratio <= 1.0) return { label: "Neutre", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30" };
+  if (ratio <= 1.5) return { label: "Peur (baissier)", color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30" };
+  return { label: "Peur extrême", color: "text-red-500", bg: "bg-red-500/15", border: "border-red-500/40" };
+}
+
+function PutCallSection({ fngValue }: { fngValue: number }) {
+  const { t } = useTranslation();
+  const [pcData, setPcData] = useState<PutCallEntry[]>([]);
+  const [pcLoading, setPcLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setPcLoading(true);
+      try {
+        const res = await fetch("/api/market-data/put-call");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!cancelled && Array.isArray(json.data)) {
+          setPcData(json.data);
+        }
+      } catch (e) {
+        console.error("[Put/Call] fetch error:", e);
+      } finally {
+        if (!cancelled) setPcLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const latest = pcData.length > 0 ? pcData[pcData.length - 1] : null;
+  const currentRatio = latest?.ratio ?? 0;
+  const cls = classifyPutCall(currentRatio);
+
+  // Correlation with Fear & Greed
+  const correlation = useMemo(() => {
+    if (!latest) return null;
+    // High put/call + low FNG = aligned fear
+    // Low put/call + high FNG = aligned greed
+    // Divergence = mixed signals
+    if (currentRatio > 1.0 && fngValue < 40) return { text: "Corrélé : Peur confirmée sur les deux indicateurs", color: "text-rose-400" };
+    if (currentRatio < 0.7 && fngValue > 60) return { text: "Corrélé : Complaisance confirmée — prudence", color: "text-amber-400" };
+    if (currentRatio > 1.0 && fngValue > 60) return { text: "Divergence : Institutionnels se couvrent malgré l'optimisme retail", color: "text-violet-400" };
+    if (currentRatio < 0.7 && fngValue < 40) return { text: "Divergence : Peu de protection malgré la peur — rebond possible", color: "text-cyan-400" };
+    return { text: "Pas de divergence notable", color: "text-[--text-muted]" };
+  }, [currentRatio, fngValue, latest]);
+
+  // SVG mini chart
+  const chartSvg = useMemo(() => {
+    if (pcData.length < 2) return null;
+    const w = 320;
+    const h = 80;
+    const pad = { left: 4, right: 4, top: 8, bottom: 8 };
+    const cW = w - pad.left - pad.right;
+    const cH = h - pad.top - pad.bottom;
+
+    const ratios = pcData.map((d) => d.ratio);
+    const minR = Math.min(...ratios, 0.4);
+    const maxR = Math.max(...ratios, 1.6);
+    const rangeR = maxR - minR || 0.1;
+
+    const pts = pcData.map((d, i) => {
+      const x = pad.left + (i / (pcData.length - 1)) * cW;
+      const y = pad.top + (1 - (d.ratio - minR) / rangeR) * cH;
+      return { x, y, r: d.ratio };
+    });
+
+    const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+
+    // Color zones: <0.7 green, 0.7-1.0 amber, 1.0-1.5 rose, >1.5 red
+    const zones = [
+      { from: 0, to: 0.7, color: "rgba(16,185,129,0.08)" },
+      { from: 0.7, to: 1.0, color: "rgba(245,158,11,0.06)" },
+      { from: 1.0, to: 1.5, color: "rgba(239,68,68,0.06)" },
+      { from: 1.5, to: 3, color: "rgba(239,68,68,0.12)" },
+    ];
+
+    return (
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+        {zones.map((z) => {
+          const yTop = pad.top + (1 - (Math.min(z.to, maxR) - minR) / rangeR) * cH;
+          const yBot = pad.top + (1 - (Math.max(z.from, minR) - minR) / rangeR) * cH;
+          if (yBot <= yTop) return null;
+          return <rect key={z.from} x={pad.left} y={yTop} width={cW} height={yBot - yTop} fill={z.color} />;
+        })}
+        {/* Reference lines */}
+        {[0.7, 1.0, 1.5].filter((v) => v >= minR && v <= maxR).map((v) => {
+          const y = pad.top + (1 - (v - minR) / rangeR) * cH;
+          return (
+            <g key={v}>
+              <line x1={pad.left} y1={y} x2={w - pad.right} y2={y} stroke="var(--border-subtle)" strokeWidth="0.5" strokeDasharray="3,3" />
+              <text x={w - pad.right + 2} y={y + 3} fontSize="7" className="fill-[--text-muted]">{v}</text>
+            </g>
+          );
+        })}
+        <defs>
+          <linearGradient id="pcAreaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path
+          d={`${linePath} L${pts[pts.length - 1].x.toFixed(1)},${pad.top + cH} L${pts[0].x.toFixed(1)},${pad.top + cH} Z`}
+          fill="url(#pcAreaGrad)"
+        />
+        <path d={linePath} fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeLinejoin="round" />
+        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="3" fill="#8b5cf6" stroke="var(--bg-primary)" strokeWidth="1.5" />
+        <text x={pts[pts.length - 1].x} y={pts[pts.length - 1].y - 8} textAnchor="middle" className="fill-[--text-primary]" fontSize="9" fontWeight="700">
+          {pts[pts.length - 1].r.toFixed(2)}
+        </text>
+      </svg>
+    );
+  }, [pcData]);
+
+  if (pcLoading) {
+    return (
+      <div className="metric-card rounded-2xl p-6 animate-pulse">
+        <div className="h-5 rounded w-48 mb-4" style={{ background: "var(--bg-secondary)" }} />
+        <div className="h-24 rounded-xl" style={{ background: "var(--bg-secondary)" }} />
+      </div>
+    );
+  }
+
+  if (!latest) return null;
+
+  return (
+    <div className={`metric-card rounded-2xl p-6 border ${cls.border} ${cls.bg}`}>
+      <div className="flex items-center gap-2 mb-5">
+        <BarChart3 className="w-5 h-5 text-violet-400" />
+        <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>
+          Ratio Put/Call (CBOE)
+        </h3>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Current Value */}
+        <div className="text-center flex flex-col items-center justify-center">
+          <div className={`text-5xl font-black mono ${cls.color}`}>
+            {currentRatio.toFixed(2)}
+          </div>
+          <p className={`text-sm font-bold mt-2 ${cls.color}`}>{cls.label}</p>
+          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+            {latest.date}
+          </p>
+          {latest.puts > 0 && latest.calls > 0 && (
+            <div className="flex items-center gap-3 mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
+              <span>Puts: {(latest.puts / 1e6).toFixed(1)}M</span>
+              <span>Calls: {(latest.calls / 1e6).toFixed(1)}M</span>
+            </div>
+          )}
+        </div>
+
+        {/* Mini Chart 30 jours */}
+        <div>
+          <p className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+            Historique 30 jours
+          </p>
+          {chartSvg}
+          <div className="flex justify-between text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
+            <span>J-{pcData.length}</span>
+            <span>{t("today")}</span>
+          </div>
+          <div className="flex items-center justify-center gap-3 mt-2 text-[10px]" style={{ color: "var(--text-muted)" }}>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> &lt;0.7 Haussier</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> 0.7-1.0 Neutre</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" /> &gt;1.0 Baissier</span>
+          </div>
+        </div>
+
+        {/* Correlation avec Fear & Greed */}
+        <div>
+          <p className="text-xs font-semibold mb-3 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+            Corrélation Fear &amp; Greed
+          </p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-violet-400" />
+              </div>
+              <div>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Put/Call</p>
+                <p className={`text-lg font-bold mono ${cls.color}`}>{currentRatio.toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center">
+                <Heart className="w-5 h-5 text-cyan-400" />
+              </div>
+              <div>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Fear &amp; Greed</p>
+                <p className={`text-lg font-bold mono ${classifyScore(fngValue).color}`}>{fngValue}</p>
+              </div>
+            </div>
+            {correlation && (
+              <div className={`text-xs font-medium mt-2 ${correlation.color}`}>
+                {correlation.text}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+        <p className="text-[10px] text-center" style={{ color: "var(--text-muted)" }}>
+          Source : CBOE Total Put/Call Ratio &middot; Mis à jour quotidiennement
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main Page                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -1148,6 +1377,11 @@ export default function SentimentPage() {
               </div>
             );
           })()}
+
+          {/* ============================================================ */}
+          {/*  Ratio Put/Call (CBOE) — Real data from API                  */}
+          {/* ============================================================ */}
+          <PutCallSection fngValue={currentVal} />
 
           {/* ============================================================ */}
           {/*  Market Regime Indicator (VIX + F&G combination)              */}

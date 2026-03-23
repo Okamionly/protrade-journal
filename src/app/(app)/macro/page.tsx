@@ -16,6 +16,12 @@ import {
   Activity,
   Clock,
   Zap,
+  ShoppingCart,
+  Smile,
+  Home,
+  Briefcase,
+  Factory,
+  Banknote,
 } from "lucide-react";
 import { fetchMultipleFredSeries, type FredSeriesData } from "@/lib/market/fred";
 import { useTranslation } from "@/i18n/context";
@@ -34,6 +40,25 @@ const MACRO_FRED_KEYS = [
   "DXY",           // DTWEXBGS
   "UNEMPLOYMENT",  // UNRATE
 ];
+
+/* Keys for the "Indicateurs Complémentaires" section */
+const COMPLEMENTARY_FRED_KEYS = [
+  "RETAIL_SALES",        // RSAFS
+  "CONSUMER_SENTIMENT",  // UMCSENT
+  "HOUSING_STARTS",      // HOUST
+  "INITIAL_CLAIMS",      // ICSA
+  "ISM_MANUFACTURING",   // MANEMP
+  "M2_MONEY_SUPPLY",     // M2SL
+];
+
+const COMPLEMENTARY_SERIES_META: Record<string, { icon: string; description: string; goodDirection: "up" | "down" | "neutral" }> = {
+  RETAIL_SALES:       { icon: "cart",     description: "Dépenses des consommateurs US", goodDirection: "up" },
+  CONSUMER_SENTIMENT: { icon: "smile",    description: "Enquête Univ. du Michigan", goodDirection: "up" },
+  HOUSING_STARTS:     { icon: "home",     description: "Santé du marché immobilier", goodDirection: "up" },
+  INITIAL_CLAIMS:     { icon: "briefcase",description: "Marché du travail hebdo.", goodDirection: "down" },
+  ISM_MANUFACTURING:  { icon: "factory",  description: "Santé du secteur manufacturier", goodDirection: "up" },
+  M2_MONEY_SUPPLY:    { icon: "banknote", description: "Indicateur de liquidité", goodDirection: "up" },
+};
 
 /* ------------------------------------------------------------------ */
 /*  Hardcoded macro data for March 2026 (fallback)                     */
@@ -196,6 +221,7 @@ function InflationSparkline({ current, previous, target }: { current: number; pr
 export default function MacroPage() {
   const { t } = useTranslation();
   const [fredData, setFredData] = useState<FredSeriesData[]>([]);
+  const [complementaryData, setComplementaryData] = useState<FredSeriesData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -205,12 +231,16 @@ export default function MacroPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchMultipleFredSeries(MACRO_FRED_KEYS);
+      const [data, compData] = await Promise.all([
+        fetchMultipleFredSeries(MACRO_FRED_KEYS),
+        fetchMultipleFredSeries(COMPLEMENTARY_FRED_KEYS),
+      ]);
       if (data.length === 0) {
         setError(t("macroFredNoData"));
         setHasFredKey(false);
       } else {
         setFredData(data);
+        setComplementaryData(compData);
         setLastUpdated(new Date());
         setHasFredKey(true);
       }
@@ -878,6 +908,60 @@ export default function MacroPage() {
           </table>
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/*  SECTION 5b — Indicateurs Complémentaires                    */}
+      {/* ============================================================ */}
+      {complementaryData.length > 0 && (
+        <div className="glass rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Activity className="w-5 h-5 text-cyan-400" />
+            <h2 className="font-semibold text-[--text-primary]">{t("macroComplementaryIndicators")}</h2>
+            <span className="text-[9px] ml-2 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">FRED LIVE</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {complementaryData.map((s) => {
+              const meta = COMPLEMENTARY_SERIES_META[s.key];
+              const isGood = meta
+                ? meta.goodDirection === "up" ? s.change >= 0 : meta.goodDirection === "down" ? s.change <= 0 : true
+                : s.change >= 0;
+              const IconComp =
+                meta?.icon === "cart" ? ShoppingCart :
+                meta?.icon === "smile" ? Smile :
+                meta?.icon === "home" ? Home :
+                meta?.icon === "briefcase" ? Briefcase :
+                meta?.icon === "factory" ? Factory :
+                meta?.icon === "banknote" ? Banknote :
+                Activity;
+              return (
+                <div key={s.key} className="metric-card rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <IconComp className="w-4 h-4 text-cyan-400" />
+                      <span className="text-xs text-[--text-secondary] font-medium">{s.label}</span>
+                    </div>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[--bg-secondary] text-[--text-muted]">{s.frequency}</span>
+                  </div>
+                  {meta && (
+                    <p className="text-[10px] text-[--text-muted] mb-2">{meta.description}</p>
+                  )}
+                  <div className="flex items-end gap-2">
+                    <span className="text-xl font-bold mono text-[--text-primary]">{s.latest.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    <span className="text-xs text-[--text-muted]">{s.unit}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[10px] text-[--text-muted]">{t("macroPrev")} {s.previous.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    <div className={`flex items-center gap-1 text-xs ${isGood ? "text-emerald-400" : "text-rose-400"}`}>
+                      {s.change > 0 ? <ArrowUpRight className="w-3 h-3" /> : s.change < 0 ? <ArrowDownRight className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                      <span className="mono">{s.change >= 0 ? "+" : ""}{s.change.toFixed(2)} ({s.changePercent.toFixed(2)}%)</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ============================================================ */}
       {/*  SECTION 6 — FRED Data (live if available)                   */}

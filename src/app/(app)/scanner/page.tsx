@@ -127,6 +127,159 @@ function saveFavorites(favs: string[]) {
 
 // ─── Signal Strength Bars (1-5) ─────────────────────────────────────────────
 
+// ─── Social Sentiment Section ───────────────────────────────────────────────
+
+interface SocialSentimentEntry {
+  symbol: string;
+  reddit: { mention: number; positiveScore: number; negativeScore: number; score: number };
+  twitter: { mention: number; positiveScore: number; negativeScore: number; score: number };
+}
+
+function SocialSentimentSection() {
+  const [data, setData] = useState<SocialSentimentEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/market-data/social-sentiment");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!cancelled && Array.isArray(json.data)) {
+          setData(json.data);
+        }
+      } catch (e) {
+        console.error("[Social Sentiment] fetch error:", e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="glass rounded-xl p-5 animate-pulse" style={{ border: "1px solid var(--border)" }}>
+        <div className="h-5 rounded w-56 mb-4" style={{ background: "var(--bg-secondary)" }} />
+        <div className="grid grid-cols-5 gap-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-20 rounded-xl" style={{ background: "var(--bg-secondary)" }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (data.length === 0) return null;
+
+  // Sort by total mentions (reddit + twitter) descending, take top 5
+  const sorted = [...data].sort((a, b) => {
+    const aMentions = a.reddit.mention + a.twitter.mention;
+    const bMentions = b.reddit.mention + b.twitter.mention;
+    return bMentions - aMentions;
+  }).slice(0, 5);
+
+  const maxMentions = Math.max(...sorted.map((s) => s.reddit.mention + s.twitter.mention), 1);
+  const HIGH_BUZZ_THRESHOLD = maxMentions * 0.7;
+
+  return (
+    <div className="glass rounded-xl p-5" style={{ border: "1px solid var(--border)" }}>
+      <div className="flex items-center gap-2 mb-4">
+        <Activity size={18} className="text-violet-400" />
+        <h3 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
+          Sentiment Social (Reddit + Twitter)
+        </h3>
+        <span className="text-[10px] px-2 py-0.5 rounded-md bg-violet-500/15 text-violet-400 border border-violet-500/30 font-bold uppercase tracking-wider">
+          7j
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+        {sorted.map((entry) => {
+          const totalMentions = entry.reddit.mention + entry.twitter.mention;
+          const avgPositive = ((entry.reddit.positiveScore + entry.twitter.positiveScore) / 2);
+          const avgNegative = ((entry.reddit.negativeScore + entry.twitter.negativeScore) / 2);
+          const netScore = avgPositive - avgNegative;
+          const isHighBuzz = totalMentions >= HIGH_BUZZ_THRESHOLD;
+
+          // Trend: positive = up, negative = down
+          const trendUp = netScore > 0.02;
+          const trendDown = netScore < -0.02;
+
+          return (
+            <div
+              key={entry.symbol}
+              className="rounded-xl p-3 relative"
+              style={{
+                background: isHighBuzz ? "rgba(139,92,246,0.08)" : "var(--bg-secondary)",
+                border: isHighBuzz ? "1px solid rgba(139,92,246,0.3)" : "1px solid var(--border-subtle)",
+              }}
+            >
+              {/* Buzz badge */}
+              {isHighBuzz && (
+                <span className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0.5 rounded-md bg-orange-500/20 text-orange-400 border border-orange-500/30 font-bold">
+                  {"\uD83D\uDD25"} Buzz
+                </span>
+              )}
+
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>{entry.symbol}</span>
+                {trendUp && <TrendingUp size={14} style={{ color: "rgb(16,185,129)" }} />}
+                {trendDown && <TrendingDown size={14} style={{ color: "rgb(239,68,68)" }} />}
+                {!trendUp && !trendDown && <Minus size={14} style={{ color: "var(--text-muted)" }} />}
+              </div>
+
+              {/* Mention count */}
+              <div className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>
+                <span className="font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{totalMentions.toLocaleString()}</span> mentions
+              </div>
+
+              {/* Sentiment bar */}
+              <div className="flex items-center gap-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-primary)" }}>
+                <div
+                  className="h-full rounded-l-full"
+                  style={{
+                    width: `${(avgPositive / (avgPositive + avgNegative || 1)) * 100}%`,
+                    background: "rgb(16,185,129)",
+                    minWidth: "4px",
+                  }}
+                />
+                <div
+                  className="h-full rounded-r-full"
+                  style={{
+                    width: `${(avgNegative / (avgPositive + avgNegative || 1)) * 100}%`,
+                    background: "rgb(239,68,68)",
+                    minWidth: "4px",
+                  }}
+                />
+              </div>
+
+              {/* Scores */}
+              <div className="flex items-center justify-between mt-1.5 text-[10px]">
+                <span style={{ color: "rgb(16,185,129)" }}>+{(avgPositive * 100).toFixed(0)}%</span>
+                <span style={{ color: "rgb(239,68,68)" }}>-{(avgNegative * 100).toFixed(0)}%</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between mt-3 pt-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+        <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
+          <span className="flex items-center gap-1"><TrendingUp size={10} style={{ color: "rgb(16,185,129)" }} /> Positif</span>
+          <span className="flex items-center gap-1"><TrendingDown size={10} style={{ color: "rgb(239,68,68)" }} /> Négatif</span>
+          <span className="flex items-center gap-1">{"\uD83D\uDD25"} Buzz élevé</span>
+        </div>
+        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+          Source : Finnhub Social Sentiment
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function ScannerPage() {
@@ -1054,6 +1207,9 @@ export default function ScannerPage() {
           </button>
         </div>
       )}
+
+      {/* Social Sentiment (Reddit + Twitter) */}
+      <SocialSentimentSection />
 
       {/* Main table */}
       <div className="glass rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>

@@ -1724,6 +1724,7 @@
   "macroYieldCurve": "Courbe des taux",
   "macroYieldCurveLabel": "Courbe des taux",
   "macroYieldInversionDesc": "L'inversion de la courbe des taux signale un risque de récession",
+  "macroComplementaryIndicators": "Indicateurs complémentaires",
   "cannotLoadNews": "Impossible de charger les actualités",
   "cannotLoadNewsCheckConnection": "Vérifiez votre connexion internet",
   "clearFilters": "Effacer les filtres",

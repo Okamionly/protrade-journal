@@ -1724,6 +1724,7 @@
   "macroYieldCurve": "Yield Curve",
   "macroYieldCurveLabel": "Yield Curve",
   "macroYieldInversionDesc": "Yield curve inversion signals recession risk",
+  "macroComplementaryIndicators": "Complementary Indicators",
   "cannotLoadNews": "Cannot load news",
   "cannotLoadNewsCheckConnection": "Check your internet connection",
   "clearFilters": "Clear filters",
