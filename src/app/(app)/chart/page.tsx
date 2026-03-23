@@ -685,9 +685,27 @@ export default function ChartPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dualChart, setDualChart] = useState(false);
 
-  // Current symbol tracked from widget config
-  const [currentSymbol, setCurrentSymbol] = useState("FX:EURUSD");
-  const [mainInterval] = useState("60");
+  // Current symbol tracked from widget config — persisted in localStorage
+  const [currentSymbol, setCurrentSymbol] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("chart-symbol") || "FX:EURUSD";
+    }
+    return "FX:EURUSD";
+  });
+  const [mainInterval, setMainInterval] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("chart-interval") || "60";
+    }
+    return "60";
+  });
+
+  // Persist symbol and interval to localStorage
+  useEffect(() => {
+    localStorage.setItem("chart-symbol", currentSymbol);
+  }, [currentSymbol]);
+  useEffect(() => {
+    localStorage.setItem("chart-interval", mainInterval);
+  }, [mainInterval]);
 
   // Detect theme
   const [theme, setTheme] = useState<"dark" | "light">("dark");
