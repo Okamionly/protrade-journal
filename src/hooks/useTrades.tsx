@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
   useRef,
+  useMemo,
   createContext,
   useContext,
   type ReactNode,
@@ -166,18 +167,21 @@ export function TradesProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const value = useMemo(
+    () => ({
+      trades,
+      loading,
+      fetchTrades,
+      addTrade,
+      deleteTrade,
+      bulkDeleteTrades,
+      updateTrade,
+    }),
+    [trades, loading, fetchTrades, addTrade, deleteTrade, bulkDeleteTrades, updateTrade]
+  );
+
   return (
-    <TradesContext.Provider
-      value={{
-        trades,
-        loading,
-        fetchTrades,
-        addTrade,
-        deleteTrade,
-        bulkDeleteTrades,
-        updateTrade,
-      }}
-    >
+    <TradesContext.Provider value={value}>
       {children}
     </TradesContext.Provider>
   );

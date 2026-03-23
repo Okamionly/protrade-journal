@@ -426,18 +426,26 @@ function useLikes(currentUserId: string | null, messages: FeedMessage[]) {
   // Optimistic set for instant UI feedback before server confirms
   const [optimistic, setOptimistic] = useState<Record<string, boolean>>({});
 
+  // Use refs so callbacks stay stable and don't cause re-renders of all consumers
+  const likesRef = useRef(likes);
+  likesRef.current = likes;
+  const optimisticRef = useRef(optimistic);
+  optimisticRef.current = optimistic;
+  const currentUserIdRef = useRef(currentUserId);
+  currentUserIdRef.current = currentUserId;
+
   const isLiked = useCallback(
     (messageId: string) => {
-      if (messageId in optimistic) return optimistic[messageId];
-      return likes.has(messageId);
+      if (messageId in optimisticRef.current) return optimisticRef.current[messageId];
+      return likesRef.current.has(messageId);
     },
-    [likes, optimistic],
+    [],
   );
 
   const toggleLike = useCallback(
     async (messageId: string) => {
-      const wasLiked = likes.has(messageId);
-      const currentOptimistic = optimistic[messageId];
+      const wasLiked = likesRef.current.has(messageId);
+      const currentOptimistic = optimisticRef.current[messageId];
       const currentState = currentOptimistic !== undefined ? currentOptimistic : wasLiked;
 
       // Optimistic update
@@ -449,21 +457,12 @@ function useLikes(currentUserId: string | null, messages: FeedMessage[]) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messageId }),
         });
-        if (!res.ok) {
-          // Rollback on error
-          setOptimistic((prev) => {
-            const next = { ...prev };
-            delete next[messageId];
-            return next;
-          });
-        } else {
-          // Clear optimistic state — next messages refresh will have truth
-          setOptimistic((prev) => {
-            const next = { ...prev };
-            delete next[messageId];
-            return next;
-          });
-        }
+        // Clear optimistic state regardless — next messages refresh will have truth
+        setOptimistic((prev) => {
+          const next = { ...prev };
+          delete next[messageId];
+          return next;
+        });
       } catch {
         // Rollback on network error
         setOptimistic((prev) => {
@@ -473,16 +472,16 @@ function useLikes(currentUserId: string | null, messages: FeedMessage[]) {
         });
       }
     },
-    [likes, optimistic],
+    [],
   );
 
   const getLikeCount = useCallback(
     (msg: FeedMessage) => {
       const serverCount = msg.reactions?.filter((r) => r.emoji === "\u2764\uFE0F").length || 0;
       const wasLikedOnServer = msg.reactions?.some(
-        (r) => r.emoji === "\u2764\uFE0F" && r.userId === currentUserId,
+        (r) => r.emoji === "\u2764\uFE0F" && r.userId === currentUserIdRef.current,
       ) || false;
-      const optState = optimistic[msg.id];
+      const optState = optimisticRef.current[msg.id];
 
       if (optState === undefined) return serverCount;
       // Adjust count based on optimistic toggle
@@ -490,7 +489,7 @@ function useLikes(currentUserId: string | null, messages: FeedMessage[]) {
       if (!optState && wasLikedOnServer) return serverCount - 1;
       return serverCount;
     },
-    [currentUserId, optimistic],
+    [],
   );
 
   return { isLiked, toggleLike, getLikeCount };
@@ -2272,6 +2271,17 @@ export default function CommunityPage() {
     return extractTrendingFromMessages(messages);
   }, [messages]);
 
+  /* ─── Memoized badge map — avoids O(N^2) per render ─── */
+  const badgeMap = useMemo(() => {
+    const map = new Map<string, { emoji: string; label: string }[]>();
+    for (const msg of messages) {
+      if (!map.has(msg.userId)) {
+        map.set(msg.userId, getUserBadges(msg.user, messages));
+      }
+    }
+    return map;
+  }, [messages]);
+
   /* ─── Handle hashtag/trend click → filter feed ─── */
   const handleTrendClick = useCallback((topic: string) => {
     setSearchQuery(topic);
@@ -2731,7 +2741,7 @@ export default function CommunityPage() {
                       pollVoteData={getPollVoteData(msg.id)}
                       onPollVote={pollVote}
                       onHashtagClick={handleTrendClick}
-                      badges={getUserBadges(msg.user, messages)}
+                      badges={badgeMap.get(msg.userId) || []}
                       shareCount={getShareCount(msg.id)}
                       onShare={incrementShare}
                     />
@@ -2788,7 +2798,7 @@ export default function CommunityPage() {
                         pollVoteData={getPollVoteData(msg.id)}
                         onPollVote={pollVote}
                         onHashtagClick={handleTrendClick}
-                        badges={getUserBadges(msg.user, messages)}
+                        badges={badgeMap.get(msg.userId) || []}
                         shareCount={getShareCount(msg.id)}
                         onShare={incrementShare}
                       />

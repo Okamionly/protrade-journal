@@ -81,6 +81,10 @@ export function useChat(roomId: string) {
   const prevRoomId = useRef<string>(roomId);
 
   const fetchMessages = useCallback(async (isPolling = false) => {
+    if (!roomId) {
+      if (!isPolling) setLoading(false);
+      return;
+    }
     try {
       let url = `/api/chat/messages?roomId=${roomId}&limit=50`;
 
@@ -118,6 +122,7 @@ export function useChat(roomId: string) {
   }, [roomId]);
 
   useEffect(() => {
+    if (!roomId) return;
     if (prevRoomId.current !== roomId) {
       setMessages([]);
       setLoading(true);
@@ -128,13 +133,14 @@ export function useChat(roomId: string) {
   }, [roomId, fetchMessages]);
 
   useEffect(() => {
+    if (!roomId) return;
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         fetchMessages(true);
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [fetchMessages]);
+  }, [roomId, fetchMessages]);
 
   const sendMessage = useCallback(async (content: string, tradeId?: string, imageUrl?: string) => {
     setSending(true);

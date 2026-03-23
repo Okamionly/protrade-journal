@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTrades } from "@/hooks/useTrades";
 import { useTranslation } from "@/i18n/context";
 import {
@@ -106,10 +106,13 @@ function CircularGauge({ score, size = 140 }: { score: number; size?: number }) 
 
 export default function AICoachPage() {
   const { t } = useTranslation();
-  const DAYS = DAY_KEYS.map((k) => t(k));
-  const DAYS_SHORT = DAY_SHORT_KEYS.map((k) => t(k));
+  const DAYS = useMemo(() => DAY_KEYS.map((k) => t(k)), [t]);
+  const DAYS_SHORT = useMemo(() => DAY_SHORT_KEYS.map((k) => t(k)), [t]);
   const { trades, loading } = useTrades();
   const [isVip, setIsVip] = useState<boolean | null>(null);
+  // Keep stable ref to DAYS for use in useMemo closures without adding as dep
+  const daysRef = useRef(DAYS);
+  daysRef.current = DAYS;
 
   useEffect(() => {
     fetch("/api/user/role")
