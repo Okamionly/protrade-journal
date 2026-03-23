@@ -697,7 +697,7 @@ export default function CotPage() {
                     : "text-[--text-secondary] hover:text-[--text-primary] hover:bg-[--bg-hover] border border-[--border]"
                 }`}
               >
-                Legacy (Non-Comm / Comm)
+                Legacy (Non-Comm. / Comm.)
               </button>
               <button
                 onClick={() => setDetailTab("managed")}
@@ -707,7 +707,7 @@ export default function CotPage() {
                     : "text-[--text-secondary] hover:text-[--text-primary] hover:bg-[--bg-hover] border border-[--border]"
                 }`}
               >
-                Managed Money (Disaggregated)
+                Managed Money (Désagrégé)
               </button>
             </div>
 
@@ -740,13 +740,13 @@ export default function CotPage() {
               </div>
             ) : (
               <div className="glass rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-2">Managed Money — Disaggregated Report</h3>
+                <h3 className="text-lg font-semibold mb-2">Managed Money — Rapport Désagrégé</h3>
                 <p className="text-xs text-[--text-muted] mb-4">
                   Positions des fonds (Managed Money), producteurs, swap dealers et autres reportables. Source : CFTC Disaggregated.
                 </p>
                 {disaggData.length === 0 ? (
                   <p className="text-sm text-[--text-muted] py-4 text-center">
-                    Pas de données Disaggregated disponibles pour ce contrat.
+                    Pas de données désagrégées disponibles pour ce contrat.
                   </p>
                 ) : (
                   <div className="overflow-x-auto">

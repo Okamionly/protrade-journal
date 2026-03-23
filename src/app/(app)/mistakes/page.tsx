@@ -656,6 +656,55 @@ export default function MistakesPage() {
     };
   }, [detectedMistakes, trades, categories]);
 
+  // ---- Regret Map (Opportunity Cost) ----
+  const regretData = useMemo(() => {
+    if (!trades.length) return null;
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // For each winning trade with a TP, compute regret = max(0, tp - exit) * lots for LONG
+    // For SHORT: regret = max(0, exit - tp) * lots — but since TP < entry for shorts, we use:
+    // regret = max(0, exitPrice - tp) * lots for SHORT winners (exited above TP means no regret for shorts)
+    // Simplification: regret = max(0, |tp - exit|) * lots when trade didn't reach TP
+    const regretTrades = trades
+      .filter((t) => t.result > 0 && t.tp && t.exit !== null && t.exit !== undefined)
+      .map((t) => {
+        const dir = t.direction?.toLowerCase();
+        const isLong = dir === "buy" || dir === "long";
+        let regret = 0;
+        if (isLong) {
+          regret = Math.max(0, t.tp - (t.exit as number)) * t.lots;
+        } else {
+          regret = Math.max(0, (t.exit as number) - t.tp) * t.lots;
+        }
+        return { ...t, regret, mfeRatio: t.result > 0 && regret > 0 ? (regret + t.result) / t.result : 1 };
+      })
+      .filter((t) => t.regret > 0);
+
+    const recentRegret = regretTrades.filter((t) => new Date(t.date) >= thirtyDaysAgo);
+    const missedThisMonth = recentRegret.reduce((s, t) => s + t.regret, 0);
+
+    // Top 3 "regret trades": where potential was 3x+ the actual profit
+    const topRegret = [...regretTrades]
+      .filter((t) => t.mfeRatio >= 3)
+      .sort((a, b) => b.regret - a.regret)
+      .slice(0, 3);
+
+    // Estimate: if held 20% longer
+    const totalActualPnl = trades.reduce((s, t) => s + t.result, 0);
+    const extraIfHeldLonger = regretTrades.reduce((s, t) => s + t.regret * 0.2, 0);
+    const hypotheticalPnl = totalActualPnl + extraIfHeldLonger;
+
+    return {
+      missedThisMonth,
+      topRegret,
+      hypotheticalPnl,
+      totalActualPnl,
+      regretTradeCount: regretTrades.length,
+    };
+  }, [trades]);
+
   // ---- Chart refs ----
   const barChartRef = useRef<HTMLCanvasElement>(null);
   const barChartInstance = useRef<Chart | null>(null);
@@ -883,6 +932,88 @@ export default function MistakesPage() {
                 <span className="text-sm" style={{ color: "var(--text-primary)" }}>{aiInsights.recommendation}</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== REGRET MAP (Opportunity Cost) ====== */}
+      {regretData && regretData.regretTradeCount > 0 && (
+        <div className="glass rounded-2xl p-5 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.04]" style={{
+            background: "linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)",
+          }} />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(245,158,11,0.15)" }}>
+                <Target className="w-4.5 h-4.5 text-amber-400" />
+              </div>
+              <div>
+                <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Carte des Regrets
+                </span>
+                <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                  Cout d&apos;opportunite — ce que vous avez laisse sur la table
+                </p>
+              </div>
+            </div>
+
+            {/* Summary metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+              <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
+                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+                  Gains manques ce mois
+                </div>
+                <div className="text-xl font-bold mono text-amber-400">
+                  +{regretData.missedThisMonth.toFixed(2)}&euro;
+                </div>
+                <div className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
+                  sur {regretData.regretTradeCount} trade(s) gagnant(s) coupe(s) avant le TP
+                </div>
+              </div>
+              <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
+                <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+                  Si vous aviez tenu vos trades 20% plus longtemps
+                </div>
+                <div className="text-xl font-bold mono" style={{ color: regretData.hypotheticalPnl >= 0 ? "#10b981" : "#ef4444" }}>
+                  {regretData.hypotheticalPnl >= 0 ? "+" : ""}{regretData.hypotheticalPnl.toFixed(2)}&euro;
+                </div>
+                <div className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
+                  au lieu de {regretData.totalActualPnl >= 0 ? "+" : ""}{regretData.totalActualPnl.toFixed(2)}&euro; actuellement
+                </div>
+              </div>
+            </div>
+
+            {/* Top 3 regret trades */}
+            {regretData.topRegret.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "var(--text-primary)" }}>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-amber-400" />
+                  Top trades a fort regret
+                  <span className="text-[10px] font-normal" style={{ color: "var(--text-muted)" }}>
+                    (potentiel &ge; 3x le profit pris)
+                  </span>
+                </h4>
+                <div className="space-y-2">
+                  {regretData.topRegret.map((t, i) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg border border-amber-500/15 bg-amber-500/5 text-xs"
+                    >
+                      <span className="font-bold text-amber-400 w-5">{i + 1}.</span>
+                      <span className="font-medium" style={{ color: "var(--text-primary)" }}>{t.asset}</span>
+                      <span style={{ color: "var(--text-muted)" }}>
+                        {new Date(t.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+                      </span>
+                      <span className="text-emerald-400">+{t.result.toFixed(2)}&euro; pris</span>
+                      <span className="text-amber-400 font-semibold">+{t.regret.toFixed(2)}&euro; manque</span>
+                      <span style={{ color: "var(--text-muted)" }} className="ml-auto">
+                        x{t.mfeRatio.toFixed(1)} potentiel
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

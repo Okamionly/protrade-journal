@@ -789,6 +789,182 @@ function RecommendationsSection({
   );
 }
 
+// ------- Section: Chrono-Profile (Personal Trading Clock) -------
+
+function ChronoProfileSection({
+  hourlyStats,
+}: {
+  hourlyStats: ReturnType<typeof computeHourlyStats>;
+}) {
+  const filtered = useMemo(
+    () => hourlyStats.filter((h) => h.trades >= 3),
+    [hourlyStats]
+  );
+
+  const { goldenRanges, avoidRanges } = useMemo(() => {
+    if (filtered.length === 0) return { goldenRanges: "", avoidRanges: "" };
+    const profitable = filtered
+      .filter((h) => h.avgPnl > 0)
+      .sort((a, b) => b.avgPnl - a.avgPnl);
+    const losing = filtered
+      .filter((h) => h.avgPnl < 0)
+      .sort((a, b) => a.avgPnl - b.avgPnl);
+
+    const toRanges = (hours: typeof profitable) => {
+      if (hours.length === 0) return "—";
+      const sorted = [...hours].sort((a, b) => a.hour - b.hour);
+      const ranges: string[] = [];
+      let start = sorted[0].hour;
+      let end = start;
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i].hour === end + 1) {
+          end = sorted[i].hour;
+        } else {
+          ranges.push(start === end ? `${start}h` : `${start}h-${end + 1}h`);
+          start = sorted[i].hour;
+          end = start;
+        }
+      }
+      ranges.push(start === end ? `${start}h` : `${start}h-${end + 1}h`);
+      return ranges.slice(0, 3).join(", ");
+    };
+
+    return {
+      goldenRanges: toRanges(profitable.slice(0, 6)),
+      avoidRanges: toRanges(losing.slice(0, 6)),
+    };
+  }, [filtered]);
+
+  const maxAbsPnl = useMemo(() => {
+    let m = 0;
+    for (const h of filtered) m = Math.max(m, Math.abs(h.avgPnl));
+    return m || 1;
+  }, [filtered]);
+
+  if (filtered.length < 3) return null;
+
+  const cx = 130;
+  const cy = 130;
+  const outerR = 110;
+  const innerR = 55;
+  const size = 260;
+
+  return (
+    <div className="glass rounded-2xl p-6">
+      <h3 className="text-sm font-semibold text-[--text-primary] mb-1 flex items-center gap-2">
+        <Clock className="w-4 h-4 text-cyan-400" />
+        Chrono-Profil Personnel
+      </h3>
+      <p className="text-xs text-[--text-muted] mb-4">
+        Votre horloge de trading — chaque heure coloree selon votre P&L moyen (vert = profitable, rouge = deficitaire).
+      </p>
+
+      <div className="flex flex-col items-center">
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          className="max-w-[260px]"
+        >
+          {/* Hour segments */}
+          {Array.from({ length: 24 }, (_, hour) => {
+            const stats = filtered.find((h) => h.hour === hour);
+            if (!stats) return null;
+
+            const startAngle = ((hour - 6) / 24) * Math.PI * 2 - Math.PI / 2;
+            const endAngle = ((hour - 6 + 1) / 24) * Math.PI * 2 - Math.PI / 2;
+            const intensity = Math.abs(stats.avgPnl) / maxAbsPnl;
+            const opacity = 0.2 + intensity * 0.7;
+            const color = stats.avgPnl >= 0 ? "#10b981" : "#ef4444";
+
+            const x1o = cx + outerR * Math.cos(startAngle);
+            const y1o = cy + outerR * Math.sin(startAngle);
+            const x2o = cx + outerR * Math.cos(endAngle);
+            const y2o = cy + outerR * Math.sin(endAngle);
+            const x1i = cx + innerR * Math.cos(endAngle);
+            const y1i = cy + innerR * Math.sin(endAngle);
+            const x2i = cx + innerR * Math.cos(startAngle);
+            const y2i = cy + innerR * Math.sin(startAngle);
+
+            const d = [
+              `M ${x1o} ${y1o}`,
+              `A ${outerR} ${outerR} 0 0 1 ${x2o} ${y2o}`,
+              `L ${x1i} ${y1i}`,
+              `A ${innerR} ${innerR} 0 0 0 ${x2i} ${y2i}`,
+              "Z",
+            ].join(" ");
+
+            // Hour label position
+            const midAngle = (startAngle + endAngle) / 2;
+            const labelR = outerR + 12;
+            const lx = cx + labelR * Math.cos(midAngle);
+            const ly = cy + labelR * Math.sin(midAngle);
+
+            return (
+              <g key={hour}>
+                <path
+                  d={d}
+                  fill={color}
+                  opacity={opacity}
+                  stroke="var(--bg-card-solid)"
+                  strokeWidth={1}
+                >
+                  <title>
+                    {hour}h — P&L moy: {stats.avgPnl >= 0 ? "+" : ""}
+                    {stats.avgPnl.toFixed(2)} ({stats.trades} trades)
+                  </title>
+                </path>
+                <text
+                  x={lx}
+                  y={ly}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill="currentColor"
+                  fillOpacity={0.35}
+                  fontSize={8}
+                >
+                  {hour}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Center text */}
+          <circle cx={cx} cy={cy} r={innerR - 4} fill="var(--bg-card-solid)" opacity={0.85} />
+          <text x={cx} y={cy - 10} textAnchor="middle" fill="currentColor" fillOpacity={0.7} fontSize={9} fontWeight="600">
+            Vos heures d&apos;or
+          </text>
+          <text x={cx} y={cy + 4} textAnchor="middle" fill="#10b981" fontSize={10} fontWeight="700">
+            {goldenRanges}
+          </text>
+          <text x={cx} y={cy + 20} textAnchor="middle" fill="currentColor" fillOpacity={0.4} fontSize={8}>
+            UTC
+          </text>
+        </svg>
+
+        {/* Legend below */}
+        <div className="mt-3 space-y-1.5 text-center">
+          {goldenRanges !== "—" && (
+            <div className="flex items-center justify-center gap-2 text-xs">
+              <div className="w-3 h-3 rounded-sm bg-emerald-500 opacity-70" />
+              <span className="text-emerald-400 font-medium">Heures d&apos;or : {goldenRanges}</span>
+            </div>
+          )}
+          {avoidRanges !== "—" && (
+            <div className="flex items-center justify-center gap-2 text-xs">
+              <div className="w-3 h-3 rounded-sm bg-rose-500 opacity-70" />
+              <span className="text-rose-400 font-medium">Heures a eviter : {avoidRanges}</span>
+            </div>
+          )}
+          <p className="text-[10px] text-[--text-muted] mt-1">
+            Seules les heures avec 3+ trades sont affichees
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ------- Main page -------
 
 export default function SessionsPage() {
@@ -977,6 +1153,9 @@ export default function SessionsPage() {
           </table>
         </div>
       </div>
+
+      {/* Chrono-Profile */}
+      <ChronoProfileSection hourlyStats={hourlyStats} />
 
       {/* 2. Hourly P&L Heatmap */}
       <HeatmapSection

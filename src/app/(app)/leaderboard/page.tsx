@@ -62,7 +62,7 @@ function formatMetric(value: number, metric: Metric): string {
     case "trades":
       return `${value}`;
     case "streak":
-      return `${value} wins`;
+      return `${value} victoires`;
   }
 }
 
@@ -486,7 +486,7 @@ export default function LeaderboardPage() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 period === p.value
                   ? "bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/10"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-[var(--bg-secondary)]"
+                  : "text-[--text-muted] hover:text-[--text-primary] hover:bg-[var(--bg-secondary)]"
               }`}
             >
               {p.label}
@@ -505,7 +505,7 @@ export default function LeaderboardPage() {
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                   metric === m.value
                     ? "bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/10"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-[var(--bg-secondary)]"
+                    : "text-[--text-muted] hover:text-[--text-primary] hover:bg-[var(--bg-secondary)]"
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />

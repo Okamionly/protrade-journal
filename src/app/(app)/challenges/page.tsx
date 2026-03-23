@@ -6,7 +6,7 @@ import {
   TrendingUp, Clock, Crosshair, BarChart3,
   Crown, Gem, Sunrise, Sparkles, Ban,
   Timer, CheckCircle2, Check, Gift, Loader2,
-  Calendar, Medal, Users, ChevronUp, Diamond,
+  Calendar, Medal, Users, ChevronUp, Diamond, History,
 } from "lucide-react";
 
 /* ─── types ────────────────────────────────────────────── */
@@ -92,6 +92,24 @@ function getSeasonDaysElapsed(): number {
 
 function getSeasonDaysRemaining(): number {
   return SEASON_CONFIG.totalDays - getSeasonDaysElapsed();
+}
+
+/* ─── season rewards ──────────────────────────────────── */
+
+const SEASON_REWARDS: { rankId: string; badge: string; titre: string; extras: string[] }[] = [
+  { rankId: "bronze",  badge: "Saison 1 Bronze",  titre: "Survivant",  extras: [] },
+  { rankId: "argent",  badge: "Saison 1 Argent",  titre: "Combattant", extras: ["Accès replay prioritaire"] },
+  { rankId: "or",      badge: "Saison 1 Or",      titre: "Expert",     extras: ["Badge doré dans le chat"] },
+  { rankId: "platine", badge: "Saison 1 Platine", titre: "Maître",     extras: ["Profil mis en avant"] },
+  { rankId: "diamant", badge: "Saison 1 Diamant", titre: "Légende",    extras: ["Mention dans le leaderboard permanent"] },
+];
+
+/* ─── difficulty helper ───────────────────────────────── */
+
+function getDifficulty(xp: number): { level: 1 | 2 | 3; label: string } {
+  if (xp <= 30) return { level: 1, label: "Facile" };
+  if (xp <= 50) return { level: 2, label: "Moyen" };
+  return { level: 3, label: "Difficile" };
 }
 
 /* ─── mock leaderboard ────────────────────────────────── */
@@ -630,6 +648,88 @@ export default function ChallengesPage() {
         </div>
       </div>
 
+      {/* ─── Season Rewards Preview ─────────────────────────── */}
+      <div>
+        <h2 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+          <Gift size={16} className="text-amber-500" />
+          Récompenses de Saison
+        </h2>
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {SEASON_REWARDS.map((rw) => {
+            const rank = SEASON_RANKS.find((r) => r.id === rw.rankId)!;
+            const isCurrentRank = seasonData.rank.id === rw.rankId;
+            return (
+              <div
+                key={rw.rankId}
+                className={`flex-shrink-0 w-48 glass rounded-xl p-4 transition-all ${isCurrentRank ? "scale-[1.03] ring-1" : "opacity-70"}`}
+                style={{
+                  border: `1px solid ${isCurrentRank ? rank.color + "60" : "var(--border)"}`,
+                  ...(isCurrentRank ? { boxShadow: `0 0 12px ${rank.color}20`, ringColor: rank.color + "40" } : {}),
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2" style={{ color: rank.color }}>
+                  {getSeasonRankIcon(rank.id, 18)}
+                  <span className="text-xs font-bold">{rank.name}</span>
+                </div>
+                <p className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
+                  Badge &quot;{rw.badge}&quot;
+                </p>
+                <p className="text-[11px] mb-1" style={{ color: "var(--text-muted)" }}>
+                  Titre : <strong style={{ color: rank.color }}>{rw.titre}</strong>
+                </p>
+                {rw.extras.map((ex, i) => (
+                  <p key={i} className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                    + {ex}
+                  </p>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ─── Season History ───────────────────────────────────── */}
+      <div className="glass rounded-2xl p-5" style={{ border: "1px solid var(--border)" }}>
+        <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+          <History size={16} className="text-cyan-400" />
+          Historique des Saisons
+        </h2>
+        <div className="space-y-3">
+          {/* Current season */}
+          <div
+            className="flex items-center justify-between gap-4 p-3 rounded-xl"
+            style={{ backgroundColor: `${seasonData.rank.color}08`, border: `1px solid ${seasonData.rank.color}20` }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center" style={{ color: seasonData.rank.color }}>
+                {getSeasonRankIcon(seasonData.rank.id, 20)}
+              </div>
+              <div>
+                <p className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>
+                  Saison 1 — Printemps 2026
+                  <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: "rgba(16,185,129,0.1)", color: "#10b981" }}>
+                    en cours
+                  </span>
+                </p>
+                <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                  Rang {seasonData.rank.name} · {seasonData.seasonXp.toLocaleString()} XP · {seasonData.challengesCompleted} challenges
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* Future season placeholder */}
+          <div
+            className="flex items-center gap-3 p-3 rounded-xl opacity-40"
+            style={{ border: "1px dashed var(--border)" }}
+          >
+            <Lock size={16} style={{ color: "var(--text-muted)" }} />
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              Saison 2 — Été 2026 (à venir)
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Completed Badges Row */}
       {completedChallenges.length > 0 && (
         <div>
@@ -844,15 +944,26 @@ export default function ChallengesPage() {
                     <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
                       {c.title}
                     </h3>
-                    <span
-                      className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                      style={{
-                        backgroundColor: `${c.color}15`,
-                        color: c.color,
-                      }}
-                    >
-                      {c.category === "daily" ? "Quotidien" : c.category === "weekly" ? "Hebdomadaire" : c.category === "monthly" ? "Mensuel" : "Spécial"}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                        style={{
+                          backgroundColor: `${c.color}15`,
+                          color: c.color,
+                        }}
+                      >
+                        {c.category === "daily" ? "Quotidien" : c.category === "weekly" ? "Hebdomadaire" : c.category === "monthly" ? "Mensuel" : "Spécial"}
+                      </span>
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                        style={{
+                          backgroundColor: getDifficulty(c.reward.xp).level === 1 ? "rgba(16,185,129,0.12)" : getDifficulty(c.reward.xp).level === 2 ? "rgba(245,158,11,0.12)" : "rgba(239,68,68,0.12)",
+                          color: getDifficulty(c.reward.xp).level === 1 ? "#10b981" : getDifficulty(c.reward.xp).level === 2 ? "#f59e0b" : "#ef4444",
+                        }}
+                      >
+                        {"★".repeat(getDifficulty(c.reward.xp).level)} {getDifficulty(c.reward.xp).label}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 {done && (
