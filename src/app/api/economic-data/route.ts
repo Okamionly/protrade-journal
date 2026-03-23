@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { canMakeRequest, recordRequest } from "@/lib/alphaVantageRateLimit";
 
 /* ------------------------------------------------------------------ */
-/*  Alpha Vantage — Indicateurs économiques US (fallback FRED)         */
+/*  Alpha Vantage — Indicateurs economiques US                         */
 /* ------------------------------------------------------------------ */
 
 const API_KEY = process.env.ALPHA_VANTAGE_API_KEY || "demo";
 const BASE = "https://www.alphavantage.co/query";
 
-// Cache en mémoire — 1 heure (les données économiques changent rarement)
+// Cache en memoire — 6 heures
 const cache = new Map<string, { data: NormalizedIndicator[]; ts: number }>();
-const CACHE_TTL = 60 * 60 * 1000; // 1h
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6h
 
 /* ---------- types ---------- */
 
@@ -25,7 +26,7 @@ export interface NormalizedIndicator {
   changePercent: number | null;
 }
 
-/* ---------- mapping indicateur → fonction Alpha Vantage ---------- */
+/* ---------- mapping indicateur -> fonction Alpha Vantage ---------- */
 
 interface AVConfig {
   fn: string;
@@ -36,69 +37,27 @@ interface AVConfig {
 }
 
 const INDICATOR_MAP: Record<string, AVConfig> = {
-  GDP: {
-    fn: "REAL_GDP",
-    name: "PIB réel US",
-    unit: "Mrd $",
-    dataKey: "data",
-  },
-  CPI: {
-    fn: "CPI",
-    name: "Indice des prix (CPI)",
-    unit: "Index",
-    dataKey: "data",
-  },
-  INFLATION: {
-    fn: "INFLATION",
-    name: "Taux d'inflation annuel",
-    unit: "%",
-    dataKey: "data",
-  },
-  UNEMPLOYMENT: {
-    fn: "UNEMPLOYMENT",
-    name: "Taux de chômage",
-    unit: "%",
-    dataKey: "data",
-  },
-  TREASURY_10Y: {
-    fn: "TREASURY_YIELD",
-    params: "&maturity=10year",
-    name: "Rendement Trésor 10 ans",
-    unit: "%",
-    dataKey: "data",
-  },
-  TREASURY_2Y: {
-    fn: "TREASURY_YIELD",
-    params: "&maturity=2year",
-    name: "Rendement Trésor 2 ans",
-    unit: "%",
-    dataKey: "data",
-  },
-  FED_RATE: {
-    fn: "FEDERAL_FUNDS_RATE",
-    name: "Taux directeur Fed",
-    unit: "%",
-    dataKey: "data",
-  },
-  RETAIL: {
-    fn: "RETAIL_SALES",
-    name: "Ventes au détail",
-    unit: "M $",
-    dataKey: "data",
-  },
-  NONFARM: {
-    fn: "NONFARM_PAYROLL",
-    name: "Emplois non-agricoles",
-    unit: "Milliers",
-    dataKey: "data",
-  },
+  GDP: { fn: "REAL_GDP", name: "PIB r\u00e9el US", unit: "Mrd $", dataKey: "data" },
+  CPI: { fn: "CPI", name: "Indice des prix (CPI)", unit: "Index", dataKey: "data" },
+  INFLATION: { fn: "INFLATION", name: "Taux d'inflation annuel", unit: "%", dataKey: "data" },
+  UNEMPLOYMENT: { fn: "UNEMPLOYMENT", name: "Taux de ch\u00f4mage", unit: "%", dataKey: "data" },
+  TREASURY_10Y: { fn: "TREASURY_YIELD", params: "&maturity=10year", name: "Rendement Tr\u00e9sor 10 ans", unit: "%", dataKey: "data" },
+  TREASURY_2Y: { fn: "TREASURY_YIELD", params: "&maturity=2year", name: "Rendement Tr\u00e9sor 2 ans", unit: "%", dataKey: "data" },
+  FED_RATE: { fn: "FEDERAL_FUNDS_RATE", name: "Taux directeur Fed", unit: "%", dataKey: "data" },
+  RETAIL: { fn: "RETAIL_SALES", name: "Ventes au d\u00e9tail", unit: "M $", dataKey: "data" },
+  NONFARM: { fn: "NONFARM_PAYROLL", name: "Emplois non-agricoles", unit: "Milliers", dataKey: "data" },
 };
+
+/* ---------- No hardcoded fallback data ---------- */
 
 /* ---------- fetcher unitaire ---------- */
 
 async function fetchIndicator(key: string): Promise<NormalizedIndicator | null> {
   const cfg = INDICATOR_MAP[key];
   if (!cfg) return null;
+
+  if (!canMakeRequest()) return null;
+  recordRequest();
 
   const url = `${BASE}?function=${cfg.fn}${cfg.params ?? ""}&apikey=${API_KEY}`;
 
@@ -108,11 +67,14 @@ async function fetchIndicator(key: string): Promise<NormalizedIndicator | null> 
 
     const json = await res.json();
 
-    // Alpha Vantage renvoie les données dans un tableau "data"
+    // Check for rate limit
+    if (json["Note"] || json["Error Message"] || json["Information"]) {
+      return null;
+    }
+
     const entries: { date: string; value: string }[] = json[cfg.dataKey];
     if (!Array.isArray(entries) || entries.length === 0) return null;
 
-    // Les données sont triées du plus récent au plus ancien
     const latest = entries[0];
     const previous = entries.length > 1 ? entries[1] : null;
 
@@ -148,12 +110,11 @@ async function fetchIndicator(key: string): Promise<NormalizedIndicator | null> 
 export async function GET(req: NextRequest) {
   const indicatorsParam = req.nextUrl.searchParams.get("indicators");
 
-  // Parse les indicateurs demandés (virgule-séparés) ou renvoyer tout
   const requestedKeys = indicatorsParam
     ? indicatorsParam.split(",").map((s) => s.trim().toUpperCase())
     : Object.keys(INDICATOR_MAP);
 
-  // Vérifier le cache
+  // Check cache
   const cacheKey = requestedKeys.sort().join(",");
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.ts < CACHE_TTL) {
@@ -165,26 +126,42 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Fetch en parallèle
-  const results = await Promise.allSettled(
-    requestedKeys.map((key) => fetchIndicator(key))
-  );
-
-  const data: NormalizedIndicator[] = results
-    .map((r) => (r.status === "fulfilled" ? r.value : null))
-    .filter((d): d is NormalizedIndicator => d !== null);
-
-  if (data.length === 0) {
+  // If rate limited, return cached or unavailable
+  if (!canMakeRequest()) {
+    if (cached) {
+      return NextResponse.json({
+        data: cached.data,
+        _source: "alpha_vantage",
+        _cached: true,
+        _cachedAt: new Date(cached.ts).toISOString(),
+        _rateLimited: true,
+      });
+    }
     return NextResponse.json(
-      {
-        error: "Impossible de récupérer les indicateurs économiques depuis Alpha Vantage",
-        _note: "Vérifiez ALPHA_VANTAGE_API_KEY dans vos variables d'environnement",
-      },
+      { error: "Données indisponibles", data: [], _source: "unavailable" },
       { status: 503 }
     );
   }
 
-  // Mise en cache
+  // Fetch sequentially to respect rate limits
+  const data: NormalizedIndicator[] = [];
+
+  for (const key of requestedKeys) {
+    const result = await fetchIndicator(key);
+    if (result) {
+      data.push(result);
+    }
+    // Skip failed indicators — no fake data
+  }
+
+  if (data.length === 0) {
+    return NextResponse.json(
+      { error: "Données indisponibles", data: [], _source: "unavailable" },
+      { status: 503 }
+    );
+  }
+
+  // Cache result
   cache.set(cacheKey, { data, ts: Date.now() });
 
   return NextResponse.json({

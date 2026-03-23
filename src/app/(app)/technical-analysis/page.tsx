@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   RefreshCw,
   Activity,
@@ -59,6 +59,106 @@ const ASSETS = [
   { value: "NAS100", label: "NAS100" },
   { value: "BTCUSD", label: "BTC/USD" },
 ];
+
+// Map internal symbol to TradingView symbol
+const TV_SYMBOL_MAP: Record<string, string> = {
+  EURUSD: "FX:EURUSD",
+  GBPUSD: "FX:GBPUSD",
+  USDJPY: "FX:USDJPY",
+  XAUUSD: "OANDA:XAUUSD",
+  US30: "TVC:DJI",
+  NAS100: "NASDAQ:NDX",
+  BTCUSD: "COINBASE:BTCUSD",
+};
+
+// TradingView studies corresponding to our indicators
+const TV_STUDIES = [
+  "RSI@tv-basicstudies",
+  "MACD@tv-basicstudies",
+  "MASimple@tv-basicstudies",
+  "BB@tv-basicstudies",
+  "Stochastic@tv-basicstudies",
+];
+
+function detectTheme(): "dark" | "light" {
+  if (typeof window === "undefined") return "dark";
+  const cls = document.documentElement.classList;
+  if (cls.contains("light")) return "light";
+  const stored = localStorage.getItem("theme");
+  if (stored === "light") return "light";
+  return "dark";
+}
+
+// ---------------------------------------------------------------------------
+// TradingView Chart for TA page
+// ---------------------------------------------------------------------------
+function TAChart({ symbol }: { symbol: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    const update = () => setTheme(detectTheme());
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    container.innerHTML = "";
+
+    const tvSymbol = TV_SYMBOL_MAP[symbol] || `FX:${symbol}`;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "tradingview-widget-container";
+    wrapper.style.cssText = "height:100%;width:100%";
+    const inner = document.createElement("div");
+    inner.className = "tradingview-widget-container__widget";
+    inner.style.cssText = "height:100%;width:100%";
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      autosize: true,
+      symbol: tvSymbol,
+      interval: "D",
+      timezone: "Europe/Paris",
+      theme,
+      style: "1",
+      locale: "fr",
+      allow_symbol_change: false,
+      hide_top_toolbar: false,
+      hide_side_toolbar: false,
+      withdateranges: true,
+      save_image: false,
+      details: false,
+      hotlist: false,
+      calendar: false,
+      studies: TV_STUDIES,
+      show_popup_button: false,
+      support_host: "https://www.tradingview.com",
+    });
+    wrapper.appendChild(inner);
+    wrapper.appendChild(script);
+    container.appendChild(wrapper);
+
+    return () => {
+      container.innerHTML = "";
+    };
+  }, [symbol, theme]);
+
+  return (
+    <div className="rounded-2xl border border-gray-800/50 overflow-hidden bg-gray-950/60 backdrop-blur-xl shadow-xl">
+      <div
+        ref={containerRef}
+        style={{ width: "100%", height: 500 }}
+      />
+    </div>
+  );
+}
 
 const SIGNAL_COLORS: Record<string, string> = {
   bullish: "text-emerald-400",
@@ -1011,6 +1111,9 @@ export default function TechnicalAnalysisPage() {
           </div>
         </div>
       )}
+
+      {/* TradingView Chart */}
+      <TAChart symbol={symbol} />
 
       {/* Content */}
       {data && (

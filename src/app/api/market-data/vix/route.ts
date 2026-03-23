@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 /*  Priority order:                                                     */
 /*    1. CBOE VIX CSV (free, official, no key needed)                  */
 /*    2. Yahoo Finance (unreliable, rate-limited)                      */
-/*    3. Mock / static fallback with "mock" flag                       */
+/*    3. Returns unavailable status when all sources fail              */
 /*                                                                      */
 /*  - 10-minute in-memory cache                                         */
 /*  - Returns VIX + SPY current + 30-day history                       */
@@ -38,7 +38,7 @@ interface VixApiResponse {
     symbol: string;
   }[];
   fetchedAt: string;
-  source: "cboe" | "yahoo" | "mock";
+  source: "cboe" | "yahoo" | "unavailable";
   sourceDetails: string;
 }
 
@@ -269,52 +269,32 @@ async function getSpyFromYahoo(): Promise<VixApiResponse["spy"] | null> {
 }
 
 /* ================================================================== */
-/*  Mock / fallback data (used when all sources fail)                 */
+/*  Unavailable response (used when all sources fail)                 */
 /* ================================================================== */
 
-function getMockData(): VixApiResponse {
-  const now = new Date();
-  const dates: string[] = [];
-  const vixHistory: number[] = [];
-  const spyHistory: number[] = [];
-
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    // Skip weekends
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
-    dates.push(d.toISOString().slice(0, 10));
-    vixHistory.push(18.2 + Math.sin(i * 0.3) * 3 + Math.random() * 1.5);
-    spyHistory.push(580 + Math.cos(i * 0.2) * 8 + Math.random() * 3);
-  }
-
-  const vixCurrent = vixHistory[vixHistory.length - 1];
-  const vixPrev = vixHistory[vixHistory.length - 2] || vixCurrent;
-  const spyCurrent = spyHistory[spyHistory.length - 1];
-  const spyPrev = spyHistory[spyHistory.length - 2] || spyCurrent;
-
+function getUnavailableResponse(): VixApiResponse {
   return {
     vix: {
-      current: Math.round(vixCurrent * 100) / 100,
-      previousClose: Math.round(vixPrev * 100) / 100,
-      changePct: Math.round(((vixCurrent - vixPrev) / vixPrev) * 10000) / 100,
-      high: Math.round((vixCurrent + 0.5) * 100) / 100,
-      low: Math.round((vixCurrent - 0.5) * 100) / 100,
-      open: Math.round(vixPrev * 100) / 100,
-      history: vixHistory.map(v => Math.round(v * 100) / 100),
-      dates,
+      current: 0,
+      previousClose: 0,
+      changePct: 0,
+      high: 0,
+      low: 0,
+      open: 0,
+      history: [],
+      dates: [],
     },
     spy: {
-      current: Math.round(spyCurrent * 100) / 100,
-      previousClose: Math.round(spyPrev * 100) / 100,
-      changePct: Math.round(((spyCurrent - spyPrev) / spyPrev) * 10000) / 100,
-      history: spyHistory.map(v => Math.round(v * 100) / 100),
-      dates,
+      current: 0,
+      previousClose: 0,
+      changePct: 0,
+      history: [],
+      dates: [],
     },
-    termStructure: getMockTermStructure(vixCurrent),
-    fetchedAt: now.toISOString(),
-    source: "mock",
-    sourceDetails: "Static mock data (all sources failed)",
+    termStructure: [],
+    fetchedAt: new Date().toISOString(),
+    source: "unavailable" as VixApiResponse["source"],
+    sourceDetails: "Données indisponibles — toutes les sources ont échoué",
   };
 }
 
@@ -352,10 +332,6 @@ function estimateTermStructure(spotVix: number): VixApiResponse["termStructure"]
       symbol: m.symbol,
     };
   });
-}
-
-function getMockTermStructure(spotVix: number) {
-  return estimateTermStructure(spotVix);
 }
 
 /* ================================================================== */
@@ -417,24 +393,27 @@ export async function GET() {
         };
       }
     } catch {
-      // Continue to mock
+      // Continue to unavailable
     }
   }
 
-  /* ---- Source 3: Mock fallback ---- */
+  /* ---- Source 3: Unavailable (no fake data) ---- */
   if (!response) {
-    response = getMockData();
+    response = getUnavailableResponse();
   }
 
-  // Cache real data for longer, mock data for less
-  const isMock = response.source === "mock";
-  cache = { data: response, timestamp: Date.now() };
+  // Cache real data; don't cache unavailable responses
+  const isUnavailable = response.source === ("unavailable" as string);
+  if (!isUnavailable) {
+    cache = { data: response, timestamp: Date.now() };
+  }
 
   return NextResponse.json(response, {
+    status: isUnavailable ? 503 : 200,
     headers: {
       "X-Cache": "MISS",
       "X-Source": response.source,
-      "Cache-Control": isMock ? "public, max-age=60" : "public, max-age=600",
+      "Cache-Control": isUnavailable ? "no-cache" : "public, max-age=600",
     },
   });
 }

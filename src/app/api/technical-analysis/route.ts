@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { canMakeRequest, recordRequest } from "@/lib/alphaVantageRateLimit";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,13 +31,17 @@ interface CachedData {
 }
 
 // ---------------------------------------------------------------------------
-// In-memory cache (30 min per symbol)
+// In-memory cache (6 hours per symbol)
 // ---------------------------------------------------------------------------
 const cache = new Map<string, CachedData>();
-const CACHE_TTL = 30 * 60 * 1000;
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 
 const API_KEY = process.env.ALPHA_VANTAGE_API_KEY || "demo";
 const BASE_URL = "https://www.alphavantage.co/query";
+
+// ---------------------------------------------------------------------------
+// No hardcoded fallback data — return error when API unavailable
+// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Alpha Vantage fetcher helpers
@@ -47,6 +52,9 @@ async function fetchIndicator(
   symbol: string,
   extra: Record<string, string> = {}
 ): Promise<Record<string, unknown> | null> {
+  if (!canMakeRequest()) return null;
+  recordRequest();
+
   const params = new URLSearchParams({
     function: fn,
     symbol,
@@ -58,7 +66,7 @@ async function fetchIndicator(
 
   try {
     const res = await fetch(`${BASE_URL}?${params}`, {
-      next: { revalidate: 1800 },
+      next: { revalidate: 21600 }, // 6 hours
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -77,7 +85,6 @@ function getLatestValue(
   metaKey: string
 ): Record<string, string> | null {
   if (!data) return null;
-  // Find the "Technical Analysis: XXX" key
   const analysisKey = Object.keys(data).find(
     (k) => k.startsWith("Technical Analysis") || k === metaKey
   );
@@ -110,10 +117,10 @@ function getLatestTwoValues(
 // Parse individual indicators
 // ---------------------------------------------------------------------------
 
-async function parseRSI(symbol: string): Promise<IndicatorResult> {
+async function parseRSI(symbol: string): Promise<IndicatorResult | null> {
   const data = await fetchIndicator("RSI", symbol, { time_period: "14" });
   const latest = getLatestValue(data, "Technical Analysis: RSI");
-  if (!latest) return { value: 0, signal: "neutral" };
+  if (!latest) return null;
 
   const val = parseFloat(latest["RSI"]);
   let signal = "neutral";
@@ -125,10 +132,10 @@ async function parseRSI(symbol: string): Promise<IndicatorResult> {
   return { value: Math.round(val * 100) / 100, signal };
 }
 
-async function parseMACD(symbol: string): Promise<IndicatorResult> {
+async function parseMACD(symbol: string): Promise<IndicatorResult | null> {
   const data = await fetchIndicator("MACD", symbol);
   const [latest, prev] = getLatestTwoValues(data, "Technical Analysis: MACD");
-  if (!latest) return { macd: 0, macdSignal: 0, histogram: 0, signal: "neutral" };
+  if (!latest) return null;
 
   const macd = parseFloat(latest["MACD"]);
   const sig = parseFloat(latest["MACD_Signal"]);
@@ -155,7 +162,7 @@ async function parseMACD(symbol: string): Promise<IndicatorResult> {
   };
 }
 
-async function parseSMA(symbol: string): Promise<IndicatorResult> {
+async function parseSMA(symbol: string): Promise<IndicatorResult | null> {
   const [data20, data50] = await Promise.all([
     fetchIndicator("SMA", symbol, { time_period: "20" }),
     fetchIndicator("SMA", symbol, { time_period: "50" }),
@@ -164,7 +171,7 @@ async function parseSMA(symbol: string): Promise<IndicatorResult> {
   const v20 = getLatestValue(data20, "Technical Analysis: SMA");
   const v50 = getLatestValue(data50, "Technical Analysis: SMA");
 
-  if (!v20 || !v50) return { sma20: 0, sma50: 0, signal: "neutral" };
+  if (!v20 || !v50) return null;
 
   const sma20 = parseFloat(v20["SMA"]);
   const sma50 = parseFloat(v50["SMA"]);
@@ -177,7 +184,7 @@ async function parseSMA(symbol: string): Promise<IndicatorResult> {
   };
 }
 
-async function parseEMA(symbol: string): Promise<IndicatorResult> {
+async function parseEMA(symbol: string): Promise<IndicatorResult | null> {
   const [data20, data50] = await Promise.all([
     fetchIndicator("EMA", symbol, { time_period: "20" }),
     fetchIndicator("EMA", symbol, { time_period: "50" }),
@@ -186,7 +193,7 @@ async function parseEMA(symbol: string): Promise<IndicatorResult> {
   const v20 = getLatestValue(data20, "Technical Analysis: EMA");
   const v50 = getLatestValue(data50, "Technical Analysis: EMA");
 
-  if (!v20 || !v50) return { ema20: 0, ema50: 0, signal: "neutral" };
+  if (!v20 || !v50) return null;
 
   const ema20 = parseFloat(v20["EMA"]);
   const ema50 = parseFloat(v50["EMA"]);
@@ -199,10 +206,10 @@ async function parseEMA(symbol: string): Promise<IndicatorResult> {
   };
 }
 
-async function parseBBANDS(symbol: string): Promise<IndicatorResult> {
+async function parseBBANDS(symbol: string): Promise<IndicatorResult | null> {
   const data = await fetchIndicator("BBANDS", symbol, { time_period: "20" });
   const latest = getLatestValue(data, "Technical Analysis: BBANDS");
-  if (!latest) return { upper: 0, middle: 0, lower: 0, bandwidth: 0, signal: "neutral" };
+  if (!latest) return null;
 
   const upper = parseFloat(latest["Real Upper Band"]);
   const middle = parseFloat(latest["Real Middle Band"]);
@@ -222,10 +229,10 @@ async function parseBBANDS(symbol: string): Promise<IndicatorResult> {
   };
 }
 
-async function parseSTOCH(symbol: string): Promise<IndicatorResult> {
+async function parseSTOCH(symbol: string): Promise<IndicatorResult | null> {
   const data = await fetchIndicator("STOCH", symbol);
   const latest = getLatestValue(data, "Technical Analysis: STOCH");
-  if (!latest) return { percentK: 0, percentD: 0, signal: "neutral" };
+  if (!latest) return null;
 
   const k = parseFloat(latest["SlowK"]);
   const d = parseFloat(latest["SlowD"]);
@@ -243,10 +250,10 @@ async function parseSTOCH(symbol: string): Promise<IndicatorResult> {
   };
 }
 
-async function parseADX(symbol: string): Promise<IndicatorResult> {
+async function parseADX(symbol: string): Promise<IndicatorResult | null> {
   const data = await fetchIndicator("ADX", symbol, { time_period: "14" });
   const latest = getLatestValue(data, "Technical Analysis: ADX");
-  if (!latest) return { adx: 0, signal: "neutral" };
+  if (!latest) return null;
 
   const adx = parseFloat(latest["ADX"]);
 
@@ -259,10 +266,10 @@ async function parseADX(symbol: string): Promise<IndicatorResult> {
   return { adx: Math.round(adx * 100) / 100, signal };
 }
 
-async function parseATR(symbol: string): Promise<IndicatorResult> {
+async function parseATR(symbol: string): Promise<IndicatorResult | null> {
   const data = await fetchIndicator("ATR", symbol, { time_period: "14" });
   const latest = getLatestValue(data, "Technical Analysis: ATR");
-  if (!latest) return { atr: 0, signal: "neutral" };
+  if (!latest) return null;
 
   const atr = parseFloat(latest["ATR"]);
 
@@ -279,7 +286,7 @@ async function parseATR(symbol: string): Promise<IndicatorResult> {
 // ---------------------------------------------------------------------------
 // Route handler
 // ---------------------------------------------------------------------------
-const INDICATOR_PARSERS: Record<string, (sym: string) => Promise<IndicatorResult>> = {
+const INDICATOR_PARSERS: Record<string, (sym: string) => Promise<IndicatorResult | null>> = {
   RSI: parseRSI,
   MACD: parseMACD,
   SMA: parseSMA,
@@ -314,17 +321,35 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Fetch all indicators in parallel
+  // If rate limited, return cached or fallback
+  if (!canMakeRequest()) {
+    if (cached) {
+      return NextResponse.json({
+        symbol,
+        indicators: cached.data,
+        cached: true,
+        timestamp: cached.timestamp,
+        rateLimited: true,
+      });
+    }
+    // Return error — no fake data
+    return NextResponse.json(
+      { error: "Données indisponibles", symbol, indicators: {}, timestamp: Date.now() },
+      { status: 503 }
+    );
+  }
+
+  // Fetch all indicators - each one checks rate limit internally
   const results: Record<string, IndicatorResult> = {};
-  const promises = validIndicators.map(async (name) => {
+
+  for (const name of validIndicators) {
     try {
-      results[name] = await INDICATOR_PARSERS[name](symbol);
+      const result = await INDICATOR_PARSERS[name](symbol);
+      results[name] = result || { signal: "unavailable" };
     } catch {
       results[name] = { signal: "error" };
     }
-  });
-
-  await Promise.all(promises);
+  }
 
   // Cache result
   cache.set(cacheKey, { data: results, timestamp: Date.now() });

@@ -153,10 +153,7 @@ function buildPairSuggestions(strengths: Record<Currency, number>): PairSuggesti
 // ---------------------------------------------------------------------------
 // Fallback data
 // ---------------------------------------------------------------------------
-const FALLBACK_STRENGTHS: Record<Currency, number> = {
-  USD: 55, EUR: 52, GBP: 58, JPY: 35,
-  AUD: 45, CAD: 48, CHF: 53, NZD: 42,
-};
+// No fallback data — return error when API is unavailable
 
 // ---------------------------------------------------------------------------
 // Route handler
@@ -214,18 +211,19 @@ export async function GET() {
 
     return NextResponse.json(responseData);
   } catch {
-    // Fallback
-    const matrix = buildMatrix(FALLBACK_STRENGTHS);
-    const pairs = buildPairSuggestions(FALLBACK_STRENGTHS);
-
-    return NextResponse.json({
-      strengths: FALLBACK_STRENGTHS,
-      rates: {},
-      matrix,
-      pairs,
-      currencies: CURRENCIES,
-      source: "fallback" as const,
-      timestamp: Date.now(),
-    });
+    // Return error — no fake data
+    return NextResponse.json(
+      {
+        error: "Données indisponibles",
+        strengths: {},
+        rates: {},
+        matrix: [],
+        pairs: [],
+        currencies: CURRENCIES,
+        source: "unavailable" as const,
+        timestamp: Date.now(),
+      },
+      { status: 503 }
+    );
   }
 }

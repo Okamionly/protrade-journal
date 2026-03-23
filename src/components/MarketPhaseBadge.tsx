@@ -4,8 +4,6 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { Activity } from "lucide-react";
 import {
-  detectMarketPhase,
-  generateDemoCandles,
   type MarketPhase,
   type PhaseResult,
 } from "@/lib/marketPhaseDetector";
@@ -45,28 +43,36 @@ const PHASE_CONFIG: Record<
   },
 };
 
-/** Hook to get current detected phase (memoized, uses demo candles) */
+/** Hook returning empty phase — requires real data source connection */
 export function useMarketPhase(): PhaseResult {
-  return useMemo(() => {
-    const candles = generateDemoCandles("markup", 80);
-    return detectMarketPhase(candles);
-  }, []);
+  return useMemo<PhaseResult>(() => ({
+    phase: "accumulation" as MarketPhase,
+    confidence: 0,
+    description: "Connectez une source de données",
+    tradingAdvice: "Connectez une source de données pour obtenir des recommandations",
+    signals: [],
+  }), []);
 }
 
 // ─── 1. Compact Badge (Dashboard header) ─────────────────────────────
 export function MarketPhaseBadgeCompact() {
   const phase = useMarketPhase();
   const cfg = PHASE_CONFIG[phase.phase];
+  const noData = phase.confidence === 0;
 
   return (
     <Link
       href="/market-phase"
       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105 cursor-pointer"
-      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
-      title={`Phase Marché: ${cfg.label} (${phase.confidence}%)`}
+      style={{
+        background: noData ? "rgba(100,116,139,0.1)" : cfg.bg,
+        color: noData ? "#94a3b8" : cfg.color,
+        border: `1px solid ${noData ? "rgba(100,116,139,0.3)" : cfg.border}`,
+      }}
+      title={noData ? "Connectez une source de données" : `Phase Marché: ${cfg.label} (${phase.confidence}%)`}
     >
       <Activity className="w-3.5 h-3.5" />
-      Phase: {cfg.label}
+      {noData ? "Phase: —" : `Phase: ${cfg.label}`}
     </Link>
   );
 }

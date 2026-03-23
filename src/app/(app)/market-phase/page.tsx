@@ -6,7 +6,6 @@ import { useTranslation } from "@/i18n/context";
 import { useTrades, type Trade } from "@/hooks/useTrades";
 import {
   detectMarketPhase,
-  generateDemoCandles,
   type Candle,
   type MarketPhase,
   type PhaseResult,
@@ -420,12 +419,9 @@ export default function MarketPhasePage() {
       // Fall through to demo data
     }
 
-    // Fallback: generate demo candles
-    const phases: MarketPhase[] = ["accumulation", "markup", "distribution", "markdown"];
-    const randomPhase = phases[Math.floor(Math.random() * phases.length)];
-    const demo = generateDemoCandles(randomPhase, 90);
-    setCandles(demo);
-    return demo;
+    // No demo data — return empty candles with error state
+    setCandles([]);
+    return [];
   }, []);
 
   const analyze = useCallback(

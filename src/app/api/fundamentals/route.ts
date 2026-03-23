@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { canMakeRequest, recordRequest } from "@/lib/alphaVantageRateLimit";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// --- Types ---
 
 interface AVOverview {
   Symbol: string;
@@ -55,7 +56,7 @@ interface AVEarningsResponse {
   quarterlyEarnings: AVQuarterlyEarning[];
 }
 
-// ─── Normalized response types ──────────────────────────────────────────────
+// --- Normalized response types ---
 
 interface CompanyOverview {
   symbol: string;
@@ -98,17 +99,20 @@ interface FundamentalsResponse {
   earnings: {
     quarterly: QuarterlyEarning[];
     annual: AnnualEarning[];
-  };
+  } | null;
   cached: boolean;
   timestamp: string;
+  demo?: boolean;
 }
 
-// ─── Cache (1 hour per symbol) ──────────────────────────────────────────────
+// --- Cache (6 hours per symbol) ---
 
 const cache = new Map<string, { data: FundamentalsResponse; ts: number }>();
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// --- No hardcoded fallback data — return error when API unavailable ---
+
+// --- Helpers ---
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || "";
 
@@ -119,12 +123,25 @@ function parseNum(val: string | undefined): number | null {
 }
 
 async function fetchAV(params: Record<string, string>): Promise<unknown> {
+  if (!canMakeRequest()) return null;
+  recordRequest();
+
   const qs = new URLSearchParams({ ...params, apikey: AV_KEY });
   const res = await fetch(`https://www.alphavantage.co/query?${qs}`, {
     signal: AbortSignal.timeout(12000),
   });
   if (!res.ok) throw new Error(`Alpha Vantage HTTP ${res.status}`);
-  return res.json();
+  const json = await res.json();
+
+  // Check for rate limit
+  if (
+    (json as Record<string, string>)["Note"] ||
+    (json as Record<string, string>)["Information"]
+  ) {
+    return null;
+  }
+
+  return json;
 }
 
 function normalizeOverview(raw: AVOverview): CompanyOverview {
@@ -173,22 +190,15 @@ function normalizeEarnings(raw: AVEarningsResponse) {
   return { quarterly, annual };
 }
 
-// ─── GET handler ────────────────────────────────────────────────────────────
+// --- GET handler ---
 
 export async function GET(req: NextRequest) {
   const symbol = req.nextUrl.searchParams.get("symbol")?.toUpperCase().trim();
 
   if (!symbol) {
     return NextResponse.json(
-      { error: "Paramètre 'symbol' requis" },
+      { error: "Param\u00e8tre 'symbol' requis" },
       { status: 400 }
-    );
-  }
-
-  if (!AV_KEY) {
-    return NextResponse.json(
-      { error: "Clé API Alpha Vantage non configurée" },
-      { status: 500 }
     );
   }
 
@@ -198,26 +208,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ...cached.data, cached: true });
   }
 
-  try {
-    // Fetch OVERVIEW + EARNINGS in parallel
-    const [overviewRaw, earningsRaw] = await Promise.all([
-      fetchAV({ function: "OVERVIEW", symbol }) as Promise<AVOverview>,
-      fetchAV({ function: "EARNINGS", symbol }) as Promise<AVEarningsResponse>,
-    ]);
+  // If no API key or rate limited, return error or expired cache
+  if (!AV_KEY || !canMakeRequest()) {
+    if (cached) {
+      return NextResponse.json({ ...cached.data, cached: true, rateLimited: true });
+    }
+    return NextResponse.json(
+      { error: "Données indisponibles", overview: null, earnings: null, timestamp: new Date().toISOString() },
+      { status: 503 }
+    );
+  }
 
-    // Alpha Vantage returns { "Note": "..." } on rate limit
-    const isRateLimited =
-      (overviewRaw as Record<string, string>)["Note"] ||
-      (overviewRaw as Record<string, string>)["Information"];
+  try {
+    // Fetch OVERVIEW + EARNINGS sequentially to respect rate limits
+    const overviewRaw = await fetchAV({ function: "OVERVIEW", symbol }) as AVOverview | null;
+    const earningsRaw = await fetchAV({ function: "EARNINGS", symbol }) as AVEarningsResponse | null;
 
     let overview: CompanyOverview | null = null;
-    if (!isRateLimited && overviewRaw.Symbol) {
+    if (overviewRaw && overviewRaw.Symbol) {
       overview = normalizeOverview(overviewRaw);
     }
 
-    const earnings = earningsRaw.quarterlyEarnings
+    const earnings = earningsRaw && earningsRaw.quarterlyEarnings
       ? normalizeEarnings(earningsRaw)
-      : { quarterly: [], annual: [] };
+      : null;
 
     const response: FundamentalsResponse = {
       overview,
@@ -231,12 +245,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(response);
   } catch (e) {
     console.error(`[Fundamentals] Erreur pour ${symbol}:`, e);
+
+    // Return error — no fake data
+    if (cached) {
+      return NextResponse.json({ ...cached.data, cached: true });
+    }
     return NextResponse.json(
-      {
-        error: "Impossible de récupérer les fondamentaux",
-        details: e instanceof Error ? e.message : "Erreur inconnue",
-      },
-      { status: 502 }
+      { error: "Données indisponibles", overview: null, earnings: null, timestamp: new Date().toISOString() },
+      { status: 503 }
     );
   }
 }

@@ -400,14 +400,6 @@ function getAvatarGradient(name: string | null): string {
   return gradients[hash % gradients.length];
 }
 
-function pseudoRandom(seed: string): number {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
-}
-
 /* ─── Likes hook (server-side via /api/chat/likes) ─────── */
 
 function useLikes(currentUserId: string | null, messages: FeedMessage[]) {
@@ -953,26 +945,17 @@ function PollDisplay({
   const remaining = getPollRemainingTime(poll);
   const isExpired = remaining === null;
 
-  // Generate pseudo-random base vote counts from messageId for display
-  const baseCounts = useMemo(() => {
-    const counts: Record<number, number> = {};
-    for (let i = 0; i < poll.options.length; i++) {
-      const seed = messageId + "-opt-" + i;
-      counts[i] = pseudoRandom(seed) % 80 + 5;
-    }
-    return counts;
-  }, [messageId, poll.options.length]);
-
+  // Vote counts from real data only (no fake base counts)
   const totalVotes = useMemo(() => {
     let total = 0;
     for (let i = 0; i < poll.options.length; i++) {
-      total += baseCounts[i] + (voteData?.counts[i] || 0);
+      total += voteData?.counts[i] || 0;
     }
     return total;
-  }, [baseCounts, voteData, poll.options.length]);
+  }, [voteData, poll.options.length]);
 
   const getPercentage = (idx: number) => {
-    const count = baseCounts[idx] + (voteData?.counts[idx] || 0);
+    const count = voteData?.counts[idx] || 0;
     return totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
   };
 
@@ -1129,7 +1112,7 @@ function TweetPost({
   const [copied, setCopied] = useState(false);
   const gradient = getAvatarGradient(msg.user.name);
   const handle = getHandle(msg.user.email);
-  const viewCount = pseudoRandom(msg.id + "views") % 4500 + 120;
+  // No fake view counts
 
   const handleLike = () => {
     onLike(msg.id);
@@ -1372,14 +1355,7 @@ function TweetPost({
               {likeCount > 0 && <span className="text-[13px]">{likeCount}</span>}
             </button>
 
-            {/* Views */}
-            <div
-              className="flex items-center gap-1.5 p-2"
-              style={{ color: "var(--text-muted)" }}
-            >
-              <BarChart2 className="w-[18px] h-[18px]" />
-              <span className="text-[13px]">{viewCount.toLocaleString("fr-FR")}</span>
-            </div>
+            {/* Views removed — no fake data */}
 
             {/* Bookmark + Share */}
             <div className="flex items-center gap-0">

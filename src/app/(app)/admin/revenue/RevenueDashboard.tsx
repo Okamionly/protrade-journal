@@ -27,23 +27,9 @@ interface Stats {
   recentSubscribers: Subscriber[];
 }
 
-// Mock monthly revenue data for chart
-const MOCK_MONTHS = [
-  { month: "Oct", mrr: 420 },
-  { month: "Nov", mrr: 580 },
-  { month: "Déc", mrr: 710 },
-  { month: "Jan", mrr: 890 },
-  { month: "Fév", mrr: 1150 },
-  { month: "Mar", mrr: 1340 },
-];
-
 export function RevenueDashboard({ stats }: { stats: Stats }) {
   const mrr = stats.vipUsers * 9;
   const arr = mrr * 12;
-  // Mock churn rate
-  const churnRate = 4.2;
-
-  const maxMrr = Math.max(...MOCK_MONTHS.map((m) => m.mrr), mrr);
 
   return (
     <div className="min-h-screen p-6 max-w-7xl mx-auto space-y-8">
@@ -129,10 +115,10 @@ export function RevenueDashboard({ stats }: { stats: Stats }) {
               Churn Rate
             </span>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            {churnRate}%
+          <p className="text-xl text-gray-400">
+            Indisponible
           </p>
-          <p className="text-xs text-gray-400 mt-1">Taux mensuel (mock)</p>
+          <p className="text-xs text-gray-400 mt-1">Connectez Stripe pour les données réelles</p>
         </div>
       </div>
 
@@ -141,26 +127,14 @@ export function RevenueDashboard({ stats }: { stats: Stats }) {
         {/* Chart */}
         <div className="lg:col-span-2 rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-800 p-6">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-6">
-            Croissance MRR (6 derniers mois)
+            Croissance MRR
           </h3>
-          <div className="flex items-end gap-3 h-48">
-            {[...MOCK_MONTHS.slice(0, -1), { month: "Mar", mrr: Math.round(mrr || 1340) }].map(
-              (m, i) => {
-                const height = Math.max(10, (m.mrr / maxMrr) * 100);
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                    <span className="text-xs font-medium text-gray-500">
-                      {m.mrr}€
-                    </span>
-                    <div
-                      className="w-full rounded-t-lg bg-gradient-to-t from-blue-500 to-blue-400 transition-all"
-                      style={{ height: `${height}%` }}
-                    />
-                    <span className="text-[10px] text-gray-400">{m.month}</span>
-                  </div>
-                );
-              }
-            )}
+          <div className="flex items-center justify-center h-48">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">{mrr}€</p>
+              <p className="text-xs text-gray-400 mt-2">MRR actuel ({stats.vipUsers} VIP x 9€)</p>
+              <p className="text-xs text-gray-400 mt-1">Historique indisponible — Connectez Stripe</p>
+            </div>
           </div>
         </div>
 

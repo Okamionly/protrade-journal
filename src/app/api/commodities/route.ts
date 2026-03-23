@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canMakeRequest, recordRequest } from "@/lib/alphaVantageRateLimit";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -7,40 +8,36 @@ interface CommodityItem {
   commodity: string;
   price: number;
   date: string;
-  change: number; // percent
-  history: number[]; // last 10 prices for sparkline
+  change: number;
+  history: number[];
+  isFallback?: boolean;
 }
 
 // ---------------------------------------------------------------------------
-// 1-hour in-memory cache
+// 6-hour in-memory cache
 // ---------------------------------------------------------------------------
 let cache: { data: CommodityItem[]; ts: number } | null = null;
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL = 6 * 60 * 60 * 1000;
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY ?? "";
 
 // ---------------------------------------------------------------------------
-// Commodity definitions
+// Commodity definitions for Alpha Vantage
 // ---------------------------------------------------------------------------
-const COMMODITIES: {
-  fn: string;
-  name: string;
-  key: string; // JSON top-level key in AV response
-  valueField: string;
-}[] = [
+const COMMODITIES = [
   { fn: "WTI", name: "WTI", key: "data", valueField: "value" },
   { fn: "BRENT", name: "Brent", key: "data", valueField: "value" },
   { fn: "NATURAL_GAS", name: "Gaz naturel", key: "data", valueField: "value" },
   { fn: "COPPER", name: "Cuivre", key: "data", valueField: "value" },
-  { fn: "WHEAT", name: "Blé", key: "data", valueField: "value" },
-  { fn: "CORN", name: "Maïs", key: "data", valueField: "value" },
+  { fn: "WHEAT", name: "Bl\u00e9", key: "data", valueField: "value" },
+  { fn: "CORN", name: "Ma\u00efs", key: "data", valueField: "value" },
   { fn: "COTTON", name: "Coton", key: "data", valueField: "value" },
   { fn: "SUGAR", name: "Sucre", key: "data", valueField: "value" },
-  { fn: "COFFEE", name: "Café", key: "data", valueField: "value" },
+  { fn: "COFFEE", name: "Caf\u00e9", key: "data", valueField: "value" },
 ];
 
 // ---------------------------------------------------------------------------
-// Fetch a single commodity from Alpha Vantage
+// Fetch a single commodity from Alpha Vantage (with rate limiting)
 // ---------------------------------------------------------------------------
 async function fetchCommodity(
   fn: string,
@@ -48,16 +45,22 @@ async function fetchCommodity(
   key: string,
   valueField: string
 ): Promise<CommodityItem | null> {
+  if (!canMakeRequest()) return null;
+
   try {
+    recordRequest();
     const url = `https://www.alphavantage.co/query?function=${fn}&interval=monthly&apikey=${AV_KEY}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) return null;
     const json = await res.json();
 
+    if (json["Note"] || json["Error Message"] || json["Information"]) {
+      return null;
+    }
+
     const entries: Record<string, string>[] = json[key];
     if (!Array.isArray(entries) || entries.length === 0) return null;
 
-    // Filter out entries with "." as value (no data)
     const valid = entries.filter(
       (e) => e[valueField] && e[valueField] !== "." && !isNaN(parseFloat(e[valueField]))
     );
@@ -67,7 +70,6 @@ async function fetchCommodity(
     const price = parseFloat(parseFloat(latest[valueField]).toFixed(2));
     const date = latest["date"] ?? "";
 
-    // Calculate change from previous data point
     let change = 0;
     if (valid.length >= 2) {
       const prev = parseFloat(valid[1][valueField]);
@@ -76,7 +78,6 @@ async function fetchCommodity(
       }
     }
 
-    // History: last 10 prices (newest first -> reversed for chart)
     const history = valid
       .slice(0, 10)
       .map((e) => parseFloat(e[valueField]))
@@ -97,22 +98,35 @@ export async function GET() {
     return NextResponse.json(cache.data);
   }
 
+  // If no API key, return unavailable
   if (!AV_KEY) {
-    return NextResponse.json(
-      { error: "ALPHA_VANTAGE_API_KEY not configured" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Donn\u00e9es indisponibles", commodities: [] }, { status: 503 });
   }
 
-  // Fetch all commodities in parallel
-  const results = await Promise.all(
-    COMMODITIES.map((c) => fetchCommodity(c.fn, c.name, c.key, c.valueField))
-  );
+  // Check rate limit before attempting any fetches
+  if (!canMakeRequest()) {
+    if (cache) {
+      return NextResponse.json(cache.data);
+    }
+    return NextResponse.json({ error: "Donn\u00e9es indisponibles", commodities: [] }, { status: 503 });
+  }
 
-  const data = results.filter((r): r is CommodityItem => r !== null);
+  // Fetch commodities sequentially to respect rate limits
+  const results: CommodityItem[] = [];
+  for (const c of COMMODITIES) {
+    if (!canMakeRequest()) break;
+    const item = await fetchCommodity(c.fn, c.name, c.key, c.valueField);
+    if (item) results.push(item);
+  }
 
-  // Populate cache
-  cache = { data, ts: Date.now() };
+  if (results.length > 0) {
+    cache = { data: results, ts: Date.now() };
+    return NextResponse.json(results);
+  }
 
-  return NextResponse.json(data);
+  // All fetches failed - use cache or return unavailable
+  if (cache) {
+    return NextResponse.json(cache.data);
+  }
+  return NextResponse.json({ error: "Donn\u00e9es indisponibles", commodities: [] }, { status: 503 });
 }

@@ -55,48 +55,13 @@ interface VixApiData {
     symbol: string;
   }[];
   fetchedAt: string;
-  source: "cboe" | "yahoo" | "mock";
+  source: "cboe" | "yahoo" | "unavailable";
   sourceDetails: string;
 }
 
 /* ------------------------------------------------------------------ */
-/*  Mock / fallback data (used when API unavailable)                   */
+/*  No mock data — show "Données indisponibles" when API unavailable   */
 /* ------------------------------------------------------------------ */
-
-const MOCK_VIX_HISTORY = [
-  18.2, 17.8, 19.1, 20.3, 19.7, 18.5, 17.9, 18.8, 21.2, 22.5,
-  21.8, 20.4, 19.6, 18.3, 17.5, 16.9, 17.4, 18.1, 19.5, 20.8,
-  21.3, 20.1, 19.2, 18.7, 19.8, 20.6, 21.4, 20.9, 19.4, 18.6,
-];
-
-const MOCK_IV_HV_DATA = [
-  { asset: "SPY", name: "S&P 500", iv: 18.5, hv: 15.2, ivRank: 42, ivPercentile: 38 },
-  { asset: "QQQ", name: "Nasdaq 100", iv: 22.1, hv: 19.8, ivRank: 55, ivPercentile: 51 },
-  { asset: "IWM", name: "Russell 2000", iv: 24.3, hv: 21.7, ivRank: 48, ivPercentile: 44 },
-  { asset: "AAPL", name: "Apple", iv: 26.8, hv: 22.4, ivRank: 35, ivPercentile: 30 },
-  { asset: "TSLA", name: "Tesla", iv: 58.2, hv: 52.1, ivRank: 62, ivPercentile: 58 },
-  { asset: "NVDA", name: "Nvidia", iv: 48.5, hv: 44.3, ivRank: 45, ivPercentile: 40 },
-  { asset: "GLD", name: "Or", iv: 14.2, hv: 12.8, ivRank: 28, ivPercentile: 22 },
-  { asset: "TLT", name: "Obligations 20A", iv: 16.7, hv: 14.9, ivRank: 52, ivPercentile: 48 },
-];
-
-const MOCK_TERM_STRUCTURE = [
-  { label: "VIX (spot)", value: 18.6 },
-  { label: "VX1 (1M)", value: 19.8 },
-  { label: "VX2 (2M)", value: 20.5 },
-  { label: "VX3 (3M)", value: 21.1 },
-  { label: "VX4 (4M)", value: 21.6 },
-  { label: "VX5 (5M)", value: 22.0 },
-  { label: "VX6 (6M)", value: 22.3 },
-];
-
-const MOCK_FEAR_INDICATORS = {
-  putCallRatio: 0.92,
-  putCallSignal: "Neutre" as const,
-  vixVxnSpread: -2.4,
-  skewIndex: 138.5,
-  vvix: 94.2,
-};
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -337,9 +302,9 @@ export default function VolatilityPage() {
 
     // Handle VIX data
     if (vixData) {
-      setUsingMock(vixData.source === "mock");
-      if (vixData.source === "mock") {
-        setError("Sources de données non disponibles — données de démonstration");
+      setUsingMock(vixData.source === "unavailable");
+      if (vixData.source === "unavailable") {
+        setError("Données indisponibles — Réessayez ultérieurement");
       }
     }
 
@@ -375,20 +340,29 @@ export default function VolatilityPage() {
       }
       setVolData(quotesData);
     } else {
-      // Quotes failed, build from VIX API data + mock for the rest
-      const mockData: Record<string, VolData> = {};
-      [...VOL_INSTRUMENTS, ...MARKET_ETFS].forEach((item) => {
-        mockData[item.symbol] = {
-          symbol: item.symbol,
-          name: item.name,
-          last: item.symbol === "VIX" ? (vixData?.vix.current ?? 18.6) : item.symbol === "SPY" ? (vixData?.spy.current ?? 582.4) : item.symbol === "QQQ" ? 498.7 : item.symbol === "IWM" ? 215.3 : item.symbol === "DIA" ? 428.1 : item.symbol === "GLD" ? 298.5 : item.symbol === "TLT" ? 91.2 : item.symbol === "USO" ? 72.8 : item.symbol === "UUP" ? 27.1 : item.symbol === "UVXY" ? 28.4 : item.symbol === "SVXY" ? 58.7 : item.symbol === "VIXY" ? 14.3 : 100,
-          changepct: item.symbol === "VIX" ? (vixData?.vix.changePct ?? 3.2) : item.symbol === "SPY" ? (vixData?.spy.changePct ?? -0.45) : item.symbol === "QQQ" ? -0.62 : item.symbol === "GLD" ? 0.8 : Math.random() * 4 - 2,
+      // Quotes failed — only populate VIX/SPY from VIX API if available, rest stays empty
+      const partialData: Record<string, VolData> = {};
+      if (vixData && vixData.vix.current > 0) {
+        partialData["VIX"] = {
+          symbol: "VIX",
+          name: "CBOE Volatility Index",
+          last: vixData.vix.current,
+          changepct: vixData.vix.changePct,
           volume: 0,
         };
-      });
-      setVolData(mockData);
+      }
+      if (vixData && vixData.spy.current > 0) {
+        partialData["SPY"] = {
+          symbol: "SPY",
+          name: "S&P 500",
+          last: vixData.spy.current,
+          changepct: vixData.spy.changePct,
+          volume: 0,
+        };
+      }
+      setVolData(partialData);
       if (!error) {
-        setError("API Quotes non disponible — données partielles");
+        setError("Données indisponibles — Réessayez ultérieurement");
         setUsingMock(true);
       }
     }
@@ -403,7 +377,7 @@ export default function VolatilityPage() {
 
   /* Derived values */
   const vix = volData["VIX"];
-  const vixLevel = vixApiData?.vix.current ?? vix?.last ?? 18.6;
+  const vixLevel = vixApiData?.vix.current ?? vix?.last ?? 0;
   const vixChangePct = vixApiData?.vix.changePct ?? vix?.changepct ?? 0;
   const vixZone = getVixZone(vixLevel, t);
 
@@ -422,18 +396,15 @@ export default function VolatilityPage() {
   };
   const fg = getFearGreedLabel(fearGreed);
 
-  // VIX history: prefer real data, fallback to mock
-  const vixHistory = vixApiData?.vix.history ?? MOCK_VIX_HISTORY;
+  // VIX history: only from real API data
+  const vixHistory = vixApiData?.vix.history ?? [];
   const vixDates = vixApiData?.vix.dates;
 
-  // Term structure: prefer API data, fallback to adjusted mock
+  // Term structure: only from real API data
   const termStructure = vixApiData?.termStructure?.length
     ? vixApiData.termStructure
-    : MOCK_TERM_STRUCTURE.map((t, i) => ({
-        ...t,
-        value: i === 0 ? vixLevel : t.value + (vixLevel - 18.6),
-      }));
-  const isContango = termStructure[termStructure.length - 1].value > termStructure[0].value;
+    : [];
+  const isContango = termStructure.length >= 2 ? termStructure[termStructure.length - 1].value > termStructure[0].value : false;
 
   // --- AI Insights: Recommandation IA basée sur le VIX ---
   const { trades } = useTrades();
@@ -499,14 +470,12 @@ export default function VolatilityPage() {
     return items.slice(0, 4);
   }, [vixLevel, isContango]);
 
-  const fear = MOCK_FEAR_INDICATORS;
-
   // Data source label
   const dataSourceLabel = vixApiData?.source === "cboe"
     ? "CBOE"
     : vixApiData?.source === "yahoo"
       ? "Yahoo Finance"
-      : "Données de démonstration";
+      : "Données indisponibles";
   const isLiveSource = vixApiData?.source === "cboe" || vixApiData?.source === "yahoo";
   const fetchedAtLabel = vixApiData?.fetchedAt
     ? new Date(vixApiData.fetchedAt).toLocaleString("fr-FR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
@@ -720,31 +689,11 @@ export default function VolatilityPage() {
                 </tr>
               </thead>
               <tbody>
-                {MOCK_IV_HV_DATA.map((row) => {
-                  const signal = getIvSignal(row.iv, row.hv, t);
-                  return (
-                    <tr key={row.asset} className="border-b border-[--border-subtle]/50">
-                      <td className="py-2.5">
-                        <span className="font-medium text-[--text-primary]">{row.asset}</span>
-                        <span className="text-[--text-muted] text-xs ml-1.5">{row.name}</span>
-                      </td>
-                      <td className="text-right mono text-[--text-primary]">{row.iv.toFixed(1)}%</td>
-                      <td className="text-right mono text-[--text-primary]">{row.hv.toFixed(1)}%</td>
-                      <td className="text-right">
-                        <div className="inline-flex items-center gap-1.5">
-                          <div className="w-12 h-1.5 rounded-full bg-[--bg-secondary]">
-                            <div
-                              className={`h-full rounded-full ${row.ivRank > 60 ? "bg-amber-500" : row.ivRank < 30 ? "bg-emerald-500" : "bg-cyan-500"}`}
-                              style={{ width: `${row.ivRank}%` }}
-                            />
-                          </div>
-                          <span className="mono text-xs text-[--text-secondary]">{row.ivRank}</span>
-                        </div>
-                      </td>
-                      <td className={`text-right text-xs font-medium ${signal.color}`}>{signal.label}</td>
-                    </tr>
-                  );
-                })}
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-[--text-muted] text-sm">
+                    Donn&eacute;es indisponibles &mdash; Connectez une source de donn&eacute;es options
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -778,56 +727,8 @@ export default function VolatilityPage() {
           <Gauge className="w-5 h-5 text-cyan-400" />
           <h3 className="font-semibold text-[--text-primary]">Indicateurs de Peur</h3>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Put/Call Ratio */}
-          <div className="metric-card rounded-xl p-4">
-            <p className="text-xs text-[--text-muted] mb-1">Put/Call Ratio</p>
-            <p className={`text-2xl font-bold mono ${fear.putCallRatio > 1 ? "text-rose-400" : fear.putCallRatio < 0.7 ? "text-emerald-400" : "text-cyan-400"}`}>
-              {fear.putCallRatio.toFixed(2)}
-            </p>
-            <p className="text-xs text-[--text-muted] mt-1">
-              {fear.putCallRatio > 1 ? t("bearishMorePuts") : fear.putCallRatio < 0.7 ? t("bullishMoreCalls") : t("volNeutral")}
-            </p>
-            <div className="mt-2 h-1.5 rounded-full bg-[--bg-secondary]">
-              <div
-                className={`h-full rounded-full transition-all ${fear.putCallRatio > 1 ? "bg-rose-500" : fear.putCallRatio < 0.7 ? "bg-emerald-500" : "bg-cyan-500"}`}
-                style={{ width: `${Math.min(fear.putCallRatio * 50, 100)}%` }}
-              />
-            </div>
-          </div>
-
-          {/* VIX/VXN Spread */}
-          <div className="metric-card rounded-xl p-4">
-            <p className="text-xs text-[--text-muted] mb-1">VIX / VXN Spread</p>
-            <p className={`text-2xl font-bold mono ${fear.vixVxnSpread > 0 ? "text-amber-400" : "text-cyan-400"}`}>
-              {fear.vixVxnSpread > 0 ? "+" : ""}{fear.vixVxnSpread.toFixed(1)}
-            </p>
-            <p className="text-xs text-[--text-muted] mt-1">
-              {fear.vixVxnSpread > 0 ? "SPX plus stressé que NDX" : "NDX plus stressé que SPX"}
-            </p>
-          </div>
-
-          {/* SKEW Index */}
-          <div className="metric-card rounded-xl p-4">
-            <p className="text-xs text-[--text-muted] mb-1">SKEW Index</p>
-            <p className={`text-2xl font-bold mono ${fear.skewIndex > 140 ? "text-amber-400" : fear.skewIndex > 130 ? "text-cyan-400" : "text-emerald-400"}`}>
-              {fear.skewIndex.toFixed(1)}
-            </p>
-            <p className="text-xs text-[--text-muted] mt-1">
-              {fear.skewIndex > 140 ? "Risque de tail event élevé" : fear.skewIndex > 130 ? "Normal" : "Risque faible"}
-            </p>
-          </div>
-
-          {/* VVIX */}
-          <div className="metric-card rounded-xl p-4">
-            <p className="text-xs text-[--text-muted] mb-1">VVIX (Vol of VIX)</p>
-            <p className={`text-2xl font-bold mono ${fear.vvix > 110 ? "text-rose-400" : fear.vvix > 90 ? "text-amber-400" : "text-cyan-400"}`}>
-              {fear.vvix.toFixed(1)}
-            </p>
-            <p className="text-xs text-[--text-muted] mt-1">
-              {fear.vvix > 110 ? "Incertitude extrême" : fear.vvix > 90 ? "Incertitude modérée" : "Calme"}
-            </p>
-          </div>
+        <div className="py-6 text-center text-[--text-muted] text-sm">
+          Donn&eacute;es indisponibles &mdash; Put/Call Ratio, VIX/VXN Spread, SKEW Index et VVIX n&eacute;cessitent une source de donn&eacute;es options
         </div>
       </div>
 

@@ -37,18 +37,7 @@ interface CachedData {
 let cache: CachedData | null = null;
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
-// Mock fallback data (approximate values) used when Yahoo Finance is unreachable
-const MOCK_DATA: Record<string, { last: number; previousClose: number }> = {
-  SP500:  { last: 5250, previousClose: 5240 },
-  DOW:    { last: 39800, previousClose: 39750 },
-  NASDAQ: { last: 16400, previousClose: 16350 },
-  FTSE:   { last: 8200, previousClose: 8190 },
-  DAX:    { last: 18500, previousClose: 18470 },
-  CAC40:  { last: 8100, previousClose: 8085 },
-  STOXX50:{ last: 5050, previousClose: 5040 },
-  NIKKEI: { last: 39500, previousClose: 39400 },
-  HSI:    { last: 17800, previousClose: 17750 },
-};
+// No mock/fallback data — if Yahoo Finance is unreachable, we return unavailable status
 
 async function fetchYahooQuote(index: GlobalIndex): Promise<GlobalMarketResult | null> {
   try {
@@ -89,18 +78,15 @@ async function fetchYahooQuote(index: GlobalIndex): Promise<GlobalMarketResult |
   }
 }
 
-function getMockResult(index: GlobalIndex): GlobalMarketResult {
-  const mock = MOCK_DATA[index.symbol] || { last: 0, previousClose: 0 };
-  const change = mock.last - mock.previousClose;
-  const changepct = mock.previousClose > 0 ? (change / mock.previousClose) * 100 : 0;
+function getUnavailableResult(index: GlobalIndex): GlobalMarketResult {
   return {
     symbol: index.symbol,
     name: index.name,
     region: index.region,
-    last: mock.last,
-    changepct,
-    change,
-    previousClose: mock.previousClose,
+    last: 0,
+    changepct: 0,
+    change: 0,
+    previousClose: 0,
   };
 }
 
@@ -136,7 +122,7 @@ export async function GET() {
         data.push(cached);
         liveCount++; // Previously live data
       } else {
-        data.push(getMockResult(GLOBAL_INDICES[i]));
+        data.push(getUnavailableResult(GLOBAL_INDICES[i]));
         mockCount++;
       }
     }

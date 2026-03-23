@@ -27,6 +27,7 @@ interface CommodityItem {
   date: string;
   change: number;
   history: number[];
+  isFallback?: boolean;
 }
 
 type GroupKey = "energy" | "metals" | "agriculture";
@@ -179,6 +180,13 @@ function CommodityCard({
             })}
           </p>
           <p className="text-[11px] text-gray-400 mt-0.5">{item.date}</p>
+          {item.isFallback && (
+            <p className="text-[10px] text-amber-500 mt-0.5">
+              {t("commodities_fallbackNote") !== "commodities_fallbackNote"
+                ? t("commodities_fallbackNote")
+                : "Donn\u00e9es en cache"}
+            </p>
+          )}
         </div>
         <Sparkline data={item.history} positive={isPositive} />
       </div>
@@ -200,19 +208,26 @@ export default function CommoditiesPage() {
     setError("");
     try {
       const res = await fetch("/api/commodities");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      if (Array.isArray(json)) {
+      if (Array.isArray(json) && json.length > 0) {
         setData(json);
+      } else if (json.error) {
+        // API returned an error but we still want to show something
+        setError(json.error);
+        // Keep existing data if we have it
+        if (data.length === 0) {
+          setData([]); // will show empty state
+        }
       } else {
-        setError(json.error ?? t("commodities_error"));
+        setData([]);
       }
     } catch {
       setError(t("commodities_error"));
+      // Keep existing data on network error
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, data.length]);
 
   useEffect(() => {
     load();
