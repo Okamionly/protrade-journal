@@ -121,19 +121,19 @@ const MARKET_ETFS = [
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function getVixZone(v: number) {
-  if (v < 15) return { label: "Volatilité Basse", color: "text-emerald-400", bg: "bg-emerald-500/20", border: "border-emerald-500/30", zone: "low" };
-  if (v < 20) return { label: "Normal", color: "text-cyan-400", bg: "bg-cyan-500/20", border: "border-cyan-500/30", zone: "normal" };
-  if (v < 30) return { label: "Élevée", color: "text-amber-400", bg: "bg-amber-500/20", border: "border-amber-500/30", zone: "elevated" };
-  if (v < 50) return { label: "Haute", color: "text-orange-400", bg: "bg-orange-500/20", border: "border-orange-500/30", zone: "high" };
-  return { label: "Extrême", color: "text-rose-400", bg: "bg-rose-500/20", border: "border-rose-500/30", zone: "extreme" };
+function getVixZone(v: number, t: (k: string) => string) {
+  if (v < 15) return { label: t("vol_vixZoneLow"), color: "text-emerald-400", bg: "bg-emerald-500/20", border: "border-emerald-500/30", zone: "low" };
+  if (v < 20) return { label: t("vol_vixZoneNormal"), color: "text-cyan-400", bg: "bg-cyan-500/20", border: "border-cyan-500/30", zone: "normal" };
+  if (v < 30) return { label: t("vol_vixZoneElevated"), color: "text-amber-400", bg: "bg-amber-500/20", border: "border-amber-500/30", zone: "elevated" };
+  if (v < 50) return { label: t("vol_vixZoneHigh"), color: "text-orange-400", bg: "bg-orange-500/20", border: "border-orange-500/30", zone: "high" };
+  return { label: t("vol_vixZoneExtreme"), color: "text-rose-400", bg: "bg-rose-500/20", border: "border-rose-500/30", zone: "extreme" };
 }
 
-function getIvSignal(iv: number, hv: number) {
+function getIvSignal(iv: number, hv: number, t: (k: string) => string) {
   const ratio = iv / hv;
-  if (ratio > 1.2) return { label: "IV Élevée", color: "text-amber-400", desc: "Vendre premium" };
-  if (ratio < 0.85) return { label: "IV Basse", color: "text-emerald-400", desc: "Acheter premium" };
-  return { label: "Neutre", color: "text-cyan-400", desc: "Pas de signal" };
+  if (ratio > 1.2) return { label: t("vol_ivHigh"), color: "text-amber-400", desc: t("vol_sellPremium") };
+  if (ratio < 0.85) return { label: t("vol_ivLow"), color: "text-emerald-400", desc: t("vol_buyPremium") };
+  return { label: t("vol_ivNeutral"), color: "text-cyan-400", desc: t("vol_noSignal") };
 }
 
 /* ------------------------------------------------------------------ */
@@ -402,7 +402,7 @@ export default function VolatilityPage() {
   const vix = volData["VIX"];
   const vixLevel = vixApiData?.vix.current ?? vix?.last ?? 18.6;
   const vixChangePct = vixApiData?.vix.changePct ?? vix?.changepct ?? 0;
-  const vixZone = getVixZone(vixLevel);
+  const vixZone = getVixZone(vixLevel, t);
 
   const spy = volData["SPY"];
   const spyChangePct = vixApiData?.spy.changePct ?? spy?.changepct ?? 0;
@@ -520,7 +520,7 @@ export default function VolatilityPage() {
           <p className={`text-5xl font-bold mono ${vixZone.color}`}>{vixLevel.toFixed(2)}</p>
           <p className={`text-sm mt-2 flex items-center gap-1 ${vixChangePct >= 0 ? "text-rose-400" : "text-emerald-400"}`}>
             {vixChangePct >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-            {vixChangePct >= 0 ? "+" : ""}{vixChangePct.toFixed(2)}% aujourd&apos;hui
+            {vixChangePct >= 0 ? "+" : ""}{vixChangePct.toFixed(2)}% {t("vol_todayLabel")}
           </p>
           {hasVixRange && (
             <div className="flex gap-3 mt-2 text-xs text-[--text-muted]">
@@ -586,10 +586,10 @@ export default function VolatilityPage() {
           </div>
           <div className="space-y-3 mt-4">
             {[
-              { label: "Risk-On", condition: vixLevel < 20 && spyChangePct > 0, desc: "VIX bas + SPY haussier" },
-              { label: "Risk-Off", condition: vixLevel > 25 && spyChangePct < 0, desc: "VIX élevé + SPY baissier" },
+              { label: "Risk-On", condition: vixLevel < 20 && spyChangePct > 0, desc: t("vol_riskOnDesc") },
+              { label: "Risk-Off", condition: vixLevel > 25 && spyChangePct < 0, desc: t("vol_riskOffDesc") },
               { label: "Indécision", condition: vixLevel >= 20 && vixLevel <= 25, desc: "Volatilité modérée" },
-              { label: "Complaisance", condition: vixLevel < 15, desc: "VIX très bas — attention" },
+              { label: t("vol_complacencyLabel"), condition: vixLevel < 15, desc: t("vol_complacencyDesc") },
             ].map((regime) => (
               <div
                 key={regime.label}
@@ -613,7 +613,7 @@ export default function VolatilityPage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="w-5 h-5 text-cyan-400" />
-          <h3 className="font-semibold text-[--text-primary]">VIX — 30 Derniers Jours</h3>
+          <h3 className="font-semibold text-[--text-primary]">{t("vol_vixHistory30")}</h3>
           {isLiveSource && (
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium ml-1">LIVE</span>
           )}
@@ -644,7 +644,7 @@ export default function VolatilityPage() {
               </thead>
               <tbody>
                 {MOCK_IV_HV_DATA.map((row) => {
-                  const signal = getIvSignal(row.iv, row.hv);
+                  const signal = getIvSignal(row.iv, row.hv, t);
                   return (
                     <tr key={row.asset} className="border-b border-[--border-subtle]/50">
                       <td className="py-2.5">
@@ -820,13 +820,13 @@ export default function VolatilityPage() {
       {/*  ROW 7 — Signals                                             */}
       {/* ============================================================ */}
       <div className="glass rounded-2xl p-6">
-        <h3 className="font-semibold text-[--text-primary] mb-4">Signaux Automatiques</h3>
+        <h3 className="font-semibold text-[--text-primary] mb-4">{t("vol_autoSignals")}</h3>
         <div className="space-y-3">
           {vixLevel > 30 && (
             <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30">
               <p className="text-sm font-medium text-rose-400">
                 <AlertTriangle className="w-4 h-4 inline mr-1.5" />
-                VIX en zone panique ({vixLevel.toFixed(1)}) — Marché très volatil, réduisez votre taille de position
+                {t("vol_vixPanicSignal", { level: vixLevel.toFixed(1) })}
               </p>
             </div>
           )}
@@ -834,35 +834,35 @@ export default function VolatilityPage() {
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
               <p className="text-sm font-medium text-amber-400">
                 <AlertTriangle className="w-4 h-4 inline mr-1.5" />
-                VIX très bas ({vixLevel.toFixed(1)}) — Complaisance, un spike de volatilité pourrait arriver
+                {t("vol_vixLowSignal", { level: vixLevel.toFixed(1) })}
               </p>
             </div>
           )}
           {spy && volData["GLD"] && spy.changepct < -1 && volData["GLD"].changepct > 0.5 && (
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-              <p className="text-sm font-medium text-amber-400">Flight to safety : SPY baisse, Gold monte — Contexte Risk-Off</p>
+              <p className="text-sm font-medium text-amber-400">{t("vol_flightToSafety")}</p>
             </div>
           )}
           {spy && volData["TLT"] && spy.changepct > 0.5 && volData["TLT"].changepct < -0.5 && (
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-              <p className="text-sm font-medium text-emerald-400">Rotation equity : SPY monte, Bonds baissent — Contexte Risk-On</p>
+              <p className="text-sm font-medium text-emerald-400">{t("vol_equityRotation")}</p>
             </div>
           )}
           {isContango && vixLevel < 20 && (
             <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
               <p className="text-sm font-medium text-cyan-400">
                 <Minus className="w-4 h-4 inline mr-1.5" />
-                Structure en Contango + VIX normal — Conditions favorables pour les stratégies short vol
+                {t("vol_contangoSignal")}
               </p>
             </div>
           )}
           {vixLevel >= 15 && vixLevel <= 30 && (
             <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
-              <p className="text-sm font-medium text-cyan-400">VIX normal ({vixLevel.toFixed(1)}) — Conditions de trading standards</p>
+              <p className="text-sm font-medium text-cyan-400">{t("vol_normalSignal", { level: vixLevel.toFixed(1) })}</p>
             </div>
           )}
           {vixLevel >= 15 && vixLevel <= 30 && !spy && (
-            <p className="text-sm text-[--text-muted] text-center py-2">Aucun signal particulier — Marché dans les normes</p>
+            <p className="text-sm text-[--text-muted] text-center py-2">{t("vol_noParticular")}</p>
           )}
         </div>
       </div>
@@ -907,7 +907,7 @@ export default function VolatilityPage() {
           <div className="glass rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <Activity className="w-5 h-5 text-cyan-400" />
-              <h3 className="font-semibold text-[--text-primary]">VIX — Historique 30 Jours avec Zones</h3>
+              <h3 className="font-semibold text-[--text-primary]">{t("vol_vixHistoryZones")}</h3>
               {isLiveSource && (
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium ml-1">LIVE</span>
               )}
@@ -997,7 +997,7 @@ export default function VolatilityPage() {
           const volRegimes = [
             {
               label: "VIX < 15",
-              name: "Volatilité Basse",
+              name: t("vol_volRegimeLow"),
               winRate: 68,
               avgRR: 2.1,
               trades: 52,
@@ -1009,7 +1009,7 @@ export default function VolatilityPage() {
             },
             {
               label: "VIX 15-20",
-              name: "Vol. Normale Basse",
+              name: t("vol_volRegimeNormalLow"),
               winRate: 64,
               avgRR: 1.8,
               trades: 78,
@@ -1021,7 +1021,7 @@ export default function VolatilityPage() {
             },
             {
               label: "VIX 20-25",
-              name: "Vol. Normale Haute",
+              name: t("vol_volRegimeNormalHigh"),
               winRate: 55,
               avgRR: 1.5,
               trades: 45,
@@ -1033,7 +1033,7 @@ export default function VolatilityPage() {
             },
             {
               label: "VIX 25-30",
-              name: "Vol. Élevée",
+              name: t("vol_volRegimeElevated"),
               winRate: 47,
               avgRR: 1.2,
               trades: 22,
@@ -1045,7 +1045,7 @@ export default function VolatilityPage() {
             },
             {
               label: "VIX > 30",
-              name: "Panique",
+              name: t("vol_volRegimePanic"),
               winRate: 38,
               avgRR: 0.9,
               trades: 8,
@@ -1128,10 +1128,10 @@ export default function VolatilityPage() {
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-2">
           <Gauge className="w-5 h-5 text-cyan-400" />
-          <h3 className="font-semibold text-[--text-primary]">ATR Reference — Aide au Placement du Stop-Loss</h3>
+          <h3 className="font-semibold text-[--text-primary]">{t("vol_atrTitle")}</h3>
         </div>
         <p className="text-xs text-[--text-muted] mb-5">
-          Average True Range sur différentes périodes. Utilisez 1-1.5x ATR pour vos stop-loss, ajusté au régime de volatilité actuel.
+          {t("vol_atrDesc")}
         </p>
 
         {(() => {
@@ -1201,12 +1201,12 @@ export default function VolatilityPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[--border-subtle]">
-                    <th className="text-left py-2 text-[--text-secondary] font-medium">Actif</th>
+                    <th className="text-left py-2 text-[--text-secondary] font-medium">{t("vol_thAsset")}</th>
                     <th className="text-right py-2 text-[--text-secondary] font-medium">ATR(7)</th>
                     <th className="text-right py-2 text-[--text-secondary] font-medium">ATR(14)</th>
                     <th className="text-right py-2 text-[--text-secondary] font-medium">ATR(30)</th>
-                    <th className="text-right py-2 text-[--text-secondary] font-medium">SL suggéré (1x ATR14)</th>
-                    <th className="text-right py-2 text-[--text-secondary] font-medium">Régime</th>
+                    <th className="text-right py-2 text-[--text-secondary] font-medium">{t("vol_thSuggestedSL")}</th>
+                    <th className="text-right py-2 text-[--text-secondary] font-medium">{t("vol_thRegime")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1242,7 +1242,7 @@ export default function VolatilityPage() {
                         </td>
                         <td className="text-right">
                           <span className={`text-[10px] font-medium ${vixLevel < 15 ? "text-emerald-400" : vixLevel < 25 ? "text-amber-400" : "text-rose-400"}`}>
-                            {vixLevel < 15 ? "SL serré" : vixLevel < 25 ? "SL standard" : "SL large"}
+                            {vixLevel < 15 ? t("vol_slTight") : vixLevel < 25 ? t("vol_slStandard") : t("vol_slWide")}
                           </span>
                         </td>
                       </tr>
@@ -1254,21 +1254,21 @@ export default function VolatilityPage() {
               {/* ATR usage tips */}
               <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
-                  <p className="text-xs font-medium text-emerald-400 mb-1">VIX &lt; 15 — Vol. Basse</p>
+                  <p className="text-xs font-medium text-emerald-400 mb-1">{t("vol_tipLowVol")}</p>
                   <p className="text-[10px] text-[--text-muted]">
-                    SL = 0.8-1x ATR14. Mouvements contenus, stops serrés possibles.
+                    {t("vol_tipLowVolDesc")}
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                  <p className="text-xs font-medium text-amber-400 mb-1">VIX 15-25 — Vol. Normale</p>
+                  <p className="text-xs font-medium text-amber-400 mb-1">{t("vol_tipNormalVol")}</p>
                   <p className="text-[10px] text-[--text-muted]">
-                    SL = 1-1.5x ATR14. Conditions standards, stops moyens recommandés.
+                    {t("vol_tipNormalVolDesc")}
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20">
-                  <p className="text-xs font-medium text-rose-400 mb-1">VIX &gt; 25 — Vol. Haute</p>
+                  <p className="text-xs font-medium text-rose-400 mb-1">{t("vol_tipHighVol")}</p>
                   <p className="text-[10px] text-[--text-muted]">
-                    SL = 1.5-2x ATR14. Mouvements amples, élargissez vos stops et réduisez la taille.
+                    {t("vol_tipHighVolDesc")}
                   </p>
                 </div>
               </div>

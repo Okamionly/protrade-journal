@@ -1284,7 +1284,7 @@ export default function SentimentPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs mt-1">
-                        <span style={{ color: "var(--text-muted)" }}>Trades</span>
+                        <span style={{ color: "var(--text-muted)" }}>{t("sentiment_trades")}</span>
                         <span className="mono" style={{ color: "var(--text-secondary)" }}>{pr.trades}</span>
                       </div>
                     </div>
