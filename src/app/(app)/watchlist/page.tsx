@@ -553,7 +553,7 @@ export default function WatchlistPage() {
     }
 
     // Assets with strong recent price movement aligned with user's bias
-    for (const item of watchlist.slice(0, 10)) {
+    for (const item of items.slice(0, 10)) {
       const q = quotes[item.symbol];
       const perf = assetPerformance[item.symbol.toUpperCase()];
       if (!q || !perf || perf.tradesCount < 3) continue;
@@ -586,7 +586,7 @@ export default function WatchlistPage() {
     }
 
     return insights.slice(0, 3);
-  }, [trades, assetPerformance, watchlist, quotes]);
+  }, [trades, assetPerformance, items, quotes]);
 
   return (
     <div className="space-y-6">
