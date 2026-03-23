@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { LbmaTranslations, Locale } from "./types";
 import { LOCALE_DATE_MAP } from "./types";
 
@@ -112,12 +112,12 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  const setLocale = (l: Locale) => {
+  const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
     localStorage.setItem(STORAGE_KEY, l);
-  };
+  }, []);
 
-  const t = (key: string, params?: Record<string, string | number>): string => {
+  const t = useCallback((key: string, params?: Record<string, string | number>): string => {
     let val = dictionaries[locale][key] || dictionaries.fr[key] || key;
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
@@ -126,7 +126,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       });
     }
     return val;
-  };
+  }, [locale]);
 
   const dir = locale === "ar" ? "rtl" : "ltr";
   const dateFmt = LOCALE_DATE_MAP[locale];
