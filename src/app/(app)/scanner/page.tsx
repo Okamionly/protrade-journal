@@ -183,6 +183,8 @@ export default function ScannerPage() {
 
   // Auto-refresh
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const signalHistoryRef = useRef(signalHistory);
+  signalHistoryRef.current = signalHistory;
 
   // ─── Fetch data ───────────────────────────────────────────────────────────
 
@@ -311,7 +313,7 @@ export default function ScannerPage() {
       // Only record if strong enough (strength >= 60)
       if (row.strength < 60) continue;
       // Check if we already have an unresolved record for this symbol+signal
-      const existing = signalHistory.find((r) => r.symbol === row.symbol && r.signal === row.signal && !r.resolved && (now - r.timestamp < 3600000));
+      const existing = signalHistoryRef.current.find((r) => r.symbol === row.symbol && r.signal === row.signal && !r.resolved && (now - r.timestamp < 3600000));
       if (!existing) {
         newRecords.push({
           symbol: row.symbol,
@@ -324,7 +326,7 @@ export default function ScannerPage() {
     }
 
     // Resolve old signals (>30min old) by comparing price direction
-    const updated = signalHistory.map((record) => {
+    const updated = signalHistoryRef.current.map((record) => {
       if (record.resolved) return record;
       if (now - record.timestamp < 1800000) return record; // wait 30min
       const currentRow = rows.find((r) => r.symbol === record.symbol);
@@ -336,8 +338,9 @@ export default function ScannerPage() {
       return { ...record, priceAfter, correct, resolved: true };
     });
 
-    if (newRecords.length > 0 || updated !== signalHistory) {
-      const combined = [...updated, ...newRecords];
+    const hasResolved = updated.some((r, i) => r !== signalHistoryRef.current[i]);
+    if (newRecords.length > 0 || hasResolved) {
+      const combined = [...updated, ...newRecords].slice(-500);
       setSignalHistory(combined);
       saveSignalHistory(combined);
     }
@@ -360,7 +363,8 @@ export default function ScannerPage() {
       }
     }
     prevRowsRef.current = rows;
-  }, [rows, favorites, signalHistory]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, favorites]);
 
   // Auto-dismiss toasts
   useEffect(() => {
