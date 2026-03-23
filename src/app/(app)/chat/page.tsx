@@ -1226,7 +1226,7 @@ function RightPanel({
     if (!uniqueUsers.has(m.userId)) {
       uniqueUsers.set(m.userId, {
         name: m.user.name || m.user.email.split("@")[0],
-        initial: (m.user.name || m.user.email)[0].toUpperCase(),
+        initial: (m.user.name || m.user.email || "?")[0].toUpperCase(),
         role: m.user.role,
       });
     }

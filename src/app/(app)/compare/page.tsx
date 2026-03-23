@@ -316,7 +316,8 @@ function generateTakeaways(a: PeriodStats, b: PeriodStats, t: (key: string, para
   }
 
   if (b.profitFactor > a.profitFactor && a.profitFactor > 0) {
-    tips.push(t("profitFactorImproved", { from: a.profitFactor.toFixed(2), to: b.profitFactor.toFixed(2) }));
+    const fmtPF = (pf: number) => pf === Infinity ? "∞" : isNaN(pf) ? "0" : pf.toFixed(2);
+    tips.push(t("profitFactorImproved", { from: fmtPF(a.profitFactor), to: fmtPF(b.profitFactor) }));
   }
 
   if (b.avgPnL > a.avgPnL) {
@@ -407,15 +408,16 @@ function generateInsights(a: PeriodStats, b: PeriodStats): Insight[] {
   }
 
   // Rule: Profit factor comparison
+  const fmtPF2 = (pf: number) => pf === Infinity ? "\u221e" : isNaN(pf) ? "0" : pf.toFixed(2);
   if (a.profitFactor > 0 && b.profitFactor > 0) {
     if (pfDiff > 0.5) {
       insights.push({
-        text: `Profit Factor en nette progression (${a.profitFactor.toFixed(2)} \u2192 ${b.profitFactor.toFixed(2)}). Votre edge s\u2019am\u00e9liore.`,
+        text: `Profit Factor en nette progression (${fmtPF2(a.profitFactor)} \u2192 ${fmtPF2(b.profitFactor)}). Votre edge s\u2019am\u00e9liore.`,
         type: "positive",
       });
     } else if (pfDiff < -0.5) {
       insights.push({
-        text: `Profit Factor en baisse (${a.profitFactor.toFixed(2)} \u2192 ${b.profitFactor.toFixed(2)}). Revoyez vos crit\u00e8res d\u2019entr\u00e9e.`,
+        text: `Profit Factor en baisse (${fmtPF2(a.profitFactor)} \u2192 ${fmtPF2(b.profitFactor)}). Revoyez vos crit\u00e8res d\u2019entr\u00e9e.`,
         type: "negative",
       });
     }

@@ -190,8 +190,10 @@ function BenchmarkBar({ label, userValue, medianValue, unit, higherIsBetter = tr
   label: string; userValue: number; medianValue: number; unit: string; higherIsBetter?: boolean;
 }) {
   const { t } = useTranslation();
-  const maxVal = Math.max(userValue, medianValue, 0.01) * 1.2;
-  const userPct = Math.max(0, Math.min((userValue / maxVal) * 100, 100));
+  const fmtVal = (v: number) => v === Infinity ? "∞" : isNaN(v) ? "0" : v.toFixed(unit === "%" ? 1 : 2);
+  const cappedUser = userValue === Infinity ? medianValue * 5 : isNaN(userValue) ? 0 : userValue;
+  const maxVal = Math.max(cappedUser, medianValue, 0.01) * 1.2;
+  const userPct = Math.max(0, Math.min((cappedUser / maxVal) * 100, 100));
   const medianPct = Math.max(0, Math.min((medianValue / maxVal) * 100, 100));
   const isBetter = higherIsBetter ? userValue >= medianValue : userValue <= medianValue;
 
@@ -200,7 +202,7 @@ function BenchmarkBar({ label, userValue, medianValue, unit, higherIsBetter = tr
       <div className="flex justify-between items-center">
         <span className="text-xs text-[--text-secondary]">{label}</span>
         <span className={`text-xs font-semibold mono ${isBetter ? "text-emerald-400" : "text-rose-400"}`}>
-          {userValue.toFixed(unit === "%" ? 1 : 2)}{unit}
+          {fmtVal(userValue)}{unit}
         </span>
       </div>
       <div className="relative h-3 rounded-full" style={{ background: "var(--bg-secondary)" }}>
@@ -209,8 +211,8 @@ function BenchmarkBar({ label, userValue, medianValue, unit, higherIsBetter = tr
           style={{ width: `${userPct}%` }} />
       </div>
       <div className="flex justify-between text-[9px] text-[--text-muted]">
-        <span>{t("benchmarkYou")}: {userValue.toFixed(unit === "%" ? 1 : 2)}{unit}</span>
-        <span>{t("benchmarkMedian")}: {medianValue.toFixed(unit === "%" ? 1 : 2)}{unit}</span>
+        <span>{t("benchmarkYou")}: {fmtVal(userValue)}{unit}</span>
+        <span>{t("benchmarkMedian")}: {fmtVal(medianValue)}{unit}</span>
       </div>
     </div>
   );
@@ -265,8 +267,11 @@ function AchievementBadge({ icon: Icon, title, description, progress, target, un
 function ComparisonRow({ label, current, previous, unit, higherIsBetter = true }: {
   label: string; current: number; previous: number; unit: string; higherIsBetter?: boolean;
 }) {
-  const diff = current - previous;
-  const pctChange = previous !== 0 ? ((current - previous) / Math.abs(previous)) * 100 : current > 0 ? 100 : 0;
+  const fmtVal = (v: number) => v === Infinity ? "∞" : isNaN(v) ? "0" : v.toFixed(unit === "%" ? 1 : 2);
+  const safeCurrent = current === Infinity ? 9999 : isNaN(current) ? 0 : current;
+  const safePrevious = previous === Infinity ? 9999 : isNaN(previous) ? 0 : previous;
+  const diff = safeCurrent - safePrevious;
+  const pctChange = safePrevious !== 0 ? ((safeCurrent - safePrevious) / Math.abs(safePrevious)) * 100 : safeCurrent > 0 ? 100 : 0;
   const improved = higherIsBetter ? diff > 0 : diff < 0;
   const neutral = diff === 0;
 
@@ -274,9 +279,9 @@ function ComparisonRow({ label, current, previous, unit, higherIsBetter = true }
     <div className="flex items-center justify-between py-2.5 border-b border-[--border-subtle] last:border-0">
       <span className="text-xs text-[--text-secondary]">{label}</span>
       <div className="flex items-center gap-4">
-        <span className="text-xs text-[--text-muted] mono">{previous.toFixed(unit === "%" ? 1 : 2)}{unit}</span>
+        <span className="text-xs text-[--text-muted] mono">{fmtVal(previous)}{unit}</span>
         <ChevronRight className="w-3 h-3 text-[--text-muted]" />
-        <span className="text-xs font-semibold mono">{current.toFixed(unit === "%" ? 1 : 2)}{unit}</span>
+        <span className="text-xs font-semibold mono">{fmtVal(current)}{unit}</span>
         {!neutral && (
           <span className={`text-[10px] font-semibold flex items-center gap-0.5 ${improved ? "text-emerald-400" : "text-rose-400"}`}>
             {improved ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}

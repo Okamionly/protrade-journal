@@ -57,7 +57,7 @@ function computeStats(trades: Trade[], sizeMultiplier: number): Stats {
   const variance = results.length > 1 ? results.reduce((s, r) => s + (r - mean) ** 2, 0) / (results.length - 1) : 0;
   const sharpe = Math.sqrt(variance) > 0 ? (mean / Math.sqrt(variance)) * Math.sqrt(252) : 0;
   return {
-    totalPnL: +totalPnL.toFixed(2), winRate: +winRate.toFixed(1), profitFactor: +profitFactor.toFixed(2),
+    totalPnL: +totalPnL.toFixed(2), winRate: +winRate.toFixed(1), profitFactor: profitFactor === Infinity ? Infinity : isNaN(profitFactor) ? 0 : +profitFactor.toFixed(2),
     maxDrawdown: +maxDD.toFixed(2), avgWin: wins.length > 0 ? +(grossWins / wins.length).toFixed(2) : 0,
     avgLoss: losses.length > 0 ? +(grossLosses / losses.length).toFixed(2) : 0, totalTrades: trades.length, sharpe: +sharpe.toFixed(2),
   };
@@ -317,7 +317,8 @@ function generateInsights(actual: Stats, simulated: Stats, config: SimConfig): s
     insights.push(`En coupant à ${config.tpRR}R, tu aurais ${pnlDiff > 0 ? "gagné" : "perdu"} ${Math.abs(pnlDiff).toFixed(0)}€ ${pnlDiff > 0 ? "de plus" : "de moins"} (${pnlDiff > 0 ? "+" : ""}${pnlPct}%).`);
   }
   if (config.removeWorst > 0 && simulated.profitFactor !== actual.profitFactor) {
-    insights.push(`Sans tes ${config.removeWorst} pires trades, ton profit factor passe de ${actual.profitFactor} à ${simulated.profitFactor}.`);
+    const fmtPF = (pf: number) => pf === Infinity ? "∞" : isNaN(pf) ? "0" : pf.toFixed(2);
+    insights.push(`Sans tes ${config.removeWorst} pires trades, ton profit factor passe de ${fmtPF(actual.profitFactor)} à ${fmtPF(simulated.profitFactor)}.`);
   }
   if (config.removeLosing && simulated.winRate !== actual.winRate) {
     insights.push(`Sans les jours rouges, ton win rate passe de ${actual.winRate}% à ${simulated.winRate}%.`);

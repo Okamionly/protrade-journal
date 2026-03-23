@@ -184,7 +184,8 @@ export default function ReportsPage() {
     if (filteredTrades.length === 0) return [t("insightNoTrades")];
     if (stats.winRate >= 60) msgs.push(t("insightWinRateGood", { rate: stats.winRate.toFixed(0) }));
     else if (stats.winRate < 40) msgs.push(t("insightWinRateLow", { rate: stats.winRate.toFixed(0) }));
-    if (stats.profitFactor > 1.5) msgs.push(t("insightProfitFactorGood", { pf: stats.profitFactor.toFixed(2) }));
+    const fmtPF = (pf: number) => pf === Infinity ? "∞" : isNaN(pf) ? "0" : pf.toFixed(2);
+    if (stats.profitFactor > 1.5) msgs.push(t("insightProfitFactorGood", { pf: fmtPF(stats.profitFactor) }));
     else if (stats.profitFactor < 1) msgs.push(t("insightProfitFactorBad"));
     const bestDay = Object.entries(dayPerformance).sort(([, a], [, b]) => b.pnl - a.pnl)[0];
     if (bestDay && bestDay[1].pnl > 0) msgs.push(t("insightBestDay", { day: t(DAY_NAMES_KEYS[parseInt(bestDay[0])]), pnl: formatCurrency(bestDay[1].pnl) }));
@@ -216,7 +217,7 @@ export default function ReportsPage() {
       `${t("period")}: ${formatDateShort(rangeStart)} - ${formatDateShort(rangeEnd)}`,
       `P&L: ${formatCurrency(stats.netProfit)}`,
       `Win Rate: ${stats.winRate.toFixed(1)}%`,
-      `Profit Factor: ${stats.profitFactor.toFixed(2)}`,
+      `Profit Factor: ${stats.profitFactor === Infinity ? "∞" : isNaN(stats.profitFactor) ? "0" : stats.profitFactor.toFixed(2)}`,
       `Trades: ${stats.totalTrades} (${stats.wins}W / ${stats.losses}L)`,
       `${t("avgRR")}: ${stats.avgRR}`,
       `Max DD: ${formatCurrency(-stats.maxDrawdown)}`,
