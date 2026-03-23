@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useTrades } from "@/hooks/useTrades";
 import { calculateRR } from "@/lib/utils";
 import {
@@ -15,6 +15,25 @@ import { useTranslation } from "@/i18n/context";
    Helper: Score Gauge (SVG donut arc)
    ═══════════════════════════════════════════════════════════ */
 function ScoreGauge({ score, label, size = "sm" }: { score: number; label: string; size?: "sm" | "lg" }) {
+  const [animatedScore, setAnimatedScore] = useState(0);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    if (hasAnimated.current) return;
+    hasAnimated.current = true;
+    const duration = 1200;
+    const start = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setAnimatedScore(Math.round(eased * score));
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }, [score]);
+
   const getColor = (s: number) => {
     if (s >= 80) return "#10b981";
     if (s >= 60) return "#0ea5e9";
@@ -24,7 +43,7 @@ function ScoreGauge({ score, label, size = "sm" }: { score: number; label: strin
   const color = getColor(score);
   const r = 45;
   const circumference = 2 * Math.PI * r;
-  const offset = circumference - (score / 100) * circumference;
+  const offset = circumference - (animatedScore / 100) * circumference;
   const isLg = size === "lg";
 
   return (
@@ -33,11 +52,10 @@ function ScoreGauge({ score, label, size = "sm" }: { score: number; label: strin
         <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
           <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={isLg ? 10 : 8} />
           <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth={isLg ? 10 : 8} strokeLinecap="round"
-            strokeDasharray={circumference} strokeDashoffset={offset}
-            className="transition-all duration-1000" />
+            strokeDasharray={circumference} strokeDashoffset={offset} />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`font-bold mono ${isLg ? "text-5xl" : "text-2xl"}`} style={{ color }}>{score}</span>
+          <span className={`font-bold mono ${isLg ? "text-5xl" : "text-2xl"}`} style={{ color }}>{animatedScore}</span>
           {isLg && <span className="text-xs text-[--text-secondary]">/ 100</span>}
         </div>
       </div>
@@ -52,6 +70,17 @@ function ScoreGauge({ score, label, size = "sm" }: { score: number; label: strin
 function CategoryBar({ label, score, icon: Icon, details }: {
   label: string; score: number; icon: React.ElementType; details: string;
 }) {
+  const [barWidth, setBarWidth] = useState(0);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    if (hasAnimated.current) return;
+    hasAnimated.current = true;
+    // Small delay so it animates visibly after mount
+    const timer = setTimeout(() => setBarWidth(Math.max(score, 2)), 100);
+    return () => clearTimeout(timer);
+  }, [score]);
+
   const getColor = (s: number) => {
     if (s >= 80) return { bar: "bg-emerald-500/70", text: "text-emerald-400" };
     if (s >= 60) return { bar: "bg-sky-500/70", text: "text-sky-400" };
@@ -70,8 +99,8 @@ function CategoryBar({ label, score, icon: Icon, details }: {
         <span className={`text-xs sm:text-sm font-bold mono whitespace-nowrap ${colors.text}`}>{score}/100</span>
       </div>
       <div className="relative h-2.5 rounded-full" style={{ background: "var(--bg-secondary)" }}>
-        <div className={`h-full rounded-full transition-all duration-700 ${colors.bar}`}
-          style={{ width: `${Math.max(score, 2)}%` }} />
+        <div className={`h-full rounded-full transition-all duration-1000 ease-out ${colors.bar}`}
+          style={{ width: `${barWidth}%` }} />
       </div>
       <p className="text-[10px] text-[--text-muted]">{details}</p>
     </div>
@@ -636,6 +665,28 @@ export default function PerformancePage() {
         <span className={`mt-4 px-4 py-2 rounded-full text-sm font-bold border ${rankBadge.bg} ${rankBadge.color}`}>
           {rankBadge.label === "beginner" ? t("beginner") : rankBadge.label}
         </span>
+        {/* Tendance indicator: current month score vs previous month */}
+        {(() => {
+          const curPnl = currentPeriod.totalPnL;
+          const prevPnl = previousPeriod.totalPnL;
+          if (previousPeriod.trades === 0 && currentPeriod.trades === 0) return null;
+          const improving = curPnl > prevPnl;
+          const stable = curPnl === prevPnl;
+          return (
+            <div className={`mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${
+              stable ? "bg-gray-500/10 text-[--text-muted]" : improving ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+            }`}>
+              {stable ? (
+                <Activity className="w-3.5 h-3.5" />
+              ) : improving ? (
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              ) : (
+                <ArrowDownRight className="w-3.5 h-3.5" />
+              )}
+              <span>Tendance: {stable ? "Stable" : improving ? "En hausse" : "En baisse"} vs mois dernier</span>
+            </div>
+          );
+        })()}
         {trades.length < 5 && <p className="text-xs text-[--text-muted] mt-3">{t("min5Trades")}</p>}
       </div>
 

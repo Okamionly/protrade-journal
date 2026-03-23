@@ -985,9 +985,10 @@ export default function WatchlistPage() {
                 return (
                   <tr
                     key={item.symbol}
-                    className={`border-b border-[--border-subtle] hover:bg-[--bg-hover] transition-colors ${
+                    className={`border-b border-[--border-subtle]/60 hover:bg-[--bg-hover] transition-colors ${
                       isTriggered ? "bg-amber-500/10 animate-pulse" : ""
                     }`}
+                    style={{ borderBottomWidth: "1px", borderBottomStyle: "solid" }}
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
@@ -1035,10 +1036,10 @@ export default function WatchlistPage() {
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      <span className="text-sm font-bold mono text-[--text-primary]">{q ? `$${q.last.toFixed(2)}` : "\u2014"}</span>
+                      <span className="text-sm font-bold text-[--text-primary]" style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace", fontVariantNumeric: "tabular-nums" }}>{q ? `$${q.last.toFixed(2)}` : "\u2014"}</span>
                     </td>
                     <td className="p-4 text-right">
-                      <span className={`text-sm font-medium mono ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
+                      <span className={`text-sm font-medium ${isUp ? "text-emerald-400" : "text-rose-400"}`} style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace", fontVariantNumeric: "tabular-nums" }}>
                         {q ? `${isUp ? "+" : ""}${q.change.toFixed(2)}` : "\u2014"}
                       </span>
                     </td>
@@ -1110,7 +1111,7 @@ export default function WatchlistPage() {
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => { setAlertSymbol(item.symbol); setAlertPrice(q ? q.last.toFixed(2) : ""); setAlertError(null); }}
-                          className={`p-1.5 rounded-lg hover:bg-[--bg-secondary] ${item.alertPrice ? "text-amber-400" : "text-[--text-muted]"}`}
+                          className={`p-1.5 rounded-lg hover:bg-[--bg-secondary] ${item.alertPrice ? "text-cyan-400 drop-shadow-[0_0_4px_rgba(34,211,238,0.4)]" : "text-[--text-muted]"}`}
                           title="Alerte prix"
                         >
                           <Bell className="w-4 h-4" />

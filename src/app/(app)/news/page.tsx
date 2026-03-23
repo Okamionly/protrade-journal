@@ -40,6 +40,16 @@ interface NewsItem {
 
 // --------------- Constants ---------------
 
+const CATEGORY_ICONS: Record<string, string> = {
+  "all": "📰",
+  "marchés": "📊",
+  "crypto": "🪙",
+  "forex": "📈",
+  "actions": "💹",
+  "macro": "🏛️",
+  "commodities": "🌍",
+};
+
 const CATEGORY_TABS = [
   { key: "all", labelKey: "all" },
   { key: "marchés", labelKey: "markets" },
@@ -276,7 +286,7 @@ function NewsRow({
   const sentiment = analyzeSentiment(item.headline);
 
   return (
-    <div className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors group border-b border-[--border]/40 last:border-b-0 relative">
+    <div className="flex items-start gap-3 px-4 py-3.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors group border-b border-[--border]/40 last:border-b-0 relative">
       {/* Bookmark button */}
       <button
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleBookmark(item.id); }}
@@ -286,7 +296,7 @@ function NewsRow({
         {isBookmarked ? (
           <BookmarkCheck className="w-3.5 h-3.5 text-cyan-400" />
         ) : (
-          <Bookmark className="w-3.5 h-3.5 text-[--text-muted] opacity-0 group-hover:opacity-60 transition-opacity" />
+          <Bookmark className="w-3.5 h-3.5 text-[--text-muted] opacity-40 group-hover:opacity-80 transition-opacity" />
         )}
       </button>
 
@@ -354,7 +364,7 @@ function NewsRow({
 
             {item.category && (
               <span className="text-[10px] text-[--text-muted] uppercase tracking-wide font-medium">
-                {item.category}
+                {CATEGORY_ICONS[item.category] && <span className="mr-0.5">{CATEGORY_ICONS[item.category]}</span>}{item.category}
               </span>
             )}
 
@@ -674,8 +684,9 @@ export default function NewsPage() {
           <Newspaper className="w-5 h-5 text-cyan-400" />
           <h1 className="text-lg font-bold">{t("newsFeed")}</h1>
           {lastUpdatedText && (
-            <span className="text-[10px] text-[--text-muted] hidden sm:inline">
-              &mdash; {lastUpdatedText}
+            <span className="text-[10px] text-[--text-muted] hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[--bg-secondary]/60 border border-[--border]/50">
+              <Clock className="w-2.5 h-2.5" />
+              Derni\u00e8re actualisation: {lastUpdatedText}
             </span>
           )}
         </div>
@@ -771,7 +782,7 @@ export default function NewsPage() {
                   : "text-[--text-secondary] hover:text-[--text-primary] border border-[--border] hover:border-[--text-muted]"
               }`}
             >
-              {t(tab.labelKey)} ({count})
+              {CATEGORY_ICONS[tab.key] && <span className="mr-0.5">{CATEGORY_ICONS[tab.key]}</span>}{t(tab.labelKey)} ({count})
             </button>
           );
         })}

@@ -348,7 +348,7 @@ export function AdvancedEquityChart({ trades }: { trades: any[] }) {
             label: "Drawdown %",
             data: drawdownPct,
             borderColor: "#ef4444",
-            backgroundColor: "rgba(239, 68, 68, 0.2)",
+            backgroundColor: "rgba(239, 68, 68, 0.12)",
             borderWidth: 1,
             fill: true,
             tension: 0.3,
@@ -381,11 +381,35 @@ export function AdvancedEquityChart({ trades }: { trades: any[] }) {
               color: textColor,
             },
           },
+          tooltip: {
+            enabled: true,
+            backgroundColor: isDark ? "rgba(15, 17, 23, 0.95)" : "rgba(255, 255, 255, 0.95)",
+            titleColor: isDark ? "#e2e8f0" : "#1e293b",
+            bodyColor: isDark ? "#cbd5e1" : "#475569",
+            borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 8,
+            displayColors: true,
+            callbacks: {
+              title: (items: any[]) => {
+                if (items.length > 0) return `Date: ${items[0].label}`;
+                return "";
+              },
+              label: (ctx: any) => {
+                const label = ctx.dataset.label || "";
+                const val = ctx.parsed.y;
+                if (label.includes("Drawdown")) return ` ${label}: ${val.toFixed(2)}%`;
+                if (label.includes("Watermark")) return ` ${label}: ${val.toFixed(2)} €`;
+                return ` ${label}: ${val.toFixed(2)} €`;
+              },
+            },
+          },
         },
         scales: {
           x: {
             grid: { color: gridColor },
-            ticks: { color: textColor },
+            ticks: { color: textColor, maxRotation: 45, autoSkip: true, maxTicksLimit: 12 },
           },
           y: {
             type: "linear",
@@ -396,7 +420,7 @@ export function AdvancedEquityChart({ trades }: { trades: any[] }) {
               color: textColor,
             },
             grid: { color: gridColor },
-            ticks: { color: textColor },
+            ticks: { color: textColor, callback: (v: string | number) => `${Number(v).toFixed(0)} €` },
           },
           y1: {
             type: "linear",

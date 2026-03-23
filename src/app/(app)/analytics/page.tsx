@@ -400,6 +400,37 @@ export default function AnalyticsPage() {
         <div className="h-80">
           <AdvancedEquityChart trades={trades} />
         </div>
+        {/* Meilleur mois / Pire mois labels */}
+        {(() => {
+          const monthMap: Record<string, number> = {};
+          trades.forEach(tr => {
+            const d = new Date(tr.date);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+            monthMap[key] = (monthMap[key] || 0) + tr.result;
+          });
+          const entries = Object.entries(monthMap);
+          if (entries.length < 1) return null;
+          const best = entries.reduce((a, b) => a[1] > b[1] ? a : b);
+          const worst = entries.reduce((a, b) => a[1] < b[1] ? a : b);
+          const fmtMonth = (key: string) => {
+            const [y, m] = key.split("-");
+            return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+          };
+          return (
+            <div className="flex gap-4 mt-4">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs text-emerald-400 font-medium">Meilleur mois: {fmtMonth(best[0])}</span>
+                <span className="text-xs font-bold text-emerald-400 mono">+{best[1].toFixed(0)}€</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                <TrendingDown className="w-4 h-4 text-rose-400" />
+                <span className="text-xs text-rose-400 font-medium">Pire mois: {fmtMonth(worst[0])}</span>
+                <span className="text-xs font-bold text-rose-400 mono">{worst[1].toFixed(0)}€</span>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Charts row 2 */}

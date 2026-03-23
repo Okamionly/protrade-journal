@@ -495,7 +495,7 @@ export default function PnLCalendarPage() {
             </div>
 
             {/* Day headers + week summary header */}
-            <div className="grid gap-2 text-center mb-3" style={{ gridTemplateColumns: "repeat(7, 1fr) 80px" }}>
+            <div className="grid gap-2 text-center mb-3" style={{ gridTemplateColumns: "repeat(7, 1fr) 110px" }}>
               {DAY_NAMES.map((d) => (
                 <div key={d} className="text-xs font-semibold text-[--text-muted] py-2">{d}</div>
               ))}
@@ -504,7 +504,7 @@ export default function PnLCalendarPage() {
 
             {/* Calendar rows with week summary */}
             {calendarRows.map((row, rowIdx) => (
-              <div key={rowIdx} className="grid gap-2 mb-2" style={{ gridTemplateColumns: "repeat(7, 1fr) 80px" }}>
+              <div key={rowIdx} className="grid gap-2 mb-2" style={{ gridTemplateColumns: "repeat(7, 1fr) 110px" }}>
                 {row.days.map((day, colIdx) => {
                   if (day === null) {
                     return <div key={`empty-${rowIdx}-${colIdx}`} className="aspect-square" />;
@@ -515,6 +515,8 @@ export default function PnLCalendarPage() {
                   const isToday = new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year;
                   const wins = dayTrades.filter(t => t.result > 0).length;
                   const losses = dayTrades.length - wins;
+
+                  const isBestDay = stats.bestDay && +stats.bestDay[0] === day;
 
                   return (
                     <div
@@ -527,20 +529,23 @@ export default function PnLCalendarPage() {
                         }
                       }}
                       onMouseLeave={() => setHoveredDay(null)}
-                      className={`calendar-day aspect-square rounded-xl border p-1.5 sm:p-2 flex flex-col justify-between cursor-pointer transition-all hover:scale-105 ${
+                      className={`calendar-day aspect-square rounded-xl border p-1.5 sm:p-2 flex flex-col justify-between cursor-pointer transition-all hover:scale-105 relative ${
                         isToday ? "ring-2 ring-cyan-400/50" : ""
-                      } ${hasTrade ? "border-transparent" : "border-[--border-subtle] bg-[--bg-secondary]/20"}`}
-                      style={hasTrade ? { background: getPnlIntensity(dayPnl), borderColor: dayPnl >= 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)" } : undefined}
+                      } ${isBestDay ? "ring-2 ring-amber-400/60" : ""} ${hasTrade ? "border-transparent" : "border-[--border-subtle] bg-[--bg-secondary]/20"}`}
+                      style={hasTrade ? { background: getPnlIntensity(dayPnl), borderColor: isBestDay ? "rgba(251,191,36,0.5)" : dayPnl >= 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)" } : undefined}
                     >
                       <div className="flex items-start justify-between">
                         <span className={`text-xs sm:text-sm font-medium ${isToday ? "text-cyan-400" : hasTrade ? (dayPnl >= 0 ? "text-emerald-300" : "text-rose-300") : "text-[--text-muted]"}`}>
                           {day}
                         </span>
-                        {hasTrade && (
-                          <span className="text-[8px] mono" style={{ color: "var(--text-muted)" }}>
-                            {dayTrades.length}t
-                          </span>
-                        )}
+                        <span className="flex items-center gap-0.5">
+                          {hasTrade && <span className="text-[9px]">{dayPnl >= 0 ? "\u2705" : "\u274C"}</span>}
+                          {hasTrade && (
+                            <span className="text-[8px] mono" style={{ color: "var(--text-muted)" }}>
+                              {dayTrades.length}t
+                            </span>
+                          )}
+                        </span>
                       </div>
                       {hasTrade && (
                         <div className="text-right">
@@ -553,6 +558,9 @@ export default function PnLCalendarPage() {
                             <span className="text-rose-400">{losses}L</span>
                           </p>
                         </div>
+                      )}
+                      {isBestDay && (
+                        <span className="absolute -top-1 -right-1 text-[10px]" title="Meilleur jour du mois">🏆</span>
                       )}
                     </div>
                   );
@@ -569,10 +577,10 @@ export default function PnLCalendarPage() {
                 >
                   {row.weekTrades > 0 ? (
                     <>
-                      <p className={`text-xs font-bold mono ${row.weekPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      <p className={`text-sm font-bold mono ${row.weekPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                         {row.weekPnl >= 0 ? "+" : ""}{row.weekPnl.toFixed(0)}€
                       </p>
-                      <p className="text-[8px] text-[--text-muted]">{row.weekTrades}t</p>
+                      <p className="text-[9px] text-[--text-muted]">{row.weekTrades} trades</p>
                     </>
                   ) : (
                     <p className="text-[9px] text-[--text-muted]">—</p>

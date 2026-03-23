@@ -1042,8 +1042,12 @@ function ForexSessionTimeline({
           50% { opacity: 1; }
         }
         @keyframes marker-pulse {
-          0%, 100% { transform: scaleY(1); }
-          50% { transform: scaleY(1.04); }
+          0%, 100% { opacity: 0.85; }
+          50% { opacity: 1; }
+        }
+        @keyframes time-line-glow {
+          0%, 100% { box-shadow: 0 0 8px #ef4444, 0 0 16px #ef444460; }
+          50% { box-shadow: 0 0 12px #ef4444, 0 0 24px #ef444480, 0 0 36px #ef444440; }
         }
         .kz-active-border {
           animation: kz-pulse 2s ease-in-out infinite;
@@ -1158,11 +1162,19 @@ function ForexSessionTimeline({
                   border: `1.5px solid ${active ? session.color : `${session.color}40`}`,
                   color: session.color,
                   zIndex: 2,
-                  boxShadow: active ? `0 0 10px ${session.color}25` : "none",
+                  boxShadow: active ? `0 0 12px ${session.color}35, 0 0 4px ${session.color}20` : "none",
                   transition: "all 0.3s ease",
                 }}
               >
-                <span className="truncate">{session.emoji} {session.name}</span>
+                <span className="truncate flex items-center gap-1">
+                  {session.emoji} <span style={{ fontWeight: active ? 800 : 600 }}>{session.name}</span>
+                  {active && (
+                    <span className="text-[7px] px-1 py-px rounded-full animate-pulse font-bold"
+                      style={{ background: `${session.color}40`, color: session.color }}>
+                      ACTIF
+                    </span>
+                  )}
+                </span>
                 <span className="text-[8px] mono whitespace-nowrap ml-1">
                   {fmtH(session.start)}-{fmtH(session.end)}
                   {perf && perf.trades > 0 && (
@@ -1193,12 +1205,12 @@ function ForexSessionTimeline({
             return (
               <div
                 key={kz.name}
-                className={`absolute rounded flex items-center px-1.5 text-[8px] font-bold ${active ? "kz-active-border" : ""}`}
+                className={`absolute rounded flex items-center px-1.5 ${active ? "kz-active-border text-[9px]" : "text-[8px]"} font-bold`}
                 style={{
                   left: `${left}%`,
                   width: `${width}%`,
                   top: `${122 + idx * 18}px`,
-                  height: "14px",
+                  height: active ? "16px" : "14px",
                   background: active
                     ? `repeating-linear-gradient(90deg, ${kz.color}35, ${kz.color}20 4px, ${kz.color}35 8px)`
                     : `${kz.color}12`,
@@ -1207,9 +1219,10 @@ function ForexSessionTimeline({
                   zIndex: 3,
                   "--kz-color": kz.color,
                   "--kz-color-dim": `${kz.color}30`,
+                  textShadow: active ? `0 0 6px ${kz.color}80` : "none",
                 } as React.CSSProperties}
               >
-                <span className="truncate">{kz.name}</span>
+                <span className="truncate" style={{ fontWeight: active ? 900 : 700 }}>{kz.name}</span>
                 {active && (
                   <span className="ml-1 text-[7px] px-1 rounded-full animate-pulse"
                     style={{ background: `${kz.color}40` }}>
@@ -1254,26 +1267,34 @@ function ForexSessionTimeline({
               left: `${timePosition}%`,
               top: "14px",
               bottom: 0,
-              width: "2px",
-              background: "#ef4444",
+              width: "3px",
+              background: "linear-gradient(180deg, #ef4444 0%, #ef444490 100%)",
               zIndex: 20,
-              boxShadow: "0 0 6px #ef444480",
+              boxShadow: "0 0 8px #ef4444, 0 0 16px #ef444460, 0 0 24px #ef444430",
+              borderRadius: "2px",
             }}
           >
+            {/* Glow halo behind the line */}
+            <div className="absolute inset-0" style={{
+              width: "9px",
+              left: "-3px",
+              background: "radial-gradient(ellipse at center, #ef444435 0%, transparent 70%)",
+            }} />
             {/* Triangle pointer at top */}
             <div style={{
               position: "absolute",
-              top: "-6px",
-              left: "-5px",
+              top: "-7px",
+              left: "-6px",
               width: 0,
               height: 0,
-              borderLeft: "5px solid transparent",
-              borderRight: "5px solid transparent",
-              borderTop: "6px solid #ef4444",
+              borderLeft: "7px solid transparent",
+              borderRight: "7px solid transparent",
+              borderTop: "8px solid #ef4444",
+              filter: "drop-shadow(0 0 4px #ef4444)",
             }} />
             {/* Time label */}
-            <div className="absolute -left-[22px] text-[9px] mono font-bold whitespace-nowrap"
-              style={{ color: "#ef4444", top: "-18px" }}>
+            <div className="absolute -left-[26px] text-[10px] mono font-bold whitespace-nowrap"
+              style={{ color: "#ef4444", top: "-20px", textShadow: "0 0 8px #ef444480" }}>
               {displayHour.toString().padStart(2, "0")}:{displayMinute.toString().padStart(2, "0")}:{displaySecond.toString().padStart(2, "0")}
             </div>
           </div>
