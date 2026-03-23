@@ -289,7 +289,7 @@ export default function WatchlistPage() {
         return false;
       }
     }
-  }, [items, t]);
+  }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchQuotes = useCallback(() => {
     if (retryTimerRef.current) {

@@ -200,7 +200,7 @@ export default function DistributionPage() {
   const daily = useMemo(() => computeDayDistribution(trades as unknown as Trade[]), [trades]);
   const sessions = useMemo(() => computeSessionDistribution(trades as unknown as Trade[]), [trades]);
 
-  const heatmapDayLabels = useMemo(() => [t("heatmapMon"), t("heatmapTue"), t("heatmapWed"), t("heatmapThu"), t("heatmapFri")], [t]);
+  const heatmapDayLabels = useMemo(() => [t("heatmapMon"), t("heatmapTue"), t("heatmapWed"), t("heatmapThu"), t("heatmapFri")], []); // eslint-disable-line react-hooks/exhaustive-deps
   const heatmapData = useMemo(() => computeHourDayHeatmap(trades as unknown as Trade[], heatmapDayLabels), [trades, heatmapDayLabels]);
   const [hoveredCell, setHoveredCell] = useState<HeatmapCell | null>(null);
 
@@ -261,7 +261,7 @@ export default function DistributionPage() {
     const bestRate = rates.length > 0 ? Math.max(...rates) : 0;
     const worstRate = rates.length > 0 ? Math.min(...rates) : 0;
     return { entries, bestRate, worstRate };
-  }, [trades, t]);
+  }, [trades]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const colorFn = (v: number) => v >= 0 ? "#10b981" : "#ef4444";
 

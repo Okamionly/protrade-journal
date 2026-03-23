@@ -157,7 +157,7 @@ export default function EarningsCalendarPage() {
     if (diffDays === 0) return t("earningsToday");
     if (diffDays === 1) return t("inOneDay");
     return t("inDays").replace("{days}", String(diffDays));
-  }, [nextMajorEarning, t]);
+  }, [nextMajorEarning]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getTimingLabel = (hour: string): string => {
     if (hour === "bmo") return t("beforeMarket");

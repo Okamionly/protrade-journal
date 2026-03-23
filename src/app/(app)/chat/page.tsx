@@ -1549,7 +1549,7 @@ export default function ChatPage() {
     };
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [t]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -304,7 +304,7 @@ function JournalPageContent() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     toast(t("csvExported"), "success");
-  }, [filtered, toast, t]);
+  }, [filtered, toast]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Bulk delete
   const handleBulkDelete = async () => {

@@ -222,7 +222,7 @@ export default function MacroPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadFred();

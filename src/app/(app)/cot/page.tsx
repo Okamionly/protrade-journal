@@ -412,7 +412,7 @@ export default function CotPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadDetail = useCallback(async (key: string) => {
     setDetailLoading(true);

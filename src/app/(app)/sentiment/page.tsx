@@ -387,7 +387,7 @@ export default function SentimentPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadVix = useCallback(async () => {
     setVixLoading(true);
@@ -611,7 +611,7 @@ export default function SentimentPage() {
     }
 
     return indicators;
-  }, [vixData, currentVal, weekAvg, spyChange, btcChange, t]);
+  }, [vixData, currentVal, weekAvg, spyChange, btcChange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Put/Call ratio (same formula as in marketIndicators)
   const putCallRatio = useMemo(() => {
@@ -667,7 +667,7 @@ export default function SentimentPage() {
     }
 
     return alerts;
-  }, [currentVal, vixData, putCallRatio, t]);
+  }, [currentVal, vixData, putCallRatio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasData = data && data.length > 0;
 
