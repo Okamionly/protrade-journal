@@ -651,7 +651,7 @@ function JournalPageContent() {
                     {/* ── Price grid: Entry/Exit, SL/TP, Lots ── */}
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 mb-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <span className="text-[--text-muted] text-xs w-16">Entr\u00e9e</span>
+                        <span className="text-[--text-muted] text-xs w-16">Entrée</span>
                         <span className="mono font-medium text-[--text-primary]">{trade.entry}</span>
                       </div>
                       <div className="flex items-center gap-2">

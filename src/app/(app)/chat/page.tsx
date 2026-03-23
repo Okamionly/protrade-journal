@@ -328,7 +328,7 @@ function PollCard({
   onVote: (optionIndex: number) => void;
   currentUserId?: string;
 }) {
-  const hasVoted = poll.options.some((o) => currentUserId && o.voters.includes(currentUserId));
+  const hasVoted = poll.options.some((o) => currentUserId && (o.voters || []).includes(currentUserId));
   const maxVotes = Math.max(...poll.options.map((o) => o.votes), 1);
 
   return (
@@ -346,7 +346,7 @@ function PollCard({
           {poll.options.map((option, i) => {
             const pct = poll.totalVotes > 0 ? Math.round((option.votes / poll.totalVotes) * 100) : 0;
             const isWinning = option.votes === maxVotes && option.votes > 0;
-            const userVoted = currentUserId ? option.voters.includes(currentUserId) : false;
+            const userVoted = currentUserId ? (option.voters || []).includes(currentUserId) : false;
 
             return (
               <button
