@@ -1,8 +1,8 @@
 "use client";
 
 import { SharedTrade } from "@/hooks/useChat";
-import { ArrowUpRight, ArrowDownRight, Copy, Clock, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowUpRight, ArrowDownRight, Copy, Clock, CheckCircle2, ImageDown, Loader2 } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
 import { calculateRR } from "@/lib/utils";
 
 /* ─── Emotion icons mapping ───────────────────────────────── */
@@ -153,6 +153,8 @@ function CompactTradeCard({ trade }: { trade: SharedTrade }) {
 /* ─── Full variant (for community feed) ───────────────────── */
 function FullTradeCard({ trade, showActions }: { trade: SharedTrade; showActions: boolean }) {
   const [copied, setCopied] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
   const isWin = trade.result > 0;
   const isBuy = trade.direction?.toUpperCase() === "BUY" || trade.direction?.toUpperCase() === "LONG";
   const pnl = trade.result;
@@ -187,8 +189,78 @@ function FullTradeCard({ trade, showActions }: { trade: SharedTrade; showActions
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleExport = useCallback(async () => {
+    if (!exportRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+
+      // Create a wrapper with premium styling for the export
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = `
+        position: fixed; left: -9999px; top: 0;
+        width: 480px; padding: 32px;
+        background: linear-gradient(145deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+        border-radius: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      `;
+
+      // Clone the card
+      const clone = exportRef.current.cloneNode(true) as HTMLElement;
+      clone.style.margin = "0";
+
+      // Add branding header
+      const header = document.createElement("div");
+      header.style.cssText = `
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 16px; padding-bottom: 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      `;
+      header.innerHTML = `
+        <span style="font-size: 18px; font-weight: 800; background: linear-gradient(135deg, #06b6d4, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MarketPhase</span>
+        <span style="font-size: 10px; color: #64748b; letter-spacing: 0.05em;">TRADE CARD</span>
+      `;
+
+      // Add branding footer
+      const footer = document.createElement("div");
+      footer.style.cssText = `
+        margin-top: 16px; padding-top: 12px; text-align: center;
+        border-top: 1px solid rgba(255,255,255,0.06);
+      `;
+      footer.innerHTML = `
+        <span style="font-size: 9px; color: #475569; letter-spacing: 0.1em;">MARKETPHASE.APP — JOURNAL DE TRADING PROFESSIONNEL</span>
+      `;
+
+      wrapper.appendChild(header);
+      wrapper.appendChild(clone);
+      wrapper.appendChild(footer);
+      document.body.appendChild(wrapper);
+
+      const canvas = await html2canvas(wrapper, {
+        scale: 2,
+        backgroundColor: "#0f172a",
+        useCORS: true,
+        logging: false,
+        width: 480,
+      });
+
+      document.body.removeChild(wrapper);
+
+      // Download
+      const link = document.createElement("a");
+      link.download = `MarketPhase_${trade.asset}_${trade.direction}_${new Date().toISOString().split("T")[0]}.png`;
+      link.href = canvas.toDataURL("image/png", 1.0);
+      link.click();
+    } catch (err) {
+      console.error("Export failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  }, [trade.asset, trade.direction, exporting]);
+
   return (
     <div
+      ref={exportRef}
       className="mt-3 rounded-xl overflow-hidden relative"
       style={{
         border: `1.5px solid ${isWin ? "rgba(16,185,129,0.4)" : "rgba(239,68,68,0.4)"}`,
@@ -311,9 +383,9 @@ function FullTradeCard({ trade, showActions }: { trade: SharedTrade; showActions
           </div>
         </div>
 
-        {/* Copy setup button */}
+        {/* Actions: Copy + Export */}
         {showActions && (
-          <div className="mt-3 pt-2.5 border-t" style={{ borderColor: isWin ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)" }}>
+          <div className="mt-3 pt-2.5 border-t flex items-center gap-4" style={{ borderColor: isWin ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)" }}>
             <button
               onClick={handleCopy}
               className="flex items-center gap-1.5 text-[11px] font-medium transition-all hover:opacity-80"
@@ -328,6 +400,24 @@ function FullTradeCard({ trade, showActions }: { trade: SharedTrade; showActions
                 <>
                   <Copy className="w-3.5 h-3.5" />
                   Copier le setup
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex items-center gap-1.5 text-[11px] font-medium transition-all hover:opacity-80 disabled:opacity-50"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {exporting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Export...</span>
+                </>
+              ) : (
+                <>
+                  <ImageDown className="w-3.5 h-3.5" />
+                  Exporter
                 </>
               )}
             </button>

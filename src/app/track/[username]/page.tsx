@@ -435,7 +435,7 @@ export default async function TrackRecordPage({
               <span className="text-[10px] text-gray-600">{xpInLevel}/100 XP</span>
             </div>
           </div>
-          <ShareButton />
+          <ShareButton username={user.name || username} />
         </div>
       </div>
 
