@@ -312,8 +312,8 @@ export default function CalculatorPage() {
   // --- Tab navigation ---
   const tabs: { id: CalcTab; label: string; icon: typeof Calculator }[] = [
     { id: "position", label: "Taille Position", icon: Calculator },
-    { id: "pip", label: "Valeur Pip", icon: Coins },
-    { id: "rr", label: "Risque/Rendement", icon: Activity },
+    { id: "pip", label: t("calcPipValue"), icon: Coins },
+    { id: "rr", label: t("calcRiskReward"), icon: Activity },
     { id: "compound", label: "Croissance Composée", icon: LineChart },
     { id: "grid", label: "Grille Rapide", icon: Grid3X3 },
   ];
@@ -484,15 +484,15 @@ export default function CalculatorPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: "Risque (€)", value: `${results.riskAmount.toFixed(2)}€`, color: riskColor, icon: DollarSign },
-                  { label: "Taille position", value: `${results.positionSize.toFixed(2)} lots`, color: "#0ea5e9", icon: Calculator },
+                  { label: t("calcRisk"), value: `${results.riskAmount.toFixed(2)}€`, color: riskColor, icon: DollarSign },
+                  { label: t("calcPositionSize"), value: `${results.positionSize.toFixed(2)} lots`, color: "#0ea5e9", icon: Calculator },
                   { label: `SL Distance (${instrument === "forex" ? "pips" : "pts"})`, value: results.slDistance.toFixed(1), color: "#f59e0b", icon: Target },
-                  { label: "Perte potentielle", value: `${results.potentialLoss.toFixed(2)}€`, color: "#ef4444", icon: AlertTriangle },
+                  { label: t("calcPotentialLoss"), value: `${results.potentialLoss.toFixed(2)}€`, color: "#ef4444", icon: AlertTriangle },
                   ...(results.potentialProfit !== null ? [
-                    { label: "Profit potentiel", value: `${results.potentialProfit.toFixed(2)}€`, color: "#10b981", icon: TrendingUp },
+                    { label: t("calcPotentialProfit"), value: `${results.potentialProfit.toFixed(2)}€`, color: "#10b981", icon: TrendingUp },
                   ] : []),
                   ...(results.rrRatio !== null ? [
-                    { label: "Ratio R:R", value: `1:${results.rrRatio.toFixed(2)}`, color: results.rrRatio >= 2 ? "#10b981" : results.rrRatio >= 1 ? "#f59e0b" : "#ef4444", icon: BarChart3 },
+                    { label: t("calcRatioRR"), value: `1:${results.rrRatio.toFixed(2)}`, color: results.rrRatio >= 2 ? "#10b981" : results.rrRatio >= 1 ? "#f59e0b" : "#ef4444", icon: BarChart3 },
                   ] : []),
                 ].map((m) => (
                   <div key={m.label} className="metric-card rounded-2xl p-5">

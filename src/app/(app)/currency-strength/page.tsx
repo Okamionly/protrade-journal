@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { RefreshCw, Activity, ArrowUpRight, ArrowDownRight, Zap, Target, BarChart3 } from "lucide-react";
 import { useTrades } from "@/hooks/useTrades";
+import { useTranslation } from "@/i18n/context";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -59,15 +60,15 @@ interface CurrencyWinRate {
 // ---------------------------------------------------------------------------
 const CURRENCIES: Currency[] = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD"];
 
-const CURRENCY_INFO: Record<Currency, { flag: string; name: string }> = {
-  USD: { flag: "\u{1F1FA}\u{1F1F8}", name: "Dollar US" },
-  EUR: { flag: "\u{1F1EA}\u{1F1FA}", name: "Euro" },
-  GBP: { flag: "\u{1F1EC}\u{1F1E7}", name: "Livre Sterling" },
-  JPY: { flag: "\u{1F1EF}\u{1F1F5}", name: "Yen Japonais" },
-  AUD: { flag: "\u{1F1E6}\u{1F1FA}", name: "Dollar Australien" },
-  CAD: { flag: "\u{1F1E8}\u{1F1E6}", name: "Dollar Canadien" },
-  CHF: { flag: "\u{1F1E8}\u{1F1ED}", name: "Franc Suisse" },
-  NZD: { flag: "\u{1F1F3}\u{1F1FF}", name: "Dollar Neo-Zelandais" },
+const CURRENCY_INFO: Record<Currency, { flag: string; nameKey: string }> = {
+  USD: { flag: "\u{1F1FA}\u{1F1F8}", nameKey: "currStr_dollarUS" },
+  EUR: { flag: "\u{1F1EA}\u{1F1FA}", nameKey: "currStr_euro" },
+  GBP: { flag: "\u{1F1EC}\u{1F1E7}", nameKey: "currStr_poundSterling" },
+  JPY: { flag: "\u{1F1EF}\u{1F1F5}", nameKey: "currStr_yen" },
+  AUD: { flag: "\u{1F1E6}\u{1F1FA}", nameKey: "currStr_audDollar" },
+  CAD: { flag: "\u{1F1E8}\u{1F1E6}", nameKey: "currStr_cadDollar" },
+  CHF: { flag: "\u{1F1E8}\u{1F1ED}", nameKey: "currStr_swissFranc" },
+  NZD: { flag: "\u{1F1F3}\u{1F1FF}", nameKey: "currStr_nzdDollar" },
 };
 
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // 5 minutes
@@ -93,12 +94,12 @@ function getTextColor(value: number): string {
   return "text-red-400";
 }
 
-function getLabel(value: number): string {
-  if (value >= 70) return "Fort";
-  if (value >= 55) return "Haussier";
-  if (value >= 45) return "Neutre";
-  if (value >= 30) return "Baissier";
-  return "Faible";
+function getLabel(value: number, t: (k: string) => string): string {
+  if (value >= 70) return t("currStr_strong");
+  if (value >= 55) return t("currStr_bullish");
+  if (value >= 45) return t("currStr_neutral");
+  if (value >= 30) return t("currStr_bearish");
+  return t("currStr_weak");
 }
 
 function matrixCellBg(delta: number): string {
@@ -192,7 +193,7 @@ function Sparkline({ values, width = 30, height = 16 }: { values: number[]; widt
 // ---------------------------------------------------------------------------
 // Feature 1: Strength Change Alerts
 // ---------------------------------------------------------------------------
-function StrengthChangeAlerts({ changes }: { changes: RankChange[] }) {
+function StrengthChangeAlerts({ changes, t }: { changes: RankChange[]; t: (k: string, v?: Record<string, string | number>) => string }) {
   const significant = changes.filter((c) => Math.abs(c.change) >= 2);
   if (significant.length === 0) return null;
 
@@ -200,7 +201,7 @@ function StrengthChangeAlerts({ changes }: { changes: RankChange[] }) {
     <div>
       <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
         <Zap className="w-5 h-5 text-yellow-400" />
-        Alertes de Momentum
+        {t("currStr_momentumAlerts")}
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {significant
@@ -241,8 +242,8 @@ function StrengthChangeAlerts({ changes }: { changes: RankChange[] }) {
                   </div>
                   <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                     {gaining
-                      ? `${info.name} a gagne ${Math.abs(c.change)} places — momentum haussier`
-                      : `${info.name} a perdu ${Math.abs(c.change)} places — momentum baissier`}
+                      ? t("currStr_gainedRanks", { name: t(info.nameKey), count: Math.abs(c.change) })
+                      : t("currStr_lostRanks", { name: t(info.nameKey), count: Math.abs(c.change) })}
                   </p>
                 </div>
                 {gaining ? (
@@ -262,13 +263,14 @@ function StrengthChangeAlerts({ changes }: { changes: RankChange[] }) {
 // Feature 2: Best Pairs Suggestions
 // ---------------------------------------------------------------------------
 function BestPairsSuggestions({ suggestions }: { suggestions: BestPairSuggestion[] }) {
+  const { t } = useTranslation();
   if (suggestions.length === 0) return null;
 
   return (
     <div>
       <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
         <Target className="w-5 h-5 text-cyan-400" />
-        Meilleures Paires a Trader
+        {t("currStr_tradeSuggestions")}
       </h2>
       <div className="space-y-3">
         {suggestions.map((s, i) => {
@@ -319,6 +321,7 @@ function BestPairsSuggestions({ suggestions }: { suggestions: BestPairSuggestion
 // Feature 4: Performance per Currency
 // ---------------------------------------------------------------------------
 function CurrencyPerformance({ winRates }: { winRates: CurrencyWinRate[] }) {
+  const { t } = useTranslation();
   if (winRates.length === 0) return null;
 
   const sorted = [...winRates].sort((a, b) => b.winRate - a.winRate);
@@ -377,12 +380,12 @@ function CurrencyPerformance({ winRates }: { winRates: CurrencyWinRate[] }) {
                 </span>
                 {isBest && (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
-                    meilleur
+                    {t("currStr_best")}
                   </span>
                 )}
                 {isWorst && (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
-                    a travailler
+                    {t("currStr_needsWork")}
                   </span>
                 )}
               </div>
@@ -410,6 +413,7 @@ function StrengthRankings({
   strengths: Record<Currency, number>;
   history: StrengthSnapshot[];
 }) {
+  const { t } = useTranslation();
   const sorted = CURRENCIES.slice()
     .sort((a, b) => (strengths[b] ?? 50) - (strengths[a] ?? 50));
 
@@ -427,7 +431,7 @@ function StrengthRankings({
   return (
     <div>
       <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-        Classement des Devises
+        {t("currStr_ranking")}
       </h2>
       <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-5 space-y-3">
         {sorted.map((currency, idx) => {
@@ -451,7 +455,7 @@ function StrengthRankings({
                       <Sparkline values={sparklines[currency]} />
                     )}
                   </div>
-                  <div className="text-[10px] text-[var(--text-secondary)] leading-tight">{info.name}</div>
+                  <div className="text-[10px] text-[var(--text-secondary)] leading-tight">{t(info.nameKey)}</div>
                 </div>
               </div>
 
@@ -472,7 +476,7 @@ function StrengthRankings({
 
               {/* Label */}
               <span className={`text-xs w-16 text-right ${getTextColor(value)}`}>
-                {getLabel(value)}
+                {getLabel(value, t)}
               </span>
             </div>
           );
@@ -501,10 +505,11 @@ function StrengthMatrix({
   matrix: number[][];
   strengths: Record<Currency, number>;
 }) {
+  const { t } = useTranslation();
   return (
     <div>
       <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-        Matrice de Force
+        {t("currStr_forceMatrix")}
       </h2>
       <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 overflow-x-auto">
         <div className="min-w-[520px]">
@@ -570,10 +575,11 @@ function StrengthMatrix({
 // Section C: Pair Suggestions
 // ---------------------------------------------------------------------------
 function PairSuggestions({ pairs }: { pairs: PairSuggestion[] }) {
+  const { t } = useTranslation();
   return (
     <div>
       <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-        Suggestions de Trades
+        {t("currStr_tradeSuggestions")}
       </h2>
       <div className="space-y-3">
         {pairs.length === 0 && (
@@ -650,6 +656,7 @@ function CrossRatesTable({
   rates: Record<string, number>;
   strengths: Record<Currency, number>;
 }) {
+  const { t } = useTranslation();
   // Build cross rates from USD rates
   function getCrossRate(base: Currency, quote: Currency): number | null {
     if (base === quote) return 1;
@@ -687,7 +694,7 @@ function CrossRatesTable({
           Taux Croises
         </h2>
         <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 text-center text-sm text-[var(--text-secondary)]">
-          Taux de change non disponibles (source: fallback)
+          {t("currStr_ratesUnavailable")}
         </div>
       </div>
     );
@@ -746,11 +753,11 @@ function CrossRatesTable({
         <div className="flex gap-4 mt-3 text-[10px] text-[var(--text-secondary)]">
           <span>
             <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1" />
-            Plus forte divergence
+            {t("currStr_strongestDivergence")}
           </span>
           <span>
             <span className="inline-block w-2 h-2 rounded-full bg-red-500 mr-1" />
-            Plus faible divergence
+            {t("currStr_weakestDivergence")}
           </span>
         </div>
       </div>
@@ -801,6 +808,7 @@ export default function CurrencyStrengthPage() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { trades } = useTrades();
+  const { t } = useTranslation();
 
   // Load history from localStorage on mount
   useEffect(() => {
@@ -947,7 +955,7 @@ export default function CurrencyStrengthPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2 text-[var(--text-primary)]">
             <Activity className="w-6 h-6 text-cyan-400" />
-            Force des Devises
+            {t("currStr_title")}
           </h1>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             Analyse de la force relative des 8 devises majeures
@@ -963,7 +971,7 @@ export default function CurrencyStrengthPage() {
           <button
             onClick={load}
             className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] transition border border-[var(--border-subtle)]"
-            title="Rafraichir"
+            title={t("currStr_refreshTitle")}
           >
             <RefreshCw
               className={`w-5 h-5 text-[var(--text-secondary)] ${loading ? "animate-spin" : ""}`}
@@ -987,7 +995,7 @@ export default function CurrencyStrengthPage() {
       ) : (
         <div className="space-y-8">
           {/* Feature 1: Strength Change Alerts */}
-          <StrengthChangeAlerts changes={rankChanges} />
+          <StrengthChangeAlerts changes={rankChanges} t={t} />
 
           {/* Section A: Strength Rankings (with sparklines) */}
           <StrengthRankings strengths={strengths} history={history} />

@@ -60,6 +60,7 @@ function QuickTagPicker({
   onAddTag: (tag: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [customTag, setCustomTag] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
@@ -103,7 +104,7 @@ function QuickTagPicker({
             type="text"
             value={customTag}
             onChange={(e) => setCustomTag(e.target.value)}
-            placeholder="Tag personnalise..."
+            placeholder={t("journalCustomTag")}
             maxLength={30}
             className="flex-1 bg-[--bg-secondary]/50 border border-[--border] rounded-lg px-2 py-1.5 text-xs text-[--text-primary] placeholder:text-[--text-muted] focus:outline-none focus:border-cyan-500/50"
           />
@@ -329,7 +330,7 @@ function JournalPageContent() {
       const sign = result >= 0 ? "+" : "";
       addNotification(
         "TRADE_ALERT",
-        "Trade enregistre",
+        t("journalTradeRegistered"),
         `${asset} ${sign}${result.toFixed(2)}€`,
         "/journal"
       );
@@ -376,7 +377,7 @@ function JournalPageContent() {
     if (existing.includes(newTag)) return;
     const updated = [...existing, newTag].join(", ");
     const ok = await updateTrade(tradeId, { tags: updated });
-    if (ok) toast("Tag ajoute", "success");
+    if (ok) toast(t("journalTagAdded"), "success");
   };
 
   const handleRemoveTag = async (tradeId: string, tagToRemove: string) => {
@@ -399,7 +400,7 @@ function JournalPageContent() {
       const ok = await updateTrade(id, { tags: updated });
       if (ok) successCount++;
     }
-    if (successCount > 0) toast(`Tag "${tag}" ajoute a ${successCount} trade${successCount > 1 ? "s" : ""}`, "success");
+    if (successCount > 0) toast(t("journalTagAddedBulk", { tag, count: String(successCount) }), "success");
     setShowBulkTagModal(false);
   };
 
@@ -411,7 +412,7 @@ function JournalPageContent() {
       const ok = await updateTrade(id, { strategy: bulkStrategyValue.trim() });
       if (ok) successCount++;
     }
-    if (successCount > 0) toast(`Strategie mise a jour pour ${successCount} trade${successCount > 1 ? "s" : ""}`, "success");
+    if (successCount > 0) toast(t("journalStrategyUpdated", { count: String(successCount) }), "success");
     setShowBulkStrategyModal(false);
     setBulkStrategyValue("");
   };
@@ -441,7 +442,7 @@ function JournalPageContent() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast("Selection exportee en CSV", "success");
+    toast(t("journalSelectionExportedCsv"), "success");
   }, [sorted, selectedIds, toast]);
 
   // Unique strategies for bulk modal
@@ -461,7 +462,7 @@ function JournalPageContent() {
         const data = await res.json();
         setAiReview(data);
       } else {
-        toast("Erreur lors de l'analyse AI", "error");
+        toast(t("journalAiAnalysisError"), "error");
         setAiReviewTradeId(null);
       }
     } catch {
@@ -482,7 +483,7 @@ function JournalPageContent() {
           <div className="flex flex-wrap items-center gap-2 mb-4">
             {urlDate && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                Filtr&eacute; par date : {urlDate}
+                {t("journalFilteredByDate")} : {urlDate}
                 <button
                   onClick={() => {
                     const params = new URLSearchParams(searchParams.toString());
@@ -498,7 +499,7 @@ function JournalPageContent() {
             )}
             {urlAsset && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                Filtr&eacute; par actif : {urlAsset}
+                {t("journalFilteredByAsset")} : {urlAsset}
                 <button
                   onClick={() => {
                     const params = new URLSearchParams(searchParams.toString());
@@ -624,7 +625,7 @@ function JournalPageContent() {
                                 onMouseEnter={() => setHoveredNoteId(trade.id)}
                                 onMouseLeave={() => setHoveredNoteId(null)}
                                 className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 transition cursor-pointer"
-                                title="Voir les notes"
+                                title={t("journalViewNotes")}
                               >
                                 <FileText className="w-3.5 h-3.5" />
                                 <span className="truncate max-w-[120px] text-xs">{trade.setup}</span>
@@ -659,7 +660,7 @@ function JournalPageContent() {
                               <button
                                 onClick={() => setTagPickerTradeId(tagPickerTradeId === trade.id ? null : trade.id)}
                                 className="w-5 h-5 rounded flex items-center justify-center text-[--text-muted] hover:text-cyan-400 hover:bg-cyan-500/10 transition"
-                                title="Ajouter un tag"
+                                title={t("journalAddTag")}
                               >
                                 <Tag className="w-3 h-3" />
                               </button>
@@ -678,10 +679,10 @@ function JournalPageContent() {
                             <button onClick={() => setEditingTrade(trade)} className="text-blue-400 hover:text-blue-300" title={t("editTrade")}>
                               <Pencil className="w-4 h-4" />
                             </button>
-                            <button onClick={() => handleDuplicate(trade)} className="text-cyan-400 hover:text-cyan-300" title="Dupliquer">
+                            <button onClick={() => handleDuplicate(trade)} className="text-cyan-400 hover:text-cyan-300" title={t("journalDuplicate")}>
                               <Copy className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setShareTradeId(trade.id)} className="text-emerald-400 hover:text-emerald-300 transition" title="Partager">
+                            <button onClick={() => setShareTradeId(trade.id)} className="text-emerald-400 hover:text-emerald-300 transition" title={t("journalShare")}>
                               <Share2 className="w-4 h-4" />
                             </button>
                             <button onClick={() => handleAIReview(trade.id)} className="text-purple-400 hover:text-purple-300" title="AI Review">
@@ -700,7 +701,7 @@ function JournalPageContent() {
                             <div className="rounded-lg bg-[--bg-secondary]/50 border border-[--border] p-4 text-sm text-[--text-secondary] whitespace-pre-wrap">
                               <div className="flex items-center gap-2 mb-2 text-xs font-medium text-amber-400">
                                 <FileText className="w-3.5 h-3.5" />
-                                Notes du trade
+                                {t("journalTradeNotes")}
                               </div>
                               {trade.setup}
                             </div>
@@ -726,15 +727,15 @@ function JournalPageContent() {
           <button
             onClick={exportSelectedCSV}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition"
-            title="Exporter la selection"
+            title={t("journalExportSelection")}
           >
             <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Exporter</span>
+            <span className="hidden sm:inline">{t("journalExport")}</span>
           </button>
           <button
             onClick={() => setShowBulkTagModal(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition"
-            title="Ajouter un tag"
+            title={t("journalAddTag")}
           >
             <Tag className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Tag</span>
@@ -742,10 +743,10 @@ function JournalPageContent() {
           <button
             onClick={() => setShowBulkStrategyModal(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition"
-            title="Changer la strategie"
+            title={t("journalChangeStrategy", { count: String(selectedIds.size) })}
           >
             <Pencil className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Strategie</span>
+            <span className="hidden sm:inline">{t("journalChangeStrategyBtn")}</span>
           </button>
           <div className="w-px h-6 bg-[--border]" />
           <button
@@ -800,7 +801,7 @@ function JournalPageContent() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold flex items-center gap-2 text-[--text-primary]">
                 <Tag className="w-5 h-5 text-amber-400" />
-                Ajouter un tag ({selectedIds.size} trade{selectedIds.size > 1 ? "s" : ""})
+                {t("journalAddTagBulk", { count: String(selectedIds.size) })}
               </h3>
               <button onClick={() => setShowBulkTagModal(false)} className="text-[--text-muted] hover:text-[--text-primary] transition">
                 <X className="w-5 h-5" />
@@ -823,7 +824,7 @@ function JournalPageContent() {
               onClick={() => setShowBulkTagModal(false)}
               className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition"
             >
-              Annuler
+              {t("journalCancel")}
             </button>
           </div>
         </div>
@@ -836,7 +837,7 @@ function JournalPageContent() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold flex items-center gap-2 text-[--text-primary]">
                 <Pencil className="w-5 h-5 text-blue-400" />
-                Changer la strategie ({selectedIds.size} trade{selectedIds.size > 1 ? "s" : ""})
+                {t("journalChangeStrategy", { count: String(selectedIds.size) })}
               </h3>
               <button onClick={() => { setShowBulkStrategyModal(false); setBulkStrategyValue(""); }} className="text-[--text-muted] hover:text-[--text-primary] transition">
                 <X className="w-5 h-5" />
@@ -848,7 +849,7 @@ function JournalPageContent() {
                 onChange={(e) => setBulkStrategyValue(e.target.value)}
                 className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-xl px-4 py-2.5 text-sm text-[--text-primary] focus:outline-none focus:border-cyan-500/50 transition"
               >
-                <option value="">Choisir une strategie...</option>
+                <option value="">{t("journalChooseStrategy")}</option>
                 {uniqueStrategies.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -857,7 +858,7 @@ function JournalPageContent() {
                 type="text"
                 value={bulkStrategyValue}
                 onChange={(e) => setBulkStrategyValue(e.target.value)}
-                placeholder="Ou saisir une nouvelle strategie..."
+                placeholder={t("journalOrNewStrategy")}
                 maxLength={50}
                 className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-xl px-4 py-2.5 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:outline-none focus:border-cyan-500/50 transition"
               />
@@ -867,14 +868,14 @@ function JournalPageContent() {
                 onClick={() => { setShowBulkStrategyModal(false); setBulkStrategyValue(""); }}
                 className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition"
               >
-                Annuler
+                {t("journalCancel")}
               </button>
               <button
                 onClick={handleBulkChangeStrategy}
                 disabled={!bulkStrategyValue.trim()}
                 className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition disabled:opacity-50"
               >
-                Appliquer
+                {t("journalApply")}
               </button>
             </div>
           </div>
@@ -906,7 +907,7 @@ function JournalPageContent() {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 <Brain className="w-5 h-5 text-purple-400" />
-                AI Trade Review
+                {t("journalAiReview")}
               </h3>
               <button onClick={() => { setAiReviewTradeId(null); setAiReview(null); }} style={{ color: "var(--text-muted)" }} className="hover:opacity-80">
                 <X className="w-5 h-5" />
@@ -916,7 +917,7 @@ function JournalPageContent() {
             {aiReviewLoading ? (
               <div className="flex flex-col items-center py-10 gap-3">
                 <div className="w-10 h-10 border-3 border-purple-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>Analyse en cours...</p>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t("journalAnalyzing")}</p>
               </div>
             ) : aiReview ? (
               <div className="space-y-5">
@@ -930,7 +931,7 @@ function JournalPageContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Observations</h4>
+                  <h4 className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("journalObservations")}</h4>
                   {aiReview.observations.map((obs, i) => (
                     <div
                       key={i}
@@ -950,7 +951,7 @@ function JournalPageContent() {
 
                 {aiReview.suggestions.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>Suggestions</h4>
+                    <h4 className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{t("journalSuggestions")}</h4>
                     <ul className="space-y-1.5">
                       {aiReview.suggestions.map((s, i) => (
                         <li key={i} className="text-sm flex items-start gap-2 p-2 rounded-lg" style={{ background: "var(--bg-secondary)", color: "var(--text-primary)" }}>
@@ -990,6 +991,7 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const trade = trades.find((t) => t.id === tradeId);
   if (!trade) return null;
@@ -1004,7 +1006,7 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
       const rooms = await roomsRes.json();
       const community = rooms.find((r: { name: string }) => r.name === "Communauté" || r.name === "community");
       if (!community) {
-        toast("Salon communautaire non trouvé", "error");
+        toast(t("journalCommunityNotFound"), "error");
         setSending(false);
         return;
       }
@@ -1025,10 +1027,10 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
 
       if (res.ok) {
         setSent(true);
-        toast("Trade partagé dans la communauté !", "success");
+        toast(t("journalShared"), "success");
         setTimeout(onClose, 1200);
       } else {
-        toast("Erreur lors du partage", "error");
+        toast(t("journalShareError"), "error");
       }
     } catch {
       toast("Erreur lors du partage", "error");
@@ -1059,7 +1061,7 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Share2 className="w-5 h-5 text-cyan-400" />
-            Partager dans la communauté
+            {t("journalShareToCommunity")}
           </h3>
           <button onClick={onClose} className="text-[--text-muted] hover:text-[--text-primary] transition">
             <X className="w-5 h-5" />
@@ -1068,7 +1070,7 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
 
         {/* Live preview label */}
         <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
-          Aperçu dans le fil
+          {t("journalPreviewInFeed")}
         </p>
 
         {/* Trade card preview using shared component */}
@@ -1096,7 +1098,7 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Ajouter un commentaire, votre analyse, votre raisonnement..."
+          placeholder={t("journalAddComment")}
           rows={3}
           maxLength={500}
           className="w-full bg-[--bg-secondary]/50 border border-[--border] rounded-xl px-4 py-2.5 text-sm text-[--text-primary] placeholder:text-[--text-muted] focus:outline-none focus:border-cyan-500/50 transition resize-none mb-1"
@@ -1110,7 +1112,7 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
             onClick={onClose}
             className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-[--border] bg-[--bg-secondary]/50 hover:bg-[--bg-secondary] transition"
           >
-            Annuler
+            {t("journalCancel")}
           </button>
           <button
             onClick={handleShare}
@@ -1118,13 +1120,13 @@ function ShareTradeToCommunityModal({ tradeId, trades, onClose }: { tradeId: str
             className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2 group"
           >
             {sent ? (
-              "Partagé !"
+              t("journalShared")
             ) : sending ? (
-              "Envoi..."
+              t("journalSending")
             ) : (
               <>
                 <Send className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                Partager dans la communauté
+                {t("journalShareToCommunity")}
               </>
             )}
           </button>

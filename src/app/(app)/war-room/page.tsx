@@ -1928,11 +1928,11 @@ export default function WarRoomPage() {
   // ─── Render ───────────────────────────────────────────────────────────
 
   const moods = [
-    { emoji: "\ud83d\ude24", label: "Frustré" },
-    { emoji: "\ud83d\ude30", label: "Anxieux" },
-    { emoji: "\ud83d\ude10", label: "Neutre" },
-    { emoji: "\ud83d\ude42", label: "Confiant" },
-    { emoji: "\ud83d\udd25", label: "En zone" },
+    { emoji: "\ud83d\ude24", label: t("warRoomMoodFrustrated") },
+    { emoji: "\ud83d\ude30", label: t("warRoomMoodAnxious") },
+    { emoji: "\ud83d\ude10", label: t("warRoomMoodNeutral") },
+    { emoji: "\ud83d\ude42", label: t("warRoomMoodConfident") },
+    { emoji: "\ud83d\udd25", label: t("warRoomInZone") },
   ];
 
   const sessionColors: Record<string, string> = {
@@ -2721,7 +2721,7 @@ export default function WarRoomPage() {
                 <div key={name} className="rounded-lg p-3" style={{ background: `${color}10`, border: `1px solid ${color}30` }}>
                   <div className="flex items-center gap-1.5 mb-2">
                     <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-                    <span className="text-xs font-medium" style={{ color }}>{name}</span>
+                    <span className="text-xs font-medium" style={{ color }}>{name === "Hors session" ? t("warRoomOutOfSession") : name}</span>
                   </div>
                   <div className="text-lg font-bold mono" style={{ color: data.pnl >= 0 ? "#22c55e" : "#ef4444" }}>
                     {formatPnl(data.pnl)}$
@@ -2889,7 +2889,7 @@ export default function WarRoomPage() {
                 <div className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                   <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>
-                    {activeStreamEmbed === stream.embedId ? "En cours" : "Cliquer pour regarder"}
+                    {activeStreamEmbed === stream.embedId ? t("warRoomStreaming") : t("warRoomClickToWatch")}
                   </span>
                 </div>
               </button>
@@ -2963,14 +2963,14 @@ export default function WarRoomPage() {
                   className="flex-1 py-2 rounded-xl text-sm font-medium"
                   style={{ background: "#22c55e20", color: "#22c55e", border: "1px solid #22c55e40" }}
                 >
-                  Sauvegarder
+                  {t("warRoomSave")}
                 </button>
                 <button
                   onClick={() => setShowSettingsModal(false)}
                   className="px-4 py-2 rounded-xl text-sm"
                   style={{ background: "var(--bg-secondary)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
                 >
-                  Annuler
+                  {t("warRoomCancel")}
                 </button>
               </div>
             </div>

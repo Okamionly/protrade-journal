@@ -7,6 +7,7 @@ import {
   Zap, BarChart3, Clock, Radio, Activity, Eye,
   Star, Bell, CheckCircle, XCircle, History,
 } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -148,6 +149,7 @@ function SignalStrengthBars({ strength, signal }: { strength: number; signal: "b
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function ScannerPage() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<ScannerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -443,9 +445,9 @@ export default function ScannerPage() {
 
   const signalLabel = (s: "buy" | "sell" | "neutral") => {
     switch (s) {
-      case "buy": return "ACHAT";
-      case "sell": return "VENTE";
-      case "neutral": return "NEUTRE";
+      case "buy": return t("scanner_signalBuy");
+      case "sell": return t("scanner_signalSell");
+      case "neutral": return t("scanner_signalNeutral");
     }
   };
 
@@ -575,10 +577,10 @@ export default function ScannerPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: "var(--text-primary)" }}>
             <Search className="w-7 h-7 text-cyan-400" />
-            Scanner de Marche
+            {t("scanner_title")}
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            Analyse en temps reel de tous les instruments
+            {t("scanner_subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -598,7 +600,7 @@ export default function ScannerPage() {
             }}
           >
             <Star size={14} fill={showOnlyFavorites ? "#f59e0b" : "none"} />
-            Mes Favoris{favorites.length > 0 ? ` (${favorites.length})` : ""}
+            {t("scanner_myFavorites")}{favorites.length > 0 ? ` (${favorites.length})` : ""}
           </button>
           <button
             onClick={() => setShowAccuracy(!showAccuracy)}
@@ -610,7 +612,7 @@ export default function ScannerPage() {
             }}
           >
             <History size={14} />
-            Precision
+            {t("scanner_accuracy")}
           </button>
           <button
             onClick={() => fetchData()}
@@ -619,7 +621,7 @@ export default function ScannerPage() {
             style={{ color: "var(--text-secondary)", border: "1px solid var(--border)" }}
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            Actualiser
+            {t("scanner_refresh")}
           </button>
         </div>
       </div>
@@ -629,28 +631,28 @@ export default function ScannerPage() {
         <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-1">
             <Radio size={14} className="text-cyan-400" />
-            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Instruments</span>
+            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("scanner_instruments")}</span>
           </div>
           <div className="text-xl font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{stats.total}</div>
         </div>
         <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp size={14} style={{ color: "rgb(16,185,129)" }} />
-            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Signaux Achat</span>
+            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("scanner_buySignals")}</span>
           </div>
           <div className="text-xl font-bold tabular-nums" style={{ color: "rgb(16,185,129)" }}>{stats.buyCount}</div>
         </div>
         <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-1">
             <TrendingDown size={14} style={{ color: "rgb(239,68,68)" }} />
-            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Signaux Vente</span>
+            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("scanner_sellSignals")}</span>
           </div>
           <div className="text-xl font-bold tabular-nums" style={{ color: "rgb(239,68,68)" }}>{stats.sellCount}</div>
         </div>
         <div className="glass rounded-xl p-4" style={{ border: "1px solid var(--border)" }}>
           <div className="flex items-center gap-2 mb-1">
             <Activity size={14} className="text-amber-400" />
-            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Force Moyenne</span>
+            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{t("scanner_avgStrength")}</span>
           </div>
           <div className="text-xl font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>{stats.avgStrength}</div>
         </div>
@@ -662,7 +664,7 @@ export default function ScannerPage() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
               <History size={16} className="text-cyan-400" />
-              Precision Historique des Signaux
+              {t("scanner_historicalAccuracy")}
             </h3>
             {signalHistory.length > 0 && (
               <button
@@ -670,18 +672,18 @@ export default function ScannerPage() {
                 className="text-[10px] flex items-center gap-1 hover:opacity-70"
                 style={{ color: "var(--text-muted)" }}
               >
-                <X size={10} /> Reinitialiser
+                <X size={10} /> {t("scanner_resetHistory")}
               </button>
             )}
           </div>
           {accuracyStats.total === 0 ? (
             <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>
-              Aucun signal resolu. Les signaux forts sont enregistres et verifies apres 30 minutes.
+              {t("scanner_noSignals")}
             </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="rounded-lg p-3" style={{ background: "var(--bg-secondary)" }}>
-                <div className="text-[10px] font-semibold uppercase mb-1" style={{ color: "var(--text-muted)" }}>Taux de Precision</div>
+                <div className="text-[10px] font-semibold uppercase mb-1" style={{ color: "var(--text-muted)" }}>{t("scanner_accuracyRate")}</div>
                 <div className="text-xl font-bold mono" style={{ color: accuracyStats.rate >= 50 ? "rgb(16,185,129)" : "rgb(239,68,68)" }}>
                   {accuracyStats.rate.toFixed(1)}%
                 </div>
@@ -840,7 +842,7 @@ export default function ScannerPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher un symbole..."
+              placeholder={t("scanner_searchPlaceholder")}
               className="w-full rounded-lg pl-9 pr-3 py-2 text-sm"
               style={{
                 background: "var(--bg-secondary)",
@@ -862,7 +864,7 @@ export default function ScannerPage() {
             }}
           >
             <Filter size={14} />
-            Filtres
+            {t("scanner_filters")}
             {activeFilterCount > 0 && (
               <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
                 style={{ background: "rgba(6,182,212,0.2)", color: "rgb(6,182,212)" }}>
@@ -925,7 +927,7 @@ export default function ScannerPage() {
                       border: signalFilter === s ? `1px solid ${signalColor(s === "all" ? "neutral" : s)}33` : "1px solid transparent",
                     }}
                   >
-                    {s === "all" ? "Tous" : signalLabel(s as "buy" | "sell" | "neutral")}
+                    {s === "all" ? t("scanner_all") : signalLabel(s as "buy" | "sell" | "neutral")}
                   </button>
                 ))}
               </div>
@@ -1152,22 +1154,22 @@ export default function ScannerPage() {
                 <div className="flex items-center gap-2">
                   {volumeIcon(selectedRow.volumeLevel)}
                   <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-                    {selectedRow.volumeLevel === "high" ? "Eleve" : selectedRow.volumeLevel === "medium" ? "Moyen" : "Faible"}
+                    {selectedRow.volumeLevel === "high" ? t("scanner_volumeHigh") : selectedRow.volumeLevel === "medium" ? t("scanner_volumeMedium") : t("scanner_volumeLow")}
                   </span>
                 </div>
               </div>
               <div className="rounded-lg p-3" style={{ background: "var(--bg-secondary)" }}>
-                <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>Recommandation</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "var(--text-muted)" }}>{t("scanner_recommendation")}</span>
                 <span className="text-sm font-medium" style={{ color: signalColor(selectedRow.signal) }}>
                   {selectedRow.signal === "buy" && selectedRow.strength >= 65
-                    ? "Opportunité forte à l'achat"
+                    ? t("scanner_strongBuyOpportunity")
                     : selectedRow.signal === "sell" && selectedRow.strength >= 65
-                    ? "Pression vendeuse élevée"
+                    ? t("scanner_strongSellPressure")
                     : selectedRow.signal === "buy"
-                    ? "Biais haussier modéré"
+                    ? t("scanner_moderateBullish")
                     : selectedRow.signal === "sell"
-                    ? "Biais baissier modéré"
-                    : "Pas de direction claire"}
+                    ? t("scanner_moderateBearish")
+                    : t("scanner_noDirection")}
                 </span>
               </div>
             </div>
@@ -1180,7 +1182,7 @@ export default function ScannerPage() {
         <div className="fixed bottom-4 right-4 glass rounded-full px-3 py-1.5 flex items-center gap-2 text-xs"
           style={{ border: "1px solid var(--border)", color: "var(--text-muted)", zIndex: 50 }}>
           <RefreshCw size={12} className="animate-spin text-cyan-400" />
-          Mise a jour...
+          {t("scanner_updating")}
         </div>
       )}
     </div>

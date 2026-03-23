@@ -11,6 +11,7 @@ import {
   ChevronDown, Minus, Trophy, Clock, Brain, Flame, Rocket,
   CalendarClock,
 } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 // --- Types ---
 interface SimConfig {
@@ -246,15 +247,17 @@ function StatRow({ label, actual, simulated, format, inverse }: {
 
 // --- Confidence Score ---
 function getConfidenceInfo(tradeCount: number): { label: string; pct: number; color: string; bgColor: string } {
-  if (tradeCount >= 100) return { label: "Excellent", pct: 95, color: "#22c55e", bgColor: "rgba(34,197,94,0.12)" };
-  if (tradeCount >= 50) return { label: "Bon", pct: 82, color: "#16a34a", bgColor: "rgba(22,163,74,0.10)" };
-  if (tradeCount >= 30) return { label: "Modéré", pct: 68, color: "#f59e0b", bgColor: "rgba(245,158,11,0.10)" };
-  if (tradeCount >= 10) return { label: "Faible", pct: 40 + (tradeCount - 10) * (20 / 20), color: "#f97316", bgColor: "rgba(249,115,22,0.10)" };
-  return { label: "Très faible", pct: Math.max(5, tradeCount * 2), color: "#ef4444", bgColor: "rgba(239,68,68,0.10)" };
+  if (tradeCount >= 100) return { label: "backtestReliabilityExcellent", pct: 95, color: "#22c55e", bgColor: "rgba(34,197,94,0.12)" };
+  if (tradeCount >= 50) return { label: "backtestReliabilityGood", pct: 82, color: "#16a34a", bgColor: "rgba(22,163,74,0.10)" };
+  if (tradeCount >= 30) return { label: "backtestReliabilityModerate", pct: 68, color: "#f59e0b", bgColor: "rgba(245,158,11,0.10)" };
+  if (tradeCount >= 10) return { label: "backtestReliabilityLow", pct: 40 + (tradeCount - 10) * (20 / 20), color: "#f97316", bgColor: "rgba(249,115,22,0.10)" };
+  return { label: "backtestReliabilityVeryLow", pct: Math.max(5, tradeCount * 2), color: "#ef4444", bgColor: "rgba(239,68,68,0.10)" };
 }
 
 function ConfidenceScore({ tradeCount }: { tradeCount: number }) {
-  const { label, pct, color, bgColor } = getConfidenceInfo(tradeCount);
+  const { t } = useTranslation();
+  const { label: labelKey, pct, color, bgColor } = getConfidenceInfo(tradeCount);
+  const label = t(labelKey);
   const showWarning = tradeCount < 30;
 
   return (
@@ -399,17 +402,17 @@ function getTradeRR(t: Trade): number {
 const SCENARIO_PRESETS: ScenarioPreset[] = [
   {
     id: "sniper",
-    label: "Sniper Mode",
+    label: "backtestSniperMode",
     icon: Crosshair,
-    description: "Retirer tous les trades avec R:R < 2",
+    description: "backtestSniperDesc",
     filterFn: (trades) => trades.filter((t) => t.result <= 0 || getTradeRR(t) >= 2),
     config: {},
   },
   {
     id: "discipline",
-    label: "Discipline",
+    label: "backtestDiscipline",
     icon: Flame,
-    description: "Retirer les revenge trades (< 15 min après une perte)",
+    description: "backtestDisciplineDesc",
     filterFn: (trades) => {
       const revengeIds = findRevengeTrades(trades);
       return trades.filter((t) => !revengeIds.has(t.id));
@@ -418,24 +421,24 @@ const SCENARIO_PRESETS: ScenarioPreset[] = [
   },
   {
     id: "best-strategy",
-    label: "Meilleure stratégie",
+    label: "backtestBestStrategy",
     icon: Trophy,
-    description: "Garder uniquement la stratégie la plus rentable",
+    description: "backtestBestStrategyDesc",
     config: {}, // strategyFilter set dynamically
   },
   {
     id: "no-emotions",
-    label: "Sans émotions",
+    label: "backtestNoEmotions",
     icon: Brain,
-    description: "Retirer les trades Stressé, Frustré, Tilt…",
+    description: "backtestNoEmotionsDesc",
     filterFn: (trades) => trades.filter((t) => !isNegativeEmotion(t.emotion)),
     config: {},
   },
   {
     id: "optimal-hours",
-    label: "Heures optimales",
+    label: "backtestOptimalHours",
     icon: CalendarClock,
-    description: "Garder uniquement tes 4 meilleures heures",
+    description: "backtestOptimalHoursDesc",
     filterFn: (trades, allTrades) => {
       const bestHours = findBestHours(allTrades, 4);
       return trades.filter((t) => bestHours.includes(new Date(t.date).getHours()));
@@ -561,6 +564,7 @@ function ProjectionPanel({
 
 // --- Main Page ---
 export default function BacktestPage() {
+  const { t } = useTranslation();
   const { trades, loading } = useTrades();
   const [config, setConfig] = useState<SimConfig>(DEFAULT_CONFIG);
   const [activeScenario, setActiveScenario] = useState<ScenarioPresetId | null>(null);
@@ -660,7 +664,7 @@ export default function BacktestPage() {
               <button
                 key={p.id}
                 onClick={() => applyScenario(p)}
-                title={p.description}
+                title={t(p.description)}
                 className="px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all"
                 style={{
                   color: isActive ? "#fff" : "var(--text-secondary)",
@@ -670,7 +674,7 @@ export default function BacktestPage() {
                 }}
               >
                 <p.icon className="w-3.5 h-3.5" style={{ color: isActive ? "#06b6d4" : "var(--text-muted)" }} />
-                {p.label}
+                {t(p.label)}
               </button>
             );
           })}
@@ -761,24 +765,24 @@ export default function BacktestPage() {
             </div>
             {/* Column headers */}
             <div className="flex items-center pb-2 border-b mb-1" style={{ borderColor: "var(--border)" }}>
-              <span className="text-xs flex-1" style={{ color: "var(--text-muted)" }}>Métrique</span>
-              <span className="text-xs w-24 text-right" style={{ color: "var(--text-muted)" }}>Actuel</span>
-              <span className="text-xs w-24 text-right font-semibold text-cyan-400">Simulé</span>
-              <span className="text-xs w-20 text-right" style={{ color: "var(--text-muted)" }}>Écart</span>
+              <span className="text-xs flex-1" style={{ color: "var(--text-muted)" }}>{t("backtestMetric")}</span>
+              <span className="text-xs w-24 text-right" style={{ color: "var(--text-muted)" }}>{t("backtestActual")}</span>
+              <span className="text-xs w-24 text-right font-semibold text-cyan-400">{t("backtestSimulated")}</span>
+              <span className="text-xs w-20 text-right" style={{ color: "var(--text-muted)" }}>{t("backtestDifference")}</span>
             </div>
-            <StatRow label="P&L Total" actual={actualStats.totalPnL} simulated={simStats.totalPnL} format={fmt} />
-            <StatRow label="Taux de réussite" actual={actualStats.winRate} simulated={simStats.winRate} format={fmtPct} />
-            <StatRow label="Facteur de profit" actual={actualStats.profitFactor} simulated={simStats.profitFactor} format={fmtRatio} />
-            <StatRow label="Drawdown max" actual={actualStats.maxDrawdown} simulated={simStats.maxDrawdown} format={fmt} inverse />
-            <StatRow label="Gain moyen" actual={actualStats.avgWin} simulated={simStats.avgWin} format={fmt} />
-            <StatRow label="Perte moyenne" actual={actualStats.avgLoss} simulated={simStats.avgLoss} format={fmt} inverse />
-            <StatRow label="Nombre de trades" actual={actualStats.totalTrades} simulated={simStats.totalTrades} format={fmtNum} />
-            <StatRow label="Ratio de Sharpe" actual={actualStats.sharpe} simulated={simStats.sharpe} format={fmtRatio} />
+            <StatRow label={t("backtestTotalPnl")} actual={actualStats.totalPnL} simulated={simStats.totalPnL} format={fmt} />
+            <StatRow label={t("backtestWinRate")} actual={actualStats.winRate} simulated={simStats.winRate} format={fmtPct} />
+            <StatRow label={t("backtestProfitFactor")} actual={actualStats.profitFactor} simulated={simStats.profitFactor} format={fmtRatio} />
+            <StatRow label={t("backtestMaxDrawdown")} actual={actualStats.maxDrawdown} simulated={simStats.maxDrawdown} format={fmt} inverse />
+            <StatRow label={t("backtestAvgWin")} actual={actualStats.avgWin} simulated={simStats.avgWin} format={fmt} />
+            <StatRow label={t("backtestAvgLoss")} actual={actualStats.avgLoss} simulated={simStats.avgLoss} format={fmt} inverse />
+            <StatRow label={t("backtestTradeCount")} actual={actualStats.totalTrades} simulated={simStats.totalTrades} format={fmtNum} />
+            <StatRow label={t("backtestSharpeRatio")} actual={actualStats.sharpe} simulated={simStats.sharpe} format={fmtRatio} />
 
             {/* Summary banner */}
             <div className="mt-4 p-3 rounded-lg flex items-center justify-between"
               style={{ background: simStats.totalPnL >= actualStats.totalPnL ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)" }}>
-              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Différence nette</span>
+              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{t("backtestNetDifference")}</span>
               <span className={`mono text-sm font-bold ${simStats.totalPnL >= actualStats.totalPnL ? "text-emerald-400" : "text-red-400"}`}>
                 {(simStats.totalPnL - actualStats.totalPnL) >= 0 ? "+" : ""}{(simStats.totalPnL - actualStats.totalPnL).toFixed(2)}&euro;
               </span>

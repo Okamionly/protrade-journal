@@ -24,16 +24,17 @@ import {
   Layers,
   Crosshair,
 } from "lucide-react";
+import { useTranslation } from "@/i18n/context";
 
 // ─── Period Filter ──────────────────────────────────────────────────
 
 type PeriodKey = "7d" | "30d" | "90d" | "all";
 
-const PERIOD_OPTIONS: { key: PeriodKey; label: string; days: number | null }[] = [
-  { key: "7d", label: "7 jours", days: 7 },
-  { key: "30d", label: "30 jours", days: 30 },
-  { key: "90d", label: "90 jours", days: 90 },
-  { key: "all", label: "Tout", days: null },
+const PERIOD_OPTIONS: { key: PeriodKey; labelKey: string; days: number | null }[] = [
+  { key: "7d", labelKey: "corrPeriod7d", days: 7 },
+  { key: "30d", labelKey: "corrPeriod30d", days: 30 },
+  { key: "90d", labelKey: "corrPeriod90d", days: 90 },
+  { key: "all", labelKey: "corrPeriodAll", days: null },
 ];
 
 function filterDatesByPeriod(dates: string[], days: number | null): string[] {
@@ -132,6 +133,7 @@ interface ScatterPoint {
 // ─── Main Component ─────────────────────────────────────────────────
 
 export default function CorrelationPage() {
+  const { t } = useTranslation();
   const { trades, loading } = useTrades();
   const [isVip, setIsVip] = useState<boolean | null>(null);
   const [selectedPair, setSelectedPair] = useState<PairDetail | null>(null);
@@ -614,15 +616,15 @@ export default function CorrelationPage() {
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(6,182,212,0.1)", border: "1px solid rgba(6,182,212,0.2)" }}>
             <Lock className="w-8 h-8 text-cyan-400" />
           </div>
-          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Fonctionnalité VIP</h2>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>{t("corrVipTitle")}</h2>
           <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-            Analysez les corrélations entre vos actifs pour optimiser votre portefeuille
+            {t("corrVipDesc")}
           </p>
           <div className="space-y-3 text-left mb-8">
             {[
-              "Matrice de corrélation entre vos actifs",
-              "Identifiez les paires qui bougent ensemble",
-              "Optimisez la diversification de votre portefeuille",
+              t("corrVipBullet1"),
+              t("corrVipBullet2"),
+              t("corrVipBullet3"),
             ].map((b, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(6,182,212,0.15)" }}>
@@ -634,10 +636,10 @@ export default function CorrelationPage() {
           </div>
           <a href="/vip" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105" style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
             <Crown className="w-4 h-4" />
-            Devenir VIP
+            {t("corrBecomeVip")}
           </a>
           <div className="mt-4">
-            <a href="/vip" className="text-xs hover:underline" style={{ color: "var(--text-muted)" }}>Voir les offres</a>
+            <a href="/vip" className="text-xs hover:underline" style={{ color: "var(--text-muted)" }}>{t("corrSeeOffers")}</a>
           </div>
         </div>
       </div>
@@ -672,12 +674,10 @@ export default function CorrelationPage() {
           className="text-2xl font-bold flex items-center gap-2"
           style={{ color: "var(--text-primary)" }}
         >
-          <Grid3x3 className="w-6 h-6 text-cyan-400" /> Corrélation &
-          Diversification
+          <Grid3x3 className="w-6 h-6 text-cyan-400" /> {t("corrTitle")}
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          Matrice de corrélation, analyse de paires, score de diversification et
-          recommandations.
+          {t("corrSubtitle")}
         </p>
       </div>
 
@@ -690,7 +690,7 @@ export default function CorrelationPage() {
               style={{ color: "var(--text-muted)" }}
             />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Actifs tradés
+              {t("corrAssetsTraded")}
             </span>
           </div>
           <div className="text-2xl font-bold mono text-cyan-400">
@@ -705,7 +705,7 @@ export default function CorrelationPage() {
               style={{ color: "var(--text-muted)" }}
             />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Score diversification
+              {t("corrDivScore")}
             </span>
           </div>
           <div
@@ -730,7 +730,7 @@ export default function CorrelationPage() {
               style={{ color: "var(--text-muted)" }}
             />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Corrélation max
+              {t("corrMaxCorrelation")}
             </span>
           </div>
           <div className="text-2xl font-bold mono text-emerald-400">
@@ -753,7 +753,7 @@ export default function CorrelationPage() {
               style={{ color: "var(--text-muted)" }}
             />
             <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Corrélation min
+              {t("corrMinCorrelation")}
             </span>
           </div>
           <div className="text-2xl font-bold mono text-rose-400">
@@ -839,13 +839,13 @@ export default function CorrelationPage() {
               className="text-sm font-semibold mb-1"
               style={{ color: "var(--text-primary)" }}
             >
-              Portefeuille optimal suggéré
+              {t("corrOptimalPortfolio")}
             </h4>
             <p
               className="text-sm leading-relaxed"
               style={{ color: "var(--text-secondary)" }}
             >
-              Pour une diversification optimale, combinez :{" "}
+              {t("corrOptimalCombine")}{" "}
               <span className="font-semibold text-emerald-400 mono">
                 {optimalPortfolio.assets.join(", ")}
               </span>
@@ -856,15 +856,15 @@ export default function CorrelationPage() {
             >
               <span className="flex items-center gap-1">
                 <Crosshair className="w-3 h-3" />
-                Corrélation moyenne : <span className="mono font-semibold text-emerald-400">{fmt(optimalPortfolio.avgCorrelation)}</span>
+                {t("corrAvgCorrelation")} <span className="mono font-semibold text-emerald-400">{fmt(optimalPortfolio.avgCorrelation)}</span>
               </span>
               <span className="flex items-center gap-1">
                 <Shield className="w-3 h-3" />
                 {optimalPortfolio.avgCorrelation < 0.3
-                  ? "Excellente diversification"
+                  ? t("corrExcellentDiv")
                   : optimalPortfolio.avgCorrelation < 0.5
-                  ? "Bonne diversification"
-                  : "Diversification modérée"}
+                  ? t("corrGoodDiv")
+                  : t("corrModerateDiv")}
               </span>
             </div>
           </div>
@@ -878,7 +878,7 @@ export default function CorrelationPage() {
             className="font-semibold flex items-center gap-2"
             style={{ color: "var(--text-primary)" }}
           >
-            <Grid3x3 className="w-5 h-5 text-cyan-400" /> Matrice de Corrélation
+            <Grid3x3 className="w-5 h-5 text-cyan-400" /> {t("corrHeatmapTitle")}
           </h3>
 
           {/* Period selector tabs */}
@@ -907,7 +907,7 @@ export default function CorrelationPage() {
                       : "1px solid transparent",
                 }}
               >
-                {opt.label}
+                {t(opt.labelKey)}
               </button>
             ))}
           </div>
@@ -1065,7 +1065,7 @@ export default function CorrelationPage() {
             style={{ color: "var(--text-primary)" }}
           >
             <Activity className="w-5 h-5 text-cyan-400" />
-            Analyse: {selectedPair.assetA} / {selectedPair.assetB}
+            {t("corrAnalysis")} {selectedPair.assetA} / {selectedPair.assetB}
           </h3>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -1074,7 +1074,7 @@ export default function CorrelationPage() {
                 className="text-xs mb-1"
                 style={{ color: "var(--text-muted)" }}
               >
-                Corrélation
+                {t("corrCorrelation")}
               </div>
               <div
                 className="text-xl font-bold mono"
@@ -1415,26 +1415,24 @@ export default function CorrelationPage() {
               </p>
               {divScore >= 70 && (
                 <p className="text-emerald-400 flex items-center gap-1">
-                  <Shield className="w-3 h-3" /> Bonne diversification
+                  <Shield className="w-3 h-3" /> {t("corrGoodDiv")}
                 </p>
               )}
               {divScore >= 40 && divScore < 70 && (
                 <p className="text-amber-400 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" /> Diversification
-                  modérée
+                  <AlertTriangle className="w-3 h-3" /> {t("corrModerateDiv")}
                 </p>
               )}
               {divScore < 40 && trades.length > 0 && (
                 <p className="text-rose-400 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" /> Diversification
-                  insuffisante
+                  <AlertTriangle className="w-3 h-3" /> {t("corrInsufficientDiv")}
                 </p>
               )}
               <p
                 className="text-xs"
                 style={{ color: "var(--text-muted)" }}
               >
-                Basé sur la corrélation moyenne absolue entre tous les actifs.
+                {t("corrBasedOnAvg")}
               </p>
             </div>
           </div>
@@ -1446,12 +1444,12 @@ export default function CorrelationPage() {
             className="font-semibold mb-4 flex items-center gap-2"
             style={{ color: "var(--text-primary)" }}
           >
-            <BarChart3 className="w-5 h-5 text-cyan-400" /> Top Corrélations
+            <BarChart3 className="w-5 h-5 text-cyan-400" /> {t("corrTopCorrelations")}
           </h3>
 
           {allPairs.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              Pas assez de paires d&apos;actifs.
+              {t("corrNotEnoughPairs")}
             </p>
           ) : (
             <div className="space-y-3">
@@ -1463,7 +1461,7 @@ export default function CorrelationPage() {
                     style={{ color: "var(--text-muted)" }}
                   >
                     <ArrowUpRight className="w-3 h-3 text-emerald-400" />
-                    Corrélation positive
+                    {t("corrPositive")}
                   </div>
                   {topPositive.map((p, i) => (
                     <div
@@ -1493,7 +1491,7 @@ export default function CorrelationPage() {
                     style={{ color: "var(--text-muted)" }}
                   >
                     <ArrowDownRight className="w-3 h-3 text-rose-400" />
-                    Corrélation négative
+                    {t("corrNegative")}
                   </div>
                   {topNegative.map((p, i) => (
                     <div

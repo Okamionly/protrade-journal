@@ -1278,7 +1278,7 @@ export default function SentimentPage() {
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span style={{ color: "var(--text-muted)" }}>P&amp;L moy.</span>
+                        <span style={{ color: "var(--text-muted)" }}>{t("sentiment_avgPnl")}</span>
                         <span className={`font-bold mono ${pr.avgPnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                           {pr.avgPnl >= 0 ? "+" : ""}{pr.avgPnl.toFixed(1)}%
                         </span>

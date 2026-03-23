@@ -603,12 +603,12 @@ export default function PerformancePage() {
   const rankBadge = getRankBadge(overallScore);
 
   const stats = [
-    { icon: Target, label: "Win Rate", value: `${winRate.toFixed(1)}%`, color: winRate >= 50 ? "text-emerald-400" : "text-rose-400" },
+    { icon: Target, label: t("perfWinRate"), value: `${winRate.toFixed(1)}%`, color: winRate >= 50 ? "text-emerald-400" : "text-rose-400" },
     { icon: TrendingUp, label: t("perfAvgWin"), value: `+€${avgWin.toFixed(2)}`, color: "text-emerald-400" },
     { icon: TrendingDown, label: t("perfAvgLoss"), value: avgLoss > 0 ? `-€${avgLoss.toFixed(2)}` : "€0.00", color: avgLoss > 0 ? "text-rose-400" : "text-gray-400" },
-    { icon: Zap, label: "Profit Factor", value: profitFactor === Infinity ? "∞" : profitFactor.toFixed(2), color: profitFactor >= 1.5 ? "text-emerald-400" : profitFactor >= 1 ? "text-amber-400" : "text-rose-400" },
+    { icon: Zap, label: t("perfProfitFactor"), value: profitFactor === Infinity ? "∞" : profitFactor.toFixed(2), color: profitFactor >= 1.5 ? "text-emerald-400" : profitFactor >= 1 ? "text-amber-400" : "text-rose-400" },
     { icon: BarChart3, label: t("perfExpectancy"), value: `€${expectancy.toFixed(2)}`, color: expectancy >= 0 ? "text-emerald-400" : "text-rose-400" },
-    { icon: Shield, label: "Max Drawdown", value: `€${maxDD.toFixed(2)}`, color: "text-rose-400" },
+    { icon: Shield, label: t("perfMaxDrawdownEuro"), value: `€${maxDD.toFixed(2)}`, color: "text-rose-400" },
     { icon: Clock, label: t("perfTotalTrades"), value: String(trades.length), color: "text-cyan-400" },
     { icon: Trophy, label: t("perfBestStreak"), value: `${maxWinStreak}W / ${Math.abs(maxLossStreak)}L`, color: "text-amber-400" },
   ];
@@ -670,16 +670,16 @@ export default function PerformancePage() {
       {/* ═══ Sub-scores (original gauges) ═══ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="glass rounded-2xl p-4 flex flex-col items-center">
-          <ScoreGauge score={metrics.winRateScore} label="Win Rate" />
+          <ScoreGauge score={metrics.winRateScore} label={t("perfWinRate")} />
         </div>
         <div className="glass rounded-2xl p-4 flex flex-col items-center">
-          <ScoreGauge score={metrics.rrScore} label="Risk/Reward" />
+          <ScoreGauge score={metrics.rrScore} label={t("perfRiskReward")} />
         </div>
         <div className="glass rounded-2xl p-4 flex flex-col items-center">
-          <ScoreGauge score={metrics.pfScore} label="Profit Factor" />
+          <ScoreGauge score={metrics.pfScore} label={t("perfProfitFactor")} />
         </div>
         <div className="glass rounded-2xl p-4 flex flex-col items-center">
-          <ScoreGauge score={metrics.ddScore} label="Drawdown" />
+          <ScoreGauge score={metrics.ddScore} label={t("perfDrawdown")} />
         </div>
       </div>
 
@@ -744,9 +744,9 @@ export default function PerformancePage() {
           <p className="text-sm text-[--text-muted] text-center py-4">{t("perfNoPreviousPeriod")}</p>
         ) : (
           <div>
-            <ComparisonRow label="Win Rate" current={currentPeriod.winRate} previous={previousPeriod.winRate} unit="%" />
-            <ComparisonRow label="Profit Factor" current={currentPeriod.profitFactor} previous={previousPeriod.profitFactor} unit="" />
-            <ComparisonRow label="P&L" current={currentPeriod.totalPnL} previous={previousPeriod.totalPnL} unit="€" />
+            <ComparisonRow label={t("perfWinRate")} current={currentPeriod.winRate} previous={previousPeriod.winRate} unit="%" />
+            <ComparisonRow label={t("perfProfitFactor")} current={currentPeriod.profitFactor} previous={previousPeriod.profitFactor} unit="" />
+            <ComparisonRow label={t("perfPnL")} current={currentPeriod.totalPnL} previous={previousPeriod.totalPnL} unit="€" />
             <ComparisonRow label={t("perfTotalTrades")} current={currentPeriod.trades} previous={previousPeriod.trades} unit="" />
           </div>
         )}
@@ -827,10 +827,10 @@ export default function PerformancePage() {
         </div>
         <p className="text-xs text-[--text-muted] mb-4">{t("benchmarkDesc")}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <BenchmarkBar label="Win Rate" userValue={winRate} medianValue={45} unit="%" higherIsBetter />
-          <BenchmarkBar label="Profit Factor" userValue={profitFactor} medianValue={1.2} unit="" higherIsBetter />
-          <BenchmarkBar label="R:R Moyen" userValue={avgRR} medianValue={0.8} unit="" higherIsBetter />
-          <BenchmarkBar label="Max Drawdown (€)" userValue={maxDD} medianValue={500} unit="" higherIsBetter={false} />
+          <BenchmarkBar label={t("perfWinRate")} userValue={winRate} medianValue={45} unit="%" higherIsBetter />
+          <BenchmarkBar label={t("perfProfitFactor")} userValue={profitFactor} medianValue={1.2} unit="" higherIsBetter />
+          <BenchmarkBar label={t("perfAvgRR")} userValue={avgRR} medianValue={0.8} unit="" higherIsBetter />
+          <BenchmarkBar label={t("perfMaxDrawdownEuro")} userValue={maxDD} medianValue={500} unit="" higherIsBetter={false} />
           <BenchmarkBar label={t("perfExpectancy")} userValue={expectancy} medianValue={5} unit="" higherIsBetter />
           <BenchmarkBar label={t("recoveryFactorLabel")} userValue={recoveryFactor === Infinity ? 10 : recoveryFactor} medianValue={1.5} unit="" higherIsBetter />
         </div>

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useTrades, type Trade } from "@/hooks/useTrades";
 import { useStrategies } from "@/hooks/useStrategies";
+import { useTranslation } from "@/i18n/context";
 
 /* ── Constants ──────────────────────────────────────── */
 const ASSETS = [
@@ -124,6 +125,7 @@ function TradesPanel({
   theme: "dark" | "light";
 }) {
   const { trades } = useTrades();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const norm = normalizeSymbol(symbol);
@@ -150,7 +152,7 @@ function TradesPanel({
           ...glassStyle,
           color: theme === "dark" ? "#a0a0a0" : "#666",
         }}
-        title={open ? "Fermer le panneau" : "Voir les trades"}
+        title={open ? t("chartClosePanel") : t("chartViewTrades")}
       >
         {open ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>
@@ -191,7 +193,7 @@ function TradesPanel({
                 className="p-4 text-center text-xs"
                 style={{ color: "var(--text-muted, #888)" }}
               >
-                Aucun trade pour {symbol}
+                {t("chartNoTradesFor", { symbol })}
               </div>
             )}
             {filtered.map((trade) => (
@@ -205,6 +207,7 @@ function TradesPanel({
 }
 
 function TradeRow({ trade }: { trade: Trade }) {
+  const { t } = useTranslation();
   const isLong = trade.direction === "LONG";
   const pnl = trade.result;
   const pnlColor =
@@ -245,7 +248,7 @@ function TradeRow({ trade }: { trade: Trade }) {
           className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors"
           style={{ color: "var(--accent, #6366f1)" }}
         >
-          Voir
+          {t("chartView")}
         </a>
       </div>
     </div>
@@ -264,6 +267,7 @@ function MiniTradeForm({
 }) {
   const { addTrade } = useTrades();
   const { strategies } = useStrategies();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [direction, setDirection] = useState("LONG");
   const [loading, setLoading] = useState(false);
@@ -378,7 +382,7 @@ function MiniTradeForm({
             ? "0 8px 24px rgba(239,68,68,0.35)"
             : "0 8px 24px rgba(59,130,246,0.35)",
         }}
-        title="Ajouter un trade"
+        title={t("chartAddTrade")}
       >
         <Plus className="w-5 h-5 text-white transition-transform duration-300" />
       </button>
@@ -396,7 +400,7 @@ function MiniTradeForm({
               className="text-sm font-semibold"
               style={{ color: "var(--text-primary, #fff)" }}
             >
-              Trade rapide
+              {t("chartQuickTrade")}
             </h3>
             <button
               onClick={() => setOpen(false)}
@@ -415,7 +419,7 @@ function MiniTradeForm({
                 className="text-xs font-medium mb-1 block"
                 style={{ color: "var(--text-muted, #888)" }}
               >
-                Symbole
+                {t("chartSymbol")}
               </label>
               <select
                 name="asset"
@@ -438,7 +442,7 @@ function MiniTradeForm({
                 className="text-xs font-medium mb-1 block"
                 style={{ color: "var(--text-muted, #888)" }}
               >
-                Direction
+                {t("chartDirection")}
               </label>
               <div className="flex gap-2">
                 <button
@@ -451,7 +455,7 @@ function MiniTradeForm({
                   }`}
                   style={direction !== "LONG" ? { color: "var(--text-muted, #888)" } : {}}
                 >
-                  Achat
+                  {t("chartBuy")}
                 </button>
                 <button
                   type="button"
@@ -463,7 +467,7 @@ function MiniTradeForm({
                   }`}
                   style={direction !== "SHORT" ? { color: "var(--text-muted, #888)" } : {}}
                 >
-                  Vente
+                  {t("chartSell")}
                 </button>
               </div>
             </div>
@@ -475,7 +479,7 @@ function MiniTradeForm({
                   className="text-xs font-medium mb-1 block"
                   style={{ color: "var(--text-muted, #888)" }}
                 >
-                  Entree
+                  {t("chartEntry")}
                 </label>
                 <input
                   name="entry"
@@ -492,7 +496,7 @@ function MiniTradeForm({
                   className="text-xs font-medium mb-1 block"
                   style={{ color: "var(--text-muted, #888)" }}
                 >
-                  Sortie
+                  {t("chartExit2")}
                 </label>
                 <input
                   name="exit"
@@ -500,7 +504,7 @@ function MiniTradeForm({
                   step="any"
                   className={glassInputClass}
                   style={{ color: "var(--text-primary, #fff)" }}
-                  placeholder="optionnel"
+                  placeholder={t("chartOptional")}
                 />
               </div>
             </div>
@@ -566,7 +570,7 @@ function MiniTradeForm({
                 className="text-xs font-medium mb-1 block"
                 style={{ color: "var(--text-muted, #888)" }}
               >
-                Strategie
+                {t("chartStrategy")}
               </label>
               <select
                 name="strategy"
@@ -595,12 +599,12 @@ function MiniTradeForm({
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Enregistrement...
+                  {t("chartSaving")}
                 </span>
               ) : success ? (
-                "Enregistre !"
+                t("chartSaved")
               ) : (
-                "Enregistrer le trade"
+                t("chartSaveTrade")
               )}
             </button>
           </form>
@@ -620,6 +624,7 @@ function ScreenshotButton({
   wrapperRef: React.RefObject<HTMLDivElement | null>;
   theme: "dark" | "light";
 }) {
+  const { t } = useTranslation();
   const [capturing, setCapturing] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -643,9 +648,7 @@ function ScreenshotButton({
       setTimeout(() => setDone(false), 2000);
     } catch {
       // Fallback: inform user TradingView has its own screenshot feature
-      alert(
-        "Capture echouee. Utilisez le bouton screenshot integre de TradingView (icone appareil photo dans la barre d'outils).",
-      );
+      alert(t("chartCaptureFailed"));
     } finally {
       setCapturing(false);
     }
@@ -664,7 +667,7 @@ function ScreenshotButton({
             ? "#a0a0a0"
             : "#666",
       }}
-      title="Capturer le graphique"
+      title={t("chartCaptureGraph")}
     >
       <Camera className="w-4 h-4" />
     </button>
@@ -675,6 +678,7 @@ function ScreenshotButton({
    MAIN PAGE COMPONENT
    ══════════════════════════════════════════════════════ */
 export default function ChartPage() {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const container2Ref = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -796,7 +800,7 @@ export default function ChartPage() {
       <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
         <button
           onClick={() => setDualChart((v) => !v)}
-          title={dualChart ? "Vue simple" : "Double graphique"}
+          title={dualChart ? t("chartSimpleView") : t("chartDualChart")}
           className="rounded-lg p-1.5 transition-all hover:scale-110"
           style={{
             ...glassStyle,
@@ -808,7 +812,7 @@ export default function ChartPage() {
         <ScreenshotButton wrapperRef={wrapperRef} theme={theme} />
         <button
           onClick={toggleFullscreen}
-          title={isFullscreen ? "Quitter" : "Plein écran"}
+          title={isFullscreen ? t("chartExit") : t("chartFullscreen")}
           className="rounded-lg p-1.5 transition-all hover:scale-110"
           style={{
             ...glassStyle,

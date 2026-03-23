@@ -19,6 +19,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useTrades } from "@/hooks/useTrades";
+import { useTranslation } from "@/i18n/context";
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -60,9 +61,9 @@ const COUNTRY_FLAGS: Record<string, string> = {
 };
 
 const IMPACT_CONFIG = {
-  high:   { label: "Élevé",  dot: "\u{1F534}", color: "text-rose-400",   bg: "bg-rose-500/10",  border: "border-rose-500/30",  dotClass: "bg-rose-500"   },
-  medium: { label: "Moyen",  dot: "\u{1F7E1}", color: "text-amber-400",  bg: "bg-amber-500/10", border: "border-amber-500/30", dotClass: "bg-amber-500"  },
-  low:    { label: "Faible", dot: "\u{1F7E2}", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", dotClass: "bg-emerald-500" },
+  high:   { labelKey: "calEco_impactLevelHigh",  dot: "\u{1F534}", color: "text-rose-400",   bg: "bg-rose-500/10",  border: "border-rose-500/30",  dotClass: "bg-rose-500"   },
+  medium: { labelKey: "calEco_impactLevelMedium",  dot: "\u{1F7E1}", color: "text-amber-400",  bg: "bg-amber-500/10", border: "border-amber-500/30", dotClass: "bg-amber-500"  },
+  low:    { labelKey: "calEco_impactLevelLow", dot: "\u{1F7E2}", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/30", dotClass: "bg-emerald-500" },
 };
 
 // ─── Static fallback dataset ────────────────────────────────────────────────────
@@ -111,9 +112,15 @@ function generateStaticFallback(): EcoEvent[] {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────────
 
-const DAYS_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
-const DAYS_SHORT = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
-const MONTHS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+function getDaysFull(t: (k: string) => string) {
+  return [t("calEco_day_0"), t("calEco_day_1"), t("calEco_day_2"), t("calEco_day_3"), t("calEco_day_4"), t("calEco_day_5"), t("calEco_day_6")];
+}
+function getDaysShort(t: (k: string) => string) {
+  return [t("calEco_dayShort_0"), t("calEco_dayShort_1"), t("calEco_dayShort_2"), t("calEco_dayShort_3"), t("calEco_dayShort_4"), t("calEco_dayShort_5"), t("calEco_dayShort_6")];
+}
+function getMonths(t: (k: string) => string) {
+  return [t("calEco_month_0"), t("calEco_month_1"), t("calEco_month_2"), t("calEco_month_3"), t("calEco_month_4"), t("calEco_month_5"), t("calEco_month_6"), t("calEco_month_7"), t("calEco_month_8"), t("calEco_month_9"), t("calEco_month_10"), t("calEco_month_11")];
+}
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
@@ -123,14 +130,14 @@ function isToday(dateStr: string): boolean {
   return dateStr === todayStr();
 }
 
-function formatDateHeader(dateStr: string): string {
+function formatDateHeader(dateStr: string, t: (k: string) => string): string {
   const d = new Date(dateStr + "T00:00:00");
-  return `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
+  return `${getDaysFull(t)[d.getDay()]} ${d.getDate()} ${getMonths(t)[d.getMonth()]}`;
 }
 
-function formatDateShort(dateStr: string): string {
+function formatDateShort(dateStr: string, t: (k: string) => string): string {
   const d = new Date(dateStr + "T00:00:00");
-  return `${DAYS_SHORT[d.getDay()]} ${d.getDate()}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${getDaysShort(t)[d.getDay()]} ${d.getDate()}/${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function getWeekDates(baseDate: string): string[] {
@@ -153,7 +160,7 @@ function shiftWeek(baseDate: string, dir: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function getCountdownFr(eventDate: string, eventTime: string): string | null {
+function getCountdownFr(eventDate: string, eventTime: string, t: (k: string, vars?: Record<string, string | number>) => string): string | null {
   if (!eventTime) return null;
   const [h, m] = eventTime.split(":").map(Number);
   const target = new Date(eventDate + "T00:00:00");
@@ -165,10 +172,10 @@ function getCountdownFr(eventDate: string, eventTime: string): string | null {
   const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   if (hours > 48) {
     const days = Math.floor(hours / 24);
-    return `Dans ${days}j`;
+    return t("calEco_inDays", { days });
   }
-  if (hours > 0) return `Dans ${hours}h ${mins}min`;
-  return `Dans ${mins}min`;
+  if (hours > 0) return t("calEco_inHoursMin", { hours, mins });
+  return t("calEco_inMin", { mins });
 }
 
 function compareActualForecast(actual?: string, forecast?: string): "better" | "worse" | "inline" | null {
@@ -304,6 +311,7 @@ export default function CalendarEcoPage() {
   const [noteModal, setNoteModal] = useState<{ date: string; event: string } | null>(null);
   const [noteText, setNoteText] = useState("");
   const { trades } = useTrades();
+  const { t } = useTranslation();
 
   // Extract currencies the user actively trades
   const userTradedCurrencies = useMemo(() => {
@@ -462,7 +470,7 @@ export default function CalendarEcoPage() {
   const renderEventRow = (e: EcoEvent, i: number, showDate?: boolean) => {
     const cfg = IMPACT_CONFIG[e.impact];
     const verdict = compareActualForecast(e.actual, e.forecast);
-    const countdown = getCountdownFr(e.date, e.time);
+    const countdown = getCountdownFr(e.date, e.time, t);
 
     return (
       <tr
@@ -522,7 +530,7 @@ export default function CalendarEcoPage() {
             {userTradedCurrencies.has(e.currency) && (
               <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-400 border border-violet-500/25 whitespace-nowrap">
                 <AlertCircle className="w-2.5 h-2.5" />
-                Concerne vos positions
+                {t("calEco_concernsPositions")}
               </span>
             )}
             <button
@@ -533,7 +541,7 @@ export default function CalendarEcoPage() {
               className={`p-0.5 rounded transition hover:bg-[var(--bg-hover)] flex-shrink-0 ${
                 getEventNote(e.date, e.event) ? "text-amber-400" : "text-[--text-muted] opacity-0 group-hover:opacity-100"
               }`}
-              title="Note personnelle"
+              title={t("calEco_personalNote")}
             >
               <StickyNote className="w-3 h-3" />
             </button>
@@ -578,7 +586,7 @@ export default function CalendarEcoPage() {
   const renderEventCard = (e: EcoEvent, i: number) => {
     const cfg = IMPACT_CONFIG[e.impact];
     const verdict = compareActualForecast(e.actual, e.forecast);
-    const countdown = getCountdownFr(e.date, e.time);
+    const countdown = getCountdownFr(e.date, e.time, t);
 
     return (
       <div
@@ -671,10 +679,10 @@ export default function CalendarEcoPage() {
           <div className="flex items-center gap-2">
             {today && <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />}
             <span className={`text-xs font-bold uppercase tracking-wider ${today ? "text-cyan-400" : "text-[--text-primary]"}`}>
-              {formatDateHeader(date)}
+              {formatDateHeader(date, t)}
             </span>
             <span className="text-[10px] text-[--text-muted]">
-              {eventCount} événement{eventCount > 1 ? "s" : ""}
+              {eventCount} {t("calEco_eventsCount")}
             </span>
             {highCount > 0 && (
               <span className="text-[10px] font-bold text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded-full ml-auto">
@@ -702,10 +710,10 @@ export default function CalendarEcoPage() {
         <div className="flex items-center gap-2">
           {today && <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />}
           <span className={`text-xs font-bold uppercase tracking-wider ${today ? "text-cyan-400" : "text-[--text-primary]"}`}>
-            {formatDateHeader(date)}
+            {formatDateHeader(date, t)}
           </span>
           <span className="text-[10px] text-[--text-muted]">
-            {eventCount} évt{eventCount > 1 ? "s" : ""}
+            {eventCount} {t("calEco_eventsCount")}
           </span>
           {highCount > 0 && (
             <span className="text-[10px] font-bold text-rose-400 bg-rose-500/15 px-1.5 py-0.5 rounded-full ml-auto">
@@ -724,14 +732,14 @@ export default function CalendarEcoPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Calendar className="w-6 h-6 text-cyan-400" />
-            Calendrier Économique
+            {t("calEco_title")}
           </h1>
           <p className="text-sm text-[--text-secondary] mt-1 flex items-center gap-2">
-            Événements macro-économiques et publications
+            {t("calEco_subtitle")}
             {dataSource && !loading && (
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-[--bg-secondary]/50 border border-[--border]">
                 {dataSource === "static" ? (
-                  <><WifiOff className="w-3 h-3 text-amber-400" /> Données statiques</>
+                  <><WifiOff className="w-3 h-3 text-amber-400" /> {t("calEco_staticData")}</>
                 ) : (
                   <><Wifi className="w-3 h-3 text-emerald-400" /> {dataSource === "forexfactory" ? "Forex Factory" : dataSource === "finnhub" ? "Finnhub" : dataSource}</>
                 )}
@@ -743,7 +751,7 @@ export default function CalendarEcoPage() {
           <button
             onClick={fetchCalendar}
             className="p-2 rounded-lg hover:bg-[var(--bg-hover)] transition"
-            title="Rafraîchir"
+            title={t("calEco_refreshTitle")}
           >
             <RefreshCw className={`w-4 h-4 text-[--text-secondary] ${loading ? "animate-spin" : ""}`} />
           </button>
@@ -751,7 +759,7 @@ export default function CalendarEcoPage() {
             onClick={goToToday}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/30 transition"
           >
-            Aujourd&apos;hui
+            {t("calEco_today")}
           </button>
           <div className="flex border border-[--border] rounded-lg overflow-hidden">
             <button
@@ -762,7 +770,7 @@ export default function CalendarEcoPage() {
                   : "text-[--text-secondary] hover:bg-[var(--bg-hover)]"
               }`}
             >
-              <Columns3 className="w-3.5 h-3.5" /> Semaine
+              <Columns3 className="w-3.5 h-3.5" /> {t("calEco_weekView")}
             </button>
             <button
               onClick={() => { setViewMode("day"); setSelectedDay(todayStr()); }}
@@ -772,7 +780,7 @@ export default function CalendarEcoPage() {
                   : "text-[--text-secondary] hover:bg-[var(--bg-hover)]"
               }`}
             >
-              <List className="w-3.5 h-3.5" /> Jour
+              <List className="w-3.5 h-3.5" /> {t("calEco_dayView")}
             </button>
           </div>
         </div>
@@ -787,7 +795,7 @@ export default function CalendarEcoPage() {
           <div className={`glass rounded-xl px-4 py-2.5 flex items-center gap-3 ${cfg.bg} border ${cfg.border}`}>
             <Clock className={`w-4 h-4 ${cfg.color} flex-shrink-0`} />
             <span className="text-xs font-semibold text-[--text-primary]">
-              Prochain événement dans{" "}
+              {t("calEco_nextEventIn")}{" "}
               <span className="text-amber-400 font-bold">{next.label}</span>
             </span>
             <span className="text-[10px] text-[--text-secondary]">
@@ -803,10 +811,10 @@ export default function CalendarEcoPage() {
       {/* ── Quick Filter Pills ─────────────────────────────────────── */}
       <div className="flex gap-2 flex-wrap">
         {([
-          { key: "tous" as QuickFilter, label: "Tous" },
-          { key: "high_only" as QuickFilter, label: "Impact élevé seulement" },
-          { key: "today" as QuickFilter, label: "Aujourd\u2019hui" },
-          { key: "this_week" as QuickFilter, label: "Cette semaine" },
+          { key: "tous" as QuickFilter, label: t("calEco_filterAll") },
+          { key: "high_only" as QuickFilter, label: t("calEco_filterHighOnly") },
+          { key: "today" as QuickFilter, label: t("calEco_filterToday") },
+          { key: "this_week" as QuickFilter, label: t("calEco_filterThisWeek") },
         ]).map(({ key, label }) => (
           <button
             key={key}
@@ -823,7 +831,7 @@ export default function CalendarEcoPage() {
         {userTradedCurrencies.size > 0 && (
           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20">
             <AlertCircle className="w-3 h-3" />
-            {userTradedCurrencies.size} devise{userTradedCurrencies.size > 1 ? "s" : ""} suivie{userTradedCurrencies.size > 1 ? "s" : ""}
+            {userTradedCurrencies.size} {userTradedCurrencies.size > 1 ? t("calEco_currenciesTracked_other") : t("calEco_currenciesTracked_one")}
           </span>
         )}
       </div>
@@ -835,11 +843,11 @@ export default function CalendarEcoPage() {
         <div className="glass rounded-xl p-3">
           <div className="flex items-center gap-2 mb-2">
             <Timer className="w-3.5 h-3.5 text-amber-400" />
-            <h2 className="text-xs font-semibold text-[--text-primary]">Prochains événements</h2>
+            <h2 className="text-xs font-semibold text-[--text-primary]">{t("calEco_upcomingEvents")}</h2>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-0.5">
             {upcomingEvents.map((e, i) => {
-              const countdown = getCountdownFr(e.date, e.time);
+              const countdown = getCountdownFr(e.date, e.time, t);
               const cfg = IMPACT_CONFIG[e.impact];
               return (
                 <div
@@ -878,9 +886,9 @@ export default function CalendarEcoPage() {
         {/* Impact filter */}
         <div className="flex gap-1">
           {([
-            { key: "all" as ImpactFilter, label: "Tous" },
-            { key: "high" as ImpactFilter, label: "\u{1F534} Élevé" },
-            { key: "medium+" as ImpactFilter, label: "\u{1F7E1} Moyen+" },
+            { key: "all" as ImpactFilter, label: t("calEco_filterAll") },
+            { key: "high" as ImpactFilter, label: `\u{1F534} ${t("calEco_impactHigh")}` },
+            { key: "medium+" as ImpactFilter, label: `\u{1F7E1} ${t("calEco_impactMediumPlus")}` },
           ]).map(({ key, label }) => (
             <button
               key={key}
@@ -934,13 +942,13 @@ export default function CalendarEcoPage() {
               onClick={() => setCurrencyFilter([])}
               className="px-2 py-0.5 rounded text-[10px] text-cyan-400 hover:bg-[var(--bg-hover)] transition"
             >
-              Réinitialiser
+              {t("calEco_reset")}
             </button>
           )}
         </div>
 
         <span className="text-[10px] text-[--text-muted] ml-auto whitespace-nowrap">
-          {filteredEvents.length} événements
+          {filteredEvents.length} {t("calEco_eventsCount")}
         </span>
       </div>
 
@@ -964,7 +972,7 @@ export default function CalendarEcoPage() {
               <ChevronLeft className="w-5 h-5" />
             </button>
             <h2 className="text-sm font-semibold text-[--text-primary]">
-              Semaine du {formatDateHeader(weekDates[0])} au {new Date(weekDates[4] + "T00:00:00").getDate()} {MONTHS_FR[new Date(weekDates[4] + "T00:00:00").getMonth()]}
+              {t("calEco_weekOf")} {formatDateHeader(weekDates[0], t)} {t("calEco_to")} {new Date(weekDates[4] + "T00:00:00").getDate()} {getMonths(t)[new Date(weekDates[4] + "T00:00:00").getMonth()]}
             </h2>
             <button
               onClick={() => navigateWeek(1)}
@@ -985,13 +993,13 @@ export default function CalendarEcoPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-[10px] uppercase tracking-wider text-[--text-muted] border-b border-[--border]/50 bg-[--bg-secondary]/20">
-                        <th className="px-3 py-2 w-[70px]">Heure</th>
-                        <th className="px-3 py-2 w-[80px]">Devise</th>
-                        <th className="px-3 py-2 w-[60px]">Impact</th>
-                        <th className="px-3 py-2">Événement</th>
-                        <th className="px-3 py-2 text-right w-[80px]">Précédent</th>
-                        <th className="px-3 py-2 text-right w-[80px]">Prévision</th>
-                        <th className="px-3 py-2 text-right w-[80px]">Actuel</th>
+                        <th className="px-3 py-2 w-[70px]">{t("calEco_thTime")}</th>
+                        <th className="px-3 py-2 w-[80px]">{t("calEco_thCurrency")}</th>
+                        <th className="px-3 py-2 w-[60px]">{t("calEco_thImpact")}</th>
+                        <th className="px-3 py-2">{t("calEco_thEvent")}</th>
+                        <th className="px-3 py-2 text-right w-[80px]">{t("calEco_thPrevious")}</th>
+                        <th className="px-3 py-2 text-right w-[80px]">{t("calEco_thForecast")}</th>
+                        <th className="px-3 py-2 text-right w-[80px]">{t("calEco_thActual")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1007,7 +1015,7 @@ export default function CalendarEcoPage() {
                       {weekDates.every((d) => !eventsByDate[d] || eventsByDate[d].length === 0) && (
                         <tr>
                           <td colSpan={7} className="px-4 py-8 text-center text-[--text-muted] text-sm">
-                            Aucun événement pour cette semaine
+                            {t("calEco_noEventsWeek")}
                           </td>
                         </tr>
                       )}
@@ -1031,7 +1039,7 @@ export default function CalendarEcoPage() {
                 })}
                 {weekDates.every((d) => !eventsByDate[d] || eventsByDate[d].length === 0) && (
                   <div className="px-4 py-8 text-center text-[--text-muted] text-sm">
-                    Aucun événement pour cette semaine
+                    {t("calEco_noEventsWeek")}
                   </div>
                 )}
               </div>
@@ -1059,7 +1067,7 @@ export default function CalendarEcoPage() {
               {isToday(selectedDay) && (
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
               )}
-              {formatDateHeader(selectedDay)}
+              {formatDateHeader(selectedDay, t)}
               {dayEvents.length > 0 && (
                 <span className="text-[10px] text-[--text-muted] font-normal">
                   ({dayEvents.length} événement{dayEvents.length > 1 ? "s" : ""})
@@ -1083,7 +1091,7 @@ export default function CalendarEcoPage() {
             <SkeletonTable />
           ) : dayEvents.length === 0 ? (
             <div className="glass rounded-2xl p-8 text-center text-[--text-muted]">
-              Aucun événement pour cette journée
+              {t("calEco_noEventsDay")}
             </div>
           ) : (
             <>
@@ -1093,13 +1101,13 @@ export default function CalendarEcoPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-left text-[10px] uppercase tracking-wider text-[--text-muted] border-b border-[--border]/50 bg-[--bg-secondary]/20">
-                        <th className="px-3 py-2 w-[70px]">Heure</th>
-                        <th className="px-3 py-2 w-[80px]">Devise</th>
-                        <th className="px-3 py-2 w-[60px]">Impact</th>
-                        <th className="px-3 py-2">Événement</th>
-                        <th className="px-3 py-2 text-right w-[80px]">Précédent</th>
-                        <th className="px-3 py-2 text-right w-[80px]">Prévision</th>
-                        <th className="px-3 py-2 text-right w-[80px]">Actuel</th>
+                        <th className="px-3 py-2 w-[70px]">{t("calEco_thTime")}</th>
+                        <th className="px-3 py-2 w-[80px]">{t("calEco_thCurrency")}</th>
+                        <th className="px-3 py-2 w-[60px]">{t("calEco_thImpact")}</th>
+                        <th className="px-3 py-2">{t("calEco_thEvent")}</th>
+                        <th className="px-3 py-2 text-right w-[80px]">{t("calEco_thPrevious")}</th>
+                        <th className="px-3 py-2 text-right w-[80px]">{t("calEco_thForecast")}</th>
+                        <th className="px-3 py-2 text-right w-[80px]">{t("calEco_thActual")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1119,21 +1127,21 @@ export default function CalendarEcoPage() {
                 <div className="flex items-center gap-4 justify-center">
                   <div className="text-center">
                     <p className="text-lg font-bold text-[--text-primary]">{dayEvents.length}</p>
-                    <p className="text-[9px] text-[--text-muted] uppercase tracking-wider">Événements</p>
+                    <p className="text-[9px] text-[--text-muted] uppercase tracking-wider">{t("calEco_events")}</p>
                   </div>
                   <div className="w-px h-8 bg-[--border]" />
                   <div className="text-center">
                     <p className="text-lg font-bold text-rose-400">
                       {dayEvents.filter((e) => e.impact === "high").length}
                     </p>
-                    <p className="text-[9px] text-[--text-muted] uppercase tracking-wider">Impact élevé</p>
+                    <p className="text-[9px] text-[--text-muted] uppercase tracking-wider">{t("calEco_highImpact")}</p>
                   </div>
                   <div className="w-px h-8 bg-[--border]" />
                   <div className="text-center">
                     <p className="text-lg font-bold text-amber-400">
                       {[...new Set(dayEvents.map((e) => e.currency))].length}
                     </p>
-                    <p className="text-[9px] text-[--text-muted] uppercase tracking-wider">Devises</p>
+                    <p className="text-[9px] text-[--text-muted] uppercase tracking-wider">{t("calEco_currencies")}</p>
                   </div>
                 </div>
               </div>
@@ -1152,7 +1160,7 @@ export default function CalendarEcoPage() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <StickyNote className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-semibold text-[--text-primary]">Note personnelle</h3>
+                <h3 className="text-sm font-semibold text-[--text-primary]">{t("calEco_personalNote")}</h3>
               </div>
               <button onClick={() => setNoteModal(null)} className="p-1 rounded-lg hover:bg-[var(--bg-hover)] transition">
                 <X className="w-4 h-4 text-[--text-muted]" />
@@ -1162,7 +1170,7 @@ export default function CalendarEcoPage() {
             <textarea
               value={noteText}
               onChange={(ev) => setNoteText(ev.target.value)}
-              placeholder="Ajoutez votre note pour cet événement..."
+              placeholder={t("calEco_notePlaceholder")}
               className="w-full h-24 rounded-xl bg-[--bg-secondary]/50 border border-[--border] px-3 py-2 text-sm text-[--text-primary] placeholder:text-[--text-muted] resize-none focus:outline-none focus:border-cyan-500/50 transition"
             />
             <div className="flex justify-end gap-2 mt-3">
@@ -1175,7 +1183,7 @@ export default function CalendarEcoPage() {
                   }}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition"
                 >
-                  Supprimer
+                  {t("calEco_delete")}
                 </button>
               )}
               <button
@@ -1185,7 +1193,7 @@ export default function CalendarEcoPage() {
                 }}
                 className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/30 transition"
               >
-                Enregistrer
+                {t("calEco_save")}
               </button>
             </div>
           </div>

@@ -13,8 +13,8 @@ import {
   ThumbsUp, ThumbsDown, Star, Ban, Info, ChevronRight,
 } from "lucide-react";
 
-const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
-const DAYS_SHORT = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+const DAY_KEYS = ["daySunday", "dayMonday", "dayTuesday", "dayWednesday", "dayThursday", "dayFriday", "daySaturday"] as const;
+const DAY_SHORT_KEYS = ["dayShortSun", "dayShortMon", "dayShortTue", "dayShortWed", "dayShortThu", "dayShortFri", "dayShortSat"] as const;
 
 function bestWorst(map: Record<string, { wins: number; total: number }>) {
   const entries = Object.entries(map).filter(([, v]) => v.total > 0);
@@ -76,7 +76,8 @@ function CircularGauge({ score, size = 140 }: { score: number; size?: number }) 
   const offset = circumference - (clamp / 100) * circumference;
   const color = clamp >= 70 ? "#10b981" : clamp >= 40 ? "#f59e0b" : "#ef4444";
   const textColor = clamp >= 70 ? "text-emerald-400" : clamp >= 40 ? "text-amber-400" : "text-rose-400";
-  const label = clamp >= 70 ? "Disciplin\u00e9" : clamp >= 40 ? "Am\u00e9liorable" : "Critique";
+  const { t } = useTranslation();
+  const label = clamp >= 70 ? t("gaugeDisciplined") : clamp >= 40 ? t("gaugeImprovable") : t("gaugeCritical");
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -105,6 +106,8 @@ function CircularGauge({ score, size = 140 }: { score: number; size?: number }) 
 
 export default function AICoachPage() {
   const { t } = useTranslation();
+  const DAYS = DAY_KEYS.map((k) => t(k));
+  const DAYS_SHORT = DAY_SHORT_KEYS.map((k) => t(k));
   const { trades, loading } = useTrades();
   const [isVip, setIsVip] = useState<boolean | null>(null);
 
@@ -1474,7 +1477,7 @@ export default function AICoachPage() {
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${severityStyles.badge}`}>
-                          {alert.severity === "red" ? "Critique" : alert.severity === "amber" ? "Attention" : "Info"}
+                          {alert.severity === "red" ? t("severityCritical") : alert.severity === "amber" ? t("severityWarning") : t("severityInfo")}
                         </span>
                         <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
                           {alert.type === "revenge" ? "Revenge Trading" : alert.type === "overtrading" ? "Overtrading" : alert.type === "tilt" ? "Tilt" : "Week-end"}
@@ -1687,6 +1690,7 @@ export default function AICoachPage() {
 
 /* === Emotion Timeline SVG Component === */
 function EmotionTimelineChart({ data }: { data: { date: string; emotion: string; result: number; asset: string }[] }) {
+  const { t } = useTranslation();
   const EMOTION_COLORS: Record<string, string> = {
     Confident: "#10b981", Calm: "#06b6d4", Focused: "#3b82f6", Disciplined: "#8b5cf6",
     Happy: "#22c55e", Neutral: "#94a3b8", Excited: "#f59e0b",
@@ -1740,8 +1744,8 @@ function EmotionTimelineChart({ data }: { data: { date: string; emotion: string;
         );
       })}
       {/* Labels */}
-      <text x={4} y={10} fontSize="7" fill="var(--text-muted)">Gains</text>
-      <text x={4} y={chartH - 2} fontSize="7" fill="var(--text-muted)">Pertes</text>
+      <text x={4} y={10} fontSize="7" fill="var(--text-muted)">{t("chartGains")}</text>
+      <text x={4} y={chartH - 2} fontSize="7" fill="var(--text-muted)">{t("chartLosses")}</text>
     </svg>
   );
 }
