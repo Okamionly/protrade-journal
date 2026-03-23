@@ -55,6 +55,7 @@ import {
   LineChart,
   Webhook,
   Flag,
+  Compass,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "@/i18n/context";
@@ -130,6 +131,7 @@ const sections: SectionDef[] = [
     labelKey: "sidebarSecMarket",
     defaultCollapsed: true,
     items: [
+      { href: "/market-phase", labelKey: "sidebarMarketPhase", icon: Compass },
       { href: "/cot", labelKey: "sidebarCotReport", icon: TrendingUp },
       { href: "/macro", labelKey: "sidebarMacro", icon: Globe },
       { href: "/calendar-eco", labelKey: "sidebarEcoCalendar", icon: CalendarDays },

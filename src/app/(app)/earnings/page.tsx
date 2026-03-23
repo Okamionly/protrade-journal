@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useTrades, type Trade } from "@/hooks/useTrades";
-import { Calendar, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, Clock, Loader2, RefreshCw, Star, Filter, Brain, Target, Zap } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, AlertTriangle, ChevronLeft, ChevronRight, BarChart3, Clock, Loader2, RefreshCw, Star, Filter, Brain, Target, Zap, Rocket } from "lucide-react";
 import { AIInsightsCard, type InsightItem } from "@/components/AIInsightsCard";
 import { useTranslation } from "@/i18n/context";
 
@@ -20,6 +20,17 @@ interface EarningsResponse {
   earnings: EarningsEvent[];
   source: "live" | "fallback";
   lastUpdated: string;
+}
+
+interface IpoEvent {
+  name: string;
+  symbol: string;
+  date: string;
+  exchange: string;
+  price: string;
+  numberOfShares: number | null;
+  totalSharesValue: number | null;
+  status: string;
 }
 
 // ---------- Mega-cap / large-cap impact classification ----------
@@ -70,6 +81,8 @@ export default function EarningsCalendarPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [myAssetsOnly, setMyAssetsOnly] = useState(false);
+  const [ipoData, setIpoData] = useState<IpoEvent[]>([]);
+  const [ipoLoading, setIpoLoading] = useState(false);
 
   const TIME_LABELS: Record<string, { label: string; color: string }> = {
     bmo: { label: t("beforeOpen"), color: "text-amber-400 bg-amber-500/20" },
@@ -93,9 +106,24 @@ export default function EarningsCalendarPage() {
     }
   }, []);
 
+  const fetchIpos = useCallback(async () => {
+    setIpoLoading(true);
+    try {
+      const res = await fetch("/api/market-data/ipo");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setIpoData(data.ipos || []);
+    } catch (e) {
+      console.error("[IPO] Failed to fetch:", e);
+    } finally {
+      setIpoLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchEarnings();
-  }, [fetchEarnings]);
+    fetchIpos();
+  }, [fetchEarnings, fetchIpos]);
 
   const today = new Date();
   const startOfWeek = new Date(today);
@@ -496,6 +524,52 @@ export default function EarningsCalendarPage() {
           </table>
         </div>
       )}
+
+      {/* IPOs à venir */}
+      <div className="glass rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Rocket className="w-5 h-5 text-violet-400" />
+          <h3 className="text-lg font-semibold text-[--text-primary]">IPOs à venir</h3>
+          {ipoLoading && <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />}
+        </div>
+        {ipoData.length === 0 && !ipoLoading ? (
+          <p className="text-sm text-[--text-muted] py-2">Aucune IPO à venir trouvée.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[--text-secondary] border-b border-[--border] text-xs uppercase tracking-wider">
+                  <th className="px-3 py-2">Date</th>
+                  <th className="px-3 py-2">Société</th>
+                  <th className="px-3 py-2">Symbole</th>
+                  <th className="px-3 py-2">Exchange</th>
+                  <th className="px-3 py-2 text-right">Prix</th>
+                  <th className="px-3 py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ipoData.slice(0, 15).map((ipo, idx) => (
+                  <tr key={`${ipo.symbol}-${ipo.date}-${idx}`} className="border-b border-[--border-subtle]/50 hover:bg-[var(--bg-hover)] transition">
+                    <td className="px-3 py-2.5 mono text-[--text-secondary]">
+                      {new Date(ipo.date + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                    </td>
+                    <td className="px-3 py-2.5 text-[--text-primary] font-medium truncate max-w-[200px]">{ipo.name}</td>
+                    <td className="px-3 py-2.5 font-bold text-violet-400">{ipo.symbol || "—"}</td>
+                    <td className="px-3 py-2.5 text-[--text-muted] text-xs">{ipo.exchange || "—"}</td>
+                    <td className="px-3 py-2.5 text-right mono text-[--text-secondary]">{ipo.price}</td>
+                    <td className="px-3 py-2.5 text-right mono text-[--text-muted]">
+                      {ipo.numberOfShares ? `${(ipo.numberOfShares / 1e6).toFixed(1)}M` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="text-[10px] text-[--text-muted] mt-2">
+          Source : Finnhub IPO Calendar
+        </p>
+      </div>
 
       {/* Legend + Attribution */}
       <div className="glass rounded-2xl p-4">

@@ -195,7 +195,7 @@ function MarkdownIcon() {
   );
 }
 
-const PHASE_ICONS: Record<MarketPhase, () => JSX.Element> = {
+const PHASE_ICONS: Record<MarketPhase, () => React.JSX.Element> = {
   accumulation: AccumulationIcon,
   markup: MarkupIcon,
   distribution: DistributionIcon,

@@ -2219,5 +2219,18 @@
   "trumpTrackerMostImpacted": "Most impacted assets",
   "trumpTrackerNewsFeed": "Trump & Trade News",
   "trumpTrackerNoNews": "No recent Trump news",
-  "trumpTrackerNoNewsDesc": "Articles mentioning Trump, tariffs or trade war will appear here."
+  "trumpTrackerNoNewsDesc": "Articles mentioning Trump, tariffs or trade war will appear here.",
+
+  "sidebarMarketPhase": "Market Phase",
+  "marketPhase_title": "Market Phase",
+  "marketPhase_subtitle": "Real-time Wyckoff Detection",
+  "marketPhase_confidence": "Confidence Level",
+  "marketPhase_signals": "Detected Signals",
+  "marketPhase_description": "Phase Description",
+  "marketPhase_advice": "Trading Advice",
+  "marketPhase_history": "Phase History (30 days)",
+  "marketPhase_performance": "Your Performance by Phase",
+  "marketPhase_cycle": "Wyckoff Cycle",
+  "marketPhase_noData": "No data available",
+  "marketPhase_loading": "Analyzing..."
 }
