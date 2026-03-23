@@ -15,8 +15,7 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title:
-    "Journal de Trading Gratuit | 35+ Outils Sans Carte Bancaire | MarketPhase",
+  title: "Journal de Trading Gratuit | Sans Carte | MarketPhase",
   description:
     "Le journal de trading gratuit le plus complet en 2026. 35+ outils inclus, AI Coach, calendrier P&L, communaute active. Sans carte bancaire, sans periode d'essai. Commencez maintenant.",
   keywords: [
@@ -28,6 +27,9 @@ export const metadata: Metadata = {
     "carnet de trading gratuit",
     "MarketPhase gratuit",
   ],
+  alternates: {
+    canonical: "https://marketphase.vercel.app/journal-de-trading-gratuit",
+  },
   openGraph: {
     title: "Journal de Trading Gratuit | 35+ Outils | MarketPhase",
     description:

@@ -229,11 +229,22 @@ function VipPage() {
             <Crown className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
           </div>
           <div className="flex-1">
+            <div
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold mb-3"
+              style={{
+                background: "rgba(239,68,68,0.15)",
+                color: "rgb(239,68,68)",
+                border: "1px solid rgba(239,68,68,0.25)",
+              }}
+            >
+              <Zap className="w-3 h-3" />
+              Offre de lancement &mdash; Ce prix ne durera pas
+            </div>
             <h1
               className="text-2xl sm:text-3xl font-bold mb-2"
               style={{ color: "var(--text-primary, #e5e7eb)" }}
             >
-              Prenez un avantage sur le marché
+              Prenez un avantage sur le march&eacute;
             </h1>
             <p
               className="text-sm sm:text-base"

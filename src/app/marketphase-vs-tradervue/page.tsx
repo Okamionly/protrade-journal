@@ -10,8 +10,7 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title:
-    "MarketPhase vs Tradervue : Meilleure Alternative Gratuite en 2026",
+  title: "MarketPhase vs Tradervue : Alternative Gratuite 2026",
   description:
     "Comparaison honnete entre MarketPhase (gratuit) et Tradervue (49$/mois). Fonctionnalites, prix, avantages et inconvenients. Decouvrez la meilleure alternative gratuite a Tradervue.",
   keywords: [
@@ -24,6 +23,9 @@ export const metadata: Metadata = {
     "journal de trading gratuit",
     "meilleur journal de trading",
   ],
+  alternates: {
+    canonical: "https://marketphase.vercel.app/marketphase-vs-tradervue",
+  },
   openGraph: {
     title: "MarketPhase vs Tradervue : Comparaison Complete 2026",
     description:

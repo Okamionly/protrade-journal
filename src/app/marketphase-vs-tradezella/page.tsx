@@ -10,8 +10,7 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title:
-    "MarketPhase vs TradeZella : Meilleure Alternative Gratuite en 2026",
+  title: "MarketPhase vs TradeZella : Alternative Gratuite 2026",
   description:
     "Comparaison honnete entre MarketPhase (gratuit) et TradeZella (49$/mois). Fonctionnalites, prix, avantages et inconvenients. Decouvrez la meilleure alternative gratuite a TradeZella.",
   keywords: [
@@ -24,6 +23,9 @@ export const metadata: Metadata = {
     "journal de trading gratuit",
     "meilleur journal de trading",
   ],
+  alternates: {
+    canonical: "https://marketphase.vercel.app/marketphase-vs-tradezella",
+  },
   openGraph: {
     title: "MarketPhase vs TradeZella : Comparaison Complete 2026",
     description:

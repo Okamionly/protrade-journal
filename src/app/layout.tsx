@@ -13,8 +13,8 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable
 export const metadata: Metadata = {
   metadataBase: new URL("https://marketphase.vercel.app"),
   title: {
-    default: "Journal de Trading Gratuit avec IA | MarketPhase - 35+ Outils d'Analyse Trading",
-    template: "%s | MarketPhase - Journal de Trading Gratuit",
+    default: "Journal de Trading Gratuit avec IA | MarketPhase",
+    template: "%s | MarketPhase",
   },
   description:
     "Journal de trading gratuit en ligne avec IA : analytics, AI Coach, market data live. Outil trading gratuit pour analyse trading. Essayez maintenant !",
@@ -73,14 +73,6 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: "https://marketphase.vercel.app",
-    languages: {
-      "fr": "https://marketphase.vercel.app",
-      "en": "https://marketphase.vercel.app/en",
-      "es": "https://marketphase.vercel.app/es",
-      "de": "https://marketphase.vercel.app/de",
-      "ar": "https://marketphase.vercel.app/ar",
-      "x-default": "https://marketphase.vercel.app",
-    },
   },
   verification: {
     google: "1ovgGf31NCAaEWZgILyqtlaCksw5vElLLrU6-p66jS0",

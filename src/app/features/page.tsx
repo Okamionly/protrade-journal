@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     "trading journal features",
     "journal de trading gratuit",
   ],
+  alternates: {
+    canonical: "https://marketphase.vercel.app/features",
+  },
   openGraph: {
     title: "35+ Outils de Trading Gratuits | MarketPhase",
     description:

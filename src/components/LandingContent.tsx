@@ -470,7 +470,7 @@ export default function LandingContent() {
                 {/* Urgency / FOMO */}
                 <p className="mt-3 text-xs text-gray-400 flex items-center justify-center lg:justify-start gap-1.5">
                   <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Rejoignez les <strong className="text-gray-600">47 traders</strong> qui se sont inscrits cette semaine</span>
+                  <span>Utilis&eacute; par des traders dans <strong className="text-gray-600">15+ pays</strong></span>
                 </p>
 
                 <div className="mt-8 flex flex-col sm:flex-row items-center lg:items-start gap-4 sm:gap-6">
@@ -489,9 +489,9 @@ export default function LandingContent() {
                 <div className="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs text-gray-400">
                   <span>&#128274; Donn&eacute;es chiffr&eacute;es</span>
                   <span className="hidden sm:inline text-gray-300">&bull;</span>
-                  <span>&#128640; +1 200 traders</span>
-                  <span className="hidden sm:inline text-gray-300">&bull;</span>
                   <span>&#11088; 4.9/5 satisfaction</span>
+                  <span className="hidden sm:inline text-gray-300">&bull;</span>
+                  <span>&#127758; Utilis&eacute; dans 15+ pays</span>
                   <span className="hidden sm:inline text-gray-300">&bull;</span>
                   <span>&#128179; Sans carte bancaire</span>
                 </div>
@@ -570,7 +570,7 @@ export default function LandingContent() {
               {[
                 { value: "35+", label: t("landing_statTools"), sub: t("landing_statToolsSub") },
                 { value: "0€", label: t("landing_statFree"), sub: t("landing_statFreeSub") },
-                { value: "1.2K+", label: t("landing_statTraders"), sub: t("landing_statTradersSub") },
+                { value: "15+", label: "Pays", sub: "Traders du monde entier" },
                 { value: "24/7", label: t("landing_statMarket"), sub: t("landing_statMarketSub") },
               ].map((s) => (
                 <div key={s.label} className="p-4 sm:p-8 rounded-2xl bg-gray-50 border border-gray-100 hover:border-blue-200 hover:shadow-lg transition-all">
@@ -853,7 +853,7 @@ export default function LandingContent() {
             {/* Stats Counter */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-3xl mx-auto">
               {[
-                { num: 1200, prefix: "+", suffix: "", decimals: 0, label: t("landing_socialStat1Label") },
+                { num: 15, prefix: "", suffix: "+", decimals: 0, label: "Pays" },
                 { num: 35, prefix: "", suffix: "+", decimals: 0, label: t("landing_socialStat2Label") },
                 { num: 2, prefix: "", suffix: "M+", decimals: 0, label: t("landing_socialStat3Label") },
                 { num: 4.9, prefix: "", suffix: "/5", decimals: 1, label: t("landing_socialStat4Label") },
@@ -977,7 +977,7 @@ export default function LandingContent() {
               </Link>
               <p className="mt-4 text-xs text-gray-400 flex items-center justify-center gap-1.5">
                 <Zap className="w-3.5 h-3.5 text-amber-400" />
-                <span>Rejoignez les <strong className="text-gray-600">47 traders</strong> qui se sont inscrits cette semaine</span>
+                <span>Utilis&eacute; par des traders dans <strong className="text-gray-600">15+ pays</strong></span>
               </p>
               <p className="mt-1.5 text-xs text-gray-400 flex items-center justify-center gap-1.5">
                 <Shield className="w-3.5 h-3.5 text-gray-300" />

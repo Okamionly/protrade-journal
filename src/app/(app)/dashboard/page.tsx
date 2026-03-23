@@ -1321,21 +1321,25 @@ export default function DashboardPage() {
         {/* Fix #3: Better empty state */}
         {trades.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-16 h-16 rounded-2xl bg-blue-500/15 flex items-center justify-center mx-auto mb-4">
-              <TrendingUp className="w-8 h-8 text-blue-400" />
+            <div className="w-20 h-20 rounded-2xl bg-blue-500/15 flex items-center justify-center mx-auto mb-5">
+              <TrendingUp className="w-10 h-10 text-blue-400" />
             </div>
-            <h4 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-              {t("startJournal")}
+            <h4 className="text-xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+              Ajoutez votre premier trade en 30 secondes
             </h4>
-            <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: "var(--text-muted)" }}>
+            <p className="text-sm mb-2 max-w-md mx-auto" style={{ color: "var(--text-muted)" }}>
               {t("startJournalDesc")}
+            </p>
+            <p className="text-xs mb-8 max-w-md mx-auto" style={{ color: "var(--text-muted)" }}>
+              Ou importez vos trades depuis MT4/MT5/TradingView
             </p>
             <button
               onClick={() => setShowForm(true)}
-              className="btn-primary px-6 py-3 rounded-xl text-white font-medium inline-flex items-center gap-2"
+              className="btn-primary px-8 py-4 rounded-xl text-white font-bold text-base inline-flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              style={{ boxShadow: "0 4px 20px rgba(59,130,246,0.3)" }}
             >
               <Plus className="w-5 h-5" />
-              {t("addFirstTrade")}
+              Ajouter mon premier trade
             </button>
           </div>
         ) : (

@@ -16,6 +16,9 @@ export const metadata: Metadata = {
     "screenshot chart trading",
     "extension navigateur trading",
   ],
+  alternates: {
+    canonical: "https://marketphase.vercel.app/extension",
+  },
   openGraph: {
     title: "MarketPhase Trade Clipper — Enregistrez vos trades en 1 clic",
     description:

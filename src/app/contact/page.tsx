@@ -12,6 +12,9 @@ export const metadata: Metadata = {
     "support trading journal",
     "MarketPhase email",
   ],
+  alternates: {
+    canonical: "https://marketphase.vercel.app/contact",
+  },
   openGraph: {
     title: "Contactez MarketPhase — Journal de Trading Gratuit",
     description: "Une question ? L'équipe MarketPhase est là pour vous aider.",

@@ -67,7 +67,7 @@ const PLANS: PlanDef[] = [
       { text: "Badge VIP doré", icon: Crown },
       { text: "Support prioritaire", icon: Shield },
     ],
-    cta: "Passer à VIP",
+    cta: "Débloquer tout MarketPhase",
   },
 ];
 
@@ -326,6 +326,20 @@ export default function PricingPage() {
                     ? "Actuel"
                     : plan.cta}
                 </button>
+
+                {isVip && !isCurrent && (
+                  <>
+                    <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-3">
+                      Annulez en 1 clic &middot; Sans engagement
+                    </p>
+                    <div className="flex items-center justify-center gap-2 mt-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-xs font-medium text-emerald-400">
+                        Satisfait ou rembours&eacute; 14 jours
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           );

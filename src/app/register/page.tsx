@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -25,7 +24,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       if (!res.ok) {
@@ -96,24 +95,6 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-xs font-medium mb-2" style={{ color: "var(--text-muted, #9ca3af)" }}>
-                Nom
-              </label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-muted, #6b7280)" }} />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="input-field w-full"
-                  style={{ paddingLeft: "2.75rem" }}
-                  placeholder="Votre nom"
-                  required
-                />
-              </div>
-            </div>
-
             <div>
               <label className="block text-xs font-medium mb-2" style={{ color: "var(--text-muted, #9ca3af)" }}>
                 Email
