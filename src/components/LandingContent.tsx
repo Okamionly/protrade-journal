@@ -287,16 +287,16 @@ export default function LandingContent() {
               </div>
 
               <p className="text-xs text-slate-500 flex items-center justify-center gap-1.5 mb-6">
-                <Shield className="w-3.5 h-3.5 text-slate-600" />
+                <Shield className="w-3.5 h-3.5 text-slate-500" />
                 Pas de carte bancaire requise
               </p>
 
               {/* Trust bar */}
-              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500 mb-16">
-                <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-amber-400" /> Utilis&eacute; dans <strong className="text-slate-300">15+ pays</strong></span>
-                <span className="hidden sm:inline text-slate-700">&bull;</span>
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400 mb-16">
+                <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-amber-400" /> Utilis&eacute; dans <strong className="text-slate-200">15+ pays</strong></span>
+                <span className="hidden sm:inline text-slate-500">&bull;</span>
                 <span>&#11088; 4.9/5 satisfaction</span>
-                <span className="hidden sm:inline text-slate-700">&bull;</span>
+                <span className="hidden sm:inline text-slate-500">&bull;</span>
                 <span>35+ outils gratuits</span>
               </div>
 
@@ -342,7 +342,7 @@ export default function LandingContent() {
                     <f.icon className="w-5 h-5 text-emerald-400" />
                   </div>
                   <h4 className="font-bold text-white text-base mb-1.5">{f.title}</h4>
-                  <p className="text-sm text-slate-500 leading-relaxed">{f.desc}</p>
+                  <p className="text-sm text-slate-400 leading-relaxed">{f.desc}</p>
                 </div>
               ))}
             </div>
@@ -374,7 +374,7 @@ export default function LandingContent() {
                         <c.icon className="w-4 h-4 text-emerald-400" />
                       </div>
                       <h4 className="font-bold text-white text-sm mb-1">{c.title}</h4>
-                      <p className="text-xs text-slate-500">{c.desc}</p>
+                      <p className="text-xs text-slate-400">{c.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -413,7 +413,7 @@ export default function LandingContent() {
                         <c.icon className="w-4 h-4 text-purple-400" />
                       </div>
                       <h4 className="font-bold text-white text-sm mb-1">{c.title}</h4>
-                      <p className="text-xs text-slate-500">{c.desc}</p>
+                      <p className="text-xs text-slate-400">{c.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -452,7 +452,7 @@ export default function LandingContent() {
                         <c.icon className="w-4 h-4 text-emerald-400" />
                       </div>
                       <h4 className="font-bold text-white text-sm mb-1">{c.title}</h4>
-                      <p className="text-xs text-slate-500">{c.desc}</p>
+                      <p className="text-xs text-slate-400">{c.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -497,19 +497,19 @@ export default function LandingContent() {
                 {t("landing_compareTitle1")}<br /><span className="text-slate-500">{t("landing_compareTitle2")}</span>
               </h2>
             </div>
-            <div className="rounded-2xl overflow-hidden border border-[#1e293b] bg-[#111827] shadow-lg overflow-x-auto">
+            <div className="rounded-2xl overflow-hidden border border-[#1e293b] bg-[#0d1117] shadow-lg overflow-x-auto">
               <table className="w-full text-xs sm:text-sm min-w-[480px]">
                 <thead>
-                  <tr className="border-b border-[#1e293b] bg-[#0d1117]">
-                    <th className="text-left px-3 sm:px-6 py-3 sm:py-4 text-slate-500 font-medium w-1/4"></th>
-                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center">
+                  <tr className="border-b border-[#1e293b] bg-[#111827]">
+                    <th className="text-left px-3 sm:px-6 py-3 sm:py-4 text-slate-400 font-medium w-1/4"></th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center w-1/4">
                       <div className="inline-flex items-center gap-1.5 sm:gap-2">
                         <Image src="/logo-icon.png" alt="MarketPhase journal de trading" width={24} height={24} sizes="24px" className="w-5 h-5 sm:w-6 sm:h-6 rounded-md" />
                         <span className="font-bold text-white text-xs sm:text-sm">MarketPhase</span>
                       </div>
                     </th>
-                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-slate-500 font-medium">TradeZella</th>
-                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-slate-500 font-medium">Tradervue</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-slate-400 font-medium w-1/4">TradeZella</th>
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-slate-400 font-medium w-1/4">Tradervue</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -524,17 +524,17 @@ export default function LandingContent() {
                     { f: "Donn\u00E9es de march\u00E9 live", mp: true, tz: false, tv: false },
                     { f: "Replay de trades", mp: true, tz: true, tv: false },
                     { f: t("landing_compareThemes"), mp: true, tz: false, tv: false },
-                  ].map((r) => (
-                    <tr key={r.f} className="border-b border-[#1e293b]/50 last:border-0">
+                  ].map((r, idx) => (
+                    <tr key={r.f} className={`border-b border-[#1e293b] last:border-0 ${idx % 2 === 0 ? "bg-[#0d1117]" : "bg-[#111827]/50"}`}>
                       <td className="px-3 sm:px-6 py-2.5 sm:py-3 text-slate-300 font-medium text-xs sm:text-sm">{r.f}</td>
                       <td className="px-3 sm:px-6 py-2.5 sm:py-3 text-center">
-                        {typeof r.mp === "string" ? <span className="font-bold text-emerald-400 text-xs sm:text-sm">{r.mp}</span> : r.mp ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 mx-auto" /> : <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 mx-auto" />}
+                        {typeof r.mp === "string" ? <span className="font-bold text-emerald-400 text-xs sm:text-sm">{r.mp}</span> : r.mp ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 mx-auto" /> : <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-400/50 mx-auto" />}
                       </td>
                       <td className="px-3 sm:px-6 py-2.5 sm:py-3 text-center">
-                        {typeof r.tz === "string" ? <span className="text-rose-400 font-medium text-xs sm:text-sm">{r.tz}</span> : r.tz ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 mx-auto" /> : <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700 mx-auto" />}
+                        {typeof r.tz === "string" ? <span className="text-slate-400 font-medium text-xs sm:text-sm">{r.tz}</span> : r.tz ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 mx-auto" /> : <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-400/50 mx-auto" />}
                       </td>
                       <td className="px-3 sm:px-6 py-2.5 sm:py-3 text-center">
-                        {typeof r.tv === "string" ? <span className="text-rose-400 font-medium text-xs sm:text-sm">{r.tv}</span> : r.tv ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 mx-auto" /> : <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700 mx-auto" />}
+                        {typeof r.tv === "string" ? <span className="text-slate-400 font-medium text-xs sm:text-sm">{r.tv}</span> : r.tv ? <Check className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 mx-auto" /> : <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-400/50 mx-auto" />}
                       </td>
                     </tr>
                   ))}
@@ -576,7 +576,7 @@ export default function LandingContent() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white">{tm.name}</p>
-                      <p className="text-xs text-slate-500">{tm.role} &middot; {tm.style}</p>
+                      <p className="text-xs text-slate-400">{tm.role} &middot; {tm.style}</p>
                     </div>
                   </div>
                 </div>
@@ -600,9 +600,9 @@ export default function LandingContent() {
               <div className="relative rounded-3xl p-6 sm:p-8 bg-[#111827] border border-[#1e293b] shadow-lg">
                 <div className="text-4xl sm:text-5xl font-black text-white mb-1">0&#8364;</div>
                 <p className="text-slate-400 mb-1 text-sm sm:text-base font-semibold">Free</p>
-                <p className="text-slate-500 mb-6 text-xs">{t("landing_pricingPerMonth")}</p>
+                <p className="text-slate-400 mb-6 text-xs">{t("landing_pricingPerMonth")}</p>
                 <div className="w-full h-px bg-[#1e293b] mb-5" />
-                <p className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{t("landing_pricingFreeLabel")}</p>
+                <p className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t("landing_pricingFreeLabel")}</p>
                 <ul className="space-y-2 text-left mb-8">
                   {[
                     t("landing_pricingItem1"), t("landing_pricingItem2"), t("landing_pricingItem3"),
@@ -618,8 +618,8 @@ export default function LandingContent() {
                   {t("landing_pricingCta")}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <p className="mt-3 text-xs text-slate-500 flex items-center justify-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-slate-600" />
+                <p className="mt-3 text-xs text-slate-400 flex items-center justify-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-slate-500" />
                   Pas de carte bancaire requise
                 </p>
               </div>
@@ -636,7 +636,7 @@ export default function LandingContent() {
                 <p className="text-amber-400 mb-1 text-sm sm:text-base font-semibold flex items-center justify-center gap-1.5">
                   <Crown className="w-4 h-4" /> VIP
                 </p>
-                <p className="text-slate-500 mb-6 text-xs">{t("landing_pricingVipPer")}</p>
+                <p className="text-slate-400 mb-6 text-xs">{t("landing_pricingVipPer")}</p>
                 <div className="w-full h-px bg-amber-500/20 mb-5" />
                 <p className="text-left text-xs font-semibold text-amber-400 uppercase tracking-wider mb-3">{t("landing_pricingVipLabel")}</p>
                 <ul className="space-y-2 text-left mb-8">
@@ -698,8 +698,8 @@ export default function LandingContent() {
               {t("landing_finalCta")}
               <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <p className="relative mt-4 text-xs text-slate-500 flex items-center justify-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-slate-600" />
+            <p className="relative mt-4 text-xs text-slate-400 flex items-center justify-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-slate-500" />
               Pas de carte bancaire requise
             </p>
           </AnimatedSection>
@@ -714,7 +714,7 @@ export default function LandingContent() {
                   <Image src="/logo-icon.png" alt="MarketPhase journal de trading" width={28} height={28} sizes="28px" className="w-7 h-7 rounded-lg" />
                   <span className="font-bold text-white">MarketPhase</span>
                 </div>
-                <p className="text-xs text-slate-500 max-w-xs">{t("landing_footerDesc")}</p>
+                <p className="text-xs text-slate-400 max-w-xs">{t("landing_footerDesc")}</p>
               </div>
               <div>
                 <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t("landing_footerProduct")}</h5>
@@ -725,7 +725,7 @@ export default function LandingContent() {
                     { l: t("landing_navPricing"), id: "pricing" },
                     { l: t("landing_navCompare"), id: "compare" },
                   ].map((i) => (
-                    <li key={i.id}><button onClick={() => scrollToSection(i.id)} className="text-xs text-slate-500 hover:text-white transition">{i.l}</button></li>
+                    <li key={i.id}><button onClick={() => scrollToSection(i.id)} className="text-xs text-slate-400 hover:text-white transition">{i.l}</button></li>
                   ))}
                 </ul>
               </div>
@@ -737,7 +737,7 @@ export default function LandingContent() {
                     { l: t("landing_footerSignup"), h: "/register" },
                     { l: t("landing_footerDemo"), h: "/login" },
                   ].map(i => (
-                    <li key={i.l}><Link href={i.h} className="text-xs text-slate-500 hover:text-white transition">{i.l}</Link></li>
+                    <li key={i.l}><Link href={i.h} className="text-xs text-slate-400 hover:text-white transition">{i.l}</Link></li>
                   ))}
                 </ul>
               </div>
@@ -747,7 +747,7 @@ export default function LandingContent() {
                     <Globe className="w-4 h-4 text-slate-400" />
                   </a>
                 </div>
-                <p className="text-xs text-slate-600">{t("landing_footerCopyright")}</p>
+                <p className="text-xs text-slate-500">{t("landing_footerCopyright")}</p>
               </div>
             </div>
           </div>
