@@ -72,7 +72,6 @@ export const config = {
     "/trump-tracker/:path*",
     "/chart/:path*",
     "/custom-dashboard/:path*",
-    "/screenshots/:path*",
     "/community/:path*",
     "/vip/:path*",
     "/pricing/:path*",
