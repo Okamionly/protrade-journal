@@ -170,7 +170,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={`dark ${inter.variable} ${jetbrains.variable}`} suppressHydrationWarning>
+    <html lang="fr" className={`${inter.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <head>
         <link rel="dns-prefetch" href="https://marketphase.vercel.app" />
         <link rel="preconnect" href="https://marketphase.vercel.app" />
@@ -182,7 +182,7 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function() {
             try {
-              var theme = localStorage.getItem('theme') || 'dark';
+              var theme = localStorage.getItem('theme') || 'light';
               document.documentElement.className = theme;
             } catch(e) {}
           })();

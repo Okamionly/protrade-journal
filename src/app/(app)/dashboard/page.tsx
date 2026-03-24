@@ -643,11 +643,13 @@ export default function DashboardPage() {
   const todayRiskPercent = balance > 0 ? (todayRiskExposure / balance) * 100 : 0;
 
   // === Decision Fatigue Index ===
-  const decisionFatigue = useMemo(() => {
-    const now = new Date();
+  // NOTE: Converted from useMemo to plain computation to avoid calling a hook
+  // after the early return on the loading check (violates Rules of Hooks).
+  const decisionFatigue = (() => {
+    const nowDf = new Date();
     const todayCount = todayTrades.length;
     const dayMap: Record<string, number> = {};
-    const thirtyDaysAgo = new Date(now);
+    const thirtyDaysAgo = new Date(nowDf);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     trades.forEach((t) => {
       const d = new Date(t.date).toISOString().slice(0, 10);
@@ -660,10 +662,10 @@ export default function DashboardPage() {
     const avgPerDay = tradingDays > 0 ? Object.values(dayMap).reduce((a, b) => a + b, 0) / tradingDays : 0;
     const ratio = avgPerDay > 0 ? todayCount / avgPerDay : 0;
     const level: "none" | "amber" | "red" = ratio >= 2 ? "red" : ratio >= 1.5 ? "amber" : "none";
-    const hour = now.getHours();
+    const hour = nowDf.getHours();
     const nextSession = hour < 12 ? "Reprenez apres la pause dejeuner (14h)" : "Reprenez demain matin (9h)";
     return { todayCount, avgPerDay, ratio, level, nextSession };
-  }, [trades, todayTrades, todayStr]);
+  })();
 
   // === Weekly sparkline data (last 7 days P&L) ===
   const last7Days: number[] = [];
