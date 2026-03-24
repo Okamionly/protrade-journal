@@ -96,7 +96,7 @@ function CounterCard({ stat, visible }: { stat: { num: number; prefix: string; s
 
   return (
     <div className="p-4 sm:p-6 rounded-2xl border border-[#1e293b] bg-[#111827]">
-      <div className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-emerald-400 to-purple-400 bg-clip-text text-transparent mb-1" style={{ textShadow: "0 0 20px rgba(16,185,129,0.4), 0 0 40px rgba(139,92,246,0.2)" }}>{display}</div>
+      <div className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-emerald-400 to-purple-400 bg-clip-text text-transparent mb-1">{display}</div>
       <p className="text-xs sm:text-sm text-slate-400">{stat.label}</p>
     </div>
   );
@@ -182,11 +182,11 @@ export default function LandingContent() {
   };
 
   return (
-    <div className="bg-[#050810] text-slate-100 overflow-y-auto landing-noise">
+    <div className="bg-[#0a0f1a] text-slate-100 overflow-y-auto">
       <h1 className="sr-only">Journal de Trading Gratuit — MarketPhase</h1>
 
       {/* ==================== NAVBAR ==================== */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#050810]/80 backdrop-blur-xl border-b border-white/5">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0f1a]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2.5" onClick={() => scrollToSection("hero")}>
@@ -243,7 +243,7 @@ export default function LandingContent() {
                 )}
               </div>
               <Link href="/login" className="hidden sm:inline-flex text-sm text-slate-400 hover:text-white px-3 py-2 transition">{t("landing_login")}</Link>
-              <Link href="/register" title="Ouvrir un journal de trading gratuit" className="text-xs sm:text-sm font-semibold text-white px-4 sm:px-5 py-2 rounded-full border border-emerald-500/50 hover:bg-emerald-500 hover:border-emerald-500 transition-all whitespace-nowrap" style={{ boxShadow: "0 0 12px rgba(16,185,129,0.3), 0 0 24px rgba(16,185,129,0.1)" }}>
+              <Link href="/register" title="Ouvrir un journal de trading gratuit" className="text-xs sm:text-sm font-semibold text-white px-4 sm:px-5 py-2 rounded-full border border-emerald-500/50 hover:bg-emerald-500 hover:border-emerald-500 transition-all whitespace-nowrap">
                 {t("landing_cta")}
               </Link>
             </div>
@@ -265,18 +265,18 @@ export default function LandingContent() {
 
               <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-white mb-6">
                 {t("landing_heroTitle1")}{" "}
-                <span className="bg-gradient-to-r from-emerald-400 to-purple-400 bg-clip-text text-transparent" style={{ textShadow: "0 0 20px rgba(16,185,129,0.4), 0 0 40px rgba(139,92,246,0.2)" }}>
+                <span className="bg-gradient-to-r from-emerald-400 to-purple-400 bg-clip-text text-transparent">
                   {t("landing_heroTitle2")}
                 </span>{" "}
                 {t("landing_heroTitle3")}
               </h2>
 
-              <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed mb-8">
+              <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed mb-8">
                 {t("landing_heroSub")}
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
-                <Link href="/register" title="Creer mon journal de trading gratuit" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 text-base font-bold text-white px-8 py-4 rounded-full bg-emerald-500 hover:bg-emerald-400 transition-all hover:-translate-y-0.5" style={{ boxShadow: "0 0 20px rgba(16,185,129,0.4), 0 0 40px rgba(16,185,129,0.2)", animation: "neon-pulse 2s ease-in-out infinite" }}>
+                <Link href="/register" title="Creer mon journal de trading gratuit" className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 text-base font-bold text-white px-8 py-4 rounded-full bg-emerald-500 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5">
                   {t("landing_ctaPrimary")}
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -292,7 +292,7 @@ export default function LandingContent() {
               </p>
 
               {/* Trust bar */}
-              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400 mb-16">
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-300 mb-16">
                 <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-amber-400" /> Utilis&eacute; dans <strong className="text-slate-200">15+ pays</strong></span>
                 <span className="hidden sm:inline text-slate-500">&bull;</span>
                 <span>&#11088; 4.9/5 satisfaction</span>
@@ -304,7 +304,7 @@ export default function LandingContent() {
               <div className="max-w-4xl mx-auto">
                 <div className="relative">
                   <div className="absolute -inset-1 bg-gradient-to-br from-emerald-400/30 via-purple-500/25 to-teal-400/30 rounded-2xl blur-sm" />
-                  <div className="relative rounded-2xl overflow-hidden border border-[#1e293b] bg-[#111827]" style={{ boxShadow: "0 0 30px rgba(16,185,129,0.1), 0 4px 20px rgba(0,0,0,0.5)" }}>
+                  <div className="relative rounded-2xl overflow-hidden border border-[#1e293b] bg-[#111827] shadow-2xl shadow-black/50">
                     <img src="/screenshots/dashboard.png" alt="Tableau de bord du journal de trading gratuit MarketPhase" className="w-full h-auto" loading="eager" fetchPriority="high" />
                   </div>
                 </div>
@@ -313,8 +313,6 @@ export default function LandingContent() {
           </AnimatedSection>
         </section>
 
-        {/* Neon accent line */}
-        <div className="max-w-3xl mx-auto h-px" style={{ background: "linear-gradient(to right, transparent, #10b981, transparent)", boxShadow: "0 0 10px rgba(16,185,129,0.3)" }} />
 
         {/* ==================== SECTION 2: FEATURES OVERVIEW (3x3 grid) ==================== */}
         <section id="features" className="py-24 sm:py-32 px-4">
@@ -337,20 +335,18 @@ export default function LandingContent() {
                 { icon: Layers, title: t("landing_feat8"), desc: t("landing_feat8Desc") },
                 { icon: CalendarDays, title: t("landing_feat9"), desc: t("landing_feat9Desc") },
               ].map((f) => (
-                <div key={f.title} className="group p-5 sm:p-6 rounded-2xl bg-[#111827] border border-[#1e293b] hover:border-emerald-500/40 transition-all" style={{ transition: "border-color 0.3s, box-shadow 0.3s" }} onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 15px rgba(16,185,129,0.15), inset 0 0 15px rgba(16,185,129,0.05)"; }} onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition" style={{ boxShadow: "inset 0 0 10px rgba(16,185,129,0.15)" }}>
+                <div key={f.title} className="group p-5 sm:p-6 rounded-2xl bg-[#111827] border border-[#1e293b] hover:border-emerald-500/30 transition-all">
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition">
                     <f.icon className="w-5 h-5 text-emerald-400" />
                   </div>
                   <h4 className="font-bold text-white text-base mb-1.5">{f.title}</h4>
-                  <p className="text-sm text-slate-400 leading-relaxed">{f.desc}</p>
+                  <p className="text-sm text-slate-300 leading-relaxed">{f.desc}</p>
                 </div>
               ))}
             </div>
           </AnimatedSection>
         </section>
 
-        {/* Neon accent line */}
-        <div className="max-w-3xl mx-auto h-px" style={{ background: "linear-gradient(to right, transparent, #10b981, transparent)", boxShadow: "0 0 10px rgba(16,185,129,0.3)" }} />
 
         {/* ==================== SECTION 3: JOURNAL (text left, screenshot right) ==================== */}
         <section id="journal" className="py-24 sm:py-32 px-4">
@@ -360,27 +356,27 @@ export default function LandingContent() {
                 <p className="text-emerald-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">{t("landing_sec1Tag")}</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black mb-4 text-white">
                   {t("landing_sec1Title1")}<br className="hidden sm:block" />
-                  <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent" style={{ textShadow: "0 0 20px rgba(16,185,129,0.4), 0 0 40px rgba(139,92,246,0.2)" }}>{t("landing_sec1Title2")}</span>
+                  <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">{t("landing_sec1Title2")}</span>
                 </h2>
-                <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">{t("landing_sec1Desc")}</p>
+                <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">{t("landing_sec1Desc")}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
                     { icon: BookOpen, title: t("landing_sec1Card1Title"), desc: t("landing_sec1Card1Desc") },
                     { icon: BarChart3, title: t("landing_sec1Card2Title"), desc: t("landing_sec1Card2Desc") },
                     { icon: CalendarDays, title: t("landing_sec1Card3Title"), desc: t("landing_sec1Card3Desc") },
                   ].map(c => (
-                    <div key={c.title} className="p-4 rounded-xl bg-[#111827] border border-[#1e293b] hover:border-emerald-500/40 transition-all" onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 15px rgba(16,185,129,0.15), inset 0 0 15px rgba(16,185,129,0.05)"; }} onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-                      <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3" style={{ boxShadow: "inset 0 0 8px rgba(16,185,129,0.15)" }}>
+                    <div key={c.title} className="p-4 rounded-xl bg-[#111827] border border-[#1e293b] hover:border-emerald-500/30 transition-all">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3">
                         <c.icon className="w-4 h-4 text-emerald-400" />
                       </div>
                       <h4 className="font-bold text-white text-sm mb-1">{c.title}</h4>
-                      <p className="text-xs text-slate-400">{c.desc}</p>
+                      <p className="text-xs text-slate-300">{c.desc}</p>
                     </div>
                   ))}
                 </div>
               </div>
               <div className="flex-1 w-full">
-                <div className="rounded-xl overflow-hidden border border-[#1e293b] bg-[#111827]" style={{ boxShadow: "0 0 30px rgba(16,185,129,0.1), 0 4px 20px rgba(0,0,0,0.5)" }}>
+                <div className="rounded-xl overflow-hidden border border-[#1e293b] bg-[#111827] shadow-2xl shadow-black/50">
                   <img src="/screenshots/dashboard.png" alt="Journal de trading saisie et suivi des trades" className="w-full h-auto" loading="lazy" />
                 </div>
               </div>
@@ -388,8 +384,6 @@ export default function LandingContent() {
           </AnimatedSection>
         </section>
 
-        {/* Neon accent line */}
-        <div className="max-w-3xl mx-auto h-px" style={{ background: "linear-gradient(to right, transparent, #10b981, transparent)", boxShadow: "0 0 10px rgba(16,185,129,0.3)" }} />
 
         {/* ==================== SECTION 4: ANALYTICS (screenshot left, text right) ==================== */}
         <section id="analytics" className="py-24 sm:py-32 px-4">
@@ -399,27 +393,27 @@ export default function LandingContent() {
                 <p className="text-purple-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">{t("landing_sec2Tag")}</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black mb-4 text-white">
                   {t("landing_sec2Title1")}<br className="hidden sm:block" />
-                  <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent" style={{ textShadow: "0 0 20px rgba(139,92,246,0.4), 0 0 40px rgba(16,185,129,0.2)" }}>{t("landing_sec2Title2")}</span>
+                  <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">{t("landing_sec2Title2")}</span>
                 </h2>
-                <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">{t("landing_sec2Desc")}</p>
+                <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">{t("landing_sec2Desc")}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
                     { icon: Activity, title: t("landing_sec2Card1Title"), desc: t("landing_sec2Card1Desc") },
                     { icon: Layers, title: t("landing_sec2Card2Title"), desc: t("landing_sec2Card2Desc") },
                     { icon: Target, title: t("landing_sec2Card3Title"), desc: t("landing_sec2Card3Desc") },
                   ].map(c => (
-                    <div key={c.title} className="p-4 rounded-xl bg-[#111827] border border-[#1e293b] hover:border-purple-500/40 transition-all" onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 15px rgba(139,92,246,0.15), inset 0 0 15px rgba(139,92,246,0.05)"; }} onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-                      <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center mb-3" style={{ boxShadow: "inset 0 0 8px rgba(139,92,246,0.15)" }}>
+                    <div key={c.title} className="p-4 rounded-xl bg-[#111827] border border-[#1e293b] hover:border-purple-500/30 transition-all">
+                      <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center mb-3">
                         <c.icon className="w-4 h-4 text-purple-400" />
                       </div>
                       <h4 className="font-bold text-white text-sm mb-1">{c.title}</h4>
-                      <p className="text-xs text-slate-400">{c.desc}</p>
+                      <p className="text-xs text-slate-300">{c.desc}</p>
                     </div>
                   ))}
                 </div>
               </div>
               <div className="flex-1 w-full">
-                <div className="rounded-xl overflow-hidden border border-[#1e293b] bg-[#111827]" style={{ boxShadow: "0 0 30px rgba(16,185,129,0.1), 0 4px 20px rgba(0,0,0,0.5)" }}>
+                <div className="rounded-xl overflow-hidden border border-[#1e293b] bg-[#111827] shadow-2xl shadow-black/50">
                   <img src="/screenshots/analytics.png" alt="Analyse trading et statistiques avancees MarketPhase" className="w-full h-auto" loading="lazy" />
                 </div>
               </div>
@@ -427,8 +421,6 @@ export default function LandingContent() {
           </AnimatedSection>
         </section>
 
-        {/* Neon accent line */}
-        <div className="max-w-3xl mx-auto h-px" style={{ background: "linear-gradient(to right, transparent, #10b981, transparent)", boxShadow: "0 0 10px rgba(16,185,129,0.3)" }} />
 
         {/* ==================== SECTION 5: AI COACH (text left, screenshot right) ==================== */}
         <section id="ai-coach" className="py-24 sm:py-32 px-4">
@@ -438,27 +430,27 @@ export default function LandingContent() {
                 <p className="text-emerald-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">{t("landing_sec3Tag")}</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black mb-4 text-white">
                   {t("landing_sec3Title1")}<br className="hidden sm:block" />
-                  <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent" style={{ textShadow: "0 0 20px rgba(16,185,129,0.4), 0 0 40px rgba(139,92,246,0.2)" }}>{t("landing_sec3Title2")}</span>
+                  <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">{t("landing_sec3Title2")}</span>
                 </h2>
-                <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">{t("landing_sec3Desc")}</p>
+                <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">{t("landing_sec3Desc")}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
                     { icon: Brain, title: t("landing_sec3Card1Title"), desc: t("landing_sec3Card1Desc") },
                     { icon: Crosshair, title: t("landing_sec3Card2Title"), desc: t("landing_sec3Card2Desc") },
                     { icon: Sparkles, title: t("landing_sec3Card3Title"), desc: t("landing_sec3Card3Desc") },
                   ].map(c => (
-                    <div key={c.title} className="p-4 rounded-xl bg-[#111827] border border-[#1e293b] hover:border-emerald-500/40 transition-all" onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 15px rgba(16,185,129,0.15), inset 0 0 15px rgba(16,185,129,0.05)"; }} onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
-                      <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3" style={{ boxShadow: "inset 0 0 8px rgba(16,185,129,0.15)" }}>
+                    <div key={c.title} className="p-4 rounded-xl bg-[#111827] border border-[#1e293b] hover:border-emerald-500/30 transition-all">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3">
                         <c.icon className="w-4 h-4 text-emerald-400" />
                       </div>
                       <h4 className="font-bold text-white text-sm mb-1">{c.title}</h4>
-                      <p className="text-xs text-slate-400">{c.desc}</p>
+                      <p className="text-xs text-slate-300">{c.desc}</p>
                     </div>
                   ))}
                 </div>
               </div>
               <div className="flex-1 w-full">
-                <div className="rounded-xl overflow-hidden border border-[#1e293b] bg-[#111827]" style={{ boxShadow: "0 0 30px rgba(16,185,129,0.1), 0 4px 20px rgba(0,0,0,0.5)" }}>
+                <div className="rounded-xl overflow-hidden border border-[#1e293b] bg-[#111827] shadow-2xl shadow-black/50">
                   <img src="/screenshots/ai-coach.png" alt="Coach IA pour ameliorer votre trading" className="w-full h-auto" loading="lazy" />
                 </div>
               </div>
@@ -466,8 +458,6 @@ export default function LandingContent() {
           </AnimatedSection>
         </section>
 
-        {/* Neon accent line */}
-        <div className="max-w-3xl mx-auto h-px" style={{ background: "linear-gradient(to right, transparent, #10b981, transparent)", boxShadow: "0 0 10px rgba(16,185,129,0.3)" }} />
 
         {/* ==================== SECTION 6: STATS/NUMBERS ==================== */}
         <section id="stats" className="py-24 sm:py-32 px-4">
@@ -485,8 +475,6 @@ export default function LandingContent() {
           </AnimatedSection>
         </section>
 
-        {/* Neon accent line */}
-        <div className="max-w-3xl mx-auto h-px" style={{ background: "linear-gradient(to right, transparent, #10b981, transparent)", boxShadow: "0 0 10px rgba(16,185,129,0.3)" }} />
 
         {/* ==================== SECTION 7: COMPARISON TABLE ==================== */}
         <section id="compare" className="py-24 sm:py-32 px-4">
@@ -544,8 +532,6 @@ export default function LandingContent() {
           </AnimatedSection>
         </section>
 
-        {/* Neon accent line */}
-        <div className="max-w-3xl mx-auto h-px" style={{ background: "linear-gradient(to right, transparent, #10b981, transparent)", boxShadow: "0 0 10px rgba(16,185,129,0.3)" }} />
 
         {/* ==================== SECTION 8: TESTIMONIALS ==================== */}
         <section id="testimonials" className="py-24 sm:py-32 px-4">
@@ -553,9 +539,9 @@ export default function LandingContent() {
             <p className="text-emerald-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-4">{t("landing_testimonialTag")}</p>
             <h2 className="text-3xl sm:text-5xl font-black text-white mb-4">
               {t("landing_testimonialTitle1")}{" "}
-              <span className="bg-gradient-to-r from-emerald-400 to-purple-400 bg-clip-text text-transparent" style={{ textShadow: "0 0 20px rgba(16,185,129,0.4), 0 0 40px rgba(139,92,246,0.2)" }}>{t("landing_testimonialTitle2")}</span>
+              <span className="bg-gradient-to-r from-emerald-400 to-purple-400 bg-clip-text text-transparent">{t("landing_testimonialTitle2")}</span>
             </h2>
-            <p className="text-slate-400 text-sm sm:text-lg max-w-2xl mx-auto mb-12">{t("landing_testimonialSub")}</p>
+            <p className="text-slate-300 text-sm sm:text-lg max-w-2xl mx-auto mb-12">{t("landing_testimonialSub")}</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-4xl mx-auto">
               {[
@@ -563,7 +549,7 @@ export default function LandingContent() {
                 { name: t("landing_testimonial2Name"), role: t("landing_testimonial2Role"), style: t("landing_testimonial2Style"), text: t("landing_testimonial2Text"), grad: "from-purple-500 to-violet-400" },
                 { name: t("landing_testimonial3Name"), role: t("landing_testimonial3Role"), style: t("landing_testimonial3Style"), text: t("landing_testimonial3Text"), grad: "from-emerald-400 to-cyan-400" },
               ].map((tm) => (
-                <div key={tm.name} className="relative p-5 sm:p-6 rounded-2xl bg-[#111827] border border-[#1e293b] text-left hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-300" onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 15px rgba(16,185,129,0.15), inset 0 0 15px rgba(16,185,129,0.05)"; }} onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
+                <div key={tm.name} className="relative p-5 sm:p-6 rounded-2xl bg-[#111827] border border-[#1e293b] text-left hover:border-emerald-500/30 hover:-translate-y-1 transition-all duration-300">
                   <div className="flex gap-0.5 mb-3">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -585,15 +571,13 @@ export default function LandingContent() {
           </AnimatedSection>
         </section>
 
-        {/* Neon accent line */}
-        <div className="max-w-3xl mx-auto h-px" style={{ background: "linear-gradient(to right, transparent, #10b981, transparent)", boxShadow: "0 0 10px rgba(16,185,129,0.3)" }} />
 
         {/* ==================== SECTION 9: PRICING ==================== */}
         <section id="pricing" className="py-24 sm:py-32 px-4">
           <AnimatedSection className="max-w-5xl mx-auto text-center">
             <p className="text-emerald-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-4">{t("landing_pricingTag")}</p>
             <h2 className="text-3xl sm:text-5xl font-black mb-4 text-white">{t("landing_pricingTitle")}</h2>
-            <p className="text-slate-400 text-sm sm:text-lg mb-12 sm:mb-16">{t("landing_pricingSub")}</p>
+            <p className="text-slate-300 text-sm sm:text-lg mb-12 sm:mb-16">{t("landing_pricingSub")}</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-20">
               {/* Free card */}
@@ -614,7 +598,7 @@ export default function LandingContent() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/register" className="group w-full inline-flex items-center justify-center gap-2 text-sm font-bold text-white px-6 py-3.5 rounded-full bg-emerald-500 hover:bg-emerald-400 transition-all" style={{ boxShadow: "0 0 20px rgba(16,185,129,0.4), 0 0 40px rgba(16,185,129,0.2)", animation: "neon-pulse 2s ease-in-out infinite" }}>
+                <Link href="/register" className="group w-full inline-flex items-center justify-center gap-2 text-sm font-bold text-white px-6 py-3.5 rounded-full bg-emerald-500 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 transition-all">
                   {t("landing_pricingCta")}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -670,15 +654,13 @@ export default function LandingContent() {
                     {faq.q}
                     <ChevronDown className="w-4 h-4 text-slate-500 group-open:rotate-180 transition-transform flex-shrink-0 ml-4" />
                   </summary>
-                  <p className="pb-4 text-xs sm:text-sm text-slate-400 leading-relaxed">{faq.a}</p>
+                  <p className="pb-4 text-xs sm:text-sm text-slate-300 leading-relaxed">{faq.a}</p>
                 </details>
               ))}
             </div>
           </AnimatedSection>
         </section>
 
-        {/* Neon accent line */}
-        <div className="max-w-3xl mx-auto h-px" style={{ background: "linear-gradient(to right, transparent, #10b981, transparent)", boxShadow: "0 0 10px rgba(16,185,129,0.3)" }} />
 
         {/* ==================== SECTION 10: FINAL CTA ==================== */}
         <section id="final-cta" className="py-24 sm:py-32 px-4">
@@ -687,14 +669,14 @@ export default function LandingContent() {
             <h2 className="relative text-2xl sm:text-4xl lg:text-5xl font-black mb-4 sm:mb-6 text-white">
               {t("landing_finalTitle1")}
               <br />
-              <span className="bg-gradient-to-r from-emerald-400 to-purple-400 bg-clip-text text-transparent" style={{ textShadow: "0 0 20px rgba(16,185,129,0.4), 0 0 40px rgba(139,92,246,0.2)" }}>
+              <span className="bg-gradient-to-r from-emerald-400 to-purple-400 bg-clip-text text-transparent">
                 {t("landing_finalTitle2")}
               </span>
             </h2>
-            <p className="relative text-sm sm:text-lg text-slate-400 mb-8 max-w-xl mx-auto">
+            <p className="relative text-sm sm:text-lg text-slate-300 mb-8 max-w-xl mx-auto">
               {t("landing_finalSub")}
             </p>
-            <Link href="/register" title="Demarrer le journal de trading gratuit" className="relative group w-full sm:w-auto inline-flex items-center justify-center gap-2 text-base sm:text-lg font-bold text-white px-8 sm:px-10 py-4 sm:py-5 rounded-full bg-emerald-500 hover:bg-emerald-400 transition-all hover:-translate-y-1" style={{ boxShadow: "0 0 20px rgba(16,185,129,0.4), 0 0 40px rgba(16,185,129,0.2)", animation: "neon-pulse 2s ease-in-out infinite" }}>
+            <Link href="/register" title="Demarrer le journal de trading gratuit" className="relative group w-full sm:w-auto inline-flex items-center justify-center gap-2 text-base sm:text-lg font-bold text-white px-8 sm:px-10 py-4 sm:py-5 rounded-full bg-emerald-500 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-1">
               {t("landing_finalCta")}
               <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform" />
             </Link>
@@ -706,7 +688,7 @@ export default function LandingContent() {
         </section>
 
         {/* ==================== SECTION 11: FOOTER ==================== */}
-        <footer className="border-t border-[#1e293b] py-12 bg-[#050810]">
+        <footer className="border-t border-[#1e293b] py-12 bg-[#0a0f1a]">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 sm:gap-12">
               <div>
