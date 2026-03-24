@@ -18,49 +18,36 @@ const pages = [
   const page = await browser.newPage();
   await page.setViewport({ width: 1920, height: 1080 });
 
-  // Pre-set localStorage BEFORE login
+  // Login page - set localStorage FIRST
   await page.goto(BASE + "/login", { waitUntil: "networkidle2" });
   await page.evaluate(() => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("theme", "dark");
-    localStorage.setItem("morning-briefing-dismissed-" + new Date().toISOString().slice(0,10), "true");
-    localStorage.setItem("smart-alerts-dismissed", JSON.stringify({}));
   });
-
-  // Login
+  
   await page.type('input[type="email"]', "mr.guessousyoussef@gmail.com");
   await page.type('input[type="password"]', "Guessous34.");
   await page.click('button[type="submit"]');
   await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 15000 }).catch(() => {});
   await new Promise(r => setTimeout(r, 3000));
 
-  // Force dark mode after login
-  await page.evaluate(() => {
-    localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("theme", "dark");
-    document.documentElement.classList.remove("light", "oled");
-    document.documentElement.classList.add("dark");
-  });
-
   for (const p of pages) {
     console.log("Capturing", p.name);
     await page.goto(BASE + p.path, { waitUntil: "networkidle2", timeout: 20000 }).catch(() => {});
     
-    // Dismiss everything
+    // Ensure dark + dismiss onboarding
     await page.evaluate(() => {
       localStorage.setItem("onboarding-complete", "true");
       document.documentElement.classList.remove("light", "oled");
       document.documentElement.classList.add("dark");
     });
-    await new Promise(r => setTimeout(r, 5000));
+    
+    // Wait for page to fully render
+    await new Promise(r => setTimeout(r, 6000));
 
-    // Close any modals/alerts
-    await page.evaluate(() => {
-      document.querySelectorAll('button').forEach(b => {
-        if (b.textContent.includes('Passer') || b.textContent.includes('×') || b.getAttribute('aria-label') === 'close') b.click();
-      });
-    });
-    await new Promise(r => setTimeout(r, 1000));
+    // Only press Escape to close any open modals (safe, no clicking)
+    await page.keyboard.press("Escape");
+    await new Promise(r => setTimeout(r, 500));
 
     await page.screenshot({ path: path.join(OUT, p.name + ".png"), fullPage: false });
     console.log("Saved", p.name + ".png");
