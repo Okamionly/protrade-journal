@@ -728,9 +728,9 @@ function TradeDuJour({ messages: _messages }: { messages: FeedMessage[] }) {
     <div
       className="mx-4 mt-3 mb-1 rounded-2xl overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, #fefce8, #fef9c3)",
-        border: "1px solid #fde68a",
-        boxShadow: "0 2px 8px rgba(234,179,8,0.15)",
+        background: "linear-gradient(135deg, #fef3c7, #fde68a)",
+        border: "1px solid #f59e0b",
+        boxShadow: "0 2px 12px rgba(234,179,8,0.2)",
       }}
     >
       <div className="px-4 pt-3 pb-2 flex items-center justify-between">
