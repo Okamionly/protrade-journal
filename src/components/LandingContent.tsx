@@ -304,8 +304,8 @@ export default function LandingContent() {
               <div className="max-w-4xl mx-auto">
                 <div className="relative">
                   <div className="absolute -inset-1 bg-gradient-to-br from-emerald-400/30 via-purple-500/25 to-teal-400/30 rounded-2xl blur-sm" />
-                  <div className="relative rounded-2xl overflow-hidden border border-[#1e293b] bg-[#111827] shadow-2xl shadow-black/50">
-                    <img src="/screenshots/dashboard.png" alt="Tableau de bord du journal de trading gratuit MarketPhase" className="w-full h-auto" loading="eager" fetchPriority="high" />
+                  <div className="relative rounded-2xl overflow-hidden border border-[#1e293b] bg-[#111827]" style={{ boxShadow: '0 0 80px rgba(16,185,129,0.15), 0 0 160px rgba(16,185,129,0.05)' }}>
+                    <img src="/screenshots/hero-demo.gif" alt="Tableau de bord du journal de trading gratuit MarketPhase" className="w-full h-auto" loading="eager" fetchPriority="high" />
                   </div>
                 </div>
               </div>
@@ -315,15 +315,18 @@ export default function LandingContent() {
 
 
         {/* ==================== SECTION 2: FEATURES OVERVIEW (3x3 grid) ==================== */}
-        <section id="features" className="py-24 sm:py-32 px-4">
+        <section id="features" className="py-24 sm:py-32 px-4" style={{ borderTop: '1px solid rgba(16,185,129,0.1)', boxShadow: '0 -1px 20px rgba(16,185,129,0.05)' }}>
           <AnimatedSection className="max-w-5xl mx-auto">
             <div className="text-center mb-12 sm:mb-16">
+              <div className="w-10 h-0.5 bg-gradient-to-r from-emerald-500/80 to-emerald-500/0 mx-auto mb-4" />
               <p className="text-emerald-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-4">{t("landing_featuresTag")}</p>
               <h2 className="text-3xl sm:text-5xl font-black text-white">
                 {t("landing_featuresTitle")}
               </h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Faint radial glow behind features grid */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-gradient-radial from-emerald-500/8 via-transparent to-transparent rounded-full blur-3xl pointer-events-none" />
               {[
                 { icon: BookOpen, title: t("landing_feat1"), desc: t("landing_feat1Desc") },
                 { icon: BarChart3, title: t("landing_feat2"), desc: t("landing_feat2Desc") },
@@ -335,7 +338,7 @@ export default function LandingContent() {
                 { icon: Layers, title: t("landing_feat8"), desc: t("landing_feat8Desc") },
                 { icon: CalendarDays, title: t("landing_feat9"), desc: t("landing_feat9Desc") },
               ].map((f) => (
-                <div key={f.title} className="group p-5 sm:p-6 rounded-2xl bg-[#111827] border border-[#1e293b] hover:border-emerald-500/30 transition-all">
+                <div key={f.title} className="relative group p-5 sm:p-6 rounded-2xl bg-[#111827] hover:border-emerald-500/30 transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.1)]" style={{ border: '1px solid rgba(16,185,129,0.15)', borderRadius: '1rem' }}>
                   <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition">
                     <f.icon className="w-5 h-5 text-emerald-400" />
                   </div>
@@ -349,10 +352,11 @@ export default function LandingContent() {
 
 
         {/* ==================== SECTION 3: JOURNAL (text left, screenshot right) ==================== */}
-        <section id="journal" className="py-24 sm:py-32 px-4">
+        <section id="journal" className="py-24 sm:py-32 px-4" style={{ borderTop: '1px solid rgba(16,185,129,0.1)', boxShadow: '0 -1px 20px rgba(16,185,129,0.05)' }}>
           <AnimatedSection className="max-w-5xl mx-auto">
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
               <div className="flex-1 text-center lg:text-left">
+                <div className="w-10 h-0.5 bg-gradient-to-r from-emerald-500/80 to-emerald-500/0 mx-auto lg:mx-0 mb-3" />
                 <p className="text-emerald-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">{t("landing_sec1Tag")}</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black mb-4 text-white">
                   {t("landing_sec1Title1")}<br className="hidden sm:block" />
@@ -386,10 +390,11 @@ export default function LandingContent() {
 
 
         {/* ==================== SECTION 4: ANALYTICS (screenshot left, text right) ==================== */}
-        <section id="analytics" className="py-24 sm:py-32 px-4">
+        <section id="analytics" className="py-24 sm:py-32 px-4" style={{ borderTop: '1px solid rgba(16,185,129,0.1)', boxShadow: '0 -1px 20px rgba(16,185,129,0.05)' }}>
           <AnimatedSection className="max-w-5xl mx-auto">
             <div className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-16">
               <div className="flex-1 text-center lg:text-left">
+                <div className="w-10 h-0.5 bg-gradient-to-r from-purple-500/80 to-purple-500/0 mx-auto lg:mx-0 mb-3" />
                 <p className="text-purple-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">{t("landing_sec2Tag")}</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black mb-4 text-white">
                   {t("landing_sec2Title1")}<br className="hidden sm:block" />
@@ -423,10 +428,11 @@ export default function LandingContent() {
 
 
         {/* ==================== SECTION 5: AI COACH (text left, screenshot right) ==================== */}
-        <section id="ai-coach" className="py-24 sm:py-32 px-4">
+        <section id="ai-coach" className="py-24 sm:py-32 px-4" style={{ borderTop: '1px solid rgba(16,185,129,0.1)', boxShadow: '0 -1px 20px rgba(16,185,129,0.05)' }}>
           <AnimatedSection className="max-w-5xl mx-auto">
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
               <div className="flex-1 text-center lg:text-left">
+                <div className="w-10 h-0.5 bg-gradient-to-r from-emerald-500/80 to-emerald-500/0 mx-auto lg:mx-0 mb-3" />
                 <p className="text-emerald-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-3">{t("landing_sec3Tag")}</p>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black mb-4 text-white">
                   {t("landing_sec3Title1")}<br className="hidden sm:block" />
@@ -460,7 +466,7 @@ export default function LandingContent() {
 
 
         {/* ==================== SECTION 6: STATS/NUMBERS ==================== */}
-        <section id="stats" className="py-24 sm:py-32 px-4">
+        <section id="stats" className="py-24 sm:py-32 px-4" style={{ borderTop: '1px solid rgba(16,185,129,0.1)', boxShadow: '0 -1px 20px rgba(16,185,129,0.05)' }}>
           <AnimatedSection className="max-w-5xl mx-auto text-center">
             <div ref={statsRef} className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
               {[
@@ -477,9 +483,10 @@ export default function LandingContent() {
 
 
         {/* ==================== SECTION 7: COMPARISON TABLE ==================== */}
-        <section id="compare" className="py-24 sm:py-32 px-4">
+        <section id="compare" className="py-24 sm:py-32 px-4" style={{ borderTop: '1px solid rgba(16,185,129,0.1)', boxShadow: '0 -1px 20px rgba(16,185,129,0.05)' }}>
           <AnimatedSection className="max-w-5xl mx-auto">
             <div className="text-center mb-12 sm:mb-16">
+              <div className="w-10 h-0.5 bg-gradient-to-r from-emerald-500/80 to-emerald-500/0 mx-auto mb-4" />
               <p className="text-emerald-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-4">{t("landing_compareTag")}</p>
               <h2 className="text-3xl sm:text-5xl font-black text-white">
                 {t("landing_compareTitle1")}<br /><span className="text-slate-500">{t("landing_compareTitle2")}</span>
@@ -534,8 +541,9 @@ export default function LandingContent() {
 
 
         {/* ==================== SECTION 8: TESTIMONIALS ==================== */}
-        <section id="testimonials" className="py-24 sm:py-32 px-4">
+        <section id="testimonials" className="py-24 sm:py-32 px-4" style={{ borderTop: '1px solid rgba(16,185,129,0.1)', boxShadow: '0 -1px 20px rgba(16,185,129,0.05)' }}>
           <AnimatedSection className="max-w-5xl mx-auto text-center">
+            <div className="w-10 h-0.5 bg-gradient-to-r from-emerald-500/80 to-emerald-500/0 mx-auto mb-4" />
             <p className="text-emerald-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-4">{t("landing_testimonialTag")}</p>
             <h2 className="text-3xl sm:text-5xl font-black text-white mb-4">
               {t("landing_testimonialTitle1")}{" "}
@@ -573,8 +581,9 @@ export default function LandingContent() {
 
 
         {/* ==================== SECTION 9: PRICING ==================== */}
-        <section id="pricing" className="py-24 sm:py-32 px-4">
+        <section id="pricing" className="py-24 sm:py-32 px-4" style={{ borderTop: '1px solid rgba(16,185,129,0.1)', boxShadow: '0 -1px 20px rgba(16,185,129,0.05)' }}>
           <AnimatedSection className="max-w-5xl mx-auto text-center">
+            <div className="w-10 h-0.5 bg-gradient-to-r from-emerald-500/80 to-emerald-500/0 mx-auto mb-4" />
             <p className="text-emerald-400 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-4">{t("landing_pricingTag")}</p>
             <h2 className="text-3xl sm:text-5xl font-black mb-4 text-white">{t("landing_pricingTitle")}</h2>
             <p className="text-slate-300 text-sm sm:text-lg mb-12 sm:mb-16">{t("landing_pricingSub")}</p>
@@ -663,7 +672,7 @@ export default function LandingContent() {
 
 
         {/* ==================== SECTION 10: FINAL CTA ==================== */}
-        <section id="final-cta" className="py-24 sm:py-32 px-4">
+        <section id="final-cta" className="py-24 sm:py-32 px-4" style={{ borderTop: '1px solid rgba(16,185,129,0.1)', boxShadow: '0 -1px 20px rgba(16,185,129,0.05)' }}>
           <AnimatedSection className="max-w-4xl mx-auto text-center relative">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-gradient-radial from-emerald-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
             <h2 className="relative text-2xl sm:text-4xl lg:text-5xl font-black mb-4 sm:mb-6 text-white">
