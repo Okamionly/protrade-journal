@@ -164,11 +164,13 @@ export function SmartAlertCenter({ trades, balance }: Props) {
   // Initialiser les alertes deja masquees
   useEffect(() => {
     if (!mounted) return;
-    const dismissed = new Set<string>();
-    for (const a of alerts) {
-      if (isDismissed(a.id)) dismissed.add(a.id);
-    }
-    setDismissedIds(dismissed);
+    const dismissedArr = alerts.filter((a) => isDismissed(a.id)).map((a) => a.id);
+    setDismissedIds((prev) => {
+      // Only update if the set actually changed to avoid re-render loops
+      const same = dismissedArr.length === prev.size && dismissedArr.every((id) => prev.has(id));
+      if (same) return prev;
+      return new Set(dismissedArr);
+    });
   }, [alerts, mounted]);
 
   const handleDismiss = (alertId: string) => {

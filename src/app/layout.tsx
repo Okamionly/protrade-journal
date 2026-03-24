@@ -183,7 +183,9 @@ export default function RootLayout({
           (function() {
             try {
               var theme = localStorage.getItem('theme') || 'light';
-              document.documentElement.className = theme;
+              var cl = document.documentElement.classList;
+              cl.remove('dark', 'light', 'oled');
+              cl.add(theme);
             } catch(e) {}
           })();
         `}</Script>

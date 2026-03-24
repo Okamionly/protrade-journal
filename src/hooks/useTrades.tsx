@@ -207,7 +207,7 @@ export function useUser() {
     fetchUser();
   }, [fetchUser]);
 
-  const updateBalance = async (balance: number) => {
+  const updateBalance = useCallback(async (balance: number) => {
     const res = await fetch("/api/user", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -218,7 +218,7 @@ export function useUser() {
       return true;
     }
     return false;
-  };
+  }, []);
 
-  return { user, fetchUser, updateBalance };
+  return useMemo(() => ({ user, fetchUser, updateBalance }), [user, fetchUser, updateBalance]);
 }
