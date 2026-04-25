@@ -7,13 +7,14 @@ import { useToast } from "@/components/Toast";
 import { calculateRR, formatDate } from "@/lib/utils";
 import React, { useState, useMemo, useCallback, Suspense, useRef, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Camera, Trash2, Pencil, ArrowUpDown, Download, X, Copy, Brain, Share2, Send, Tag, FileText, LayoutGrid, List, Image as ImageIcon } from "lucide-react";
+import { Plus, Camera, Trash2, Pencil, ArrowUpDown, Download, X, Copy, Brain, Share2, Send, Tag, FileText, LayoutGrid, List, Image as ImageIcon, Sparkles } from "lucide-react";
 import { useTranslation } from "@/i18n/context";
 import { TradeCard } from "@/components/TradeCard";
 
 import { AdvancedFilters } from "@/components/AdvancedFilters";
 import { useAdvancedFilters } from "@/hooks/useAdvancedFilters";
 import { useNotificationSystem } from "@/hooks/useNotifications";
+import { AITradeSummaryModal } from "@/components/AITradeSummaryModal";
 
 /* ── Tag system constants ── */
 const PRESET_TAGS: { label: string; color: string; bg: string; border: string }[] = [
@@ -183,10 +184,13 @@ function JournalPageContent() {
   // Duplication state
   const [duplicatingTrade, setDuplicatingTrade] = useState<Trade | null>(null);
 
-  // AI Review state
+  // AI Review state (rule-based, free, fast)
   const [aiReview, setAiReview] = useState<AIReviewResult | null>(null);
   const [aiReviewLoading, setAiReviewLoading] = useState(false);
   const [aiReviewTradeId, setAiReviewTradeId] = useState<string | null>(null);
+
+  // AI Summary state (Claude LLM with vision + macro)
+  const [aiSummaryTradeId, setAiSummaryTradeId] = useState<string | null>(null);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -756,9 +760,13 @@ function JournalPageContent() {
                         <Share2 className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">Partager</span>
                       </button>
-                      <button onClick={() => handleAIReview(trade.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-purple-400 hover:bg-purple-500/10 transition" title="AI Review">
+                      <button onClick={() => handleAIReview(trade.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-purple-400 hover:bg-purple-500/10 transition" title="AI Review (rule-based, instant)">
                         <Brain className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">AI Review</span>
+                      </button>
+                      <button onClick={() => setAiSummaryTradeId(trade.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-fuchsia-400 hover:bg-fuchsia-500/10 transition" title="AI Summary (Claude vision + macro)">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">AI Summary</span>
                       </button>
                       <div className="ml-auto">
                         <button onClick={() => handleDelete(trade.id)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-rose-400 hover:bg-rose-500/10 transition" title={t("delete")}>
@@ -913,8 +921,11 @@ function JournalPageContent() {
                               <button onClick={() => handleDuplicate(trade)} className="text-cyan-400 hover:text-cyan-300 transition p-1 rounded hover:bg-cyan-500/10" title={t("journalDuplicate")}>
                                 <Copy className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => handleAIReview(trade.id)} className="text-purple-400 hover:text-purple-300 transition p-1 rounded hover:bg-purple-500/10" title="AI Review">
+                              <button onClick={() => handleAIReview(trade.id)} className="text-purple-400 hover:text-purple-300 transition p-1 rounded hover:bg-purple-500/10" title="AI Review (rule-based)">
                                 <Brain className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => setAiSummaryTradeId(trade.id)} className="text-fuchsia-400 hover:text-fuchsia-300 transition p-1 rounded hover:bg-fuchsia-500/10" title="AI Summary (Claude vision)">
+                                <Sparkles className="w-3.5 h-3.5" />
                               </button>
                               <button onClick={() => handleDelete(trade.id)} className="text-rose-400 hover:text-rose-300 transition p-1 rounded hover:bg-rose-500/10" title={t("delete")}>
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1259,6 +1270,18 @@ function JournalPageContent() {
           onClose={() => setShareTradeId(null)}
         />
       )}
+
+      {/* AI Summary Modal — Claude LLM with vision + macro context */}
+      {aiSummaryTradeId && (() => {
+        const targetTrade = trades.find((x) => x.id === aiSummaryTradeId);
+        return (
+          <AITradeSummaryModal
+            tradeId={aiSummaryTradeId}
+            tradeAsset={targetTrade?.asset ?? "—"}
+            onClose={() => setAiSummaryTradeId(null)}
+          />
+        );
+      })()}
     </>
   );
 }
